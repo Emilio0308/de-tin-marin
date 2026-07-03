@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "title": "De Tin Marín — ¡Endulza cada sorpresa!",
+    "description": "Ecommerce de dulces y sorpresas: caramelos, chocolates, gomitas y combos cumpleañeros."
+  },
+  "common": {
+    "loading": "Cargando…",
+    "empty": "No hay nada por aquí todavía.",
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "retry": "Reintentar",
+    "addToCart": "Añadir",
+    "iWantIt": "Lo quiero"
+  },
+  "home": {
+    "nav": {
+      "sweets": "Dulces",
+      "surprises": "Sorpresas",
+      "about": "Nosotros"
+    },
+    "catalog": {
+      "title": "Nuestros dulces"
+    },
+    "bundles": {
+      "title": "Combos sorpresa"
+    },
+    "help": {
+      "label": "¿Necesitas ayuda?"
+    }
+  }
+}

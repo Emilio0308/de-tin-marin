@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "title": "De Tin Marín — Admin",
+    "description": "Backoffice administrativo"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "empty": "Sin registros.",
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "signOut": "Cerrar sesión"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "categories": "Categorías",
+    "products": "Productos",
+    "bundles": "Paquetes"
+  }
+}

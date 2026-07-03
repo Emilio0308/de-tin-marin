@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Plus_Jakarta_Sans, Quicksand } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 
 const displayFont = Plus_Jakarta_Sans({
@@ -23,24 +25,32 @@ const labelFont = Quicksand({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "De Tin Marín — ¡Endulza cada sorpresa!",
-  description:
-    "Ecommerce de dulces y sorpresas: caramelos, chocolates, gomitas y combos cumpleañeros.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata");
 
-export default function RootLayout({
+  return {
+    title: t("title"),
+    description: t("description"),
+  };
+}
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${displayFont.variable} ${bodyFont.variable} ${labelFont.variable}`}
     >
       <body className="bg-background font-body text-on-surface selection:bg-secondary-fixed selection:text-on-secondary-fixed min-h-screen antialiased">
-        {children}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

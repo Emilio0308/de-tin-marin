@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@de-tin-marin/shared/cn";
 import { createAdminBrowserClient } from "@/shared/clients/supabase-browser";
 
 const links = [
-  { href: "/", label: "Dashboard" },
-  { href: "/categories", label: "Categorías" },
-  { href: "/products", label: "Productos" },
-  { href: "/bundles", label: "Paquetes" },
-];
+  { href: "/", labelKey: "dashboard" },
+  { href: "/categories", labelKey: "categories" },
+  { href: "/products", labelKey: "products" },
+  { href: "/bundles", labelKey: "bundles" },
+] as const;
 
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   async function handleSignOut() {
     const supabase = createAdminBrowserClient();
@@ -38,7 +41,7 @@ export function AdminNav() {
                   : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
               )}
             >
-              {link.label}
+              {t(link.labelKey)}
             </Link>
           </li>
         ))}
@@ -48,7 +51,7 @@ export function AdminNav() {
         onClick={() => void handleSignOut()}
         className="text-left text-sm text-zinc-500 hover:text-zinc-800"
       >
-        Cerrar sesión
+        {tCommon("signOut")}
       </button>
     </nav>
   );
