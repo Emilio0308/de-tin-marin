@@ -1,8 +1,15 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalEnv": ["SKIP_ENV_VALIDATION"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_APP_NAME"
+      ],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "dev": {

@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
     "@de-tin-marin/db",
     "@de-tin-marin/validations",
   ],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+    ],
+  },
 };
 
 export default nextConfig;
