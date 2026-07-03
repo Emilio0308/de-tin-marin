@@ -6,18 +6,35 @@ Configurar en el dashboard de Supabase → **Settings → API → Exposed schema
 
 `core`, `catalog`, `pricing`, `commerce`, `crm`
 
-## Local
+## Primer usuario staff (remoto)
 
-```bash
-supabase start
-supabase db reset   # aplica migraciones + seed
+1. Crear usuario en **Authentication → Users** (email + password).
+2. Copiar el UUID del usuario.
+3. En **SQL Editor**:
+
+```sql
+insert into core.user_roles (user_id, role)
+values ('<uuid-del-usuario>', 'admin');
+
+insert into core.profiles (id, display_name)
+values ('<uuid-del-usuario>', 'Admin')
+on conflict (id) do nothing;
 ```
 
 ## Migraciones
 
-| Archivo                            | Contenido                         |
-| ---------------------------------- | --------------------------------- |
-| `00001_spine_schemas_and_core.sql` | Schemas + tablas `core.*` con RLS |
+| Archivo                                 | Contenido                                |
+| --------------------------------------- | ---------------------------------------- |
+| `00001_spine_schemas_and_core.sql`      | Schemas + tablas `core.*` con RLS        |
+| `00002_catalog_products_categories.sql` | `catalog.categories`, `catalog.products` |
+
+## Deploy remoto
+
+```bash
+supabase link --project-ref hmfxknqmqnmtzqviwkad
+supabase db push
+pnpm gen:db-types
+```
 
 ## Tests pgTAP
 
@@ -26,9 +43,3 @@ supabase test db
 ```
 
 Archivos en `supabase/tests/`.
-
-## Tipos TypeScript
-
-```bash
-supabase gen types typescript --local > packages/types/src/database.generated.ts
-```

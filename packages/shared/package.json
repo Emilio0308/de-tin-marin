@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./cn": "./src/cn.ts"
+    "./cn": "./src/cn.ts",
+    "./slugify": "./src/slugify.ts",
+    "./prices": "./src/prices.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

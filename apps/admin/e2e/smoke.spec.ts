@@ -1,9 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-test("admin home loads", async ({ page }) => {
+test("admin redirects to login when unauthenticated", async ({ page }) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /panel administrativo/i }),
-  ).toBeVisible();
-  await expect(page.getByText("De Tin Marín").first()).toBeVisible();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();
 });

@@ -14,7 +14,101 @@ export type Database = {
   };
   catalog: {
     Tables: {
-      [_ in never]: never;
+      categories: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          description: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          slug: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          slug: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          slug?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      products: {
+        Row: {
+          brand: string | null;
+          category_id: string;
+          created_at: string;
+          deleted_at: string | null;
+          description: string | null;
+          id: string;
+          image_url: string | null;
+          is_active: boolean;
+          name: string;
+          prices: Json;
+          sku: string;
+          slug: string;
+          stock_quantity: number;
+          updated_at: string;
+        };
+        Insert: {
+          brand?: string | null;
+          category_id: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          name: string;
+          prices?: Json;
+          sku: string;
+          slug: string;
+          stock_quantity?: number;
+          updated_at?: string;
+        };
+        Update: {
+          brand?: string | null;
+          category_id?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          description?: string | null;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          name?: string;
+          prices?: Json;
+          sku?: string;
+          slug?: string;
+          stock_quantity?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;

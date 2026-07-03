@@ -19,29 +19,31 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S0 — Fundación (~1–2 semanas)
+## S0 — Fundación (~1–2 semanas) ✅
 
 **Goal:** Repo ejecutable con gates de calidad y Supabase provisionado.
 
-- [ ] Turborepo + pnpm workspaces
-- [ ] `packages/config`, `types`, `validations`, `db`, `ui`, `shared`
-- [ ] `apps/ecommerce` y `apps/admin` shells Next.js
-- [ ] ESLint + Prettier + Husky
-- [ ] `CLAUDE.md` / `AGENTS.md` ✅
-- [ ] Migración spine: schemas `core`, `catalog`, `pricing`, `commerce`, `crm` (sin `inventory` en v1)
-- [ ] CI: `pnpm check` + build
+- [x] Turborepo + pnpm workspaces
+- [x] `packages/config`, `types`, `validations`, `db`, `ui`, `shared`
+- [x] `apps/ecommerce` y `apps/admin` shells Next.js
+- [x] ESLint + Prettier + Husky
+- [x] `CLAUDE.md` / `AGENTS.md`
+- [x] Migración spine: schemas `core`, `catalog`, `pricing`, `commerce`, `crm`
+- [x] CI: `pnpm check` + build
 - [x] Brief: `docs/stages/S0/01-monorepo-foundation.md`
 
 ---
 
-## S1A — Products + Categories
+## S1A — Products + Categories (in progress)
 
-**Goal:** CRUD admin de productos con SKU, imágenes, categorías, `prices` JSONB y stock.
+**Goal:** CRUD admin de productos con SKU, categorías, `prices` JSONB, `image_url` y stock.
 
-- Tablas: `catalog.categories`, `catalog.products`, `catalog.product_images`
-- Columnas: `prices` (normal.netPrice/igv/subtotal), `stock_quantity`
-- Admin UI: listado + formulario
+- Tablas: `catalog.categories`, `catalog.products`
+- Columnas producto: `sku`, `slug`, `brand`, `image_url`, `prices`, `stock_quantity`, `category_id`
+- Columnas categoría: `slug`, `sort_order`
+- Admin UI: listado + formulario + auth staff mínima
 - Reglas 1–4
+- Brief: `docs/stages/S1A/01-catalog-products-categories.md`
 
 **Depends on:** S0
 

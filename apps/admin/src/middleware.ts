@@ -3,9 +3,13 @@ import { updateSession } from "@de-tin-marin/db/proxy";
 import { supabaseConfig } from "@/config/env";
 
 export async function middleware(request: NextRequest) {
+  const isLogin = request.nextUrl.pathname.startsWith("/login");
+
   return updateSession(request, {
     ...supabaseConfig,
-    redirectIfUnauthed: false,
+    redirectIfUnauthed: !isLogin,
+    loginPath: "/login",
+    publicPrefixes: ["/login", "/auth"],
   });
 }
 

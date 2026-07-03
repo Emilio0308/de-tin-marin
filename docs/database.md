@@ -65,26 +65,38 @@ v1 solo usa `normal`. Claves `suggested` y `fantasy` reservadas para futuro.
 
 ### Schema `catalog`
 
-| Tabla                    | Descripción                                  |
-| ------------------------ | -------------------------------------------- |
-| `catalog.categories`     | Categorías de productos                      |
-| `catalog.products`       | Dulce / producto individual                  |
-| `catalog.product_images` | Imágenes (`product_id`, `url`, `sort_order`) |
-| `catalog.bundles`        | Plantilla de sorpresa (sin stock)            |
-| `catalog.bundle_items`   | Composición base de la plantilla             |
+| Tabla                  | Descripción                       |
+| ---------------------- | --------------------------------- |
+| `catalog.categories`   | Categorías de productos (planas)  |
+| `catalog.products`     | Dulce / producto individual       |
+| `catalog.bundles`      | Plantilla de sorpresa (sin stock) |
+| `catalog.bundle_items` | Composición base de la plantilla  |
+
+**`catalog.categories`** (columnas clave):
+
+| Columna               | Tipo        | Notas               |
+| --------------------- | ----------- | ------------------- |
+| `name`, `description` | text        |                     |
+| `slug`                | text unique | URL amigable        |
+| `is_active`           | boolean     |                     |
+| `sort_order`          | int         | Orden visualización |
+| `deleted_at`          | timestamptz | Soft-delete         |
 
 **`catalog.products`** (columnas clave):
 
-| Columna               | Tipo          | Notas                           |
-| --------------------- | ------------- | ------------------------------- |
-| `sku`                 | text unique   | Obligatorio                     |
-| `name`, `description` | text          |                                 |
-| `prices`              | jsonb         | Ver estructura arriba           |
-| `stock_quantity`      | int           | **Fuente de verdad v1**         |
-| `category_id`         | uuid          | → `categories`                  |
-| `campaign_id`         | uuid nullable | → `pricing.campaigns` (**1:1**) |
-| `is_active`           | boolean       |                                 |
-| `deleted_at`          | timestamptz   | Soft-delete                     |
+| Columna               | Tipo          | Notas                                |
+| --------------------- | ------------- | ------------------------------------ |
+| `sku`                 | text unique   | Obligatorio                          |
+| `name`, `description` | text          |                                      |
+| `slug`                | text unique   | URL amigable                         |
+| `brand`               | text          | Marca (texto libre)                  |
+| `image_url`           | text          | URL imagen principal (S1A)           |
+| `prices`              | jsonb         | Ver estructura arriba                |
+| `stock_quantity`      | int           | **Fuente de verdad v1**              |
+| `category_id`         | uuid          | → `categories`                       |
+| `campaign_id`         | uuid nullable | → `pricing.campaigns` (**1:1**, S1C) |
+| `is_active`           | boolean       |                                      |
+| `deleted_at`          | timestamptz   | Soft-delete                          |
 
 **`catalog.bundles`** (plantilla — sin stock):
 
@@ -193,7 +205,6 @@ Reservado para ledger `inventory_movements` y fuente de verdad desacoplada. v1 d
 ```mermaid
 erDiagram
   categories ||--o{ products : groups
-  products ||--o{ product_images : has
   campaigns ||--o| products : assigns_one
   bundles ||--o{ bundle_items : template
   products ||--o{ bundle_items : part_of

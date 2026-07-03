@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./health": "./src/health.ts"
+    "./health": "./src/health.ts",
+    "./prices": "./src/prices.ts",
+    "./category": "./src/category.ts",
+    "./product": "./src/product.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

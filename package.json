@@ -22,7 +22,7 @@
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
-    "gen:db-types": "echo 'Run: supabase gen types typescript --local > packages/types/src/database.generated.ts'",
+    "gen:db-types": "supabase gen types typescript --project-id hmfxknqmqnmtzqviwkad --schema core,catalog,pricing,commerce,crm > packages/types/src/database.generated.ts",
     "prepare": "husky"
   },
   "devDependencies": {
