@@ -23,10 +23,16 @@ on conflict (id) do nothing;
 
 ## Migraciones
 
-| Archivo                                 | Contenido                                |
-| --------------------------------------- | ---------------------------------------- |
-| `00001_spine_schemas_and_core.sql`      | Schemas + tablas `core.*` con RLS        |
-| `00002_catalog_products_categories.sql` | `catalog.categories`, `catalog.products` |
+| Archivo                                 | Contenido                                           |
+| --------------------------------------- | --------------------------------------------------- |
+| `00001_spine_schemas_and_core.sql`      | Schemas + tablas `core.*` con RLS                   |
+| `00002_catalog_products_categories.sql` | `catalog.categories`, `catalog.products`            |
+| `00003_api_grants.sql`                  | GRANTs de schema/tablas para `anon`/`authenticated` |
+
+> **Importante:** exponer un schema en la API (Settings → API → Exposed schemas)
+> no basta. Los roles `anon`/`authenticated` también necesitan `GRANT USAGE` sobre
+> el schema y privilegios sobre las tablas. La RLS sigue gobernando las filas.
+> Cada nueva migración que cree tablas en un schema propio debe incluir sus grants.
 
 ## Deploy remoto
 

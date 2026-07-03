@@ -13,7 +13,9 @@ export function ProductListContainer() {
     queryKey: ["products"],
     queryFn: async () => {
       const result = await listProductsAction();
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
       return result.data;
     },
   });
@@ -21,7 +23,9 @@ export function ProductListContainer() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const result = await softDeleteProductAction(id);
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["products"] });

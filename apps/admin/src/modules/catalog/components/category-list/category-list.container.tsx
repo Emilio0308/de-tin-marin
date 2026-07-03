@@ -13,7 +13,9 @@ export function CategoryListContainer() {
     queryKey: ["categories"],
     queryFn: async () => {
       const result = await listCategoriesAction();
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
       return result.data;
     },
   });
@@ -21,7 +23,9 @@ export function CategoryListContainer() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const result = await softDeleteCategoryAction(id);
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["categories"] });

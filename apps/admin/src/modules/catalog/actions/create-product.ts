@@ -3,15 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { supabaseConfig } from "@/config/env";
 import { requireStaff } from "@/shared/auth/require-staff";
+import { guardAction } from "@/shared/errors/server-error";
 import { createProductService } from "@/modules/catalog/services/product.service";
 
 export async function createProductAction(raw: unknown) {
-  const auth = await requireStaff(supabaseConfig);
-  if (!auth.ok) return { ok: false as const, error: auth.error };
+  return guardAction("createProductAction", async () => {
+    const auth = await requireStaff(supabaseConfig);
+    if (!auth.ok) return { ok: false as const, error: auth.error };
 
-  const result = await createProductService(supabaseConfig, raw);
-  if (result.ok) {
-    revalidatePath("/products");
-  }
-  return result;
+    const result = await createProductService(supabaseConfig, raw);
+    if (result.ok) {
+      revalidatePath("/products");
+    }
+    return result;
+  });
 }

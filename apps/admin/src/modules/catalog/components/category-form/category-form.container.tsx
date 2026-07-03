@@ -13,6 +13,26 @@ type CategoryFormContainerProps = {
   initial?: CategoryFormDTO;
 };
 
+function categoryErrorMessage(result: {
+  error: string;
+  message?: string;
+}): string {
+  switch (result.error) {
+    case "SLUG_TAKEN":
+      return "El slug ya está en uso";
+    case "VALIDATION":
+      return "Revisa los campos del formulario";
+    case "UNAUTHORIZED":
+      return "Tu sesión expiró. Inicia sesión de nuevo.";
+    case "FORBIDDEN":
+      return "No tienes permisos de administrador.";
+    default:
+      return result.message
+        ? `No se pudo guardar la categoría: ${result.message}`
+        : "No se pudo guardar la categoría";
+  }
+}
+
 export function CategoryFormContainer({
   mode,
   initial,
@@ -41,13 +61,7 @@ export function CategoryFormContainer({
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(
-        result.error === "SLUG_TAKEN"
-          ? "El slug ya está en uso"
-          : result.error === "VALIDATION"
-            ? "Revisa los campos del formulario"
-            : "No se pudo guardar la categoría",
-      );
+      setError(categoryErrorMessage(result));
       return;
     }
 

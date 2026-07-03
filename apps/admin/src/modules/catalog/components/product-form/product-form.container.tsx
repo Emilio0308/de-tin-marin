@@ -15,6 +15,28 @@ type ProductFormContainerProps = {
   initial?: ProductFormDTO;
 };
 
+function productErrorMessage(result: {
+  error: string;
+  message?: string;
+}): string {
+  switch (result.error) {
+    case "SKU_TAKEN":
+      return "El SKU ya está en uso";
+    case "SLUG_TAKEN":
+      return "El slug ya está en uso";
+    case "VALIDATION":
+      return "Revisa los campos del formulario";
+    case "UNAUTHORIZED":
+      return "Tu sesión expiró. Inicia sesión de nuevo.";
+    case "FORBIDDEN":
+      return "No tienes permisos de administrador.";
+    default:
+      return result.message
+        ? `No se pudo guardar el producto: ${result.message}`
+        : "No se pudo guardar el producto";
+  }
+}
+
 export function ProductFormContainer({
   mode,
   initial,
@@ -27,7 +49,9 @@ export function ProductFormContainer({
     queryKey: ["categories"],
     queryFn: async () => {
       const result = await listCategoriesAction();
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
       return result.data;
     },
   });
@@ -52,15 +76,7 @@ export function ProductFormContainer({
     setSubmitting(false);
 
     if (!result.ok) {
-      const message =
-        result.error === "SKU_TAKEN"
-          ? "El SKU ya está en uso"
-          : result.error === "SLUG_TAKEN"
-            ? "El slug ya está en uso"
-            : result.error === "VALIDATION"
-              ? "Revisa los campos del formulario"
-              : "No se pudo guardar el producto";
-      setError(message);
+      setError(productErrorMessage(result));
       return;
     }
 

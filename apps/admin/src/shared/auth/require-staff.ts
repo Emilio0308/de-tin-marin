@@ -3,6 +3,7 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { getUser, createSupabaseServerClient } from "@de-tin-marin/db/server";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
+import { logServerError } from "@/shared/errors/server-error";
 
 export type StaffSession = {
   userId: string;
@@ -29,7 +30,16 @@ export async function requireStaff(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    logServerError("requireStaff:user_roles", error);
+    return { ok: false, error: "FORBIDDEN" };
+  }
+
+  if (!data) {
+    logServerError(
+      "requireStaff:no-role",
+      `El usuario ${user.id} no tiene fila en core.user_roles`,
+    );
     return { ok: false, error: "FORBIDDEN" };
   }
 
