@@ -2,6 +2,8 @@
 
 > **Responsabilidad:** definir campañas promocionales y asignarlas a productos (1:1). El **precio final** se calcula en el listado de productos (dominio Pricing).
 
+> **Acotación v1 (DECISIONS #24):** el esquema y el helper `computeFinalPrice` existen, pero **no hay campañas activas ni UI admin en v1**. Sin asignaciones → `finalPrice === netPrice`. La activación operativa (CRUD campañas + asignar a productos) se implementará en una etapa posterior sin cambiar el contrato de DTOs.
+
 ## Modelo v1
 
 Una sola tabla principal + FK en productos:
@@ -47,6 +49,8 @@ function applyCampaign(
 El listado de productos (Server Action / repository) hace JOIN a `campaigns`, valida vigencia y devuelve `finalPrice` — **el front no recalcula**.
 
 ## Admin — pantallas
+
+> **v1:** pantallas planificadas abajo — **no implementadas** hasta activación operativa de campañas (DECISIONS #24).
 
 - CRUD campañas (nombre, %, fechas, descripción)
 - Asignar campaña a producto(s) desde producto o desde campaña

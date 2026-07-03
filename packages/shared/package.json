@@ -7,7 +7,8 @@
     "./cn": "./src/cn.ts",
     "./slugify": "./src/slugify.ts",
     "./prices": "./src/prices.ts",
-    "./bundle-price": "./src/bundle-price.ts"
+    "./bundle-price": "./src/bundle-price.ts",
+    "./final-price": "./src/final-price.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

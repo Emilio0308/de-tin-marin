@@ -7,10 +7,16 @@ import type { Database, Json } from "@de-tin-marin/types/database";
 type ProductRow = Database["catalog"]["Tables"]["products"]["Row"];
 type ProductInsert = Database["catalog"]["Tables"]["products"]["Insert"];
 type ProductUpdate = Database["catalog"]["Tables"]["products"]["Update"];
+type CampaignRow = Database["pricing"]["Tables"]["campaigns"]["Row"];
 
 export type ProductWithCategory = ProductRow & {
   categories: { name: string } | null;
 };
+
+export type CampaignPricingRow = Pick<
+  CampaignRow,
+  "id" | "name" | "percentage" | "starts_at" | "ends_at" | "is_active"
+>;
 
 export async function listProductsRepo(
   config: SupabaseConfig,
@@ -25,6 +31,23 @@ export async function listProductsRepo(
 
   if (error) throw new Error(error.message);
   return (data ?? []) as ProductWithCategory[];
+}
+
+export async function listCampaignsByIdsRepo(
+  config: SupabaseConfig,
+  ids: string[],
+): Promise<CampaignPricingRow[]> {
+  if (ids.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("pricing")
+    .from("campaigns")
+    .select("id, name, percentage, starts_at, ends_at, is_active")
+    .in("id", ids);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 export async function getProductByIdRepo(

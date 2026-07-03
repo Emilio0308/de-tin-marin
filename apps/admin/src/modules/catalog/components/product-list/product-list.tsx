@@ -41,7 +41,7 @@ export function ProductList({
             <TableCell>{product.sku}</TableCell>
             <TableCell className="font-medium">{product.name}</TableCell>
             <TableCell>{product.categoryName}</TableCell>
-            <TableCell>S/ {product.netPrice.toFixed(2)}</TableCell>
+            <TableCell>S/ {product.finalPrice.toFixed(2)}</TableCell>
             <TableCell>{product.stockQuantity}</TableCell>
             <TableCell>
               <Badge variant={product.isActive ? "success" : "muted"}>

@@ -134,6 +134,7 @@ export type Database = {
       products: {
         Row: {
           brand: string | null
+          campaign_id: string | null
           category_id: string
           created_at: string
           deleted_at: string | null
@@ -150,6 +151,7 @@ export type Database = {
         }
         Insert: {
           brand?: string | null
+          campaign_id?: string | null
           category_id: string
           created_at?: string
           deleted_at?: string | null
@@ -166,6 +168,7 @@ export type Database = {
         }
         Update: {
           brand?: string | null
+          campaign_id?: string | null
           category_id?: string
           created_at?: string
           deleted_at?: string | null
@@ -346,7 +349,42 @@ export type Database = {
   }
   pricing: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          ends_at: string
+          id: string
+          is_active: boolean
+          name: string
+          percentage: number
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          name: string
+          percentage: number
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          percentage?: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

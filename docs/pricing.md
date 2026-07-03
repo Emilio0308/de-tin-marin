@@ -2,6 +2,8 @@
 
 > **Responsabilidad:** calcular y exponer precios finales en el **backend**. El frontend **no recalcula**.
 
+> **Acotación v1 (DECISIONS #24):** `finalPrice` ya se expone en el listado de productos vía `computeFinalPrice`, pero **sin campañas asignadas** equivale a `netPrice`. No hay descuentos activos hasta que se habilite la gestión de campañas.
+
 ## v1 — Dos contextos
 
 ### A) Productos sueltos — listado catálogo

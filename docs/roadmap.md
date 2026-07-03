@@ -68,14 +68,16 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S1C — Pricing + Campaigns
+## S1C — Pricing + Campaigns ✅ (fundación)
 
-**Goal:** Campañas 1:1 con productos; listado devuelve `finalPrice` desde backend.
+**Goal:** Esquema de campañas 1:1 + `finalPrice` calculado en backend; **sin uso operativo en v1**.
 
-- Tablas: `pricing.campaigns`, FK `products.campaign_id`
-- Servicios: `product-price`, `bundle-line-price`
-- Reglas 9–12
-- Sin cupones ni VIP en v1
+- [x] Tablas: `pricing.campaigns`, FK `products.campaign_id`
+- [x] Helper `computeFinalPrice` en `@de-tin-marin/shared/final-price`
+- [x] Listado productos admin devuelve `finalPrice` (+ `campaign` null en v1)
+- [x] **Sin CRUD admin de campañas** — activación diferida (DECISIONS #24)
+- [x] Reglas 9–12 (contrato); front no recalcula
+- [x] Brief: `docs/stages/S1C/01-pricing-campaigns-foundation.md`
 
 **Depends on:** S1A, S1B
 

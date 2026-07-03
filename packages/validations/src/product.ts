@@ -26,6 +26,14 @@ export const updateProductInputSchema = createProductInputSchema
     id: z.string().uuid(),
   });
 
+export const productCampaignSummarySchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    percentage: z.number(),
+  })
+  .nullable();
+
 export const productListItemSchema = z.object({
   id: z.string().uuid(),
   sku: z.string(),
@@ -35,6 +43,8 @@ export const productListItemSchema = z.object({
   categoryId: z.string().uuid(),
   categoryName: z.string(),
   netPrice: z.number(),
+  finalPrice: z.number(),
+  campaign: productCampaignSummarySchema,
   stockQuantity: z.number(),
   isActive: z.boolean(),
   imageUrl: z.string().nullable(),

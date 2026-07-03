@@ -29,6 +29,7 @@
 | 21  | Grants de schemas propios | ✅     | Exponer schema en la API **no basta**: cada migración que crea tablas en un schema propio debe incluir `GRANT USAGE` + privilegios para `anon`/`authenticated`. RLS gobierna filas. Ver `00003_api_grants.sql`                                                                                                                                                                                                                |
 | 22  | Modelo de bundles         | ✅     | Bundle = plantilla con `quantity` (nº de personas/porciones a las que apunta el pack) + `service_fee` (referencia/armado). `bundle_items` guarda `units_per_person` por producto (**v1 fija en 1**). Sin stock (#5), sin `prices` propio; total dinámico (#6)                                                                                                                                                                 |
 | 23  | i18n                      | ✅     | **`next-intl` sin routing por URL** en ambas apps. `defaultLocale = 'es'`; v1 solo español (`en` declarado en `@de-tin-marin/config/i18n` para habilitar sin refactor). Catálogos en `apps/<app>/messages/es.json`; config en `apps/<app>/src/i18n/request.ts`; tipos aumentados en `src/global.d.ts`. Presentacionales puros: el texto se resuelve en container/layout y baja por props o `useTranslations` en client leaves |
+| 24  | Campañas v1               | ✅     | **Fundación sin uso operativo.** Esquema `pricing.campaigns` + `products.campaign_id` (1:1) + `computeFinalPrice` en backend. Sin CRUD admin ni campañas activas en v1 → `finalPrice === netPrice`. El front solo consume `finalPrice`; activación operativa en etapa posterior                                                                                                                                               |
 
 ## Docs sincronizados (2026-07-02)
 
@@ -60,6 +61,12 @@
 - DECISIONS #23 nueva (i18n con `next-intl`, default `es`)
 - `@de-tin-marin/config/i18n` — `locales`, `defaultLocale`, `Locale`, `isLocale`
 - `apps/ecommerce` y `apps/admin`: `src/i18n/request.ts`, `messages/es.json`, `next.config.ts` con `createNextIntlPlugin`, layout con `NextIntlClientProvider`, `src/global.d.ts` (tipado de mensajes)
+
+## Docs sincronizados (2026-07-03 — S1C campañas fundación)
+
+- `docs/stages/S1C/01-pricing-campaigns-foundation.md` — brief fundación sin uso operativo v1
+- `campaigns.md`, `pricing.md` — acotación v1
+- DECISIONS #24 (campañas dormidas en v1)
 
 ## Cómo añadir una decisión
 

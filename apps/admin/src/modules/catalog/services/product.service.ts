@@ -6,6 +6,11 @@ import {
 } from "@de-tin-marin/validations/product";
 import { pricesSchema } from "@de-tin-marin/validations/prices";
 import { buildPricesFromNetPrice } from "@de-tin-marin/shared/prices";
+import {
+  computeFinalPrice,
+  isCampaignActive,
+  toCampaignForPricing,
+} from "@de-tin-marin/shared/final-price";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import type { Json } from "@de-tin-marin/types/database";
 import {
@@ -13,17 +18,23 @@ import {
   insertProductRepo,
   isProductSlugTakenRepo,
   isSkuTakenRepo,
+  listCampaignsByIdsRepo,
   listProductsRepo,
   parsePricesJson,
   softDeleteProductRepo,
   updateProductRepo,
+  type CampaignPricingRow,
 } from "../repositories/product.repository";
 import type { ProductFormDTO, ProductListItem } from "../types/product.dto";
 
 function toListItem(
   row: Awaited<ReturnType<typeof listProductsRepo>>[number],
+  campaign: CampaignPricingRow | null,
 ): ProductListItem {
   const { netPrice } = parsePricesJson(row.prices);
+  const campaignForPricing = campaign ? toCampaignForPricing(campaign) : null;
+  const finalPrice = computeFinalPrice(netPrice, campaignForPricing);
+
   return {
     id: row.id,
     sku: row.sku,
@@ -33,6 +44,15 @@ function toListItem(
     categoryId: row.category_id,
     categoryName: row.categories?.name ?? "—",
     netPrice,
+    finalPrice,
+    campaign:
+      campaign && isCampaignActive(campaignForPricing)
+        ? {
+            id: campaign.id,
+            name: campaign.name,
+            percentage: Number(campaign.percentage),
+          }
+        : null,
     stockQuantity: row.stock_quantity,
     isActive: row.is_active,
     imageUrl: row.image_url,
@@ -67,7 +87,26 @@ export async function listProductsService(
   config: SupabaseConfig,
 ): Promise<ProductListItem[]> {
   const rows = await listProductsRepo(config);
-  return rows.map(toListItem);
+  if (rows.length === 0) return [];
+
+  const campaignIds = [
+    ...new Set(
+      rows
+        .map((row) => row.campaign_id)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
+  const campaignById = new Map(
+    campaigns.map((campaign) => [campaign.id, campaign]),
+  );
+
+  return rows.map((row) =>
+    toListItem(
+      row,
+      row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
+    ),
+  );
 }
 
 export async function getProductService(
