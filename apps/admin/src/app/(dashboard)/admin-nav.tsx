@@ -9,6 +9,7 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/categories", label: "Categorías" },
   { href: "/products", label: "Productos" },
+  { href: "/bundles", label: "Paquetes" },
 ];
 
 export function AdminNav() {

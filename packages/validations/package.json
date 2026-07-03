@@ -7,7 +7,8 @@
     "./health": "./src/health.ts",
     "./prices": "./src/prices.ts",
     "./category": "./src/category.ts",
-    "./product": "./src/product.ts"
+    "./product": "./src/product.ts",
+    "./bundle": "./src/bundle.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

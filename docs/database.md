@@ -98,16 +98,24 @@ v1 solo usa `normal`. Claves `suggested` y `fantasy` reservadas para futuro.
 | `is_active`           | boolean       |                                      |
 | `deleted_at`          | timestamptz   | Soft-delete                          |
 
-**`catalog.bundles`** (plantilla — sin stock):
+**`catalog.bundles`** (plantilla — sin stock, sin precio persistido):
 
-| Columna               | Tipo          | Notas                                           |
-| --------------------- | ------------- | ----------------------------------------------- |
-| `name`, `description` | text          |                                                 |
-| `service_fee`         | numeric(12,2) | Fee de armado/servicio; **editable por bundle** |
-| `is_active`           | boolean       |                                                 |
-| `deleted_at`          | timestamptz   |                                                 |
+| Columna               | Tipo          | Notas                                                      |
+| --------------------- | ------------- | ---------------------------------------------------------- |
+| `name`, `description` | text          |                                                            |
+| `image_url`           | text          | URL imagen principal (solo texto, sin Storage v1)          |
+| `service_fee`         | numeric(12,2) | Fee de armado/servicio; **editable por bundle**            |
+| `quantity`            | int           | Nº de personas/porciones a las que apunta el pack (`>= 1`) |
+| `is_active`           | boolean       |                                                            |
+| `deleted_at`          | timestamptz   |                                                            |
 
-**`catalog.bundle_items`**: `bundle_id`, `product_id`, `quantity` (unidades por sorpresa en la plantilla base). Unique `(bundle_id, product_id)`.
+> **Sin columna `prices`.** El precio del bundle es **dinámico** (DECISIONS #6), calculado en cada consulta desde los componentes vivos:
+>
+> ```text
+> total = service_fee + quantity × Σ (product.prices.normal.netPrice × units_per_person)
+> ```
+
+**`catalog.bundle_items`**: `bundle_id`, `product_id`, `units_per_person` (unidades de ese producto por persona/porción; **v1 fija en 1**). Unique `(bundle_id, product_id)`.
 
 ### Schema `pricing`
 

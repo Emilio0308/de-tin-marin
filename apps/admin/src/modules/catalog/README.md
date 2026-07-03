@@ -1,6 +1,6 @@
 # Catálogo — módulo admin
 
-CRUD de categorías y productos en `apps/admin`.
+CRUD de categorías, productos y paquetes en `apps/admin`.
 
 ## Capas
 
@@ -14,6 +14,9 @@ CRUD de categorías y productos en `apps/admin`.
 - `/products` — listado
 - `/products/new` — crear
 - `/products/[id]/edit` — editar
+- `/bundles` — listado de paquetes
+- `/bundles/new` — crear paquete
+- `/bundles/[id]/edit` — editar paquete
 
 ## Auth staff
 

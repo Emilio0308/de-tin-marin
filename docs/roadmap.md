@@ -34,28 +34,35 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S1A — Products + Categories (in progress)
+## S1A — Products + Categories ✅
 
 **Goal:** CRUD admin de productos con SKU, categorías, `prices` JSONB, `image_url` y stock.
 
-- Tablas: `catalog.categories`, `catalog.products`
-- Columnas producto: `sku`, `slug`, `brand`, `image_url`, `prices`, `stock_quantity`, `category_id`
-- Columnas categoría: `slug`, `sort_order`
-- Admin UI: listado + formulario + auth staff mínima
-- Reglas 1–4
-- Brief: `docs/stages/S1A/01-catalog-products-categories.md`
+- [x] Tablas: `catalog.categories`, `catalog.products`
+- [x] Columnas producto: `sku`, `slug`, `brand`, `image_url`, `prices`, `stock_quantity`, `category_id`
+- [x] Columnas categoría: `slug`, `sort_order`
+- [x] Admin UI: listado + formulario + auth staff mínima
+- [x] Grants de API para schemas propios (`00003_api_grants.sql`)
+- [x] Manejo de errores en Server Actions (`guardAction`/`logServerError`)
+- [x] Landing ecommerce (módulo `home`) + infra de tests de render (Vitest + Testing Library)
+- [x] Deploy admin en Vercel (env vars declaradas en `turbo.json`)
+- [x] Reglas 1–4
+- [x] Brief: `docs/stages/S1A/01-catalog-products-categories.md`
 
 **Depends on:** S0
 
 ---
 
-## S1B — Bundles (plantillas sorpresa)
+## S1B — Bundles (plantillas sorpresa) ✅
 
-**Goal:** Plantillas de sorpresas sin stock, con `service_fee` editable.
+**Goal:** Plantillas de sorpresas sin stock, precio dinámico desde componentes + `service_fee`.
 
-- Tablas: `catalog.bundles`, `catalog.bundle_items`
-- Reglas 5–6
-- DECISIONS #5–#6 ✅
+- [x] Migración `00004_catalog_bundles.sql` + pgTAP + grants
+- [x] `computeBundleTotal` en `@de-tin-marin/shared/bundle-price`
+- [x] Validaciones Zod + CRUD admin (listado, formulario, soft-delete)
+- [x] Precio calculado en vivo: `service_fee + quantity × Σ(precio × units_per_person)`
+- [x] Reglas 5–6, DECISIONS #5–#6, #22
+- [x] Brief: `docs/stages/S1B/01-bundles.md`
 
 **Depends on:** S1A
 

@@ -12,7 +12,7 @@ export type Prices = {
   fantasy: Record<string, unknown>;
 };
 
-function roundMoney(value: number): number {
+export function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 

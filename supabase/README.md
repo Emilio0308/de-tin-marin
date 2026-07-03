@@ -28,6 +28,7 @@ on conflict (id) do nothing;
 | `00001_spine_schemas_and_core.sql`      | Schemas + tablas `core.*` con RLS                   |
 | `00002_catalog_products_categories.sql` | `catalog.categories`, `catalog.products`            |
 | `00003_api_grants.sql`                  | GRANTs de schema/tablas para `anon`/`authenticated` |
+| `00004_catalog_bundles.sql`             | `catalog.bundles`, `catalog.bundle_items` + grants  |
 
 > **Importante:** exponer un schema en la API (Settings → API → Exposed schemas)
 > no basta. Los roles `anon`/`authenticated` también necesitan `GRANT USAGE` sobre
