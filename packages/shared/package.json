@@ -1,0 +1,19 @@
+{
+  "name": "@de-tin-marin/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./cn": "./src/cn.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

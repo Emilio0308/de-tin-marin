@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/config" },
+    { "path": "packages/db" },
+    { "path": "packages/shared" },
+    { "path": "packages/types" },
+    { "path": "packages/validations" },
+    { "path": "packages/ui" },
+    { "path": "apps/ecommerce" },
+    { "path": "apps/admin" }
+  ]
+}

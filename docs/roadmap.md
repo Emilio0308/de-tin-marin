@@ -1,0 +1,162 @@
+# Roadmap — De Tin Marín
+
+Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` antes de codear.
+
+## Resumen
+
+| Etapa   | Nombre                     | Entregable                                         |
+| ------- | -------------------------- | -------------------------------------------------- |
+| **S0**  | Fundación                  | Monorepo, packages base, CI, Supabase spine        |
+| **S1A** | Catálogo                   | Products + Categories                              |
+| **S1B** | Bundles                    | Composición de sorpresas                           |
+| **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
+| **S2A** | Stock v1                   | `stock_quantity` en products + deduct al pagar     |
+| **S2B** | Orders                     | Órdenes, sorpresas personalizadas, snapshot        |
+| **S2C** | Payments manual + Shipping | Confirmación operador, sin pasarela                |
+| **S3A** | Ecommerce app              | Tienda pública                                     |
+| **S3B** | Admin app                  | Backoffice                                         |
+| **S4**  | Resto                      | Customers, Users, Notifications, Reports, Settings |
+
+---
+
+## S0 — Fundación (~1–2 semanas)
+
+**Goal:** Repo ejecutable con gates de calidad y Supabase provisionado.
+
+- [ ] Turborepo + pnpm workspaces
+- [ ] `packages/config`, `types`, `validations`, `db`, `ui`, `shared`
+- [ ] `apps/ecommerce` y `apps/admin` shells Next.js
+- [ ] ESLint + Prettier + Husky
+- [ ] `CLAUDE.md` / `AGENTS.md` ✅
+- [ ] Migración spine: schemas `core`, `catalog`, `pricing`, `commerce`, `crm` (sin `inventory` en v1)
+- [ ] CI: `pnpm check` + build
+- [x] Brief: `docs/stages/S0/01-monorepo-foundation.md`
+
+---
+
+## S1A — Products + Categories
+
+**Goal:** CRUD admin de productos con SKU, imágenes, categorías, `prices` JSONB y stock.
+
+- Tablas: `catalog.categories`, `catalog.products`, `catalog.product_images`
+- Columnas: `prices` (normal.netPrice/igv/subtotal), `stock_quantity`
+- Admin UI: listado + formulario
+- Reglas 1–4
+
+**Depends on:** S0
+
+---
+
+## S1B — Bundles (plantillas sorpresa)
+
+**Goal:** Plantillas de sorpresas sin stock, con `service_fee` editable.
+
+- Tablas: `catalog.bundles`, `catalog.bundle_items`
+- Reglas 5–6
+- DECISIONS #5–#6 ✅
+
+**Depends on:** S1A
+
+---
+
+## S1C — Pricing + Campaigns
+
+**Goal:** Campañas 1:1 con productos; listado devuelve `finalPrice` desde backend.
+
+- Tablas: `pricing.campaigns`, FK `products.campaign_id`
+- Servicios: `product-price`, `bundle-line-price`
+- Reglas 9–12
+- Sin cupones ni VIP en v1
+
+**Depends on:** S1A, S1B
+
+---
+
+## S2A — Stock v1
+
+**Goal:** Stock en `products.stock_quantity` y descuento atómico al pagar.
+
+- Función `deduct_stock_for_order`
+- Ajuste manual admin + audit_log
+- Regla 15
+- Schema `inventory` → **v2**
+
+**Depends on:** S1A, S1B
+
+---
+
+## S2B — Orders
+
+**Goal:** Órdenes con productos y sorpresas personalizadas; snapshot congelado.
+
+- Tablas: `commerce.orders`, `order_items`, `order_bundle_items`
+- Personalización de plantilla al crear pedido
+- Reglas 13–16
+
+**Depends on:** S1C, S2A
+
+---
+
+## S2C — Payments manual + Shipping
+
+**Goal:** Tabla `payments`, confirmación por operador, envíos. **Sin pasarela v1.**
+
+- Tablas: `commerce.payments`, `commerce.shipments`
+- Reglas 17–18
+
+**Depends on:** S2B
+
+---
+
+## S3A — Ecommerce
+
+**Goal:** Tienda funcional end-to-end.
+
+- Catálogo, carrito, checkout, mis pedidos
+- TanStack Query
+- Playwright: happy path compra
+
+**Depends on:** S2C
+
+---
+
+## S3B — Admin
+
+**Goal:** Backoffice completo.
+
+- Todos los dominios operativos
+- Roles staff
+- Referencia UX: ADMIN_BACKOFFICE (pantallas)
+
+**Depends on:** S2C
+
+---
+
+## S4 — Completitud
+
+- Customers (sin VIP v1)
+- Users / roles
+- Notifications
+- Reports
+- Settings
+- Inventory v2 (ledger movimientos)
+- Cupones, VIP, pasarela de pagos (epoch posterior)
+
+---
+
+## Workstreams (si hay 2+ devs)
+
+| Dev | Vertical                         |
+| --- | -------------------------------- |
+| A   | Platform: S0, auth, packages, CI |
+| B   | Catálogo + Pricing: S1A/B/C      |
+| C   | Commerce: S2A/B/C, Payments      |
+
+Consumir entre workstreams solo vía **DTOs declarados en briefs**.
+
+## Definition of done (por feature)
+
+- Brief aprobado
+- Código + tests nombrados en brief
+- `pnpm check` + `pnpm build` verdes
+- Docs del dominio actualizados

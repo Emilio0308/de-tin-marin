@@ -1,0 +1,41 @@
+# De Tin Marín — Supabase local config (S0)
+# https://supabase.com/docs/guides/cli/config
+
+project_id = "de-tin-marin"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "core", "catalog", "pricing", "commerce", "crm"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3001"]
+
+[auth.email]
+enable_signup = true
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[analytics]
+enabled = false
