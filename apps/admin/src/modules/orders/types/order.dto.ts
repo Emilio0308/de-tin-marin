@@ -7,6 +7,10 @@ import {
   orderDetailSchema,
 } from "@de-tin-marin/validations/order";
 import type { OrderRow } from "../repositories/order.repository";
+import { listPaymentsByOrderIdRepo } from "../repositories/payment.repository";
+import { getShipmentByOrderIdRepo } from "../repositories/shipment.repository";
+import type { SupabaseConfig } from "@de-tin-marin/db/config";
+import { parsePaymentSummary, parseShipmentDto } from "./payment-shipment.dto";
 
 export type { OrderDetail, OrderListItem };
 
@@ -44,6 +48,8 @@ export function parseOrderDetail(row: OrderRow): OrderDetail {
         ? (row.metadata as Record<string, unknown>)
         : {},
     createdAt: row.created_at,
+    payments: [],
+    shipment: null,
   });
 
   if (!parsed.success) {
@@ -51,4 +57,21 @@ export function parseOrderDetail(row: OrderRow): OrderDetail {
   }
 
   return parsed.data;
+}
+
+export async function parseOrderDetailWithRelations(
+  config: SupabaseConfig,
+  row: OrderRow,
+): Promise<OrderDetail> {
+  const [payments, shipment] = await Promise.all([
+    listPaymentsByOrderIdRepo(config, row.id),
+    getShipmentByOrderIdRepo(config, row.id),
+  ]);
+
+  const base = parseOrderDetail(row);
+  return {
+    ...base,
+    payments: payments.map(parsePaymentSummary),
+    shipment: shipment ? parseShipmentDto(shipment) : null,
+  };
 }

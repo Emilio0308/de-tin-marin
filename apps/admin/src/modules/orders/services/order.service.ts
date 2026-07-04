@@ -32,7 +32,7 @@ import {
   type OrderRow,
 } from "../repositories/order.repository";
 import {
-  parseOrderDetail,
+  parseOrderDetailWithRelations,
   type OrderDetail,
   type OrderListItem,
 } from "../types/order.dto";
@@ -89,7 +89,8 @@ export async function getOrderService(
   if (!row) return { ok: false, error: "NOT_FOUND" };
 
   try {
-    return { ok: true, data: parseOrderDetail(row) };
+    const data = await parseOrderDetailWithRelations(config, row);
+    return { ok: true, data };
   } catch {
     return { ok: false, error: "INVALID_ORDER_ROW" };
   }
@@ -233,8 +234,7 @@ export async function transitionOrderStatusService(
         | "VALIDATION"
         | "NOT_FOUND"
         | "INVALID_TRANSITION"
-        | "PAYMENT_CONFIRMATION_REQUIRED"
-        | "TRANSITION_NOT_IN_S2B";
+        | "PAYMENT_CONFIRMATION_REQUIRED";
     }
 > {
   const parsed = transitionOrderStatusInputSchema.safeParse(raw);
@@ -248,10 +248,6 @@ export async function transitionOrderStatusService(
 
   if (to === "paid") {
     return { ok: false, error: "PAYMENT_CONFIRMATION_REQUIRED" };
-  }
-
-  if (to !== "cancelled") {
-    return { ok: false, error: "TRANSITION_NOT_IN_S2B" };
   }
 
   if (!canTransitionOrderStatus(from, to)) {

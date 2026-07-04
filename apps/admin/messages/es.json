@@ -80,5 +80,52 @@
       "tag": "Campaña"
     },
     "quickAdd": "Añadir producto rápido"
+  },
+  "orders": {
+    "paymentStatus": {
+      "pending": "Pendiente",
+      "confirmed": "Confirmado",
+      "refunded": "Reembolsado"
+    },
+    "shipmentStatus": {
+      "pending": "Pendiente",
+      "shipped": "Enviado",
+      "delivered": "Entregado"
+    },
+    "detail": {
+      "title": "Orden",
+      "back": "Volver",
+      "loadError": "No se pudo cargar la orden.",
+      "customer": "Cliente",
+      "delivery": "Entrega",
+      "cart": "Carrito de la orden",
+      "subtotal": "Subtotal",
+      "discount": "Descuento",
+      "shipping": "Envío",
+      "total": "Total",
+      "paymentStatusLabel": "Pago",
+      "paymentPanelTitle": "Pago manual",
+      "paymentReference": "Referencia de pago",
+      "paymentNotes": "Notas",
+      "confirmPayment": "Confirmar pago",
+      "confirmingPayment": "Confirmando…",
+      "paymentHistory": "Historial de pagos",
+      "refundPayment": "Reembolsar",
+      "refundingPayment": "Reembolsando…",
+      "noPayments": "Sin pagos registrados.",
+      "shipmentPanelTitle": "Envío",
+      "shipmentStatus": "Estado del envío",
+      "shipmentTracking": "Nº de seguimiento",
+      "shipmentCarrier": "Transportista",
+      "shipmentNotes": "Notas de envío",
+      "saveShipment": "Guardar envío",
+      "savingShipment": "Guardando…",
+      "statusActionsTitle": "Avanzar estado",
+      "cancelOrder": "Cancelar orden",
+      "cancelling": "Cancelando…",
+      "cancelConfirm": "¿Cancelar esta orden?",
+      "referencePrefix": "Ref",
+      "paymentReferencePlaceholder": "Yape, transferencia…"
+    }
   }
 }

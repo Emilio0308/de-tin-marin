@@ -9,7 +9,9 @@
     "./category": "./src/category.ts",
     "./product": "./src/product.ts",
     "./bundle": "./src/bundle.ts",
-    "./order": "./src/order.ts"
+    "./order": "./src/order.ts",
+    "./payment": "./src/payment.ts",
+    "./shipment": "./src/shipment.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

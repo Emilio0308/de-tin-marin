@@ -99,13 +99,16 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S2C — Payments manual + Shipping
+## S2C — Payments manual + Shipping ✅
 
 **Goal:** Tabla `payments`, confirmación por operador, envíos. **Sin pasarela v1.**
 
-- Tablas: `commerce.payments`, `commerce.shipments`
-- Operador confirma pago → orden `paid`
-- Reglas 17–18
+- [x] Migración `00007_commerce_payments_shipments.sql` + pgTAP
+- [x] Tablas: `commerce.payments`, `commerce.shipments`
+- [x] Operador confirma pago → orden `paid`
+- [x] Admin: envío (tracking, carrier, estados)
+- [x] Reglas 17–18
+- [x] Brief: [`docs/stages/S2C/01-payments-shipping.md`](stages/S2C/01-payments-shipping.md)
 - **Sin descuento de stock** → S2A
 
 **Depends on:** S2B

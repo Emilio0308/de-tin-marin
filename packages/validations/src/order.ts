@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { paymentSummarySchema } from "./payment";
+import { shipmentDtoSchema } from "./shipment";
 
 export const orderContactSchema = z.object({
   name: z.string().min(1).max(200),
@@ -142,6 +144,8 @@ export const orderDetailSchema = z.object({
   currencyCode: z.literal("PEN"),
   metadata: z.record(z.unknown()),
   createdAt: z.string(),
+  payments: z.array(paymentSummarySchema),
+  shipment: shipmentDtoSchema.nullable(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderInputSchema>;

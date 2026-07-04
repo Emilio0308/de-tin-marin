@@ -86,6 +86,46 @@ export async function updateOrderStatusRepo(
   return result.data as OrderRow;
 }
 
+export async function updateOrderAfterPaymentRepo(
+  config: SupabaseConfig,
+  id: string,
+  paymentMethods: Json,
+): Promise<OrderRow> {
+  const supabase = await createSupabaseServerClient(config);
+  const result = await supabase
+    .schema("commerce")
+    .from("orders")
+    .update({
+      status: "paid",
+      payment_status: "confirmed",
+      payment_methods: paymentMethods,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (result.error) throw new Error(result.error.message);
+  return result.data as OrderRow;
+}
+
+export async function updateOrderPaymentStatusRepo(
+  config: SupabaseConfig,
+  id: string,
+  paymentStatus: string,
+): Promise<OrderRow> {
+  const supabase = await createSupabaseServerClient(config);
+  const result = await supabase
+    .schema("commerce")
+    .from("orders")
+    .update({ payment_status: paymentStatus })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (result.error) throw new Error(result.error.message);
+  return result.data as OrderRow;
+}
+
 export function asJson(value: unknown): Json {
   return value as Json;
 }

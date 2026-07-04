@@ -177,6 +177,20 @@ v1 solo usa `normal`. Claves `suggested` y `fantasy` reservadas para futuro.
 
 Sin pasarela en v1 — sin `external_payment_id` obligatorio.
 
+**`commerce.shipments`** (v1):
+
+| Columna           | Tipo        | Notas                                 |
+| ----------------- | ----------- | ------------------------------------- |
+| `order_id`        | uuid unique | FK → `commerce.orders` (1:1)          |
+| `status`          | text        | `pending` \| `shipped` \| `delivered` |
+| `tracking_number` | text        | Opcional                              |
+| `carrier`         | text        | Opcional                              |
+| `shipped_at`      | timestamptz | Al marcar enviado                     |
+| `delivered_at`    | timestamptz | Al marcar entregado                   |
+| `notes`           | text        | Opcional                              |
+
+Dirección de entrega: snapshot en `orders.fulfillment` — no duplicar en shipments.
+
 ### Schema `crm`
 
 | Tabla                    | Descripción                       |
@@ -215,6 +229,7 @@ erDiagram
 | `pricing.campaigns`        | Staff                         | Staff                       |
 | `commerce.orders`          | Cliente propias / staff todas | Server + staff              |
 | `commerce.payments`        | Staff                         | Staff (confirmación manual) |
+| `commerce.shipments`       | Staff                         | Staff                       |
 
 ---
 

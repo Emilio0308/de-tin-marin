@@ -2,7 +2,7 @@
 
 Órdenes manuales con **Order shopping cart** congelado en JSONB.
 
-Brief: [S2B](../../../docs/stages/S2B/01-orders.md) · Dominio: [orders.md](../../../docs/orders.md)
+Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [orders.md](../../../docs/orders.md)
 
 ## Capas
 
@@ -12,20 +12,28 @@ actions/ → services/ → repositories/ → Supabase schema commerce
 
 ## Server Actions
 
-| Action              | Service              | Descripción                      |
-| ------------------- | -------------------- | -------------------------------- |
-| `listOrdersAction`  | `listOrdersService`  | Listado                          |
-| `getOrderAction`    | `getOrderService`    | Detalle                          |
-| `createOrderAction` | `createOrderService` | Crear → `pending_payment`        |
-| `cancelOrderAction` | `cancelOrderService` | Cancelar desde `pending_payment` |
+| Action                        | Service                        | Descripción                      |
+| ----------------------------- | ------------------------------ | -------------------------------- |
+| `listOrdersAction`            | `listOrdersService`            | Listado                          |
+| `getOrderAction`              | `getOrderService`              | Detalle + pagos + envío          |
+| `createOrderAction`           | `createOrderService`           | Crear → `pending_payment`        |
+| `cancelOrderAction`           | `cancelOrderService`           | Cancelar desde `pending_payment` |
+| `confirmPaymentAction`        | `confirmPaymentService`        | Pago manual → `paid` (S2C)       |
+| `refundPaymentAction`         | `refundPaymentService`         | Reembolso payment (S2C)          |
+| `transitionOrderStatusAction` | `transitionOrderStatusService` | Avance logístico post-pago       |
+| `upsertShipmentAction`        | `upsertShipmentService`        | Envío 1:1 por orden (S2C)        |
 
 ## Services
 
-- `order.service.ts` — congela carrito vía `@de-tin-marin/shared/order-cart`
+- `order.service.ts` — carrito congelado, transiciones
+- `payment.service.ts` — confirmar / reembolsar pago
+- `shipment.service.ts` — upsert envío
 
 ## Repositories
 
 - `order.repository.ts`
+- `payment.repository.ts`
+- `shipment.repository.ts`
 
 ## Rutas
 
@@ -37,4 +45,4 @@ actions/ → services/ → repositories/ → Supabase schema commerce
 
 ## Validaciones
 
-`@de-tin-marin/validations/order`
+`@de-tin-marin/validations/order` · `payment` · `shipment`
