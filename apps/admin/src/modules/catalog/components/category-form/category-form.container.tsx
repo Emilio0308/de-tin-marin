@@ -1,35 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createCategoryAction } from "@/modules/catalog/actions/create-category";
 import { updateCategoryAction } from "@/modules/catalog/actions/update-category";
-import type { CategoryFormDTO } from "@/modules/catalog/types/category.dto";
 import { CategoryForm } from "./category-form";
-import type { CategoryFormValues } from "./category-form.types";
+import type {
+  CategoryFormContainerProps,
+  CategoryFormLabels,
+  CategoryFormValues,
+} from "./category-form.types";
 
-type CategoryFormContainerProps = {
-  mode: "create" | "edit";
-  initial?: CategoryFormDTO;
-};
-
-function categoryErrorMessage(result: {
-  error: string;
-  message?: string;
-}): string {
+function categoryErrorMessage(
+  result: { error: string; message?: string },
+  t: ReturnType<typeof useTranslations<"categoryForm.errors">>,
+): string {
   switch (result.error) {
     case "SLUG_TAKEN":
-      return "El slug ya está en uso";
+      return t("slugTaken");
     case "VALIDATION":
-      return "Revisa los campos del formulario";
+      return t("validation");
     case "UNAUTHORIZED":
-      return "Tu sesión expiró. Inicia sesión de nuevo.";
+      return t("unauthorized");
     case "FORBIDDEN":
-      return "No tienes permisos de administrador.";
+      return t("forbidden");
     default:
       return result.message
-        ? `No se pudo guardar la categoría: ${result.message}`
-        : "No se pudo guardar la categoría";
+        ? t("defaultWithMessage", { message: result.message })
+        : t("default");
   }
 }
 
@@ -37,9 +36,54 @@ export function CategoryFormContainer({
   mode,
   initial,
 }: CategoryFormContainerProps) {
+  const t = useTranslations("categoryForm");
+  const tErrors = useTranslations("categoryForm.errors");
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const labels: CategoryFormLabels = useMemo(
+    () => ({
+      breadcrumbParent: t("breadcrumbParent"),
+      breadcrumbCurrent:
+        mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      title: mode === "create" ? t("titleCreate") : t("titleEdit"),
+      sectionGeneral: t("sectionGeneral"),
+      sectionConfig: t("sectionConfig"),
+      name: t("name"),
+      nameRequired: t("nameRequired"),
+      namePlaceholder: t("namePlaceholder"),
+      description: t("description"),
+      descriptionOptional: t("descriptionOptional"),
+      descriptionPlaceholder: t("descriptionPlaceholder"),
+      descriptionMaxHint: t("descriptionMaxHint", { max: 2000 }),
+      slug: t("slug"),
+      slugUnique: t("slugUnique"),
+      slugPrefix: t("slugPrefix"),
+      slugPlaceholder: t("slugPlaceholder"),
+      slugHint: t("slugHint"),
+      sortOrder: t("sortOrder"),
+      sortOrderShort: t("sortOrderShort"),
+      sortOrderDecrease: t("sortOrderDecrease"),
+      sortOrderIncrease: t("sortOrderIncrease"),
+      status: t("status"),
+      statusYes: t("statusYes"),
+      statusNo: t("statusNo"),
+      statusActiveTitle: t("statusActiveTitle"),
+      statusActiveHint: t("statusActiveHint"),
+      tipTitle: t("tipTitle"),
+      tipBody: t("tipBody"),
+      previewLabel: t("previewLabel"),
+      previewFallback: t("previewFallback"),
+      cancel: t("cancel"),
+      save: t("save"),
+      saving: t("saving"),
+      formatNameCounter: (current, max) => t("nameCounter", { current, max }),
+      formatDescriptionCounter: (current, max) =>
+        t("descriptionCounter", { current, max }),
+    }),
+    [t, mode],
+  );
 
   async function handleSubmit(values: CategoryFormValues) {
     setSubmitting(true);
@@ -61,7 +105,7 @@ export function CategoryFormContainer({
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(categoryErrorMessage(result));
+      setError(categoryErrorMessage(result, tErrors));
       return;
     }
 
@@ -69,14 +113,17 @@ export function CategoryFormContainer({
     router.refresh();
   }
 
+  function handleCancel() {
+    router.push("/categories");
+  }
+
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <h1 className="text-3xl font-bold">
-        {mode === "create" ? "Nueva categoría" : "Editar categoría"}
-      </h1>
+    <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-32 lg:p-8 lg:pb-8">
       <CategoryForm
         initial={initial}
+        labels={labels}
         onSubmit={handleSubmit}
+        onCancel={handleCancel}
         submitting={submitting}
         error={error}
       />

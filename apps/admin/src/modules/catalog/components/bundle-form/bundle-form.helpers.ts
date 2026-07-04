@@ -59,3 +59,24 @@ export function removeBundleItem(
 ): BundleFormItemValues[] {
   return items.filter((item) => item.productId !== productId);
 }
+
+export function setBundleItemUnits(
+  items: BundleFormItemValues[],
+  productId: string,
+  unitsPerPerson: number,
+): BundleFormItemValues[] {
+  const next = Math.max(1, Math.floor(unitsPerPerson));
+  return items.map((item) =>
+    item.productId === productId ? { ...item, unitsPerPerson: next } : item,
+  );
+}
+
+export function isValidImageUrl(value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}

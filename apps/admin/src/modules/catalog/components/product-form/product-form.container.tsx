@@ -2,38 +2,42 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createProductAction } from "@/modules/catalog/actions/create-product";
 import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
 import { updateProductAction } from "@/modules/catalog/actions/update-product";
 import type { ProductFormDTO } from "@/modules/catalog/types/product.dto";
 import { ProductForm } from "./product-form";
-import type { ProductFormValues } from "./product-form.types";
+import type {
+  ProductFormLabels,
+  ProductFormValues,
+} from "./product-form.types";
 
 type ProductFormContainerProps = {
   mode: "create" | "edit";
   initial?: ProductFormDTO;
 };
 
-function productErrorMessage(result: {
-  error: string;
-  message?: string;
-}): string {
+function productErrorMessage(
+  result: { error: string; message?: string },
+  t: ReturnType<typeof useTranslations<"productForm.errors">>,
+): string {
   switch (result.error) {
     case "SKU_TAKEN":
-      return "El SKU ya está en uso";
+      return t("skuTaken");
     case "SLUG_TAKEN":
-      return "El slug ya está en uso";
+      return t("slugTaken");
     case "VALIDATION":
-      return "Revisa los campos del formulario";
+      return t("validation");
     case "UNAUTHORIZED":
-      return "Tu sesión expiró. Inicia sesión de nuevo.";
+      return t("unauthorized");
     case "FORBIDDEN":
-      return "No tienes permisos de administrador.";
+      return t("forbidden");
     default:
       return result.message
-        ? `No se pudo guardar el producto: ${result.message}`
-        : "No se pudo guardar el producto";
+        ? t("defaultWithMessage", { message: result.message })
+        : t("default");
   }
 }
 
@@ -41,9 +45,52 @@ export function ProductFormContainer({
   mode,
   initial,
 }: ProductFormContainerProps) {
+  const t = useTranslations("productForm");
+  const tErrors = useTranslations("productForm.errors");
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const labels: ProductFormLabels = useMemo(
+    () => ({
+      breadcrumbParent: t("breadcrumbParent"),
+      breadcrumbCurrent:
+        mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      title: mode === "create" ? t("titleCreate") : t("titleEdit"),
+      status: t("status"),
+      statusActive: t("statusActive"),
+      statusInactive: t("statusInactive"),
+      statusToggle: t("statusToggle"),
+      sku: t("sku"),
+      skuPlaceholder: t("skuPlaceholder"),
+      name: t("name"),
+      namePlaceholder: t("namePlaceholder"),
+      slug: t("slug"),
+      slugPrefix: t("slugPrefix"),
+      slugPlaceholder: t("slugPlaceholder"),
+      image: t("image"),
+      imagePreview: t("imagePreview"),
+      imageAlt: t("imageAlt"),
+      imageUrl: t("imageUrl"),
+      imageUrlPlaceholder: t("imageUrlPlaceholder"),
+      brand: t("brand"),
+      brandPlaceholder: t("brandPlaceholder"),
+      category: t("category"),
+      categoryPlaceholder: t("categoryPlaceholder"),
+      price: t("price"),
+      stock: t("stock"),
+      stockDecrease: t("stockDecrease"),
+      stockIncrease: t("stockIncrease"),
+      description: t("description"),
+      descriptionPlaceholder: t("descriptionPlaceholder"),
+      tipTitle: t("tipTitle"),
+      tipBody: t("tipBody"),
+      cancel: t("cancel"),
+      save: t("save"),
+      saving: t("saving"),
+    }),
+    [t, mode],
+  );
 
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
@@ -76,7 +123,7 @@ export function ProductFormContainer({
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(productErrorMessage(result));
+      setError(productErrorMessage(result, tErrors));
       return;
     }
 
@@ -84,30 +131,35 @@ export function ProductFormContainer({
     router.refresh();
   }
 
-  if (categoriesQuery.isLoading) {
-    return <p className="p-8 text-sm text-zinc-500">Cargando categorías…</p>;
-  }
-
-  if (categoriesQuery.isError || !categoriesQuery.data?.length) {
-    return (
-      <p className="p-8 text-sm text-red-600">
-        Crea al menos una categoría antes de agregar productos.
-      </p>
-    );
+  function handleCancel() {
+    router.push("/products");
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8">
-      <h1 className="text-3xl font-bold">
-        {mode === "create" ? "Nuevo producto" : "Editar producto"}
-      </h1>
-      <ProductForm
-        initial={initial}
-        categories={categoriesQuery.data}
-        onSubmit={handleSubmit}
-        submitting={submitting}
-        error={error}
-      />
+    <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-24 lg:p-8">
+      {categoriesQuery.isLoading ? (
+        <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
+          <p className="font-body text-body-md text-on-surface-variant">
+            {t("loadingCategories")}
+          </p>
+        </div>
+      ) : categoriesQuery.isError || !categoriesQuery.data?.length ? (
+        <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
+          <p className="font-body text-body-md text-on-surface-variant">
+            {t("noCategories")}
+          </p>
+        </div>
+      ) : (
+        <ProductForm
+          initial={initial}
+          categories={categoriesQuery.data}
+          labels={labels}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          submitting={submitting}
+          error={error}
+        />
+      )}
     </div>
   );
 }
