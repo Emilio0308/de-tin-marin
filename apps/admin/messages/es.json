@@ -7,6 +7,19 @@
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú"
   },
+  "login": {
+    "brand": "De Tin Marín",
+    "title": "Admin",
+    "subtitle": "Inicia sesión con tu cuenta staff",
+    "email": "Email",
+    "emailPlaceholder": "admin@detinmarin.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "••••••••",
+    "submit": "Iniciar sesión",
+    "loading": "Verificando…",
+    "forgotPrefix": "¿Olvidaste tu contraseña?",
+    "contactSupport": "Contacta a soporte"
+  },
   "common": {
     "loading": "Cargando…",
     "empty": "Sin registros.",
