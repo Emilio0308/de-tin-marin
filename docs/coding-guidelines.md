@@ -71,8 +71,9 @@ repositories/→ queries Supabase
 ## Estilos
 
 - Tailwind CSS + shadcn/ui
-- Tokens en CSS variables / `@theme`
+- Tokens en CSS variables / `@theme` — ver `apps/*/src/app/globals.css`
 - Componentes en `@de-tin-marin/ui`
+- **UI / i18n / responsive / paleta / sin mocks:** [`rules/88-ui-design-i18n.md`](rules/88-ui-design-i18n.md)
 
 ## Tests
 

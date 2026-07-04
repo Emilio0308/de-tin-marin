@@ -10,9 +10,9 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 | **S1A** | Catálogo                   | Products + Categories                              |
 | **S1B** | Bundles                    | Composición de sorpresas                           |
 | **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
-| **S2A** | Stock v1                   | `stock_quantity` en products + deduct al pagar     |
-| **S2B** | Orders                     | Órdenes, sorpresas personalizadas, snapshot        |
-| **S2C** | Payments manual + Shipping | Confirmación operador, sin pasarela                |
+| **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado            |
+| **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela       |
+| **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)   |
 | **S3A** | Ecommerce app              | Tienda pública                                     |
 | **S3B** | Admin app                  | Backoffice                                         |
 | **S4**  | Resto                      | Customers, Users, Notifications, Reports, Settings |
@@ -83,28 +83,19 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S2A — Stock v1
-
-**Goal:** Stock en `products.stock_quantity` y descuento atómico al pagar.
-
-- Función `deduct_stock_for_order`
-- Ajuste manual admin + audit_log
-- Regla 15
-- Schema `inventory` → **v2**
-
-**Depends on:** S1A, S1B
-
----
-
-## S2B — Orders
+## S2B — Orders ✅
 
 **Goal:** Órdenes con productos y sorpresas personalizadas; snapshot congelado.
 
-- Tablas: `commerce.orders`, `order_items`, `order_bundle_items`
-- Personalización de plantilla al crear pedido
-- Reglas 13–16
+- [x] Tabla `commerce.orders` con `shopping_cart` JSONB (Order shopping cart congelado)
+- [x] Admin: crear, listar, detalle, cancelar (`pending_payment`)
+- [x] Personalización de plantilla al crear pedido (desde template bundle)
+- [x] Reglas 13–14, 16
+- [x] Brief: `docs/stages/S2B/01-orders.md`
+- **Sin descuento de stock** → S2A
+- **Sin confirmar pago** → S2C
 
-**Depends on:** S1C, S2A
+**Depends on:** S1C
 
 ---
 
@@ -113,9 +104,25 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 **Goal:** Tabla `payments`, confirmación por operador, envíos. **Sin pasarela v1.**
 
 - Tablas: `commerce.payments`, `commerce.shipments`
+- Operador confirma pago → orden `paid`
 - Reglas 17–18
+- **Sin descuento de stock** → S2A
 
 **Depends on:** S2B
+
+---
+
+## S2A — Stock deduct al pagar
+
+**Goal:** Descuento atómico de `products.stock_quantity` cuando la orden pasa a `paid` (confirmación manual del operador en S2C).
+
+- Función `commerce.deduct_stock_for_order`
+- Enganchar en action de confirmar pago (S2C)
+- Validación pre-pago opcional (`checkOrderStock`)
+- Ajuste manual admin + `audit_log` (Regla 15)
+- Schema `inventory` → **v2**
+
+**Depends on:** S1A, S1B, S2C
 
 ---
 
@@ -127,7 +134,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - TanStack Query
 - Playwright: happy path compra
 
-**Depends on:** S2C
+**Depends on:** S2A
 
 ---
 
@@ -139,7 +146,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - Roles staff
 - Referencia UX: ADMIN_BACKOFFICE (pantallas)
 
-**Depends on:** S2C
+**Depends on:** S2A
 
 ---
 
@@ -161,7 +168,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 | --- | -------------------------------- |
 | A   | Platform: S0, auth, packages, CI |
 | B   | Catálogo + Pricing: S1A/B/C      |
-| C   | Commerce: S2A/B/C, Payments      |
+| C   | Commerce: S2B/C, luego S2A       |
 
 Consumir entre workstreams solo vía **DTOs declarados en briefs**.
 

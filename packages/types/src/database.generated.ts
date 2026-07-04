@@ -209,7 +209,69 @@ export type Database = {
   }
   commerce: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          contact: Json
+          created_at: string
+          currency_code: string
+          customer_id: string | null
+          discount_total: number
+          fulfillment: Json
+          id: string
+          metadata: Json
+          order_number: string
+          payment_methods: Json
+          payment_status: string
+          pricing_snapshot: Json
+          shipping_total: number
+          shopping_cart: Json
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          contact?: Json
+          created_at?: string
+          currency_code?: string
+          customer_id?: string | null
+          discount_total?: number
+          fulfillment?: Json
+          id?: string
+          metadata?: Json
+          order_number: string
+          payment_methods?: Json
+          payment_status?: string
+          pricing_snapshot?: Json
+          shipping_total?: number
+          shopping_cart: Json
+          status?: string
+          subtotal: number
+          total: number
+          updated_at?: string
+        }
+        Update: {
+          contact?: Json
+          created_at?: string
+          currency_code?: string
+          customer_id?: string | null
+          discount_total?: number
+          fulfillment?: Json
+          id?: string
+          metadata?: Json
+          order_number?: string
+          payment_methods?: Json
+          payment_status?: string
+          pricing_snapshot?: Json
+          shipping_total?: number
+          shopping_cart?: Json
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

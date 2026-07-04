@@ -16,7 +16,7 @@
 - **DECISIONS #5** — bundles **no tienen stock**; son plantillas por demanda. Solo `products` tiene `stock_quantity`.
 - **DECISIONS #6** — precio del bundle **dinámico, NO persistido**; se recalcula en cada consulta desde componentes vivos.
 - **DECISIONS #22** — bundle = plantilla con `quantity` (personas/porciones) + `service_fee`; `bundle_items` con `units_per_person` (v1 = 1).
-- **Invariante 9/11** — pricing se calcula en backend; el bundle es plantilla y su precio se **congela** recién al crear la orden (`order_bundle_items`, S2B) — no aquí.
+- **Invariante 9/11** — pricing se calcula en backend; el bundle es plantilla y su precio se **congela** recién al crear la orden (`orders.shopping_cart`, S2B) — no aquí.
 - Los componentes referencian **solo `catalog.products`** (sin bundles anidados).
 - Grants: cada tabla nueva en schema propio necesita `GRANT` para `anon`/`authenticated` (lección S1A, ver `00003_api_grants.sql`).
 
@@ -57,7 +57,7 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 - **NO columna `prices` en bundles** — el precio es dinámico, calculado siempre → _stale / DECISIONS #6_
 - **NO campañas ni `finalPrice` con descuento** — el total usa `products.prices.normal.netPrice`; el precio final campaña-aware es S1C → _pricing boundary violation_
 - **NO bundles anidados** — `bundle_items.product_id` solo apunta a `products` → _ciclos / complejidad_
-- **NO personalización ni snapshot de orden** — eso es `order_bundle_items` en S2B → _invariante 11_
+- **NO personalización ni snapshot de orden** — eso va en `shopping_cart` (S2B) → _invariante 11_
 - **NO `units_per_person` editable en UI v1** — se fija en `1`; el campo existe en tabla para v2 → _scope creep_
 - **NO ecommerce UI** → S3A
 - **NO Supabase Storage** — `image_url` es solo URL texto (como productos en S1A) → _scope creep_

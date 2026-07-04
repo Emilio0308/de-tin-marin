@@ -8,7 +8,8 @@
     "./prices": "./src/prices.ts",
     "./category": "./src/category.ts",
     "./product": "./src/product.ts",
-    "./bundle": "./src/bundle.ts"
+    "./bundle": "./src/bundle.ts",
+    "./order": "./src/order.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -1,1 +1,107 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #b60058;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #db2670;
+  --color-on-primary-container: #fffbff;
+  --color-primary-fixed: #ffd9e0;
+  --color-primary-fixed-dim: #ffb1c4;
+  --color-on-primary-fixed: #3f001a;
+  --color-on-primary-fixed-variant: #8f0043;
+  --color-inverse-primary: #ffb1c4;
+
+  --color-secondary: #006874;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #68ecff;
+  --color-on-secondary-container: #006974;
+  --color-secondary-fixed: #95f1ff;
+  --color-secondary-fixed-dim: #50d8ea;
+  --color-on-secondary-fixed: #001f24;
+  --color-on-secondary-fixed-variant: #004f57;
+
+  --color-tertiary: #83467e;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #9e5e98;
+  --color-on-tertiary-container: #fffbff;
+  --color-tertiary-fixed: #ffd7f6;
+  --color-tertiary-fixed-dim: #f8afee;
+  --color-on-tertiary-fixed: #380038;
+  --color-on-tertiary-fixed-variant: #6b3167;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #fbf9f1;
+  --color-on-background: #1b1c17;
+  --color-surface: #fbf9f1;
+  --color-on-surface: #1b1c17;
+  --color-surface-variant: #e4e3db;
+  --color-on-surface-variant: #5a4046;
+  --color-surface-bright: #fbf9f1;
+  --color-surface-dim: #dcdad2;
+  --color-surface-tint: #bb005a;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f5f4ec;
+  --color-surface-container: #f0eee6;
+  --color-surface-container-high: #eae8e0;
+  --color-surface-container-highest: #e4e3db;
+
+  --color-outline: #8d6f76;
+  --color-outline-variant: #e1bec5;
+  --color-inverse-surface: #30312c;
+  --color-inverse-on-surface: #f3f1e9;
+
+  --font-display:
+    var(--font-plus-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-body:
+    var(--font-be-vietnam), "Be Vietnam Pro", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-label:
+    var(--font-quicksand), "Quicksand", ui-sans-serif, system-ui, sans-serif;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 700;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+
+  --text-label-bold: 14px;
+  --text-label-bold--line-height: 20px;
+  --text-label-bold--letter-spacing: 0.05em;
+  --text-label-bold--font-weight: 700;
+
+  --text-price-display: 28px;
+  --text-price-display--line-height: 28px;
+  --text-price-display--font-weight: 800;
+
+  --spacing-stack-sm: 12px;
+  --spacing-stack-md: 24px;
+  --spacing-stack-lg: 48px;
+  --spacing-gutter: 24px;
+  --spacing-margin-mobile: 16px;
+}
+
+.soft-glow-pink {
+  box-shadow: 0 10px 30px rgba(182, 0, 88, 0.08);
+}
+
+.soft-glow-turquoise {
+  box-shadow: 0 10px 30px rgba(0, 104, 116, 0.08);
+}
+
+.press-down {
+  transition: transform 0.12s ease;
+}
+.press-down:active {
+  transform: translateY(2px) scale(0.98);
+}

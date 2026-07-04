@@ -16,7 +16,7 @@
 core       → staff, settings, audit
 catalog    → products, bundles, categories
 pricing    → campaigns (+ FK en products)
-commerce   → orders, order_items, order_bundle_items, payments, shipments
+commerce   → orders, payments, shipments
 crm        → customers
 
 inventory  → ⏸ v2 (ledger de movimientos; v1 usa stock en products)
@@ -140,44 +140,28 @@ v1 solo usa `normal`. Claves `suggested` y `fantasy` reservadas para futuro.
 
 ### Schema `commerce`
 
-| Tabla                         | Descripción                                        |
-| ----------------------------- | -------------------------------------------------- |
-| `commerce.orders`             | Orden de compra                                    |
-| `commerce.order_items`        | Línea: producto individual o sorpresa (bundle)     |
-| `commerce.order_bundle_items` | Composición **congelada** de una línea tipo bundle |
-| `commerce.payments`           | Registro de pago (manual en v1)                    |
-| `commerce.shipments`          | Envío                                              |
+| Tabla                | Descripción                               |
+| -------------------- | ----------------------------------------- |
+| `commerce.orders`    | Orden + **shopping_cart** JSONB congelado |
+| `commerce.payments`  | Registro de pago (manual en v1)           |
+| `commerce.shipments` | Envío                                     |
 
 **`commerce.orders`**:
 
-- `customer_id` → `crm.customers`
-- `status` — ver [`orders.md`](orders.md)
-- `subtotal`, `discount_total`, `shipping_total`, `total` — snapshots
-- `pricing_snapshot` jsonb — desglose al confirmar
-- `currency_code` default `'PEN'`
-
-**`commerce.order_items`**:
-
-| Columna                    | Notas                                        |
-| -------------------------- | -------------------------------------------- |
-| `item_type`                | `product` \| `bundle`                        |
-| `product_id`               | Si tipo product                              |
-| `bundle_id`                | Si tipo bundle (referencia plantilla origen) |
-| `quantity`                 | Cantidad de unidades (ej. 25 sorpresas)      |
-| `unit_price`, `line_total` | Congelados                                   |
-| `service_fee`              | Fee de servicio congelado (solo bundle)      |
-
-**`commerce.order_bundle_items`** (snapshot por línea bundle):
-
-| Columna             | Notas                                                 |
-| ------------------- | ----------------------------------------------------- |
-| `order_item_id`     | → `order_items`                                       |
-| `product_id`        | Componente elegido                                    |
-| `quantity_per_unit` | Unidades de ese producto **por cada sorpresa**        |
-| `total_quantity`    | `quantity_per_unit × order_item.quantity`             |
-| `unit_price`        | Precio final del producto congelado al crear la orden |
-
-Ejemplo: 25 sorpresas con productos 1,2,3,5,6,8 → una fila por producto con `quantity_per_unit = 1`, `total_quantity = 25`.
+| Columna / grupo                                         | Notas                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `order_number`                                          | Código legible (`TM-YYYYMMDD-NNNN`)                                      |
+| `customer_id`                                           | → `crm.customers` nullable (guest v1)                                    |
+| `contact`                                               | jsonb — snapshot `name`, `lastName`, `phone`, `email`                    |
+| `fulfillment`                                           | jsonb — `method`, `deliveryAddress`, `notes`                             |
+| `shopping_cart`                                         | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)) |
+| `payment_methods`                                       | jsonb — array flexible; detalle interno → S2C                            |
+| `status`                                                | Ver [`orders.md`](orders.md)                                             |
+| `payment_status`                                        | `pending` \| `confirmed` \| `refunded`                                   |
+| `subtotal`, `discount_total`, `shipping_total`, `total` | Snapshots numéricos                                                      |
+| `pricing_snapshot`                                      | jsonb — desglose al confirmar                                            |
+| `currency_code`                                         | default `'PEN'`                                                          |
+| `metadata`                                              | jsonb                                                                    |
 
 **`commerce.payments`** (v1 manual):
 
@@ -217,9 +201,6 @@ erDiagram
   bundles ||--o{ bundle_items : template
   products ||--o{ bundle_items : part_of
   customers ||--o{ orders : places
-  orders ||--o{ order_items : contains
-  order_items ||--o{ order_bundle_items : snapshot
-  products ||--o{ order_bundle_items : component
   orders ||--o{ payments : has
   orders ||--o| shipments : ships_via
 ```
@@ -239,10 +220,10 @@ erDiagram
 
 ## Queries planificadas
 
-| Query / RPC                                 | Uso                                                         |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend     |
-| `commerce.deduct_stock_for_order(order_id)` | Regla 14 — descuenta `products.stock_quantity` atómicamente |
+| Query / RPC                                 | Uso                                                                  |
+| ------------------------------------------- | -------------------------------------------------------------------- |
+| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend              |
+| `commerce.deduct_stock_for_order(order_id)` | S2A — descuenta `products.stock_quantity` al confirmar pago (`paid`) |
 
 ---
 

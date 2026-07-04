@@ -73,7 +73,7 @@ Cada línea indica el **bug class** que previene.
 8. **DTOs con allowlist explícita** — nunca filas crudas de Supabase al cliente. → _sobre-exposición de PII/secrets_
 9. **Pricing calcula en backend; Orders NO recalcula** — listado productos con `finalPrice`; snapshot al confirmar orden. → _precios inconsistentes_
 10. **Stock v1 en `products.stock_quantity`** — bundles sin stock; deduct atómico al `paid`. → _overselling_
-11. **Bundles son plantillas** — composición personalizable; snapshot en `order_bundle_items`. → _órdenes inconsistentes con plantilla_
+11. **Bundles son plantillas** — composición personalizable; snapshot en `orders.shopping_cart`. → _órdenes inconsistentes con plantilla_
 12. **Campaña 1:1 por producto** — precio final en query de catálogo; front no recalcula. → _discrepancia front/back_
 13. **Mutaciones solo en Server Actions**; `revalidatePath`/`revalidateTag` **después** del write. → _UI stale / CSRF_
 14. **`redirect()` / `notFound()` fuera de try/catch**. → _redirect de auth tragado_
@@ -106,6 +106,7 @@ Máquina de estados de órdenes: ver [`docs/orders.md`](docs/orders.md).
 | [`docs/rules/30-rls-and-postgres.md`](docs/rules/30-rls-and-postgres.md)                   | RLS, policies, SECURITY DEFINER                             |
 | [`docs/rules/40-validation-and-boundaries.md`](docs/rules/40-validation-and-boundaries.md) | Zod, parse-don't-validate, env                              |
 | [`docs/rules/95-guardrails-lint-ci.md`](docs/rules/95-guardrails-lint-ci.md)               | ESLint, CI, pre-commit                                      |
+| [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md)                       | Responsive, i18n, paleta, no mocks en UI                    |
 | [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md)                   | Container/presentational, orden de archivo, tests de render |
 
 ## Docs de dominio y arquitectura

@@ -11,9 +11,14 @@ const links = [
   { href: "/categories", labelKey: "categories" },
   { href: "/products", labelKey: "products" },
   { href: "/bundles", labelKey: "bundles" },
+  { href: "/orders", labelKey: "orders" },
 ] as const;
 
-export function AdminNav() {
+type AdminNavProps = {
+  onNavigate?: () => void;
+};
+
+export function AdminNav({ onNavigate }: AdminNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations("nav");
@@ -33,12 +38,13 @@ export function AdminNav() {
           <li key={link.href}>
             <Link
               href={link.href}
+              onClick={onNavigate}
               className={cn(
-                "block rounded-md px-2 py-1.5 transition-colors",
+                "font-label text-label-bold block rounded-full px-3 py-2 transition-colors",
                 pathname === link.href ||
                   (link.href !== "/" && pathname.startsWith(link.href))
-                  ? "bg-rose-50 font-medium text-rose-700"
-                  : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
+                  ? "bg-primary-fixed text-on-primary-fixed"
+                  : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
               )}
             >
               {t(link.labelKey)}
@@ -49,7 +55,7 @@ export function AdminNav() {
       <button
         type="button"
         onClick={() => void handleSignOut()}
-        className="text-left text-sm text-zinc-500 hover:text-zinc-800"
+        className="font-body text-body-md text-on-surface-variant hover:text-on-surface text-left"
       >
         {tCommon("signOut")}
       </button>

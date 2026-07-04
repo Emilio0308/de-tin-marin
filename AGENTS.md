@@ -13,5 +13,6 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 4. Reglas de negocio en [`docs/business-rules.md`](docs/business-rules.md).
 5. Tablas canónicas en [`docs/database.md`](docs/database.md) — copiar nombres, no recordar.
 6. **Campaña 1:1** — `finalPrice` en backend; front no recalcula.
-7. **Componentes:** container/presentational + `types` + `helpers` + test render — ver [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md).
-8. **Repo:** `de-tin-marin` · scope `@de-tin-marin/*` · DECISIONS paso 1 ✅ · siguiente: scaffold S0.
+7. **Componentes:** container/presentational + `types` + `helpers` + test render — [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md).
+8. **UI / i18n:** responsive, paleta, sin mocks — [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md).
+9. **Repo:** `de-tin-marin` · scope `@de-tin-marin/*`.

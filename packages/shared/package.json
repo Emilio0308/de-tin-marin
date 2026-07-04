@@ -8,7 +8,8 @@
     "./slugify": "./src/slugify.ts",
     "./prices": "./src/prices.ts",
     "./bundle-price": "./src/bundle-price.ts",
-    "./final-price": "./src/final-price.ts"
+    "./final-price": "./src/final-price.ts",
+    "./order-cart": "./src/order-cart.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -43,11 +43,11 @@ type ProductPriceDTO = {
 Los bundles **no tienen precio fijo en catálogo** para venta. El total se calcula al armar el pedido:
 
 ```text
-Por cada componente en order_bundle_items:
-  total_quantity × unit_price_final (precio producto con campaña ya aplicada)
+Por cada `component` en una línea bundle del `shopping_cart`:
+  totalQuantity × unitPrice (precio producto con campaña ya aplicada)
 
-+ service_fee × cantidad_de_sorpresas (order_item.quantity)
-= line_total
++ service_fee × quantity (línea bundle)
+= lineTotal
 ```
 
 **Regla:** 8.

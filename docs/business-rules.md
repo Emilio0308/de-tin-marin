@@ -50,7 +50,7 @@
 ### Regla 7 — Personalización en la orden
 
 - **Trigger:** Cliente crea/edita una sorpresa en el pedido.
-- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos y ajustar cantidades por sorpresa. Persistir snapshot en `order_bundle_items` (independiente de la plantilla).
+- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos y ajustar cantidades por sorpresa. Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`, independiente de la plantilla).
 - **Fallo:** Rechazar productos inactivos o cantidades <= 0.
 
 ### Regla 8 — Precio de sorpresa en orden
@@ -61,10 +61,10 @@
 ```text
 line_total =
   Σ (total_quantity × unit_price_final_producto)   // precio con campaña ya aplicado
-  + service_fee × order_item.quantity              // fee congelado del bundle
+  + service_fee × bundle.quantity              // fee congelado en shopping_cart
 ```
 
-- `service_fee` es editable por bundle en backoffice y se congela en `order_items.service_fee`.
+- `service_fee` es editable por bundle en backoffice y se congela en la línea bundle del `shopping_cart`.
 - **Fallo:** N/A.
 
 ---
@@ -108,7 +108,7 @@ line_total =
 ### Regla 13 — Congelar al confirmar orden
 
 - **Trigger:** Orden pasa a `pending_payment`.
-- **Pasos:** Persistir `order_items` (precios, `service_fee`) y `order_bundle_items` (composición). Guardar `pricing_snapshot` en `orders`.
+- **Pasos:** Persistir `shopping_cart` (líneas producto y bundle con precios congelados). Guardar `pricing_snapshot` y totales en `orders`.
 - **Fallo:** Rechazar transición sin snapshot.
 
 ### Regla 14 — Transiciones de estado válidas
@@ -121,8 +121,8 @@ line_total =
 
 - **Trigger:** Operador confirma pago → orden `paid`.
 - **Pasos (transacción atómica):**
-  1. Por cada `order_item` tipo **product**: `stock_quantity -= quantity`.
-  2. Por cada `order_bundle_item`: `stock_quantity -= total_quantity` del producto componente.
+  1. Por cada línea `type: product` en `shopping_cart.lines`: `stock_quantity -= quantity`.
+  2. Por cada `component` en líneas `type: bundle`: `stock_quantity -= totalQuantity`.
   3. Si cualquier `stock_quantity < 0` → **ROLLBACK** completo; orden no queda `paid`.
 - **Fallo:** Notificar operador; stock no mutado.
 - **Tests:** Integración obligatoria.
@@ -130,7 +130,7 @@ line_total =
 ### Regla 16 — Orders no recalcula precios
 
 - **Trigger:** Post-checkout.
-- **Pasos:** Usar valores congelados en `order_items` / `order_bundle_items`.
+- **Pasos:** Usar valores congelados en `orders.shopping_cart`.
 - **Fallo:** Prohibido invocar recálculo de precios.
 
 ---

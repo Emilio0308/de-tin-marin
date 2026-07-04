@@ -106,7 +106,7 @@ Reglas detalladas: [`rules/00-architecture.md`](rules/00-architecture.md).
 | `core`      | staff, settings, audit_log                                                     |
 | `catalog`   | products (`prices` JSONB, `stock_quantity`), bundles, bundle_items, categories |
 | `pricing`   | campaigns (+ `products.campaign_id` 1:1)                                       |
-| `commerce`  | orders, order_items, order_bundle_items, payments, shipments                   |
+| `commerce`  | orders (`shopping_cart` JSONB), payments, shipments                            |
 | `crm`       | customers                                                                      |
 | `inventory` | ⏸ v2 — ledger de movimientos                                                   |
 

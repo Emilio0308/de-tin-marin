@@ -2,6 +2,14 @@
 
 > **v1 simplificado:** el stock vive en **`catalog.products.stock_quantity`**. Sin schema `inventory` ni ledger de movimientos hasta v2.
 
+## Implementación por etapa
+
+| Etapa         | Qué incluye                                         |
+| ------------- | --------------------------------------------------- |
+| **S1A** ✅    | Columna `stock_quantity`; edición manual en admin   |
+| **S2B / S2C** | Sin deduct ni validación de stock                   |
+| **S2A**       | `deduct_stock_for_order` al confirmar pago (`paid`) |
+
 ## Fuente de verdad (v1)
 
 `catalog.products.stock_quantity` — Regla 4.
@@ -18,17 +26,17 @@ Cuando el operador confirma pago y la orden pasa a `paid`:
 
 ```text
 BEGIN TRANSACTION
-  FOR order_item WHERE item_type = 'product':
-    products.stock_quantity -= order_item.quantity
+  FOR line IN shopping_cart.lines WHERE type = 'product':
+    products.stock_quantity -= line.quantity
 
-  FOR order_bundle_item IN líneas bundle de la orden:
-    products.stock_quantity -= order_bundle_item.total_quantity
+  FOR component IN bundle.components (líneas type = 'bundle'):
+    products.stock_quantity -= component.totalQuantity
 
   IF ANY products.stock_quantity < 0 → ROLLBACK
 COMMIT
 ```
 
-Implementar como función `commerce.deduct_stock_for_order(p_order_id)` SECURITY DEFINER o transacción en service con `SELECT ... FOR UPDATE` en filas de productos afectados.
+Implementar en **S2A** como `commerce.deduct_stock_for_order(p_order_id)` SECURITY DEFINER, enganchada al confirmar pago (S2C). Alternativa: transacción en service con `SELECT ... FOR UPDATE` en filas afectadas.
 
 ## Bundles / sorpresas
 

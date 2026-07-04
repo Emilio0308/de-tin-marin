@@ -3,6 +3,10 @@
     "title": "De Tin Marín — Admin",
     "description": "Backoffice administrativo"
   },
+  "shell": {
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
+  },
   "common": {
     "loading": "Cargando…",
     "empty": "Sin registros.",
@@ -10,12 +14,71 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "cancel": "Cancelar",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "viewAll": "Ver todo"
   },
   "nav": {
     "dashboard": "Dashboard",
     "categories": "Categorías",
     "products": "Productos",
-    "bundles": "Paquetes"
+    "bundles": "Paquetes",
+    "orders": "Órdenes",
+    "brand": "De Tin Marín",
+    "subtitle": "Admin"
+  },
+  "dashboard": {
+    "welcome": "¡Bienvenido de nuevo, Jefe Confectioner! 🍬",
+    "subtitle": "Esto es lo dulce de hoy en tu tienda.",
+    "period": {
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual"
+    },
+    "stats": {
+      "totalProducts": "Total productos",
+      "productsTrend": "{count} en catálogo",
+      "activeCampaigns": "Campañas activas",
+      "campaignsUnavailable": "Próximamente",
+      "pendingOrders": "Órdenes pendientes",
+      "pendingOrdersHint": "Requieren atención"
+    },
+    "orderStatus": {
+      "pending_payment": "Pendiente de pago",
+      "paid": "Pagada",
+      "preparing": "Preparando",
+      "ready": "Lista",
+      "delivered": "Entregada",
+      "completed": "Completada",
+      "cancelled": "Cancelada"
+    },
+    "recentOrders": {
+      "title": "Actividad reciente de órdenes",
+      "viewAll": "Ver todo",
+      "empty": "No hay órdenes recientes.",
+      "lineSummary": "{count, plural, one {# artículo • S/ {amount}} other {# artículos • S/ {amount}}}",
+      "columns": {
+        "orderId": "Nº orden",
+        "customer": "Cliente",
+        "product": "Resumen",
+        "amount": "Monto",
+        "status": "Estado"
+      }
+    },
+    "alerts": {
+      "title": "Alertas de inventario",
+      "empty": "No hay alertas de stock bajo.",
+      "lowStock": "Quedan pocas unidades de {name} (menos de {quantity})."
+    },
+    "activity": {
+      "title": "Actividad reciente",
+      "loadMore": "Cargar más actividad"
+    },
+    "promo": {
+      "title": "Impulso cumpleañero mensual",
+      "description": "Prepara los combos \"Sorpresa Piñata\" para el pico de este fin de semana.",
+      "priority": "Prioridad alta",
+      "tag": "Campaña"
+    },
+    "quickAdd": "Añadir producto rápido"
   }
 }

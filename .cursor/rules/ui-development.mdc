@@ -1,0 +1,17 @@
+---
+description: UI responsive, i18n, paleta y datos reales (no mocks)
+globs: apps/**/*.tsx
+alwaysApply: false
+---
+
+# UI — De Tin Marín
+
+Leer `docs/rules/88-ui-design-i18n.md` al maquetar o tocar front.
+
+- **Responsive** mobile-first (Tailwind `sm`/`md`/`lg`).
+- **Textos** vía `next-intl` (`messages/es.json`); no hardcodear copy en JSX.
+- **Validar** textos, truncado, estados vacío/error/carga e iconos (`aria-label` si aplica).
+- **Colores** solo tokens de `apps/*/src/app/globals.css` — no hex sueltos ni grises ad hoc para marca.
+- **Datos** usar Server Actions/services existentes en containers; no arrays mock si el CRUD ya está implementado (mocks solo en tests).
+
+CRUDs admin: `apps/admin/src/modules/*/actions/` y `services/` — ver README del módulo.
