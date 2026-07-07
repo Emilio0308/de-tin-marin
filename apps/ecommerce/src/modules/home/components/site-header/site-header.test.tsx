@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { SiteHeader } from "./site-header";
 import type { HomeNavLink } from "@/modules/home/types/home.types";
@@ -6,6 +6,7 @@ import type { HomeNavLink } from "@/modules/home/types/home.types";
 const navLinks: HomeNavLink[] = [
   { label: "Dulces", href: "/productos" },
   { label: "Sorpresas", href: "/sorpresas" },
+  { label: "Mis pedidos", href: "/mis-pedidos" },
 ];
 
 describe("SiteHeader", () => {
@@ -25,8 +26,14 @@ describe("SiteHeader", () => {
     expect(screen.getByRole("link", { name: "Dulces" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sorpresas" })).toBeInTheDocument();
     expect(
+      within(screen.getByRole("navigation")).getByRole("link", {
+        name: "Mis pedidos",
+      }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("link", { name: /ver carrito/i }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Mis pedidos")).toBeInTheDocument();
   });
 
   it("no resalta ningún enlace cuando activeIndex es -1", () => {

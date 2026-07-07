@@ -75,13 +75,13 @@ export function SiteHeader({
               </span>
             ) : null}
           </Link>
-          <button
-            type="button"
-            aria-label="Mi cuenta"
-            className="text-primary hover:text-secondary p-2 transition-all duration-300 hover:scale-105 active:scale-95"
+          <Link
+            href="/mis-pedidos"
+            aria-label="Mis pedidos"
+            className="text-primary hover:text-secondary p-2 transition-all duration-300 hover:scale-105 active:scale-95 md:hidden"
           >
             <User className="h-6 w-6" />
-          </button>
+          </Link>
         </div>
       </div>
     </header>

@@ -58,9 +58,13 @@ test.describe("checkout guest", () => {
 
     await submitButton.click();
 
-    await expect(page).toHaveURL(/\/pedido\/confirmacion\?orderNumber=/, {
-      timeout: 30000,
-    });
+    await expect(page).toHaveURL(
+      /\/pedido\/confirmacion\?orderNumber=.*&email=/,
+      { timeout: 30000 },
+    );
     await expect(page.getByText(/TM-/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /instrucciones de pago/i }),
+    ).toBeVisible({ timeout: 15000 });
   });
 });

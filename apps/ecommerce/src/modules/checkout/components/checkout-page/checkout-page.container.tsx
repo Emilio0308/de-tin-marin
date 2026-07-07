@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -8,6 +8,7 @@ import { storeFeatures } from "@/config/store";
 import { cartLinesToOrderInput } from "@/modules/cart/helpers/cart-to-order-input";
 import { toShoppingCartLines } from "@/modules/cart/helpers/cart-lines";
 import { useCart } from "@/modules/cart/hooks/use-cart";
+import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
 import { createGuestOrderAction } from "@/modules/checkout/actions/create-guest-order";
 import { listCheckoutDeliveryZonesAction } from "@/modules/checkout/actions/list-checkout-delivery-zones";
@@ -36,6 +37,8 @@ export function CheckoutPageContainer() {
   const [form, setForm] = useState(initialForm);
   const [mapPin, setMapPin] = useState<MapPin>(defaultMapPin);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const orderPlacedRef = useRef(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const zonesQuery = useQuery({
@@ -73,11 +76,11 @@ export function CheckoutPageContainer() {
   });
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || orderPlacedRef.current || orderPlaced) return;
     if (lines.length === 0) {
       router.replace("/carrito");
     }
-  }, [isReady, lines.length, router]);
+  }, [isReady, lines.length, orderPlaced, router]);
 
   const shippingTotal = deliveryQuery.data?.fee ?? 0;
   const covered = deliveryQuery.data?.covered ?? false;
@@ -97,6 +100,18 @@ export function CheckoutPageContainer() {
 
   if (!isReady) {
     return null;
+  }
+
+  if (orderPlaced) {
+    return (
+      <StorefrontLayout>
+        <section className="container-max px-gutter py-section-lg">
+          <p className="font-body text-body-lg text-on-surface-variant text-center">
+            {t("redirecting")}
+          </p>
+        </section>
+      </StorefrontLayout>
+    );
   }
 
   const handleSubmit = async () => {
@@ -145,9 +160,11 @@ export function CheckoutPageContainer() {
       return;
     }
 
+    orderPlacedRef.current = true;
+    setOrderPlaced(true);
     clear();
-    router.push(
-      `/pedido/confirmacion?orderNumber=${encodeURIComponent(result.data.orderNumber)}`,
+    router.replace(
+      `/pedido/confirmacion?orderNumber=${encodeURIComponent(result.data.orderNumber)}&email=${encodeURIComponent(form.email)}`,
     );
   };
 

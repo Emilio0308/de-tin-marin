@@ -29,6 +29,8 @@ export const queryKeys = {
   orders: {
     all: ["orders"] as const,
     detail: (id: string) => [...queryKeys.orders.all, "detail", id] as const,
+    guestLookup: (orderNumber: string, email: string) =>
+      [...queryKeys.orders.all, "guest-lookup", orderNumber, email] as const,
   },
   checkout: {
     all: ["checkout"] as const,

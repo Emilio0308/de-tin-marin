@@ -7,13 +7,13 @@
 | **App(s)**     | `apps/ecommerce`, `supabase`                                       |
 | **Schemas**    | `commerce`                                                         |
 | **Depende de** | [S3A-3/03-cart-checkout.md](03-cart-checkout.md)                   |
-| **Estado**     | draft                                                              |
+| **Estado**     | done                                                               |
 
 ## Contexto (leer esto, no todo docs/)
 
-- S3A-3 crea orden guest y redirige con `orderNumber`.
+- S3A-3 crea orden guest y redirige a confirmación con `orderNumber` + `email`.
 - Sin auth S4: consulta pedido por **email + número de orden** (no exponer todas las órdenes).
-- Pago v1 manual: pantalla con instrucciones Yape/transferencia (texto i18n estático configurable luego en S4 Settings).
+- Pago v1 manual: pantalla con instrucciones Yape/transferencia solo si `status === pending_payment`.
 - RLS guest no permite `SELECT` libre → RPC **`commerce.get_guest_order(p_order_number, p_email)`** SECURITY DEFINER.
 
 ## Objetivo
@@ -22,14 +22,15 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
 
 ## Scope IN
 
-- `/pedido/confirmacion?orderNumber=TM-...` — resumen: total, shipping, líneas resumidas, estado `pending_payment`, instrucciones de pago
-- `/mis-pedidos` — formulario email + número de orden → detalle readonly
-- Migración (misma `00011` o `00012`):
+- `/pedido/confirmacion?orderNumber=TM-...&email=...` — resumen: total, shipping, líneas resumidas, estado, instrucciones de pago si `pending_payment`
+- `/mis-pedidos` — formulario email + número de orden → detalle readonly; auto-lookup si vienen params en URL
+- Migración `00012`:
   - `commerce.get_guest_order(p_order_number text, p_email text) returns jsonb`
   - Valida email case-insensitive contra `orders.contact->>'email'`
   - Retorna DTO allowlist (sin `payment_methods` sensibles innecesarios)
   - `GRANT EXECUTE` a `anon, authenticated`
-- Limpiar carrito localStorage tras orden exitosa (desde confirmación o post-create redirect)
+- Limpiar carrito localStorage tras `createGuestOrder` exitoso (antes de redirigir a confirmación)
+- Nav textual “Mis pedidos” en barra principal + icono usuario
 - i18n — confirmación, instrucciones pago, estados orden, errores “no encontrado”
 - Vitest — parser DTO guest order
 - Playwright — `guest-order-lookup-smoke.spec.ts`: crear orden (fixture o UI) + consultar en mis-pedidos
@@ -78,23 +79,29 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
 
 ## Orden de implementación
 
-1. RPC `get_guest_order` + pgTAP (email mismatch → not found)
+1. RPC `get_guest_order` + pgTAP (email mismatch + case-insensitive)
 2. Action + página confirmación
-3. Página mis-pedidos
-4. Limpiar carrito + nav link
+3. Página mis-pedidos (auto-lookup con query params)
+4. Limpiar carrito post-create + nav link
 5. Playwright end-to-end S3A completo
 6. Actualizar `roadmap.md` S3A ✅
 7. `pnpm check` + `pnpm build`
 
 ## Criterios de aceptación
 
-- [ ] Confirmación muestra número de orden y total correctos
-- [ ] Instrucciones de pago visibles en español
-- [ ] Mis pedidos: combinación correcta email+orderNumber devuelve detalle
-- [ ] Email incorrecto → error genérico (no filtrar existencia)
-- [ ] Carrito vacío tras compra exitosa
-- [ ] Playwright — lookup guest verde
-- [ ] `pnpm check` + `pnpm build` verdes
+- [x] Confirmación muestra número de orden y total correctos
+- [x] Instrucciones de pago visibles en español si `pending_payment`
+- [x] Mis pedidos: combinación correcta email+orderNumber devuelve detalle
+- [x] Email incorrecto → error genérico (no filtrar existencia)
+- [x] Carrito vacío tras compra exitosa (en checkout, no acoplado al RPC)
+- [x] Playwright — lookup guest verde
+- [x] `pnpm check` + `pnpm build` verdes
+
+## Notas de implementación
+
+- **URL de confirmación:** requiere `orderNumber` **y** `email` (necesario para RPC sin sesión). Compartir solo el número muestra `missingParams`.
+- **Email en query string:** queda en historial del navegador y logs de referrer. Aceptable en v1 guest; en S4 con auth se puede evitar.
+- **E2E:** varios `test.skip()` si no hay productos/distritos en el entorno (mismo patrón S3A-1/S3A-2).
 
 ## Preguntas abiertas
 

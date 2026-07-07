@@ -208,7 +208,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 **Depends on:** S3A-2
 
-### S3A-4 — Confirmación + mis pedidos guest
+### S3A-4 — Confirmación + mis pedidos guest ✅
 
 - Pantalla confirmación + instrucciones pago manual
 - Lookup email + orderNumber vía RPC
