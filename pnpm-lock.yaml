@@ -135,6 +135,9 @@ importers:
       '@de-tin-marin/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@de-tin-marin/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@de-tin-marin/ui':
         specifier: workspace:*
         version: link:../../packages/ui

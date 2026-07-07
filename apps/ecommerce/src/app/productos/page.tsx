@@ -1,14 +1,10 @@
-import { getTranslations } from "next-intl/server";
-import { ComingSoonPage } from "@/modules/home/components/coming-soon-page/coming-soon-page";
+import { Suspense } from "react";
+import { ProductsPageContainer } from "@/modules/catalog/components/products-page/products-page.container";
 
-export default async function ProductosPage() {
-  const t = await getTranslations("catalog");
-
+export default function ProductosPage() {
   return (
-    <ComingSoonPage
-      title={t("products.title")}
-      description={t("products.comingSoon")}
-      backLabel={t("backHome")}
-    />
+    <Suspense fallback={null}>
+      <ProductsPageContainer />
+    </Suspense>
   );
 }

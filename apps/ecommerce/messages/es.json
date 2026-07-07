@@ -18,13 +18,53 @@
   },
   "catalog": {
     "backHome": "Volver al inicio",
+    "filters": {
+      "categories": "Categorías",
+      "allCategories": "Todas",
+      "search": "Buscar",
+      "searchProducts": "Buscar por nombre o SKU…",
+      "searchBundles": "Buscar sorpresas…",
+      "sort": "Ordenar por"
+    },
+    "sort": {
+      "nameAsc": "Nombre A → Z",
+      "nameDesc": "Nombre Z → A",
+      "priceAsc": "Precio ↑",
+      "priceDesc": "Precio ↓"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {page} de {total}"
+    },
+    "actions": {
+      "addToCart": "Añadir",
+      "personalize": "Personalizar"
+    },
     "products": {
       "title": "Nuestros dulces",
-      "comingSoon": "Estamos preparando el catálogo completo. Muy pronto podrás explorar todos nuestros dulces."
+      "subtitle": "Explora todos nuestros dulces con stock y precios actualizados.",
+      "empty": "No encontramos dulces con esos filtros.",
+      "stock": "Stock",
+      "sku": "SKU",
+      "category": "Categoría",
+      "description": "Descripción",
+      "backToList": "← Volver al catálogo"
     },
     "bundles": {
       "title": "Combos sorpresa",
-      "comingSoon": "Estamos preparando nuestros combos sorpresa. Muy pronto podrás armar el regalo perfecto."
+      "subtitle": "La mezcla perfecta de dulces y sorpresas para celebrar a lo grande.",
+      "empty": "No encontramos combos con esos filtros.",
+      "container": "Envase",
+      "quantity": "Cantidad",
+      "items": "Incluye",
+      "description": "Descripción",
+      "backToList": "← Volver a sorpresas",
+      "backToDetail": "Volver al combo"
+    },
+    "wizard": {
+      "comingSoonTitle": "Personalización próximamente",
+      "comingSoon": "Muy pronto podrás armar tu sorpresa paso a paso. Por ahora, explora nuestros combos plantilla."
     }
   },
   "home": {

@@ -12,7 +12,7 @@ test("home page loads", async ({ page }) => {
   await expect(page.getByRole("link", { name: /ver dulces/i })).toBeVisible();
 });
 
-test("catalog placeholder routes respond", async ({ page }) => {
+test("catalog routes load", async ({ page }) => {
   await page.goto("/productos");
   await expect(
     page.getByRole("heading", { name: /nuestros dulces/i }),

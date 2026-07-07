@@ -15,6 +15,7 @@
     "@de-tin-marin/shared": "workspace:*",
     "@de-tin-marin/ui": "workspace:*",
     "@de-tin-marin/validations": "workspace:*",
+    "@de-tin-marin/types": "workspace:*",
     "@t3-oss/env-nextjs": "^0.13.8",
     "lucide-react": "^1.23.0",
     "next": "^15.3.3",

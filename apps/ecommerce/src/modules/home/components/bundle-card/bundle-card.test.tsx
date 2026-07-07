@@ -17,7 +17,7 @@ const bundle: HomeBundle = {
 
 describe("BundleCard", () => {
   it("renderiza nombre, precio y features", () => {
-    render(<BundleCard bundle={bundle} />);
+    render(<BundleCard bundle={bundle} personalizeLabel="Lo quiero" />);
 
     expect(screen.getByText("Combo Fiesta")).toBeInTheDocument();
     expect(screen.getByText("$45.00")).toBeInTheDocument();

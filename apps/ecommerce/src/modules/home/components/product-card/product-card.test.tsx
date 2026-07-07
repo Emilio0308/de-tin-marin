@@ -13,7 +13,7 @@ const baseProduct: HomeProduct = {
 
 describe("ProductCard", () => {
   it("renderiza nombre, precio formateado e imagen", () => {
-    render(<ProductCard product={baseProduct} />);
+    render(<ProductCard product={baseProduct} addToCartLabel="Añadir" />);
 
     expect(screen.getByText("Paleta Arcoiris")).toBeInTheDocument();
     expect(screen.getByText("$5.50")).toBeInTheDocument();
@@ -24,7 +24,12 @@ describe("ProductCard", () => {
     const { rerender } = render(<ProductCard product={baseProduct} />);
     expect(screen.queryByText("Nuevo")).not.toBeInTheDocument();
 
-    rerender(<ProductCard product={{ ...baseProduct, badge: "Nuevo" }} />);
+    rerender(
+      <ProductCard
+        product={{ ...baseProduct, badge: "Nuevo" }}
+        addToCartLabel="Añadir"
+      />,
+    );
     expect(screen.getByText("Nuevo")).toBeInTheDocument();
   });
 });
