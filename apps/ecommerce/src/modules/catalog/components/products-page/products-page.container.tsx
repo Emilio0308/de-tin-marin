@@ -11,6 +11,7 @@ import {
   catalogSortOptions,
   readProductListQuery,
 } from "@/modules/catalog/helpers/catalog-url";
+import { useCart } from "@/modules/cart/hooks/use-cart";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { queryKeys } from "@/shared/query/query-keys";
 import type { PublicCatalogSort } from "@de-tin-marin/validations/public-catalog";
@@ -23,6 +24,7 @@ export function ProductsPageContainer() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const { addProduct } = useCart();
   const [searchDraft, setSearchDraft] = useState(
     () => searchParams.get("search") ?? "",
   );
@@ -120,6 +122,7 @@ export function ProductsPageContainer() {
           pushParams({ sort, page: "1" })
         }
         onPageChange={(page) => pushParams({ page: String(page) })}
+        onAddProduct={addProduct}
       />
     </StorefrontLayout>
   );

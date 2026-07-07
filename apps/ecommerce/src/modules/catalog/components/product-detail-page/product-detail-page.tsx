@@ -14,9 +14,14 @@ export type ProductDetailPageProps = {
     addToCart: string;
     description: string;
   };
+  onAddToCart?: () => void;
 };
 
-export function ProductDetailPage({ product, labels }: ProductDetailPageProps) {
+export function ProductDetailPage({
+  product,
+  labels,
+  onAddToCart,
+}: ProductDetailPageProps) {
   return (
     <StorefrontLayout>
       <section className="container-max px-gutter py-section-lg">
@@ -78,6 +83,7 @@ export function ProductDetailPage({ product, labels }: ProductDetailPageProps) {
             ) : null}
             <button
               type="button"
+              onClick={onAddToCart}
               className="press-down bg-primary font-label text-label-bold text-on-primary rounded-full px-8 py-3"
             >
               {labels.addToCart}

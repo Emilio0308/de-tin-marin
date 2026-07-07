@@ -67,7 +67,6 @@
       "back": "← Volver al combo",
       "personCount": "Para {count} personas",
       "addToCart": "Agregar al carrito",
-      "saved": "Guardado. El carrito estará disponible muy pronto.",
       "validation": {
         "min": "Agrega al menos {min} dulces para continuar.",
         "max": "Puedes incluir como máximo {max} dulces.",
@@ -91,7 +90,8 @@
       "price": {
         "total": "Total de tu sorpresa",
         "loading": "Calculando precio…",
-        "invalid": "Ajusta tu selección para ver el total."
+        "invalid": "Ajusta tu selección para ver el total.",
+        "previewError": "No pudimos calcular el precio. Intenta de nuevo."
       },
       "stock": {
         "title": "Stock limitado",
@@ -99,6 +99,57 @@
         "containerShortage": "Envase"
       }
     }
+  },
+  "cart": {
+    "title": "Tu carrito",
+    "empty": "Tu carrito está vacío.",
+    "checkout": "Ir a checkout",
+    "remove": "Quitar",
+    "subtotal": "Subtotal",
+    "quantity": "Cant.",
+    "bundlePersons": "Para {count} personas",
+    "components": "dulces",
+    "stockTitle": "Stock limitado",
+    "stockProduct": "Dulce",
+    "stockContainer": "Envase"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "backToCart": "← Volver al carrito",
+    "contactTitle": "Datos de contacto",
+    "addressTitle": "Dirección de entrega",
+    "name": "Nombre",
+    "lastName": "Apellido",
+    "phone": "Teléfono",
+    "email": "Correo electrónico",
+    "line1": "Dirección",
+    "district": "Distrito",
+    "city": "Ciudad",
+    "province": "Provincia",
+    "reference": "Referencia",
+    "mapTitle": "Ubicación en el mapa",
+    "mapHint": "Arrastra el pin o haz clic para indicar tu ubicación en Piura.",
+    "subtotal": "Subtotal",
+    "shipping": "Envío",
+    "total": "Total",
+    "submit": "Confirmar pedido",
+    "submitting": "Creando pedido…",
+    "outOfCoverage": "Sin cobertura en esta zona.",
+    "stockTitle": "Stock limitado",
+    "stockProduct": "Dulce",
+    "stockContainer": "Envase",
+    "emptyCart": "Tu carrito está vacío.",
+    "errors": {
+      "outOfCoverage": "No entregamos en esa ubicación.",
+      "insufficientStock": "No hay stock suficiente para completar el pedido.",
+      "validation": "Revisa los datos del formulario."
+    }
+  },
+  "orderConfirmation": {
+    "title": "¡Pedido registrado!",
+    "orderNumber": "Número de pedido: {orderNumber}",
+    "pendingPayment": "Tu pedido está pendiente de pago. Te contactaremos pronto con las instrucciones.",
+    "missingOrderNumber": "No encontramos el número de pedido."
   },
   "home": {
     "hero": {

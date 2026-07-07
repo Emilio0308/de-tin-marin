@@ -10,7 +10,14 @@ const navLinks: HomeNavLink[] = [
 
 describe("SiteHeader", () => {
   it("renderiza el logo y los enlaces de navegación", () => {
-    render(<SiteHeader navLinks={navLinks} activeIndex={0} scrolled={false} />);
+    render(
+      <SiteHeader
+        navLinks={navLinks}
+        activeIndex={0}
+        scrolled={false}
+        cartCount={0}
+      />,
+    );
 
     expect(
       screen.getByRole("link", { name: "De Tin Marín" }),
@@ -18,13 +25,18 @@ describe("SiteHeader", () => {
     expect(screen.getByRole("link", { name: "Dulces" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Sorpresas" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /ver carrito/i }),
+      screen.getByRole("link", { name: /ver carrito/i }),
     ).toBeInTheDocument();
   });
 
   it("no resalta ningún enlace cuando activeIndex es -1", () => {
     render(
-      <SiteHeader navLinks={navLinks} activeIndex={-1} scrolled={false} />,
+      <SiteHeader
+        navLinks={navLinks}
+        activeIndex={-1}
+        scrolled={false}
+        cartCount={2}
+      />,
     );
 
     const sweetsLink = screen.getByRole("link", { name: "Dulces" });

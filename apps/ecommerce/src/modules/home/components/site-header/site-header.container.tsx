@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { HOME_NAV_ROUTES } from "@/modules/home/data/home.data";
 import type { HomeNavLink } from "@/modules/home/types/home.types";
+import { useCart } from "@/modules/cart/hooks/use-cart";
 import { SiteHeader } from "./site-header";
 
 function resolveActiveIndex(pathname: string): number {
@@ -17,6 +18,7 @@ export function SiteHeaderContainer() {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const { itemCount } = useCart();
 
   const navLinks = useMemo<HomeNavLink[]>(
     () =>
@@ -41,6 +43,7 @@ export function SiteHeaderContainer() {
       navLinks={navLinks}
       activeIndex={activeIndex}
       scrolled={scrolled}
+      cartCount={itemCount}
     />
   );
 }

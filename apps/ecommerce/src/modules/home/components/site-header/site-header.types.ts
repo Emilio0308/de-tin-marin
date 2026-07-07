@@ -6,4 +6,5 @@ export interface SiteHeaderProps {
   activeIndex: number;
   /** true cuando la página se ha desplazado (header compacto). */
   scrolled: boolean;
+  cartCount: number;
 }

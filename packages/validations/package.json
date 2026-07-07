@@ -15,7 +15,8 @@
     "./shipment": "./src/shipment.ts",
     "./surprise-container": "./src/surprise-container.ts",
     "./public-catalog": "./src/public-catalog.ts",
-    "./customize-bundle": "./src/customize-bundle.ts"
+    "./customize-bundle": "./src/customize-bundle.ts",
+    "./checkout": "./src/checkout.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

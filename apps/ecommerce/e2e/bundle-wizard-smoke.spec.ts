@@ -30,11 +30,14 @@ test.describe("wizard de personalización", () => {
 
     const removeButtons = page.getByRole("button", { name: /^quitar$/i });
     const removeCount = await removeButtons.count();
-    if (removeCount === 0) {
-      test.skip();
-    }
 
-    await removeButtons.first().click();
+    for (let index = 0; index < removeCount; index += 1) {
+      const button = removeButtons.nth(index);
+      if (await button.isEnabled()) {
+        await button.click();
+        break;
+      }
+    }
 
     const searchInput = page.getByPlaceholder(/buscar por nombre o sku/i);
     await searchInput.fill("a");
@@ -46,10 +49,62 @@ test.describe("wizard de personalización", () => {
       test.skip();
     }
 
-    await addButtons.first().click();
+    const enabledAddButton = addButtons
+      .filter({ hasNotText: /agregado/i })
+      .first();
+    await expect(enabledAddButton).toBeEnabled({ timeout: 15000 });
+    await enabledAddButton.click();
 
     await expect
       .poll(async () => initialTotal.textContent(), { timeout: 15000 })
       .not.toBe(initialTotalText);
+  });
+
+  test("agregar al carrito redirige a /carrito", async ({ page }) => {
+    await page.goto("/sorpresas");
+    const personalizeLinks = page.getByRole("link", { name: /personalizar/i });
+    if ((await personalizeLinks.count()) === 0) {
+      test.skip();
+    }
+
+    await personalizeLinks.first().click();
+    await expect(page).toHaveURL(/\/sorpresas\/[^/]+\/personalizar/);
+
+    const addToCartButton = page.getByRole("button", {
+      name: /agregar al carrito/i,
+    });
+    await expect(addToCartButton).toBeEnabled({ timeout: 15000 });
+    await addToCartButton.click();
+
+    await expect(page).toHaveURL(/\/carrito/, { timeout: 15000 });
+    await expect(
+      page.getByRole("heading", { name: /tu carrito/i }),
+    ).toBeVisible();
+  });
+
+  test("doble click en agregar al carrito no duplica la línea", async ({
+    page,
+  }) => {
+    await page.goto("/sorpresas");
+    const personalizeLinks = page.getByRole("link", { name: /personalizar/i });
+    if ((await personalizeLinks.count()) === 0) {
+      test.skip();
+    }
+
+    await personalizeLinks.first().click();
+    await expect(page).toHaveURL(/\/sorpresas\/[^/]+\/personalizar/);
+
+    const addToCartButton = page.getByRole("button", {
+      name: /agregar al carrito/i,
+    });
+    await expect(addToCartButton).toBeEnabled({ timeout: 15000 });
+    await addToCartButton.dblclick();
+
+    await expect(page).toHaveURL(/\/carrito/, { timeout: 15000 });
+
+    const cartLines = page.locator(
+      "ul.space-y-4 > li.rounded-2xl.border.border-outline-variant",
+    );
+    await expect(cartLines).toHaveCount(1, { timeout: 5000 });
   });
 });

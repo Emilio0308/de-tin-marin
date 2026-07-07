@@ -45,6 +45,7 @@ export type ProductsPageProps = {
   onSearchSubmit: () => void;
   onSortChange: (sort: PublicCatalogSort) => void;
   onPageChange: (page: number) => void;
+  onAddProduct?: (product: PublicProductListItem) => void;
 };
 
 export function ProductsPage({
@@ -70,6 +71,7 @@ export function ProductsPage({
   onSearchSubmit,
   onSortChange,
   onPageChange,
+  onAddProduct,
 }: ProductsPageProps) {
   return (
     <section className="bg-surface py-stack-lg">
@@ -141,6 +143,9 @@ export function ProductsPage({
                         product={mapProductToCard(product)}
                         detailHref={`/productos/${product.slug}`}
                         addToCartLabel={labels.addToCart}
+                        onAddToCart={
+                          onAddProduct ? () => onAddProduct(product) : undefined
+                        }
                       />
                       <p className="font-body text-body-sm text-on-surface-variant text-center">
                         {labels.stockLabel}: {product.stockDisplay}

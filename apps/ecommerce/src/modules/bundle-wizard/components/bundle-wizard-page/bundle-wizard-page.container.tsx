@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -19,7 +20,8 @@ import {
   canRemoveComponent,
   removeComponent,
 } from "@/modules/bundle-wizard/helpers/wizard-state";
-import { savePendingCartLine } from "@/modules/bundle-wizard/helpers/pending-cart";
+import { clearPendingCartLines } from "@/modules/bundle-wizard/helpers/pending-cart";
+import { useCart } from "@/modules/cart/hooks/use-cart";
 import { queryKeys } from "@/shared/query/query-keys";
 import { BundleWizardPage } from "./bundle-wizard-page";
 
@@ -32,6 +34,8 @@ export function BundleWizardPageContainer({
 }: BundleWizardPageContainerProps) {
   const t = useTranslations("catalog.wizard");
   const tCommon = useTranslations("common");
+  const router = useRouter();
+  const { addBundleLine } = useCart();
   const [, startTransition] = useTransition();
   const [components, setComponents] = useState<CustomizeBundleComponent[]>(
     () => template.initialComponents,
@@ -41,7 +45,7 @@ export function BundleWizardPageContainer({
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pickerLabels, setPickerLabels] = useState<Record<string, string>>({});
-  const [isSaved, setIsSaved] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -102,20 +106,20 @@ export function BundleWizardPageContainer({
   }, [previewQuery.data?.line.components]);
 
   const handleRemove = (productId: string) => {
-    setIsSaved(false);
     setComponents((current) => removeComponent(current, productId));
   };
 
   const handleAdd = (product: { id: string; name: string }) => {
-    setIsSaved(false);
     setPickerLabels((current) => ({ ...current, [product.id]: product.name }));
     setComponents((current) => addComponent(current, product.id));
   };
 
   const handleAddToCart = () => {
-    if (!previewQuery.data?.line || !isValid) return;
-    savePendingCartLine(previewQuery.data.line);
-    setIsSaved(true);
+    if (isAddingToCart || !previewQuery.data?.line || !isValid) return;
+    setIsAddingToCart(true);
+    addBundleLine(previewQuery.data.line);
+    clearPendingCartLines();
+    router.push("/carrito");
   };
 
   return (
@@ -136,13 +140,12 @@ export function BundleWizardPageContainer({
       isPreviewError={previewQuery.isError}
       isProductsLoading={productsQuery.isLoading}
       isProductsError={productsQuery.isError}
-      isSaved={isSaved}
+      isAddingToCart={isAddingToCart}
       labels={{
         back: t("back"),
         title: t("title"),
         personCount: t("personCount", { count: template.personCount }),
         addToCart: t("addToCart"),
-        saved: t("saved"),
         validationMin: t("validation.min", { min: BUNDLE_CUSTOMIZATION_MIN }),
         validationMax: t("validation.max", { max: BUNDLE_CUSTOMIZATION_MAX }),
         validationDuplicate: t("validation.duplicate"),
@@ -173,6 +176,8 @@ export function BundleWizardPageContainer({
           total: t("price.total"),
           loading: t("price.loading"),
           invalid: t("price.invalid"),
+          previewError: t("price.previewError"),
+          retry: tCommon("retry"),
         },
         stock: {
           title: t("stock.title"),
@@ -190,6 +195,9 @@ export function BundleWizardPageContainer({
       }}
       onProductsRetry={() => {
         void productsQuery.refetch();
+      }}
+      onPreviewRetry={() => {
+        void previewQuery.refetch();
       }}
       onAddToCart={handleAddToCart}
     />

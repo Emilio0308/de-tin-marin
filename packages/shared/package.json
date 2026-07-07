@@ -13,7 +13,8 @@
     "./final-price": "./src/final-price.ts",
     "./order-cart": "./src/order-cart.ts",
     "./check-order-stock": "./src/check-order-stock.ts",
-    "./build-order-cart": "./src/build-order-cart.ts"
+    "./build-order-cart": "./src/build-order-cart.ts",
+    "./checkout-coverage": "./src/checkout-coverage.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

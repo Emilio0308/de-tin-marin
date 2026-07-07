@@ -11,6 +11,7 @@ export function SiteHeader({
   navLinks,
   activeIndex,
   scrolled,
+  cartCount,
 }: SiteHeaderProps) {
   return (
     <header
@@ -62,13 +63,18 @@ export function SiteHeader({
               className="font-body text-body-md placeholder:text-on-surface-variant/50 w-48 border-none bg-transparent focus:outline-none focus:ring-0"
             />
           </div>
-          <button
-            type="button"
+          <Link
+            href="/carrito"
             aria-label="Ver carrito"
-            className="text-primary hover:text-secondary p-2 transition-all duration-300 hover:scale-105 active:scale-95"
+            className="text-primary hover:text-secondary relative p-2 transition-all duration-300 hover:scale-105 active:scale-95"
           >
             <ShoppingCart className="h-6 w-6" />
-          </button>
+            {cartCount > 0 ? (
+              <span className="bg-secondary text-on-secondary absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+                {cartCount}
+              </span>
+            ) : null}
+          </Link>
           <button
             type="button"
             aria-label="Mi cuenta"

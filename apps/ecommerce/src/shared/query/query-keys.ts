@@ -30,4 +30,15 @@ export const queryKeys = {
     all: ["orders"] as const,
     detail: (id: string) => [...queryKeys.orders.all, "detail", id] as const,
   },
+  checkout: {
+    all: ["checkout"] as const,
+    deliveryFee: (district: string, mapPin: { lat: number; lng: number }) =>
+      [...queryKeys.checkout.all, "delivery-fee", district, mapPin] as const,
+    stock: (lines: unknown) =>
+      [...queryKeys.checkout.all, "stock", lines] as const,
+  },
+  delivery: {
+    all: ["delivery"] as const,
+    zones: () => [...queryKeys.delivery.all, "zones"] as const,
+  },
 } as const;

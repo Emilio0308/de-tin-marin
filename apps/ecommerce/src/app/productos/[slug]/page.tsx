@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPublicProductAction } from "@/modules/catalog/actions/get-public-product";
-import { ProductDetailPage } from "@/modules/catalog/components/product-detail-page/product-detail-page";
+import { ProductDetailPageContainer } from "@/modules/catalog/components/product-detail-page/product-detail-page.container";
 
 type ProductDetailRouteProps = {
   params: Promise<{ slug: string }>;
@@ -20,7 +20,7 @@ export default async function ProductDetailRoute({
   }
 
   return (
-    <ProductDetailPage
+    <ProductDetailPageContainer
       product={result.data}
       labels={{
         back: t("products.backToList"),

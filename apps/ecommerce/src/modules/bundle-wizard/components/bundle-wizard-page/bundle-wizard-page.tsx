@@ -2,6 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { BundleWizardTemplate } from "@de-tin-marin/validations/customize-bundle";
 import type { CustomizeBundleComponent } from "@de-tin-marin/validations/customize-bundle";
+import {
+  BUNDLE_CUSTOMIZATION_MAX,
+  BUNDLE_CUSTOMIZATION_MIN,
+} from "@de-tin-marin/validations/customize-bundle";
 import type { OrderStockCheckResult } from "@de-tin-marin/shared/check-order-stock";
 import type { PublicProductListItem } from "@de-tin-marin/validations/public-catalog";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
@@ -27,13 +31,11 @@ export type BundleWizardPageProps = {
   isPreviewError: boolean;
   isProductsLoading: boolean;
   isProductsError: boolean;
-  isSaved: boolean;
   labels: {
     back: string;
     title: string;
     personCount: string;
     addToCart: string;
-    saved: string;
     validationMin: string;
     validationMax: string;
     validationDuplicate: string;
@@ -59,6 +61,8 @@ export type BundleWizardPageProps = {
       total: string;
       loading: string;
       invalid: string;
+      previewError: string;
+      retry: string;
     };
     stock: {
       title: string;
@@ -71,8 +75,35 @@ export type BundleWizardPageProps = {
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
   onProductsRetry: () => void;
+  onPreviewRetry: () => void;
   onAddToCart: () => void;
+  isAddingToCart: boolean;
 };
+
+function resolveBundleValidationMessage({
+  isValid,
+  componentCount,
+  labels,
+}: {
+  isValid: boolean;
+  componentCount: number;
+  labels: Pick<
+    BundleWizardPageProps["labels"],
+    "validationMin" | "validationMax" | "validationDuplicate"
+  >;
+}): string | null {
+  if (isValid) return null;
+
+  if (componentCount < BUNDLE_CUSTOMIZATION_MIN) {
+    return labels.validationMin;
+  }
+
+  if (componentCount > BUNDLE_CUSTOMIZATION_MAX) {
+    return labels.validationMax;
+  }
+
+  return labels.validationDuplicate;
+}
 
 export function BundleWizardPage({
   template,
@@ -88,24 +119,24 @@ export function BundleWizardPage({
   canRemove,
   canAdd,
   isPreviewLoading,
+  isPreviewError,
   isProductsLoading,
   isProductsError,
-  isSaved,
+  isAddingToCart,
   labels,
   onRemove,
   onAdd,
   onSearchChange,
   onSearchSubmit,
   onProductsRetry,
+  onPreviewRetry,
   onAddToCart,
 }: BundleWizardPageProps) {
-  const validationMessage = !isValid
-    ? components.length < 5
-      ? labels.validationMin
-      : components.length > 20
-        ? labels.validationMax
-        : labels.validationDuplicate
-    : null;
+  const validationMessage = resolveBundleValidationMessage({
+    isValid,
+    componentCount: components.length,
+    labels,
+  });
 
   return (
     <StorefrontLayout>
@@ -179,25 +210,37 @@ export function BundleWizardPage({
               isLoading={isPreviewLoading}
               isValid={isValid}
             />
+            {isPreviewError ? (
+              <div className="text-center">
+                <p className="font-body text-body-sm text-error mb-3">
+                  {labels.price.previewError}
+                </p>
+                <button
+                  type="button"
+                  onClick={onPreviewRetry}
+                  className="bg-primary text-on-primary font-label text-label-bold rounded-full px-6 py-2"
+                >
+                  {labels.price.retry}
+                </button>
+              </div>
+            ) : null}
             <WizardStockBanner stockCheck={stockCheck} labels={labels.stock} />
             {validationMessage ? (
               <p className="font-body text-body-sm text-on-surface-variant">
                 {validationMessage}
               </p>
             ) : null}
-            {isSaved ? (
-              <p
-                className="font-body text-body-sm text-secondary"
-                role="status"
-              >
-                {labels.saved}
-              </p>
-            ) : null}
           </div>
 
           <button
             type="button"
-            disabled={!isValid || isPreviewLoading || lineTotal === null}
+            disabled={
+              !isValid ||
+              isPreviewLoading ||
+              isPreviewError ||
+              lineTotal === null ||
+              isAddingToCart
+            }
             onClick={onAddToCart}
             className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary w-full rounded-full px-8 py-3 disabled:cursor-not-allowed disabled:opacity-60 lg:w-auto"
           >

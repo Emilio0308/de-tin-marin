@@ -31,6 +31,7 @@ import {
   getWizardContainerStockByIdsRepo,
   getWizardProductStockByIdsRepo,
 } from "../repositories/wizard-stock.repository";
+import { clampBundleInitialComponents } from "../helpers/clamp-initial-components";
 
 function normalizeImageUrl(imageUrl: string | null | undefined): string {
   if (!imageUrl || imageUrl.trim() === "") {
@@ -45,12 +46,14 @@ function isActiveBundleItem(item: PublicBundleItemRow): boolean {
 }
 
 function toInitialComponents(items: PublicBundleItemRow[]) {
-  return items.filter(isActiveBundleItem).map((item) => ({
-    productId: item.product_id,
-    quantityPerUnit: storeFeatures.enableUnitsPerPerson
-      ? item.units_per_person
-      : 1,
-  }));
+  return clampBundleInitialComponents(
+    items.filter(isActiveBundleItem).map((item) => ({
+      productId: item.product_id,
+      quantityPerUnit: storeFeatures.enableUnitsPerPerson
+        ? item.units_per_person
+        : 1,
+    })),
+  );
 }
 
 export async function getBundleForWizardService(
