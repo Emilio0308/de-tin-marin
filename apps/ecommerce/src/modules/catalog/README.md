@@ -25,4 +25,4 @@ Catálogo público de productos y sorpresas (S3A-1).
 - `/productos/[slug]` — detalle producto
 - `/sorpresas` — listado bundles
 - `/sorpresas/[id]` — detalle plantilla
-- `/sorpresas/[id]/personalizar` — stub wizard (S3A-2)
+- `/sorpresas/[id]/personalizar` — wizard personalización (S3A-2)

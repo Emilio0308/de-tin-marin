@@ -17,6 +17,15 @@ export const queryKeys = {
     all: ["cart"] as const,
     current: () => [...queryKeys.cart.all, "current"] as const,
   },
+  wizard: {
+    all: ["wizard"] as const,
+    template: (bundleId: string) =>
+      [...queryKeys.wizard.all, "template", bundleId] as const,
+    preview: (bundleId: string, components: unknown) =>
+      [...queryKeys.wizard.all, "preview", bundleId, components] as const,
+    productSearch: (search: string) =>
+      [...queryKeys.wizard.all, "product-search", search] as const,
+  },
   orders: {
     all: ["orders"] as const,
     detail: (id: string) => [...queryKeys.orders.all, "detail", id] as const,

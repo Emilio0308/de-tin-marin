@@ -7,6 +7,7 @@ import { parseContainerPricesJson } from "@de-tin-marin/shared/prices";
 
 type ContainerRow = {
   id: string;
+  sku: string;
   name: string;
   prices: Json;
 };
@@ -21,7 +22,7 @@ export async function getActiveContainersByIdsRepo(
   const { data, error } = await supabase
     .schema("catalog")
     .from("surprise_containers")
-    .select("id, name, prices")
+    .select("id, sku, name, prices")
     .in("id", ids)
     .eq("is_active", true)
     .is("deleted_at", null);

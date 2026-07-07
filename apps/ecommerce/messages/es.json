@@ -63,8 +63,41 @@
       "backToDetail": "Volver al combo"
     },
     "wizard": {
-      "comingSoonTitle": "Personalización próximamente",
-      "comingSoon": "Muy pronto podrás armar tu sorpresa paso a paso. Por ahora, explora nuestros combos plantilla."
+      "title": "Personaliza tu sorpresa",
+      "back": "← Volver al combo",
+      "personCount": "Para {count} personas",
+      "addToCart": "Agregar al carrito",
+      "saved": "Guardado. El carrito estará disponible muy pronto.",
+      "validation": {
+        "min": "Agrega al menos {min} dulces para continuar.",
+        "max": "Puedes incluir como máximo {max} dulces.",
+        "duplicate": "No puedes repetir el mismo dulce."
+      },
+      "componentList": {
+        "title": "Tus dulces",
+        "remove": "Quitar",
+        "minReached": "Necesitas al menos {min} dulces en tu sorpresa.",
+        "count": "{current} de {max} dulces"
+      },
+      "picker": {
+        "title": "Agregar dulce",
+        "searchPlaceholder": "Buscar por nombre o SKU…",
+        "searchAriaLabel": "Buscar dulces para agregar",
+        "add": "Agregar",
+        "empty": "No encontramos dulces con esa búsqueda.",
+        "maxReached": "Ya alcanzaste el máximo de {max} dulces.",
+        "alreadyAdded": "Agregado"
+      },
+      "price": {
+        "total": "Total de tu sorpresa",
+        "loading": "Calculando precio…",
+        "invalid": "Ajusta tu selección para ver el total."
+      },
+      "stock": {
+        "title": "Stock limitado",
+        "productShortage": "Dulce",
+        "containerShortage": "Envase"
+      }
     }
   },
   "home": {
