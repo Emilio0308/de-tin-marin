@@ -10,7 +10,7 @@ export type BundleListLabels = {
   };
   statusActive: string;
   statusDraft: string;
-  feeShort: string;
+  containerShort: string;
   edit: string;
   empty: string;
   emptyFiltered: string;

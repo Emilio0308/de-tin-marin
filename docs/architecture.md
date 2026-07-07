@@ -32,21 +32,21 @@ de-tin-marin/
 
 ## Dominios
 
-| Dominio       | Responsabilidad principal                                         |
-| ------------- | ----------------------------------------------------------------- |
-| Products      | CRUD, SKU, categorías, imágenes, `prices` JSONB, `stock_quantity` |
-| Bundles       | Plantillas sorpresa sin stock; `service_fee` editable             |
-| Pricing       | `finalPrice` en listado; total línea sorpresa                     |
-| Campaigns     | Campañas %; asignación 1:1 a producto                             |
-| Orders        | Ciclo de vida; snapshot; personalización bundle                   |
-| Inventory     | Stock v1 en products; deduct al `paid`                            |
-| Customers     | Perfiles de cliente (sin VIP v1)                                  |
-| Payments      | Registro manual; operador confirma                                |
-| Shipping      | Envíos, tracking                                                  |
-| Notifications | Email (futuro)                                                    |
-| Reports       | Métricas y exportaciones                                          |
-| Users         | Staff del admin, roles                                            |
-| Settings      | Configuración global                                              |
+| Dominio       | Responsabilidad principal                                                             |
+| ------------- | ------------------------------------------------------------------------------------- |
+| Products      | CRUD, SKU, categorías, imágenes, `prices` JSONB (`normal`+`unit`), stock sealed/loose |
+| Bundles       | Plantillas sorpresa sin stock; `service_fee` editable                                 |
+| Pricing       | `finalPrice` en listado; total línea sorpresa                                         |
+| Campaigns     | Campañas %; asignación 1:1 a producto                                                 |
+| Orders        | Ciclo de vida; snapshot; personalización bundle                                       |
+| Inventory     | Stock v1 en products; deduct al `paid`                                                |
+| Customers     | Perfiles de cliente (sin VIP v1)                                                      |
+| Payments      | Registro manual; operador confirma                                                    |
+| Shipping      | Envíos, tracking                                                                      |
+| Notifications | Email (futuro)                                                                        |
+| Reports       | Métricas y exportaciones                                                              |
+| Users         | Staff del admin, roles                                                                |
+| Settings      | Configuración global                                                                  |
 
 ## Estructura de un dominio
 
@@ -101,14 +101,14 @@ Reglas detalladas: [`rules/00-architecture.md`](rules/00-architecture.md).
 
 ## Schemas Postgres (v1)
 
-| Schema      | Contenido                                                                      |
-| ----------- | ------------------------------------------------------------------------------ |
-| `core`      | staff, settings, audit_log                                                     |
-| `catalog`   | products (`prices` JSONB, `stock_quantity`), bundles, bundle_items, categories |
-| `pricing`   | campaigns (+ `products.campaign_id` 1:1)                                       |
-| `commerce`  | orders (`shopping_cart` JSONB), payments, shipments                            |
-| `crm`       | customers                                                                      |
-| `inventory` | ⏸ v2 — ledger de movimientos                                                   |
+| Schema      | Contenido                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `core`      | staff, settings, audit_log                                                                                      |
+| `catalog`   | products (`prices` JSONB, `stock_sealed_packages`, `stock_loose_base_units`), bundles, bundle_items, categories |
+| `pricing`   | campaigns (+ `products.campaign_id` 1:1)                                                                        |
+| `commerce`  | orders (`shopping_cart` JSONB), payments, shipments                                                             |
+| `crm`       | customers                                                                                                       |
+| `inventory` | ⏸ v2 — ledger de movimientos                                                                                    |
 
 Moneda: **PEN** únicamente. Catálogo completo: [`database.md`](database.md).
 

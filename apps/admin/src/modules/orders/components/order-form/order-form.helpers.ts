@@ -13,7 +13,18 @@ import type {
 export function previewOrderTotals(
   values: Pick<OrderFormValues, "lines" | "shippingTotal" | "discountTotal">,
   products: ProductOption[],
-  bundlesById: Map<string, { name: string; serviceFee: number }>,
+  bundlesById: Map<
+    string,
+    {
+      name: string;
+      container: {
+        containerId: string;
+        sku: string;
+        name: string;
+        unitPrice: number;
+      };
+    }
+  >,
 ) {
   if (values.lines.length === 0) {
     return computeOrderTotals({ lines: [] }, values);
@@ -47,7 +58,7 @@ export function previewOrderTotals(
       bundleId: line.bundleId,
       name: bundle.name,
       quantity: line.quantity,
-      serviceFee: bundle.serviceFee,
+      container: bundle.container,
       components: line.components,
     });
   }

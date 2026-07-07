@@ -4,6 +4,7 @@ import {
   canTransitionOrderStatus,
   computeOrderTotals,
   formatOrderNumber,
+  getBundleLineContainerUnitPrice,
 } from "./order-cart";
 
 const productsById = new Map([
@@ -12,7 +13,7 @@ const productsById = new Map([
 ]);
 
 describe("buildShoppingCart", () => {
-  it("freezes product and bundle lines with totals", () => {
+  it("freezes product and bundle lines with container totals", () => {
     const cart = buildShoppingCart({
       productsById,
       lines: [
@@ -22,7 +23,12 @@ describe("buildShoppingCart", () => {
           bundleId: "b1",
           name: "Sorpresa",
           quantity: 25,
-          serviceFee: 50,
+          container: {
+            containerId: "c1",
+            sku: "ENV-50",
+            name: "Caja mediana",
+            unitPrice: 50,
+          },
           components: [
             { productId: "p1", quantityPerUnit: 1 },
             { productId: "p2", quantityPerUnit: 1 },
@@ -38,11 +44,26 @@ describe("buildShoppingCart", () => {
     expect(cart.lines[1]).toMatchObject({
       type: "bundle",
       lineTotal: 1500,
+      container: { unitPrice: 50 },
       components: [
         { totalQuantity: 25, unitPrice: 8 },
         { totalQuantity: 25, unitPrice: 2 },
       ],
     });
+  });
+
+  it("reads legacy serviceFee via helper", () => {
+    const legacyLine = {
+      type: "bundle" as const,
+      bundleId: "b1",
+      name: "Legacy",
+      quantity: 2,
+      serviceFee: 5,
+      lineTotal: 20,
+      components: [],
+    };
+
+    expect(getBundleLineContainerUnitPrice(legacyLine)).toBe(5);
   });
 });
 

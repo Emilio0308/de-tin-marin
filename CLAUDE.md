@@ -72,7 +72,7 @@ Cada línea indica el **bug class** que previene.
 7. **Módulos con secrets marcan `import "server-only"`**; `process.env` solo vía `@de-tin-marin/config/env`. → _secret en bundle del cliente_
 8. **DTOs con allowlist explícita** — nunca filas crudas de Supabase al cliente. → _sobre-exposición de PII/secrets_
 9. **Pricing calcula en backend; Orders NO recalcula** — listado productos con `finalPrice`; snapshot al confirmar orden. → _precios inconsistentes_
-10. **Stock v1 en `products.stock_quantity`** — bundles sin stock; deduct atómico al `paid`. → _overselling_
+10. **Stock v1 en `products` (sealed + loose, unidades base)** — bundles sin stock; deduct atómico al `paid` (S2A, post-S1D). → _overselling_
 11. **Bundles son plantillas** — composición personalizable; snapshot en `orders.shopping_cart`. → _órdenes inconsistentes con plantilla_
 12. **Campaña 1:1 por producto** — precio final en query de catálogo; front no recalcula. → _discrepancia front/back_
 13. **Mutaciones solo en Server Actions**; `revalidatePath`/`revalidateTag` **después** del write. → _UI stale / CSRF_
@@ -83,13 +83,13 @@ Cada línea indica el **bug class** que previene.
 
 ## Separación de responsabilidades crítica
 
-| Dominio            | Responsabilidad                                 | NO hace              |
-| ------------------ | ----------------------------------------------- | -------------------- |
-| **Pricing**        | `finalPrice` en listado + total línea sorpresa  | Gestionar órdenes    |
-| **Orders**         | Ciclo de vida, snapshot, personalización bundle | Recalcular precios   |
-| **Inventory (v1)** | `stock_quantity` en products, deduct al `paid`  | Calcular precios     |
-| **Bundles**        | Plantillas sin stock, `service_fee` editable    | Tener stock propio   |
-| **Campaigns**      | Definir % y asignar 1:1 a producto              | Calcular en frontend |
+| Dominio            | Responsabilidad                                                      | NO hace              |
+| ------------------ | -------------------------------------------------------------------- | -------------------- |
+| **Pricing**        | `finalPrice` en listado + total línea sorpresa                       | Gestionar órdenes    |
+| **Orders**         | Ciclo de vida, snapshot, personalización bundle                      | Recalcular precios   |
+| **Inventory (v1)** | `stock_sealed_packages` + `stock_loose_base_units`, deduct al `paid` | Calcular precios     |
+| **Bundles**        | Plantillas sin stock, `service_fee` editable                         | Tener stock propio   |
+| **Campaigns**      | Definir % y asignar 1:1 a producto                                   | Calcular en frontend |
 
 Pipeline de precios: ver [`docs/pricing.md`](docs/pricing.md).
 

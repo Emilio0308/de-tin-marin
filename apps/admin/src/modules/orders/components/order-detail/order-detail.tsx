@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { getBundleLineContainerUnitPrice } from "@de-tin-marin/shared/order-cart";
 import { Badge } from "@de-tin-marin/ui/badge";
 import { Button } from "@de-tin-marin/ui/button";
 import {
@@ -310,10 +311,15 @@ export function OrderDetailView({
                   {line.name} (sorpresa)
                 </p>
                 <p className="text-on-surface-variant text-sm">
-                  {line.quantity} sorpresas · fee S/{" "}
-                  {line.serviceFee.toFixed(2)} · total S/{" "}
+                  {line.quantity} sorpresas · envase S/{" "}
+                  {getBundleLineContainerUnitPrice(line).toFixed(2)} · total S/{" "}
                   {line.lineTotal.toFixed(2)}
                 </p>
+                {line.container ? (
+                  <p className="text-on-surface-variant/80 text-xs">
+                    {line.container.name} ({line.container.sku})
+                  </p>
+                ) : null}
                 <ul className="text-on-surface-variant mt-2 list-disc pl-5 text-sm">
                   {line.components.map((component) => (
                     <li key={component.productId}>

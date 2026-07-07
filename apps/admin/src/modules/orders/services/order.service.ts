@@ -4,6 +4,7 @@ import {
   computeFinalPrice,
   toCampaignForPricing,
 } from "@de-tin-marin/shared/final-price";
+import { roundMoney } from "@de-tin-marin/shared/prices";
 import {
   buildShoppingCart,
   canTransitionOrderStatus,
@@ -17,10 +18,12 @@ import {
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
+import { parseContainerPricesJson } from "@/modules/catalog/repositories/surprise-container.repository";
 import {
   listCampaignsByIdsRepo,
   parsePricesJson,
 } from "@/modules/catalog/repositories/product.repository";
+import { resolveDeliveryFeeService } from "@/modules/delivery/services/delivery.service";
 import {
   asJson,
   countOrdersByDatePrefixRepo,
@@ -129,14 +132,19 @@ export async function createOrderService(
 
   const productsById = new Map(
     products.map((product) => {
-      const { netPrice } = parsePricesJson(product.prices);
+      const { packageNetPrice, unitNetPrice } = parsePricesJson(product.prices);
       const campaignRow = product.campaign_id
         ? (campaignsById.get(product.campaign_id) ?? null)
         : null;
-      const unitPrice = computeFinalPrice(
-        netPrice,
-        campaignRow ? toCampaignForPricing(campaignRow) : null,
-      );
+      const itemsPerPackage = product.items_per_package ?? 1;
+      const unitPrice = campaignRow
+        ? roundMoney(
+            computeFinalPrice(
+              packageNetPrice,
+              toCampaignForPricing(campaignRow),
+            ) / itemsPerPackage,
+          )
+        : unitNetPrice;
       return [
         product.id,
         {
@@ -156,7 +164,12 @@ export async function createOrderService(
         bundleId: string;
         name: string;
         quantity: number;
-        serviceFee: number;
+        container: {
+          containerId: string;
+          sku: string;
+          name: string;
+          unitPrice: number;
+        };
         components: Array<{ productId: string; quantityPerUnit: number }>;
       }
   > = [];
@@ -172,6 +185,11 @@ export async function createOrderService(
       return { ok: false, error: "BUNDLE_NOT_FOUND" };
     }
 
+    const containerRow = bundle.surprise_containers;
+    if (!containerRow) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+
     const componentIds = line.components.map((item) => item.productId);
     if (new Set(componentIds).size !== componentIds.length) {
       return { ok: false, error: "DUPLICATE_PRODUCT_IN_BUNDLE" };
@@ -182,7 +200,12 @@ export async function createOrderService(
       bundleId: line.bundleId,
       name: bundle.name,
       quantity: line.quantity,
-      serviceFee: Number(bundle.service_fee),
+      container: {
+        containerId: containerRow.id,
+        sku: containerRow.sku,
+        name: containerRow.name,
+        unitPrice: parseContainerPricesJson(containerRow.prices).netPrice,
+      },
       components: line.components,
     });
   }
@@ -194,9 +217,16 @@ export async function createOrderService(
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
 
+  const shippingResult = await resolveDeliveryFeeService(config, {
+    method: parsed.data.fulfillment.method,
+    district: parsed.data.fulfillment.deliveryAddress?.district,
+  });
+  const shippingTotal =
+    shippingResult.ok === true ? shippingResult.fee : parsed.data.shippingTotal;
+
   const totals = computeOrderTotals(shoppingCart, {
     discountTotal: parsed.data.discountTotal,
-    shippingTotal: parsed.data.shippingTotal,
+    shippingTotal,
   });
 
   const datePrefix = formatOrderNumber(0).slice(0, 12);

@@ -9,9 +9,11 @@
     "./category": "./src/category.ts",
     "./product": "./src/product.ts",
     "./bundle": "./src/bundle.ts",
+    "./delivery": "./src/delivery.ts",
     "./order": "./src/order.ts",
     "./payment": "./src/payment.ts",
-    "./shipment": "./src/shipment.ts"
+    "./shipment": "./src/shipment.ts",
+    "./surprise-container": "./src/surprise-container.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -2,6 +2,7 @@ import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
 import type {
   BundleFormItemValues,
   BundleFormValues,
+  ContainerOption,
   ProductOption,
 } from "./bundle-form.types";
 import type { BundleFormDTO } from "@/modules/catalog/types/bundle.dto";
@@ -13,7 +14,7 @@ export function buildDefaultBundleValues(
     name: initial?.name ?? "",
     description: initial?.description ?? "",
     imageUrl: initial?.imageUrl ?? "",
-    serviceFee: initial?.serviceFee ?? 0,
+    containerId: initial?.containerId ?? "",
     quantity: initial?.quantity ?? 1,
     isActive: initial?.isActive ?? true,
     items:
@@ -25,15 +26,17 @@ export function buildDefaultBundleValues(
 }
 
 export function computeLiveTotal(
-  values: Pick<BundleFormValues, "serviceFee" | "quantity" | "items">,
+  values: Pick<BundleFormValues, "containerId" | "quantity" | "items">,
   products: ProductOption[],
+  containers: ContainerOption[],
 ) {
   const priceById = new Map(
-    products.map((product) => [product.id, product.netPrice]),
+    products.map((product) => [product.id, product.unitNetPrice]),
   );
+  const container = containers.find((item) => item.id === values.containerId);
 
   return computeBundleTotal({
-    serviceFee: values.serviceFee,
+    containerNetPrice: container?.netPrice ?? 0,
     quantity: values.quantity,
     items: values.items.map((item) => ({
       unitNetPrice: priceById.get(item.productId) ?? 0,
@@ -79,4 +82,11 @@ export function isValidImageUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function getSelectedContainerNetPrice(
+  containerId: string,
+  containers: ContainerOption[],
+): number {
+  return containers.find((item) => item.id === containerId)?.netPrice ?? 0;
 }

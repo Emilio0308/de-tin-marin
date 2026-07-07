@@ -7,8 +7,14 @@ export type ProductFormDTO = {
   description: string | null;
   slug: string;
   brand: string | null;
-  netPrice: number;
-  stockQuantity: number;
+  productType: "unit" | "package";
+  itemsPerPackage: number;
+  packageLabel: string | null;
+  packageNetPrice: number;
+  unitNetPrice: number;
+  stockSealedPackages: number;
+  stockLooseBaseUnits: number;
+  stockTotalBaseUnits: number;
   categoryId: string;
   imageUrl: string | null;
   isActive: boolean;

@@ -103,7 +103,7 @@ export function BundleListContainer() {
       },
       statusActive: t("statusActive"),
       statusDraft: t("statusDraft"),
-      feeShort: t("feeShort"),
+      containerShort: t("containerShort"),
       edit: t("edit"),
       empty: t("empty"),
       emptyFiltered: t("emptyFiltered"),

@@ -2,7 +2,7 @@
 
 CRUD de categorías, productos y paquetes (bundles) en `apps/admin`.
 
-Briefs: [S1A](../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../docs/stages/S1B/01-bundles.md)
+Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) _(presentaciones + stock)_
 
 ## Capas
 

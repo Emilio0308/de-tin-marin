@@ -3,6 +3,13 @@ import type { BundleFormDTO } from "@/modules/catalog/types/bundle.dto";
 export type ProductOption = {
   id: string;
   name: string;
+  unitNetPrice: number;
+};
+
+export type ContainerOption = {
+  id: string;
+  name: string;
+  sku: string;
   netPrice: number;
 };
 
@@ -15,7 +22,7 @@ export type BundleFormValues = {
   name: string;
   description: string;
   imageUrl: string;
-  serviceFee: number;
+  containerId: string;
   quantity: number;
   isActive: boolean;
   items: BundleFormItemValues[];
@@ -46,10 +53,11 @@ export type BundleFormLabels = {
   removeProduct: string;
   configActiveTitle: string;
   configActiveHint: string;
-  serviceFee: string;
+  container: string;
+  containerPlaceholder: string;
   persons: string;
   subtotalLabel: string;
-  feeLabel: string;
+  containerLabel: string;
   totalLabel: string;
   cancel: string;
   save: string;
@@ -61,6 +69,7 @@ export type BundleFormLabels = {
 export type BundleFormProps = {
   initial?: BundleFormDTO;
   products: ProductOption[];
+  containers: ContainerOption[];
   labels: BundleFormLabels;
   onSubmit: (values: BundleFormValues) => Promise<void>;
   onCancel: () => void;

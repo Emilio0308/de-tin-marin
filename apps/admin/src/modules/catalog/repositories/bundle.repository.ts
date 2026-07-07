@@ -20,7 +20,15 @@ export type BundleItemWithProduct = BundleItemRow & {
   } | null;
 };
 
+export type BundleContainer = {
+  id: string;
+  sku: string;
+  name: string;
+  prices: Json;
+};
+
 export type BundleWithItems = BundleRow & {
+  surprise_containers: BundleContainer | null;
   bundle_items: BundleItemWithProduct[];
 };
 
@@ -47,7 +55,9 @@ export async function getBundleByIdRepo(
   const result = await supabase
     .schema("catalog")
     .from("bundles")
-    .select("*, bundle_items(*, products(name, prices, is_active, deleted_at))")
+    .select(
+      "*, surprise_containers(id, sku, name, prices), bundle_items(*, products(name, prices, is_active, deleted_at))",
+    )
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();

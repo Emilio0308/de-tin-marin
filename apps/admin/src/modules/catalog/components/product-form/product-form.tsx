@@ -13,7 +13,10 @@ import {
 import { cn } from "@de-tin-marin/shared/cn";
 import type { ProductFormProps, ProductFormValues } from "./product-form.types";
 import {
+  applyProductTypeChange,
   buildInitialProductValues,
+  computeStockTotalPreview,
+  computeUnitNetPricePreview,
   isValidImageUrl,
   slugify,
 } from "./product-form.helpers";
@@ -59,12 +62,34 @@ export function ProductForm({
     setField("slug", slug);
   }
 
-  function adjustStock(delta: number) {
+  function adjustSealed(delta: number) {
     setValues((prev) => ({
       ...prev,
-      stockQuantity: Math.max(0, prev.stockQuantity + delta),
+      stockSealedPackages: Math.max(0, prev.stockSealedPackages + delta),
     }));
   }
+
+  function adjustLoose(delta: number) {
+    setValues((prev) => ({
+      ...prev,
+      stockLooseBaseUnits: Math.max(0, prev.stockLooseBaseUnits + delta),
+    }));
+  }
+
+  function handleProductTypeChange(productType: "unit" | "package") {
+    setValues((prev) => applyProductTypeChange(prev, productType));
+  }
+
+  const isPackage = values.productType === "package";
+  const unitPricePreview = computeUnitNetPricePreview(
+    values.packageNetPrice,
+    values.itemsPerPackage,
+  );
+  const stockTotalPreview = computeStockTotalPreview(
+    values.stockSealedPackages,
+    values.stockLooseBaseUnits,
+    values.itemsPerPackage,
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -265,70 +290,245 @@ export function ProductForm({
           </div>
         </section>
 
-        {/* Precio + Stock */}
-        <section className={cardClass}>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass} htmlFor="netPrice">
-              {labels.price}
-            </label>
-            <div className="relative">
-              <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
-                S/
-              </span>
-              <input
-                id="netPrice"
-                name="netPrice"
-                type="number"
-                min={0}
-                step="0.01"
-                required
-                value={values.netPrice}
-                onChange={(event) =>
-                  setField("netPrice", Number(event.target.value) || 0)
-                }
+        {/* Presentación, precio y stock */}
+        <section className={cn(cardClass, "lg:col-span-2")}>
+          <span className={labelClass}>{labels.packageSection}</span>
+
+          <div className="flex flex-col gap-2">
+            <span className={labelClass}>{labels.productType}</span>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleProductTypeChange("unit")}
                 className={cn(
                   fieldClass,
-                  "font-display text-primary pl-10 text-[20px] font-extrabold",
+                  "font-label text-label-bold cursor-pointer text-center transition-colors",
+                  !isPackage &&
+                    "border-secondary bg-secondary/10 text-secondary",
                 )}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className={labelClass}>{labels.stock}</span>
-            <div className="border-outline-variant/40 bg-surface-container-low flex items-center justify-between rounded-full border-2 p-1.5">
+              >
+                {labels.productTypeUnit}
+              </button>
               <button
                 type="button"
-                onClick={() => adjustStock(-1)}
-                aria-label={labels.stockDecrease}
-                className="press-down border-outline-variant/30 text-primary flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm"
+                onClick={() => handleProductTypeChange("package")}
+                className={cn(
+                  fieldClass,
+                  "font-label text-label-bold cursor-pointer text-center transition-colors",
+                  isPackage &&
+                    "border-secondary bg-secondary/10 text-secondary",
+                )}
               >
-                <Minus className="h-5 w-5" aria-hidden />
-              </button>
-              <input
-                id="stockQuantity"
-                name="stockQuantity"
-                type="number"
-                min={0}
-                required
-                value={values.stockQuantity}
-                onChange={(event) =>
-                  setField(
-                    "stockQuantity",
-                    Math.max(0, Math.floor(Number(event.target.value) || 0)),
-                  )
-                }
-                className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-              <button
-                type="button"
-                onClick={() => adjustStock(1)}
-                aria-label={labels.stockIncrease}
-                className="press-down bg-primary text-on-primary flex h-10 w-10 items-center justify-center rounded-full shadow-md"
-              >
-                <Plus className="h-5 w-5" aria-hidden />
+                {labels.productTypePackage}
               </button>
             </div>
+            <p className="font-body text-body-md text-on-surface-variant">
+              {labels.productTypeHint}
+            </p>
           </div>
+
+          {isPackage ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass} htmlFor="itemsPerPackage">
+                  {labels.itemsPerPackage}
+                </label>
+                <input
+                  id="itemsPerPackage"
+                  name="itemsPerPackage"
+                  type="number"
+                  min={2}
+                  required
+                  value={values.itemsPerPackage}
+                  onChange={(event) =>
+                    setField(
+                      "itemsPerPackage",
+                      Math.max(2, Math.floor(Number(event.target.value) || 2)),
+                    )
+                  }
+                  className={fieldClass}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass} htmlFor="packageLabel">
+                  {labels.packageLabel}
+                </label>
+                <input
+                  id="packageLabel"
+                  name="packageLabel"
+                  value={values.packageLabel}
+                  onChange={(event) =>
+                    setField("packageLabel", event.target.value)
+                  }
+                  placeholder={labels.packageLabelPlaceholder}
+                  className={fieldClass}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass} htmlFor="packageNetPrice">
+                {isPackage ? labels.packagePrice : labels.unitPrice}
+              </label>
+              <div className="relative">
+                <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
+                  S/
+                </span>
+                <input
+                  id="packageNetPrice"
+                  name="packageNetPrice"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  required
+                  value={values.packageNetPrice}
+                  onChange={(event) =>
+                    setField("packageNetPrice", Number(event.target.value) || 0)
+                  }
+                  className={cn(
+                    fieldClass,
+                    "font-display text-primary pl-10 text-[20px] font-extrabold",
+                  )}
+                />
+              </div>
+            </div>
+            {isPackage ? (
+              <div className="flex flex-col justify-end gap-1.5">
+                <span className={labelClass}>{labels.unitPricePreview}</span>
+                <p className="font-body text-body-md text-on-surface-variant">
+                  {labels.formatUnitPrice(unitPricePreview.toFixed(2))}
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="bg-outline-variant/20 h-px w-full" />
+
+          <span className={labelClass}>{labels.stock}</span>
+          {isPackage ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <span className={labelClass}>{labels.stockSealed}</span>
+                <div className="border-outline-variant/40 bg-surface-container-low flex items-center justify-between rounded-full border-2 p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => adjustSealed(-1)}
+                    aria-label={labels.stockDecrease}
+                    className="press-down border-outline-variant/30 text-primary flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm"
+                  >
+                    <Minus className="h-5 w-5" aria-hidden />
+                  </button>
+                  <input
+                    id="stockSealedPackages"
+                    name="stockSealedPackages"
+                    type="number"
+                    min={0}
+                    required
+                    value={values.stockSealedPackages}
+                    onChange={(event) =>
+                      setField(
+                        "stockSealedPackages",
+                        Math.max(
+                          0,
+                          Math.floor(Number(event.target.value) || 0),
+                        ),
+                      )
+                    }
+                    className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => adjustSealed(1)}
+                    aria-label={labels.stockIncrease}
+                    className="press-down bg-primary text-on-primary flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+                  >
+                    <Plus className="h-5 w-5" aria-hidden />
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className={labelClass}>{labels.stockLoose}</span>
+                <div className="border-outline-variant/40 bg-surface-container-low flex items-center justify-between rounded-full border-2 p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => adjustLoose(-1)}
+                    aria-label={labels.stockDecrease}
+                    className="press-down border-outline-variant/30 text-primary flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm"
+                  >
+                    <Minus className="h-5 w-5" aria-hidden />
+                  </button>
+                  <input
+                    id="stockLooseBaseUnits"
+                    name="stockLooseBaseUnits"
+                    type="number"
+                    min={0}
+                    required
+                    value={values.stockLooseBaseUnits}
+                    onChange={(event) =>
+                      setField(
+                        "stockLooseBaseUnits",
+                        Math.max(
+                          0,
+                          Math.floor(Number(event.target.value) || 0),
+                        ),
+                      )
+                    }
+                    className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => adjustLoose(1)}
+                    aria-label={labels.stockIncrease}
+                    className="press-down bg-primary text-on-primary flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+                  >
+                    <Plus className="h-5 w-5" aria-hidden />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <span className={labelClass}>{labels.stockUnitsOnly}</span>
+              <div className="border-outline-variant/40 bg-surface-container-low flex items-center justify-between rounded-full border-2 p-1.5">
+                <button
+                  type="button"
+                  onClick={() => adjustLoose(-1)}
+                  aria-label={labels.stockDecrease}
+                  className="press-down border-outline-variant/30 text-primary flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-sm"
+                >
+                  <Minus className="h-5 w-5" aria-hidden />
+                </button>
+                <input
+                  id="stockLooseBaseUnitsUnit"
+                  name="stockLooseBaseUnits"
+                  type="number"
+                  min={0}
+                  required
+                  value={values.stockLooseBaseUnits}
+                  onChange={(event) =>
+                    setField(
+                      "stockLooseBaseUnits",
+                      Math.max(0, Math.floor(Number(event.target.value) || 0)),
+                    )
+                  }
+                  className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => adjustLoose(1)}
+                  aria-label={labels.stockIncrease}
+                  className="press-down bg-primary text-on-primary flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+                >
+                  <Plus className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
+            </div>
+          )}
+          <p className="font-body text-body-md text-on-surface-variant">
+            {labels.formatStockTotal(stockTotalPreview)}
+          </p>
         </section>
 
         {/* Descripción */}

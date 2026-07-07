@@ -6,6 +6,7 @@ import { startTransition, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createBundleAction } from "@/modules/catalog/actions/create-bundle";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
+import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
 import { BundleForm } from "./bundle-form";
 import type {
@@ -26,6 +27,8 @@ function bundleErrorMessage(
       return t("productNotFound");
     case "DUPLICATE_PRODUCT":
       return t("duplicateProduct");
+    case "CONTAINER_NOT_FOUND":
+      return t("containerNotFound");
     case "NOT_FOUND":
       return t("notFound");
     case "UNAUTHORIZED":
@@ -61,6 +64,17 @@ export function BundleFormContainer({
     },
   });
 
+  const containersQuery = useQuery({
+    queryKey: ["surprise-containers"],
+    queryFn: async () => {
+      const result = await listSurpriseContainersAction();
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
+      return result.data;
+    },
+  });
+
   const labels: BundleFormLabels = useMemo(
     () => ({
       breadcrumbParent: t("breadcrumbParent"),
@@ -88,10 +102,11 @@ export function BundleFormContainer({
       removeProduct: t("removeProduct"),
       configActiveTitle: t("configActiveTitle"),
       configActiveHint: t("configActiveHint"),
-      serviceFee: t("serviceFee"),
+      container: t("container"),
+      containerPlaceholder: t("containerPlaceholder"),
       persons: t("persons"),
       subtotalLabel: t("subtotalLabel"),
-      feeLabel: t("feeLabel"),
+      containerLabel: t("containerLabel"),
       totalLabel: t("totalLabel"),
       cancel: t("cancel"),
       save: t("save"),
@@ -143,16 +158,19 @@ export function BundleFormContainer({
 
   return (
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-40 lg:p-8 lg:pb-8">
-      {productsQuery.isLoading ? (
+      {productsQuery.isLoading || containersQuery.isLoading ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
             {t("loadingProducts")}
           </p>
         </div>
-      ) : productsQuery.isError || !productsQuery.data?.length ? (
+      ) : productsQuery.isError ||
+        !productsQuery.data?.length ||
+        containersQuery.isError ||
+        !containersQuery.data?.length ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
-            {t("noProducts")}
+            {!productsQuery.data?.length ? t("noProducts") : t("noContainers")}
           </p>
         </div>
       ) : (
@@ -161,7 +179,13 @@ export function BundleFormContainer({
           products={productsQuery.data.map((product): ProductOption => ({
             id: product.id,
             name: product.name,
-            netPrice: product.netPrice,
+            unitNetPrice: product.unitNetPrice,
+          }))}
+          containers={containersQuery.data.map((container) => ({
+            id: container.id,
+            name: container.name,
+            sku: container.sku,
+            netPrice: container.netPrice,
           }))}
           labels={labels}
           onSubmit={handleSubmit}

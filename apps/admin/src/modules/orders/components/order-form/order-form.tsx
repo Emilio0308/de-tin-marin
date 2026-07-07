@@ -14,6 +14,7 @@ type OrderFormProps = {
   values: OrderFormValues;
   products: ProductOption[];
   bundles: BundleOption[];
+  deliveryDistricts: string[];
   totals: {
     subtotal: number;
     discountTotal: number;
@@ -33,6 +34,7 @@ export function OrderForm({
   values,
   products,
   bundles,
+  deliveryDistricts,
   totals,
   submitting,
   error,
@@ -134,32 +136,58 @@ export function OrderForm({
           <div className="grid gap-4 md:grid-cols-2">
             {(
               [
-                ["recipientName", "Destinatario"],
-                ["line1", "Dirección"],
-                ["district", "Distrito"],
-                ["city", "Ciudad"],
-                ["province", "Provincia"],
-                ["phone", "Teléfono entrega"],
-                ["reference", "Referencia"],
+                ["recipientName", "Destinatario", "text"],
+                ["line1", "Dirección", "text"],
+                ["district", "Distrito", "district"],
+                ["city", "Ciudad", "text"],
+                ["province", "Provincia", "text"],
+                ["phone", "Teléfono entrega", "text"],
+                ["reference", "Referencia", "text"],
               ] as const
-            ).map(([field, label]) => (
+            ).map(([field, label, fieldType]) => (
               <div key={field}>
                 <Label>{label}</Label>
-                <Input
-                  value={values.fulfillment.deliveryAddress[field]}
-                  onChange={(event) =>
-                    onChange({
-                      ...values,
-                      fulfillment: {
-                        ...values.fulfillment,
-                        deliveryAddress: {
-                          ...values.fulfillment.deliveryAddress,
-                          [field]: event.target.value,
+                {fieldType === "district" ? (
+                  <select
+                    className="block w-full rounded border px-3 py-2 text-sm"
+                    value={values.fulfillment.deliveryAddress.district}
+                    onChange={(event) =>
+                      onChange({
+                        ...values,
+                        fulfillment: {
+                          ...values.fulfillment,
+                          deliveryAddress: {
+                            ...values.fulfillment.deliveryAddress,
+                            district: event.target.value,
+                          },
                         },
-                      },
-                    })
-                  }
-                />
+                      })
+                    }
+                  >
+                    <option value="">Seleccionar distrito…</option>
+                    {deliveryDistricts.map((district) => (
+                      <option key={district} value={district}>
+                        {district}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    value={values.fulfillment.deliveryAddress[field]}
+                    onChange={(event) =>
+                      onChange({
+                        ...values,
+                        fulfillment: {
+                          ...values.fulfillment,
+                          deliveryAddress: {
+                            ...values.fulfillment.deliveryAddress,
+                            [field]: event.target.value,
+                          },
+                        },
+                      })
+                    }
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -292,14 +320,12 @@ export function OrderForm({
             type="number"
             min={0}
             step="0.01"
+            readOnly
             value={values.shippingTotal}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                shippingTotal: Number(event.target.value) || 0,
-              })
-            }
           />
+          <p className="mt-1 text-xs text-zinc-500">
+            Calculado según distrito (Piura) o recojo en tienda.
+          </p>
         </div>
         <div>
           <Label>Descuento (S/)</Label>

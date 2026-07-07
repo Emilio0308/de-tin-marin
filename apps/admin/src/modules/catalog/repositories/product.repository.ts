@@ -156,17 +156,34 @@ export async function isProductSlugTakenRepo(
   return data !== null;
 }
 
-export function parsePricesJson(prices: Json): { netPrice: number } {
+export function parsePricesJson(prices: Json): {
+  packageNetPrice: number;
+  unitNetPrice: number;
+} {
   if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
-    return { netPrice: 0 };
+    return { packageNetPrice: 0, unitNetPrice: 0 };
   }
+
   const normal = prices.normal;
-  if (typeof normal !== "object" || normal === null || Array.isArray(normal)) {
-    return { netPrice: 0 };
-  }
-  const netPrice =
-    "netPrice" in normal && typeof normal.netPrice === "number"
+  const unit = prices.unit;
+
+  const packageNetPrice =
+    typeof normal === "object" &&
+    normal !== null &&
+    !Array.isArray(normal) &&
+    "netPrice" in normal &&
+    typeof normal.netPrice === "number"
       ? normal.netPrice
       : 0;
-  return { netPrice };
+
+  const unitNetPrice =
+    typeof unit === "object" &&
+    unit !== null &&
+    !Array.isArray(unit) &&
+    "netPrice" in unit &&
+    typeof unit.netPrice === "number"
+      ? unit.netPrice
+      : packageNetPrice;
+
+  return { packageNetPrice, unitNetPrice };
 }

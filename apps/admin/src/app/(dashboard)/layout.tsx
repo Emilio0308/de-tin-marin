@@ -29,7 +29,9 @@ export default async function DashboardLayout({
           dashboard: t("dashboard"),
           categories: t("categories"),
           products: t("products"),
+          containers: t("containers"),
           bundles: t("bundles"),
+          delivery: t("delivery"),
           orders: t("orders"),
         }}
       >

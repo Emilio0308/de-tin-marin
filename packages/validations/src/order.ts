@@ -102,12 +102,20 @@ export const orderShoppingCartProductLineSchema = z.object({
   lineTotal: z.number(),
 });
 
+export const orderShoppingCartBundleContainerSchema = z.object({
+  containerId: z.string().uuid(),
+  sku: z.string(),
+  name: z.string(),
+  unitPrice: z.number(),
+});
+
 export const orderShoppingCartBundleLineSchema = z.object({
   type: z.literal("bundle"),
   bundleId: z.string().uuid(),
   name: z.string(),
   quantity: z.number(),
-  serviceFee: z.number(),
+  serviceFee: z.number().optional(),
+  container: orderShoppingCartBundleContainerSchema.optional(),
   lineTotal: z.number(),
   components: z.array(
     z.object({

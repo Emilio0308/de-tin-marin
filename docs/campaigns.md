@@ -17,15 +17,15 @@ Una sola tabla principal + FK en productos:
 
 ## `pricing.campaigns`
 
-| Campo         | Tipo         | Notas                                    |
-| ------------- | ------------ | ---------------------------------------- |
-| `id`          | uuid         | PK                                       |
-| `name`        | text         |                                          |
-| `description` | text         | Opcional                                 |
-| `percentage`  | numeric(5,2) | Descuento sobre `prices.normal.netPrice` |
-| `starts_at`   | timestamptz  | Inicio                                   |
-| `ends_at`     | timestamptz  | Fin                                      |
-| `is_active`   | boolean      | Kill switch manual                       |
+| Campo         | Tipo         | Notas                                                   |
+| ------------- | ------------ | ------------------------------------------------------- |
+| `id`          | uuid         | PK                                                      |
+| `name`        | text         |                                                         |
+| `description` | text         | Opcional                                                |
+| `percentage`  | numeric(5,2) | Descuento sobre `prices.normal.netPrice` (presentación) |
+| `starts_at`   | timestamptz  | Inicio                                                  |
+| `ends_at`     | timestamptz  | Fin                                                     |
+| `is_active`   | boolean      | Kill switch manual                                      |
 
 ## Relación producto ↔ campaña
 
@@ -47,6 +47,8 @@ function applyCampaign(
 ```
 
 El listado de productos (Server Action / repository) hace JOIN a `campaigns`, valida vigencia y devuelve `finalPrice` — **el front no recalcula**.
+
+Para bundles y costeo por sorpresa (S1D): `finalUnitPrice = finalPrice / items_per_package`. Sin campaña: `prices.unit.netPrice`.
 
 ## Admin — pantallas
 

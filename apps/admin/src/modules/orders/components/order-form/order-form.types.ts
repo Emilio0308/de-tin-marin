@@ -8,7 +8,9 @@ export type ProductOption = {
 export type BundleOption = {
   id: string;
   name: string;
-  serviceFee: number;
+  containerId: string;
+  containerName: string;
+  containerNetPrice: number;
 };
 
 export type OrderFormProductLine = {
@@ -69,8 +71,8 @@ export const emptyOrderFormValues: OrderFormValues = {
       recipientName: "",
       line1: "",
       district: "",
-      city: "Lima",
-      province: "Lima",
+      city: "Piura",
+      province: "Piura",
       reference: "",
       phone: "",
     },

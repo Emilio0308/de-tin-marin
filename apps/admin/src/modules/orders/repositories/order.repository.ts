@@ -136,6 +136,7 @@ export type OrderProductRow = {
   name: string;
   prices: Json;
   campaign_id: string | null;
+  items_per_package: number;
 };
 
 export async function getOrderProductsByIdsRepo(
@@ -148,7 +149,7 @@ export async function getOrderProductsByIdsRepo(
   const result = await supabase
     .schema("catalog")
     .from("products")
-    .select("id, sku, name, prices, campaign_id")
+    .select("id, sku, name, prices, campaign_id, items_per_package")
     .in("id", productIds)
     .eq("is_active", true)
     .is("deleted_at", null);

@@ -16,9 +16,20 @@ export const priceNormalSchema = z
 
 export const pricesSchema = z.object({
   normal: priceNormalSchema,
+  unit: priceNormalSchema,
   suggested: z.record(z.unknown()).optional().default({}),
   fantasy: z.record(z.unknown()).optional().default({}),
 });
+
+export function pricesSchemaWithCoherence(itemsPerPackage: number) {
+  const safeItems = Math.max(1, Math.floor(itemsPerPackage));
+  return pricesSchema.refine(
+    (data) =>
+      Math.abs(data.unit.netPrice * safeItems - data.normal.netPrice) <=
+      MONEY_TOLERANCE,
+    { message: "unit.netPrice × items_per_package must equal normal.netPrice" },
+  );
+}
 
 export type PriceNormal = z.infer<typeof priceNormalSchema>;
 export type Prices = z.infer<typeof pricesSchema>;

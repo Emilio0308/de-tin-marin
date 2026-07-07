@@ -7,8 +7,8 @@ select ok(
 );
 
 select throws_ok(
-  $$ insert into catalog.bundles (name, service_fee, quantity)
-     values ('Test Bundle', 10, 5) $$,
+  $$ insert into catalog.bundles (name, quantity, container_id)
+     values ('Test Bundle', 5, gen_random_uuid()) $$,
   '42501',
   null,
   'anon cannot insert bundles'
@@ -20,8 +20,14 @@ select ok(
 );
 
 select ok(
-  (select conname from pg_constraint where conname = 'bundles_service_fee_non_negative') is not null,
-  'bundles_service_fee_non_negative constraint exists'
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'catalog'
+      and table_name = 'bundles'
+      and column_name = 'container_id'
+  ),
+  'bundles.container_id column exists'
 );
 
 select * from finish();

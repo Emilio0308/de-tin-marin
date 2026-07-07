@@ -6,13 +6,14 @@ export type BundlePriceItem = {
 };
 
 export type BundlePriceInput = {
-  serviceFee: number;
+  containerNetPrice: number;
   quantity: number;
   items: BundlePriceItem[];
 };
 
 export type BundlePriceResult = {
   itemsSubtotal: number;
+  containerSubtotal: number;
   total: number;
 };
 
@@ -23,6 +24,11 @@ export function computeBundleTotal(input: BundlePriceInput): BundlePriceResult {
       0,
     ),
   );
-  const total = roundMoney(input.serviceFee + input.quantity * itemsSubtotal);
-  return { itemsSubtotal, total };
+  const containerSubtotal = roundMoney(
+    input.containerNetPrice * input.quantity,
+  );
+  const total = roundMoney(
+    input.quantity * (input.containerNetPrice + itemsSubtotal),
+  );
+  return { itemsSubtotal, containerSubtotal, total };
 }

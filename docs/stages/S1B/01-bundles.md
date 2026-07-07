@@ -25,9 +25,11 @@
 El bundle **no guarda precio**. El operador define solo: `service_fee`, `quantity` (personas) y qué productos vincula (con `units_per_person`, v1 = 1). El precio se calcula en vivo:
 
 ```text
-itemsSubtotal = Σ (product.prices.normal.netPrice × units_per_person)
+itemsSubtotal = Σ (product.prices.unit.netPrice × units_per_person)
 total         = service_fee + quantity × itemsSubtotal
 ```
+
+> **Post-S1D:** el precio por componente usa `prices.unit.netPrice` (unidad base). Pre-S1D el código leía `prices.normal.netPrice` (equivalente cuando `items_per_package = 1`).
 
 **Ejemplo** (`pack premium`): `service_fee = 30`, `quantity = 20`, galleta S/1 (×1) + chocolate S/2 (×1):
 
@@ -55,7 +57,7 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 
 - **NO stock en bundles** — sin `stock_quantity` en `bundles` → _overselling / DECISIONS #5_
 - **NO columna `prices` en bundles** — el precio es dinámico, calculado siempre → _stale / DECISIONS #6_
-- **NO campañas ni `finalPrice` con descuento** — el total usa `products.prices.normal.netPrice`; el precio final campaña-aware es S1C → _pricing boundary violation_
+- **NO campañas ni `finalPrice` con descuento** — el total usa `products.prices.unit.netPrice` (post-S1D); precio final campaña-aware es S1C → _pricing boundary violation_
 - **NO bundles anidados** — `bundle_items.product_id` solo apunta a `products` → _ciclos / complejidad_
 - **NO personalización ni snapshot de orden** — eso va en `shopping_cart` (S2B) → _invariante 11_
 - **NO `units_per_person` editable en UI v1** — se fija en `1`; el campo existe en tabla para v2 → _scope creep_

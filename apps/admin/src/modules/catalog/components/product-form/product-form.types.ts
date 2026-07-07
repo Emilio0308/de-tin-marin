@@ -7,8 +7,12 @@ export type ProductFormValues = {
   description: string;
   slug: string;
   brand: string;
-  netPrice: number;
-  stockQuantity: number;
+  productType: "unit" | "package";
+  itemsPerPackage: number;
+  packageLabel: string;
+  packageNetPrice: number;
+  stockSealedPackages: number;
+  stockLooseBaseUnits: number;
   categoryId: string;
   imageUrl: string;
   isActive: boolean;
@@ -38,8 +42,21 @@ export type ProductFormLabels = {
   brandPlaceholder: string;
   category: string;
   categoryPlaceholder: string;
-  price: string;
+  productType: string;
+  productTypeUnit: string;
+  productTypePackage: string;
+  productTypeHint: string;
+  packageSection: string;
+  itemsPerPackage: string;
+  packageLabel: string;
+  packageLabelPlaceholder: string;
+  packagePrice: string;
+  unitPrice: string;
+  unitPricePreview: string;
   stock: string;
+  stockSealed: string;
+  stockLoose: string;
+  stockUnitsOnly: string;
   stockDecrease: string;
   stockIncrease: string;
   description: string;
@@ -49,6 +66,8 @@ export type ProductFormLabels = {
   cancel: string;
   save: string;
   saving: string;
+  formatUnitPrice: (price: string) => string;
+  formatStockTotal: (total: number) => string;
 };
 
 export type ProductFormProps = {

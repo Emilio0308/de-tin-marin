@@ -8,6 +8,11 @@ import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { parsePricesJson } from "../repositories/product.repository";
 import {
+  getActiveContainersByIdsRepo,
+  getSurpriseContainerByIdRepo,
+  parseContainerPricesJson,
+} from "../repositories/surprise-container.repository";
+import {
   getActiveProductsByIdsRepo,
   getBundleByIdRepo,
   hardDeleteBundleRepo,
@@ -20,11 +25,8 @@ import {
   type BundleItemWithProduct,
   type BundleRow,
 } from "../repositories/bundle.repository";
-import type {
-  BundleFormDTO,
-  BundleFormItemDTO,
-  BundleListItem,
-} from "../types/bundle.dto";
+import type { BundleFormDTO, BundleFormItemDTO } from "../types/bundle.dto";
+import type { BundleListItem } from "@de-tin-marin/validations/bundle";
 
 function normalizeImageUrl(imageUrl: string | null | undefined): string | null {
   if (!imageUrl || imageUrl.trim() === "") return null;
@@ -33,7 +35,7 @@ function normalizeImageUrl(imageUrl: string | null | undefined): string | null {
 
 function toPriceItems(items: BundleItemWithProduct[]) {
   return items.map((item) => ({
-    unitNetPrice: parsePricesJson(item.products?.prices ?? {}).netPrice,
+    unitNetPrice: parsePricesJson(item.products?.prices ?? {}).unitNetPrice,
     unitsPerPerson: item.units_per_person,
   }));
 }
@@ -42,17 +44,28 @@ function toFormItemDTO(item: BundleItemWithProduct): BundleFormItemDTO {
   return {
     productId: item.product_id,
     productName: item.products?.name ?? "—",
-    unitNetPrice: parsePricesJson(item.products?.prices ?? {}).netPrice,
+    unitNetPrice: parsePricesJson(item.products?.prices ?? {}).unitNetPrice,
     unitsPerPerson: item.units_per_person,
   };
+}
+
+function getContainerNetPrice(
+  row: BundleRow,
+  containersById: Map<string, { netPrice: number; name: string; sku: string }>,
+): number {
+  const container = containersById.get(row.container_id);
+  return container?.netPrice ?? 0;
 }
 
 function toListItem(
   row: BundleRow,
   items: BundleItemWithProduct[],
+  containersById: Map<string, { netPrice: number; name: string; sku: string }>,
 ): BundleListItem {
+  const container = containersById.get(row.container_id);
+  const containerNetPrice = container?.netPrice ?? 0;
   const { total } = computeBundleTotal({
-    serviceFee: Number(row.service_fee),
+    containerNetPrice,
     quantity: row.quantity,
     items: toPriceItems(items),
   });
@@ -61,7 +74,9 @@ function toListItem(
     id: row.id,
     name: row.name,
     imageUrl: row.image_url,
-    serviceFee: Number(row.service_fee),
+    containerId: row.container_id,
+    containerName: container?.name ?? "—",
+    containerNetPrice,
     quantity: row.quantity,
     itemCount: items.length,
     total,
@@ -72,9 +87,10 @@ function toListItem(
 function toFormDTO(
   row: BundleRow,
   items: BundleItemWithProduct[],
+  container: { id: string; sku: string; name: string; netPrice: number },
 ): BundleFormDTO {
-  const { itemsSubtotal, total } = computeBundleTotal({
-    serviceFee: Number(row.service_fee),
+  const { itemsSubtotal, containerSubtotal, total } = computeBundleTotal({
+    containerNetPrice: container.netPrice,
     quantity: row.quantity,
     items: toPriceItems(items),
   });
@@ -84,11 +100,14 @@ function toFormDTO(
     name: row.name,
     description: row.description,
     imageUrl: row.image_url,
-    serviceFee: Number(row.service_fee),
+    containerId: container.id,
+    containerName: container.name,
+    containerNetPrice: container.netPrice,
     quantity: row.quantity,
     isActive: row.is_active,
     items: items.map(toFormItemDTO),
     itemsSubtotal,
+    containerSubtotal,
     total,
   };
 }
@@ -115,11 +134,39 @@ async function validateBundleItems(
   return { ok: true as const };
 }
 
+async function validateContainer(config: SupabaseConfig, containerId: string) {
+  const container = await getSurpriseContainerByIdRepo(config, containerId);
+  if (!container || !container.is_active) {
+    return { ok: false as const, error: "CONTAINER_NOT_FOUND" as const };
+  }
+  return { ok: true as const };
+}
+
+async function buildContainersMap(
+  config: SupabaseConfig,
+  containerIds: string[],
+) {
+  const containers = await getActiveContainersByIdsRepo(config, containerIds);
+  return new Map(
+    containers.map((container) => [
+      container.id,
+      {
+        netPrice: parseContainerPricesJson(container.prices).netPrice,
+        name: container.name,
+        sku: container.sku,
+      },
+    ]),
+  );
+}
+
 export async function listBundlesService(
   config: SupabaseConfig,
 ): Promise<BundleListItem[]> {
   const rows = await listBundlesRepo(config);
   if (rows.length === 0) return [];
+
+  const containerIds = [...new Set(rows.map((row) => row.container_id))];
+  const containersById = await buildContainersMap(config, containerIds);
 
   const bundleIds = rows.map((row) => row.id);
   const allItems = await listBundleItemsByBundleIdsRepo(config, bundleIds);
@@ -131,7 +178,9 @@ export async function listBundlesService(
     itemsByBundle.set(item.bundle_id, list);
   }
 
-  return rows.map((row) => toListItem(row, itemsByBundle.get(row.id) ?? []));
+  return rows.map((row) =>
+    toListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
+  );
 }
 
 export async function getBundleService(
@@ -140,7 +189,18 @@ export async function getBundleService(
 ): Promise<BundleFormDTO | null> {
   const row = await getBundleByIdRepo(config, id);
   if (!row) return null;
-  return toFormDTO(row, row.bundle_items ?? []);
+
+  const containerRow = row.surprise_containers;
+  if (!containerRow) return null;
+
+  const container = {
+    id: containerRow.id,
+    sku: containerRow.sku,
+    name: containerRow.name,
+    netPrice: parseContainerPricesJson(containerRow.prices).netPrice,
+  };
+
+  return toFormDTO(row, row.bundle_items ?? [], container);
 }
 
 export async function createBundleService(
@@ -162,11 +222,16 @@ export async function createBundleService(
     return { ok: false as const, error: itemsCheck.error };
   }
 
+  const containerCheck = await validateContainer(config, data.containerId);
+  if (!containerCheck.ok) {
+    return { ok: false as const, error: containerCheck.error };
+  }
+
   const row = await insertBundleRepo(config, {
     name: data.name,
     description: data.description ?? null,
     image_url: normalizeImageUrl(data.imageUrl),
-    service_fee: data.serviceFee,
+    container_id: data.containerId,
     quantity: data.quantity,
     is_active: data.isActive,
   });
@@ -214,6 +279,13 @@ export async function updateBundleService(
     }
   }
 
+  if (fields.containerId) {
+    const containerCheck = await validateContainer(config, fields.containerId);
+    if (!containerCheck.ok) {
+      return { ok: false as const, error: containerCheck.error };
+    }
+  }
+
   const updatePayload: Parameters<typeof updateBundleRepo>[2] = {};
 
   if (fields.name !== undefined) updatePayload.name = fields.name;
@@ -221,8 +293,8 @@ export async function updateBundleService(
     updatePayload.description = fields.description ?? null;
   if (fields.imageUrl !== undefined)
     updatePayload.image_url = normalizeImageUrl(fields.imageUrl);
-  if (fields.serviceFee !== undefined)
-    updatePayload.service_fee = fields.serviceFee;
+  if (fields.containerId !== undefined)
+    updatePayload.container_id = fields.containerId;
   if (fields.quantity !== undefined) updatePayload.quantity = fields.quantity;
   if (fields.isActive !== undefined) updatePayload.is_active = fields.isActive;
 
@@ -256,3 +328,5 @@ export async function softDeleteBundleService(
   await softDeleteBundleRepo(config, id);
   return { ok: true as const };
 }
+
+export { getContainerNetPrice };

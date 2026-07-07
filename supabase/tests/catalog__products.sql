@@ -1,5 +1,5 @@
 begin;
-select plan(3);
+select plan(7);
 
 select ok(
   (select relrowsecurity from pg_class where oid = 'catalog.products'::regclass),
@@ -17,6 +17,26 @@ select throws_ok(
 select ok(
   (select conname from pg_constraint where conname = 'products_sku_unique') is not null,
   'products_sku_unique constraint exists'
+);
+
+select ok(
+  (select conname from pg_constraint where conname = 'products_product_type_check') is not null,
+  'products_product_type_check constraint exists'
+);
+
+select ok(
+  (select conname from pg_constraint where conname = 'products_items_per_package_positive') is not null,
+  'products_items_per_package_positive constraint exists'
+);
+
+select ok(
+  (select conname from pg_constraint where conname = 'products_stock_sealed_packages_non_negative') is not null,
+  'products_stock_sealed_packages_non_negative constraint exists'
+);
+
+select ok(
+  (select conname from pg_constraint where conname = 'products_stock_loose_base_units_non_negative') is not null,
+  'products_stock_loose_base_units_non_negative constraint exists'
 );
 
 select * from finish();

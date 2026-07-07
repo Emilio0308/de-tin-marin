@@ -30,6 +30,14 @@ function productErrorMessage(
       return t("slugTaken");
     case "VALIDATION":
       return t("validation");
+    case "INVALID_PRICE":
+      return t("invalidPrice");
+    case "NOT_FOUND":
+      return t("notFound");
+    case "UNEXPECTED":
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("default");
     case "UNAUTHORIZED":
       return t("unauthorized");
     case "FORBIDDEN":
@@ -77,8 +85,21 @@ export function ProductFormContainer({
       brandPlaceholder: t("brandPlaceholder"),
       category: t("category"),
       categoryPlaceholder: t("categoryPlaceholder"),
-      price: t("price"),
+      productType: t("productType"),
+      productTypeUnit: t("productTypeUnit"),
+      productTypePackage: t("productTypePackage"),
+      productTypeHint: t("productTypeHint"),
+      packageSection: t("packageSection"),
+      itemsPerPackage: t("itemsPerPackage"),
+      packageLabel: t("packageLabel"),
+      packageLabelPlaceholder: t("packageLabelPlaceholder"),
+      packagePrice: t("packagePrice"),
+      unitPrice: t("unitPrice"),
+      unitPricePreview: t("unitPricePreview"),
       stock: t("stock"),
+      stockSealed: t("stockSealed"),
+      stockLoose: t("stockLoose"),
+      stockUnitsOnly: t("stockUnitsOnly"),
       stockDecrease: t("stockDecrease"),
       stockIncrease: t("stockIncrease"),
       description: t("description"),
@@ -88,6 +109,8 @@ export function ProductFormContainer({
       cancel: t("cancel"),
       save: t("save"),
       saving: t("saving"),
+      formatUnitPrice: (price) => t("formatUnitPrice", { price }),
+      formatStockTotal: (total) => t("formatStockTotal", { total }),
     }),
     [t, mode],
   );

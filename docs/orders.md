@@ -124,7 +124,7 @@ Sin pasarela. El operador en admin:
 2. Cambia orden a `paid` y `payment_status` a `confirmed`.
 3. _(S2A)_ Se ejecuta `deduct_stock_for_order`.
 
-Hasta S2A, el operador puede revisar/ajustar `stock_quantity` manualmente en admin.
+Hasta S2A, el operador puede revisar/ajustar `stock_sealed_packages` / `stock_loose_base_units` manualmente en admin (ver [inventory.md](inventory.md)).
 
 Ver Reglas 17–18.
 

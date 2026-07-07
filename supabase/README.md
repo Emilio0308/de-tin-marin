@@ -23,13 +23,16 @@ on conflict (id) do nothing;
 
 ## Migraciones
 
-| Archivo                                 | Contenido                                            |
-| --------------------------------------- | ---------------------------------------------------- |
-| `00001_spine_schemas_and_core.sql`      | Schemas + tablas `core.*` con RLS                    |
-| `00002_catalog_products_categories.sql` | `catalog.categories`, `catalog.products`             |
-| `00003_api_grants.sql`                  | GRANTs de schema/tablas para `anon`/`authenticated`  |
-| `00004_catalog_bundles.sql`             | `catalog.bundles`, `catalog.bundle_items` + grants   |
-| `00005_pricing_campaigns.sql`           | `pricing.campaigns`, `products.campaign_id` + grants |
+| Archivo                                     | Contenido                                               |
+| ------------------------------------------- | ------------------------------------------------------- |
+| `00001_spine_schemas_and_core.sql`          | Schemas + tablas `core.*` con RLS                       |
+| `00002_catalog_products_categories.sql`     | `catalog.categories`, `catalog.products`                |
+| `00003_api_grants.sql`                      | GRANTs de schema/tablas para `anon`/`authenticated`     |
+| `00004_catalog_bundles.sql`                 | `catalog.bundles`, `catalog.bundle_items` + grants      |
+| `00005_pricing_campaigns.sql`               | `pricing.campaigns`, `products.campaign_id` + grants    |
+| `00006_commerce_orders.sql`                 | `commerce.orders` + grants                              |
+| `00007_commerce_payments_shipments.sql`     | `commerce.payments`, `commerce.shipments` + grants      |
+| `00008_catalog_products_packages_stock.sql` | S1D — presentaciones, `prices.unit`, stock sealed/loose |
 
 > **Importante:** exponer un schema en la API (Settings → API → Exposed schemas)
 > no basta. Los roles `anon`/`authenticated` también necesitan `GRANT USAGE` sobre

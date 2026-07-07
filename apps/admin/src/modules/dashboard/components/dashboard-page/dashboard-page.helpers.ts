@@ -106,13 +106,14 @@ export function buildLowStockAlerts(
 ): DashboardAlertItem[] {
   return products
     .filter(
-      (product) => product.stockQuantity > 0 && product.stockQuantity < 10,
+      (product) =>
+        product.stockTotalBaseUnits > 0 && product.stockTotalBaseUnits < 10,
     )
     .slice(0, 4)
     .map((product) => ({
       id: product.id,
       icon: "warning" as const,
-      message: labels.lowStock(product.name, product.stockQuantity),
+      message: labels.lowStock(product.name, product.stockTotalBaseUnits),
       timeAgo: "",
     }));
 }

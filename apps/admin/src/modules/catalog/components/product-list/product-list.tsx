@@ -113,12 +113,18 @@ function StatusToggle({
   );
 }
 
-function StockCell({ quantity }: { quantity: number }) {
+function StockCell({
+  quantity,
+  display,
+}: {
+  quantity: number;
+  display: string;
+}) {
   const tone = stockTone(quantity);
   const barWidth = quantity <= 0 ? 0 : Math.min(100, Math.max(8, quantity));
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1" title={display}>
       <span
         className={cn(
           "text-sm font-bold",
@@ -146,16 +152,21 @@ function StockCell({ quantity }: { quantity: number }) {
 
 function StockBadge({
   quantity,
+  display,
   labels,
 }: {
   quantity: number;
+  display: string;
   labels: ProductListLabels;
 }) {
   const tone = stockTone(quantity);
 
   if (tone === "ok") {
     return (
-      <span className="text-on-surface-variant flex items-center gap-1.5">
+      <span
+        className="text-on-surface-variant flex items-center gap-1.5"
+        title={display}
+      >
         <Package className="h-[18px] w-[18px]" aria-hidden />
         <span className="font-label text-label-bold">
           {labels.formatStockAvailable(quantity)}
@@ -310,7 +321,10 @@ export function ProductList({
                   </span>
                 </td>
                 <td className="px-6 py-5">
-                  <StockCell quantity={product.stockQuantity} />
+                  <StockCell
+                    quantity={product.stockTotalBaseUnits}
+                    display={product.stockDisplay}
+                  />
                 </td>
                 <td className="px-6 py-5">
                   <StatusToggle
@@ -376,7 +390,8 @@ export function ProductList({
                     {formatPrice(product.finalPrice)}
                   </span>
                   <StockBadge
-                    quantity={product.stockQuantity}
+                    quantity={product.stockTotalBaseUnits}
+                    display={product.stockDisplay}
                     labels={labels}
                   />
                 </div>

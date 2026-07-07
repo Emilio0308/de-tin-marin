@@ -12,11 +12,14 @@ export type BundleFormDTO = {
   name: string;
   description: string | null;
   imageUrl: string | null;
-  serviceFee: number;
+  containerId: string;
+  containerName: string;
+  containerNetPrice: number;
   quantity: number;
   isActive: boolean;
   items: BundleFormItemDTO[];
   itemsSubtotal: number;
+  containerSubtotal: number;
   total: number;
 };
 

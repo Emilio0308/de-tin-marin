@@ -189,7 +189,9 @@ export function BundleList({
                     {formatPrice(bundle.total)}
                   </span>
                   <span className="text-on-surface-variant/60 text-xs">
-                    {labels.feeShort}: {formatPrice(bundle.serviceFee)}
+                    {labels.containerShort}:{" "}
+                    {formatPrice(bundle.containerNetPrice)} ·{" "}
+                    {bundle.containerName}
                   </span>
                 </td>
                 <td className="px-6 py-5 text-center">
@@ -255,7 +257,8 @@ export function BundleList({
             <div className="bg-outline-variant/10 h-px w-full" />
             <div className="flex items-center justify-between">
               <span className="text-on-surface-variant/60 font-label text-label-bold text-xs">
-                {labels.feeShort}: {formatPrice(bundle.serviceFee)}
+                {labels.containerShort}: {formatPrice(bundle.containerNetPrice)}{" "}
+                · {bundle.containerName}
               </span>
               <div className="flex items-center gap-1">
                 <Link

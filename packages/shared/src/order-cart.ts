@@ -35,12 +35,21 @@ export type OrderShoppingCartBundleComponent = {
   unitPrice: number;
 };
 
+export type OrderShoppingCartBundleContainer = {
+  containerId: string;
+  sku: string;
+  name: string;
+  unitPrice: number;
+};
+
 export type OrderShoppingCartBundleLine = {
   type: "bundle";
   bundleId: string;
   name: string;
   quantity: number;
-  serviceFee: number;
+  container?: OrderShoppingCartBundleContainer;
+  /** @deprecated Legacy orders pre-S1E */
+  serviceFee?: number;
   lineTotal: number;
   components: OrderShoppingCartBundleComponent[];
 };
@@ -75,7 +84,7 @@ export type BuildBundleLineInput = {
   bundleId: string;
   name: string;
   quantity: number;
-  serviceFee: number;
+  container: OrderShoppingCartBundleContainer;
   components: BundleComponentInput[];
 };
 
@@ -109,6 +118,13 @@ export function canTransitionOrderStatus(
   return ALLOWED_TRANSITIONS[from].includes(to);
 }
 
+export function getBundleLineContainerUnitPrice(
+  line: OrderShoppingCartBundleLine,
+): number {
+  if (line.container) return line.container.unitPrice;
+  return line.serviceFee ?? 0;
+}
+
 export function buildProductLine(
   product: ProductForOrderLine,
   quantity: number,
@@ -129,7 +145,7 @@ export function buildBundleLine(
   bundleId: string,
   name: string,
   quantity: number,
-  serviceFee: number,
+  container: OrderShoppingCartBundleContainer,
   components: BundleComponentInput[],
   productsById: Map<string, ProductForOrderLine>,
 ): OrderShoppingCartBundleLine {
@@ -158,14 +174,22 @@ export function buildBundleLine(
       0,
     ),
   );
-  const lineTotal = roundMoney(componentsSubtotal + serviceFee * quantity);
+  const containerUnitPrice = roundMoney(container.unitPrice);
+  const lineTotal = roundMoney(
+    componentsSubtotal + containerUnitPrice * quantity,
+  );
 
   return {
     type: "bundle",
     bundleId,
     name,
     quantity,
-    serviceFee: roundMoney(serviceFee),
+    container: {
+      containerId: container.containerId,
+      sku: container.sku,
+      name: container.name,
+      unitPrice: containerUnitPrice,
+    },
     lineTotal,
     components: frozenComponents,
   };
@@ -187,7 +211,7 @@ export function buildShoppingCart(
       line.bundleId,
       line.name,
       line.quantity,
-      line.serviceFee,
+      line.container,
       line.components,
       input.productsById,
     );

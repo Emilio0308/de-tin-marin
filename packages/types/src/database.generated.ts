@@ -58,6 +58,7 @@ export type Database = {
       }
       bundles: {
         Row: {
+          container_id: string
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -66,7 +67,54 @@ export type Database = {
           is_active: boolean
           name: string
           quantity: number
-          service_fee: number
+          updated_at: string
+        }
+        Insert: {
+          container_id: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          container_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundles_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "surprise_containers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surprise_containers: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          prices: Json
+          sku: string
+          stock_quantity: number
           updated_at: string
         }
         Insert: {
@@ -77,8 +125,9 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name: string
-          quantity?: number
-          service_fee?: number
+          prices?: Json
+          sku: string
+          stock_quantity?: number
           updated_at?: string
         }
         Update: {
@@ -89,8 +138,9 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name?: string
-          quantity?: number
-          service_fee?: number
+          prices?: Json
+          sku?: string
+          stock_quantity?: number
           updated_at?: string
         }
         Relationships: []
@@ -142,11 +192,15 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          items_per_package: number
           name: string
+          package_label: string | null
           prices: Json
+          product_type: string
           sku: string
           slug: string
-          stock_quantity: number
+          stock_loose_base_units: number
+          stock_sealed_packages: number
           updated_at: string
         }
         Insert: {
@@ -159,11 +213,15 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          items_per_package?: number
           name: string
+          package_label?: string | null
           prices?: Json
+          product_type?: string
           sku: string
           slug: string
-          stock_quantity?: number
+          stock_loose_base_units?: number
+          stock_sealed_packages?: number
           updated_at?: string
         }
         Update: {
@@ -176,11 +234,15 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          items_per_package?: number
           name?: string
+          package_label?: string | null
           prices?: Json
+          product_type?: string
           sku?: string
           slug?: string
-          stock_quantity?: number
+          stock_loose_base_units?: number
+          stock_sealed_packages?: number
           updated_at?: string
         }
         Relationships: [
@@ -540,6 +602,63 @@ export type Database = {
           name?: string
           percentage?: number
           starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      delivery_settings: {
+        Row: {
+          delivery_enabled: boolean
+          fallback_fee: number
+          id: string
+          pickup_enabled: boolean
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          delivery_enabled?: boolean
+          fallback_fee?: number
+          id?: string
+          pickup_enabled?: boolean
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          delivery_enabled?: boolean
+          fallback_fee?: number
+          id?: string
+          pickup_enabled?: boolean
+          singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      delivery_zones: {
+        Row: {
+          created_at: string
+          district: string
+          fee: number
+          id: string
+          is_active: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          district: string
+          fee?: number
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          district?: string
+          fee?: number
+          id?: string
+          is_active?: boolean
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

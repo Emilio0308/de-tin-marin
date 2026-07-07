@@ -10,6 +10,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 | **S1A** | Catálogo                   | Products + Categories                              |
 | **S1B** | Bundles                    | Composición de sorpresas                           |
 | **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
+| **S1D** | Presentaciones + stock     | `prices.unit`, paquetes, stock sealed/loose        |
+| **S1E** | Envases + delivery         | Insumos sorpresa + tarifas por distrito (Piura)    |
 | **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado            |
 | **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela       |
 | **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)   |
@@ -83,6 +85,43 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
+## S1D — Presentaciones, precios dual y stock por paquetes
+
+**Goal:** Productos con presentación (tira/paquete), precios `normal` + `unit`, stock en paquetes cerrados + unidades sueltas.
+
+- Migración `00008_catalog_products_packages_stock.sql` + pgTAP
+- Columnas: `product_type`, `items_per_package`, `package_label`, `stock_sealed_packages`, `stock_loose_base_units`
+- `prices.unit` en JSONB; coherencia con `normal` al guardar
+- Backfill desde `stock_quantity`; drop columna legacy
+- Admin: formulario producto + bundles usan `prices.unit.netPrice`
+- Helpers: `buildPricesFromPackageNetPrice`, `normalizeProductStock`, `deductBaseUnits`
+- Reglas 2, 4, 8, 9 actualizadas; DECISIONS #27–#29
+- Brief: [`docs/stages/S1D/01-products-packages-stock.md`](stages/S1D/01-products-packages-stock.md)
+
+**Depends on:** S1A, S1B, S1C
+
+**Bloquea:** S2A (deduct usa algoritmo sealed/loose)
+
+---
+
+## S1E — Envases de sorpresa + delivery ✅
+
+**Goal:** Insumos de envase (tabla aparte de productos) con stock y precio; bundles referencian envase en lugar de `service_fee`; tarifas de delivery configurables por distrito.
+
+- [x] Migración `00009_surprise_containers_delivery.sql` + pgTAP
+- [x] Tablas: `catalog.surprise_containers`, `pricing.delivery_zones`, `pricing.delivery_settings`
+- [x] Alter `catalog.bundles`: `container_id`; drop `service_fee`
+- [x] Admin: CRUD envases, CRUD zonas delivery, bundle/order actualizados
+- [x] Seed distritos Piura: Piura, Castilla, 26 de Octubre, La Unión, Catacaos
+- [x] `shopping_cart` bundle: `container` congelado (compat legacy `serviceFee`)
+- Brief: [`docs/stages/S1E/01-surprise-containers-delivery.md`](stages/S1E/01-surprise-containers-delivery.md)
+
+**Depends on:** S1B, S1D, S2B
+
+**Bloquea:** S2A (deduct envases), S3A (checkout delivery)
+
+---
+
 ## S2B — Orders ✅
 
 **Goal:** Órdenes con productos y sorpresas personalizadas; snapshot congelado.
@@ -117,15 +156,15 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ## S2A — Stock deduct al pagar
 
-**Goal:** Descuento atómico de `products.stock_quantity` cuando la orden pasa a `paid` (confirmación manual del operador en S2C).
+**Goal:** Descuento atómico en **unidades base** (algoritmo sealed/loose) cuando la orden pasa a `paid` (confirmación manual del operador en S2C).
 
 - Función `commerce.deduct_stock_for_order`
 - Enganchar en action de confirmar pago (S2C)
 - Validación pre-pago opcional (`checkOrderStock`)
-- Ajuste manual admin + `audit_log` (Regla 15)
+- Ajuste manual admin sealed/loose + `audit_log` (Regla 15)
 - Schema `inventory` → **v2**
 
-**Depends on:** S1A, S1B, S2C
+**Depends on:** S1D, **S1E**, S2C
 
 ---
 
@@ -170,8 +209,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 | Dev | Vertical                         |
 | --- | -------------------------------- |
 | A   | Platform: S0, auth, packages, CI |
-| B   | Catálogo + Pricing: S1A/B/C      |
-| C   | Commerce: S2B/C, luego S2A       |
+| B   | Catálogo + Pricing: S1A/B/C/D    |
+| C   | Commerce: S2B/C, S1D, luego S2A  |
 
 Consumir entre workstreams solo vía **DTOs declarados en briefs**.
 

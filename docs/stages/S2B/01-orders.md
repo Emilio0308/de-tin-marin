@@ -11,7 +11,8 @@
 
 ## Contexto (leer esto, no todo docs/)
 
-- S1A ✅ — productos con `prices`, `stock_quantity`; S1B ✅ — bundles plantilla; S1C ✅ — `finalPrice` en backend.
+- S1A ✅ — productos con `prices`, stock; S1B ✅ — bundles plantilla; S1C ✅ — `finalPrice` en backend.
+- **S1D** (posterior) refactoriza stock a sealed/loose y añade `prices.unit` — S2B no requiere cambios en `shopping_cart`.
 - **Order shopping cart** — detalle congelado en `commerce.orders.shopping_cart` JSONB (DECISIONS #26). Sin tablas de líneas.
 - Toda orden nace en **`pending_payment`**; estados: `pending_payment → paid → preparing → ready → delivered → completed` (+ `cancelled`).
 - **Regla 13** — al crear orden se congela carrito + totales; **Regla 16** — no recalcular post-checkout.

@@ -2,10 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { getBundleAction } from "@/modules/catalog/actions/get-bundle";
 import { listBundlesAction } from "@/modules/catalog/actions/list-bundles";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
+import {
+  listDeliveryZonesAction,
+  resolveDeliveryFeeAction,
+} from "@/modules/delivery/actions/delivery.actions";
 import { createOrderAction } from "@/modules/orders/actions/create-order";
 import { OrderForm } from "./order-form";
 import {
@@ -63,6 +67,15 @@ export function OrderFormContainer() {
     },
   });
 
+  const deliveryZonesQuery = useQuery({
+    queryKey: ["delivery-zones"],
+    queryFn: async () => {
+      const result = await listDeliveryZonesAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
   const productOptions = useMemo(
     () =>
       (productsQuery.data ?? []).map((product) => ({
@@ -79,15 +92,46 @@ export function OrderFormContainer() {
       (bundlesQuery.data ?? []).map((bundle) => ({
         id: bundle.id,
         name: bundle.name,
-        serviceFee: bundle.serviceFee,
+        containerId: bundle.containerId,
+        containerName: bundle.containerName,
+        containerNetPrice: bundle.containerNetPrice,
       })),
     [bundlesQuery.data],
   );
 
   const bundlesById = useMemo(
-    () => new Map(bundleOptions.map((bundle) => [bundle.id, bundle])),
+    () =>
+      new Map(
+        bundleOptions.map((bundle) => [
+          bundle.id,
+          {
+            name: bundle.name,
+            container: {
+              containerId: bundle.containerId,
+              sku: "",
+              name: bundle.containerName,
+              unitPrice: bundle.containerNetPrice,
+            },
+          },
+        ]),
+      ),
     [bundleOptions],
   );
+
+  useEffect(() => {
+    void (async () => {
+      const result = await resolveDeliveryFeeAction({
+        method: values.fulfillment.method,
+        district: values.fulfillment.deliveryAddress.district,
+      });
+      if (!result.ok) return;
+      setValues((current) =>
+        current.shippingTotal === result.fee
+          ? current
+          : { ...current, shippingTotal: result.fee },
+      );
+    })();
+  }, [values.fulfillment.method, values.fulfillment.deliveryAddress.district]);
 
   const totals = previewOrderTotals(values, productOptions, bundlesById);
 
@@ -146,7 +190,11 @@ export function OrderFormContainer() {
     })();
   }
 
-  if (productsQuery.isLoading || bundlesQuery.isLoading) {
+  if (
+    productsQuery.isLoading ||
+    bundlesQuery.isLoading ||
+    deliveryZonesQuery.isLoading
+  ) {
     return <p className="p-8 text-sm text-zinc-500">Cargando catálogo…</p>;
   }
 
@@ -162,6 +210,9 @@ export function OrderFormContainer() {
         values={values}
         products={productOptions}
         bundles={bundleOptions}
+        deliveryDistricts={(deliveryZonesQuery.data ?? [])
+          .filter((zone) => zone.isActive)
+          .map((zone) => zone.district)}
         totals={totals}
         submitting={submitting}
         error={error}

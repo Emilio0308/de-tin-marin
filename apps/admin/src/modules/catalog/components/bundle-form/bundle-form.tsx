@@ -90,6 +90,7 @@ function UnitStepper({
 export function BundleForm({
   initial,
   products,
+  containers,
   labels,
   onSubmit,
   onCancel,
@@ -109,8 +110,15 @@ export function BundleForm({
   );
 
   const priceSummary = useMemo(
-    () => computeLiveTotal(values, products),
-    [values, products],
+    () => computeLiveTotal(values, products, containers),
+    [values, products, containers],
+  );
+
+  const selectedContainerPrice = useMemo(
+    () =>
+      containers.find((container) => container.id === values.containerId)
+        ?.netPrice ?? 0,
+    [containers, values.containerId],
   );
 
   const productById = useMemo(
@@ -150,7 +158,8 @@ export function BundleForm({
     }));
   }
 
-  const canSubmit = !submitting && values.items.length > 0;
+  const canSubmit =
+    !submitting && values.items.length > 0 && values.containerId.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -287,7 +296,7 @@ export function BundleForm({
                 <option value="">{labels.productSelectPlaceholder}</option>
                 {availableProducts.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} · {formatPrice(product.netPrice)}
+                    {product.name} · {formatPrice(product.unitNetPrice)}
                   </option>
                 ))}
               </select>
@@ -321,7 +330,7 @@ export function BundleForm({
                         </p>
                         <p className="text-on-surface-variant/70 text-xs">
                           {labels.formatUnitPrice(
-                            formatPrice(product?.netPrice ?? 0),
+                            formatPrice(product?.unitNetPrice ?? 0),
                           )}
                         </p>
                       </div>
@@ -398,32 +407,31 @@ export function BundleForm({
               </button>
             </div>
             <div className="bg-outline-variant/20 h-px w-full" />
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className={labelClass} htmlFor="serviceFee">
-                  {labels.serviceFee}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <label className={labelClass} htmlFor="containerId">
+                  {labels.container}
                 </label>
-                <div className="relative">
-                  <span className="text-on-surface-variant absolute left-4 top-1/2 -translate-y-1/2 font-bold">
-                    S/
-                  </span>
-                  <input
-                    id="serviceFee"
-                    name="serviceFee"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    required
-                    value={values.serviceFee}
-                    onChange={(event) =>
-                      setValues((current) => ({
-                        ...current,
-                        serviceFee: Number(event.target.value) || 0,
-                      }))
-                    }
-                    className={cn(fieldClass, "pl-9")}
-                  />
-                </div>
+                <select
+                  id="containerId"
+                  name="containerId"
+                  required
+                  value={values.containerId}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      containerId: event.target.value,
+                    }))
+                  }
+                  className={cn(fieldClass, "cursor-pointer appearance-none")}
+                >
+                  <option value="">{labels.containerPlaceholder}</option>
+                  {containers.map((container) => (
+                    <option key={container.id} value={container.id}>
+                      {container.name} · S/ {container.netPrice.toFixed(2)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass} htmlFor="quantity">
@@ -475,12 +483,16 @@ export function BundleForm({
             </div>
             <div className="flex items-center justify-between">
               <span className="font-body text-body-md text-on-surface-variant">
-                {labels.feeLabel}
+                {labels.containerLabel}
               </span>
               <span className="font-label text-label-bold text-on-surface">
-                {formatPrice(values.serviceFee)}
+                {formatPrice(priceSummary.containerSubtotal)}
               </span>
             </div>
+            <p className="text-on-surface-variant/70 text-xs">
+              S/ {selectedContainerPrice.toFixed(2)} × {values.quantity}{" "}
+              sorpresas
+            </p>
             <div className="bg-primary/20 h-px w-full" />
             <div className="flex items-center justify-between">
               <span className="font-label text-label-bold text-primary uppercase">

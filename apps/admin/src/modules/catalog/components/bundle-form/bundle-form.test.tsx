@@ -4,8 +4,12 @@ import { BundleForm } from "./bundle-form";
 import type { BundleFormLabels } from "./bundle-form.types";
 
 const products = [
-  { id: "p1", name: "Galleta", netPrice: 1 },
-  { id: "p2", name: "Chocolate", netPrice: 2 },
+  { id: "p1", name: "Galleta", unitNetPrice: 1 },
+  { id: "p2", name: "Chocolate", unitNetPrice: 2 },
+];
+
+const containers = [
+  { id: "c1", name: "Caja mediana", sku: "ENV-1-5", netPrice: 1.5 },
 ];
 
 const labels: BundleFormLabels = {
@@ -33,10 +37,11 @@ const labels: BundleFormLabels = {
   removeProduct: "Quitar",
   configActiveTitle: "¿Sorpresa activa?",
   configActiveHint: "Disponible",
-  serviceFee: "Fee de servicio (S/)",
+  container: "Envase de sorpresa",
+  containerPlaceholder: "Selecciona un envase",
   persons: "Cantidad de personas",
   subtotalLabel: "Subtotal",
-  feeLabel: "Fee de servicio",
+  containerLabel: "Subtotal envases",
   totalLabel: "Inversión total estimada",
   cancel: "Cancelar",
   save: "Guardar sorpresa",
@@ -50,6 +55,7 @@ describe("BundleForm", () => {
     render(
       <BundleForm
         products={products}
+        containers={containers}
         labels={labels}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -58,14 +64,16 @@ describe("BundleForm", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText(labels.serviceFee), {
-      target: { value: "30" },
+    fireEvent.change(screen.getByLabelText(labels.container), {
+      target: { value: "c1" },
     });
     fireEvent.change(screen.getByLabelText(labels.persons), {
       target: { value: "20" },
     });
 
-    const productSelect = screen.getByRole("combobox");
+    const productSelect = screen.getByRole("combobox", {
+      name: labels.productSelectPlaceholder,
+    });
     fireEvent.change(productSelect, { target: { value: "p1" } });
     fireEvent.click(screen.getByRole("button", { name: labels.addProduct }));
 
