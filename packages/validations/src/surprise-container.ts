@@ -22,6 +22,8 @@ export const surpriseContainerListItemSchema = z.object({
   id: z.string().uuid(),
   sku: z.string(),
   name: z.string(),
+  description: z.string().nullable(),
+  imageUrl: z.string().nullable(),
   netPrice: z.number(),
   stockQuantity: z.number(),
   isActive: z.boolean(),

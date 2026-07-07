@@ -2,6 +2,8 @@ export type SurpriseContainerListItem = {
   id: string;
   sku: string;
   name: string;
+  description: string | null;
+  imageUrl: string | null;
   netPrice: number;
   stockQuantity: number;
   isActive: boolean;

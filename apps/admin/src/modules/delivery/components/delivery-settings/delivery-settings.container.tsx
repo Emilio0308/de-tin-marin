@@ -1,10 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Button } from "@de-tin-marin/ui/button";
-import { Input } from "@de-tin-marin/ui/input";
-import { Label } from "@de-tin-marin/ui/label";
+import { useTranslations } from "next-intl";
 import {
   deleteDeliveryZoneAction,
   getDeliverySettingsAction,
@@ -12,14 +10,42 @@ import {
   updateDeliverySettingsAction,
   upsertDeliveryZoneAction,
 } from "@/modules/delivery/actions/delivery.actions";
+import type { DeliveryZoneDTO } from "@/modules/delivery/types/delivery.dto";
+import { DeliverySettings } from "./delivery-settings";
+import {
+  buildDefaultZoneDraft,
+  nextZoneSortOrder,
+} from "./delivery-settings.helpers";
+import type {
+  DeliverySettingsLabels,
+  DeliverySettingsValues,
+  ZoneDraft,
+  ZoneEditDraft,
+} from "./delivery-settings.types";
+
+function zoneErrorMessage(
+  error: string,
+  t: ReturnType<typeof useTranslations<"delivery.errors">>,
+): string {
+  if (error === "VALIDATION") return t("validation");
+  if (error.toLowerCase().includes("duplicate")) return t("duplicateDistrict");
+  return t("default");
+}
 
 export function DeliverySettingsContainer() {
+  const t = useTranslations("delivery");
+  const tErrors = useTranslations("delivery.errors");
   const queryClient = useQueryClient();
-  const [zoneDraft, setZoneDraft] = useState({
-    district: "",
-    fee: 0,
-    sortOrder: 0,
+
+  const [settingsDraft, setSettingsDraft] = useState<DeliverySettingsValues>({
+    pickupEnabled: true,
+    deliveryEnabled: true,
+    fallbackFee: 20,
   });
+  const [zoneDraft, setZoneDraft] = useState<ZoneDraft>(buildDefaultZoneDraft);
+  const [editingZone, setEditingZone] = useState<ZoneEditDraft | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [zoneError, setZoneError] = useState<string | null>(null);
 
   const zonesQuery = useQuery({
     queryKey: ["delivery-zones"],
@@ -39,16 +65,9 @@ export function DeliverySettingsContainer() {
     },
   });
 
-  const [settingsDraft, setSettingsDraft] = useState({
-    pickupEnabled: true,
-    deliveryEnabled: true,
-    fallbackFee: 20,
-  });
-
   useEffect(() => {
-    if (settingsQuery.data) {
-      setSettingsDraft(settingsQuery.data);
-    }
+    if (!settingsQuery.data) return;
+    setSettingsDraft(settingsQuery.data);
   }, [settingsQuery.data]);
 
   const saveSettingsMutation = useMutation({
@@ -57,23 +76,33 @@ export function DeliverySettingsContainer() {
       if (!result.ok) throw new Error(result.error);
     },
     onSuccess: async () => {
+      setSettingsError(null);
       await queryClient.invalidateQueries({ queryKey: ["delivery-settings"] });
+    },
+    onError: (error: Error) => {
+      setSettingsError(zoneErrorMessage(error.message, tErrors));
     },
   });
 
   const saveZoneMutation = useMutation({
-    mutationFn: async () => {
-      const result = await upsertDeliveryZoneAction({
-        district: zoneDraft.district,
-        fee: zoneDraft.fee,
-        sortOrder: zoneDraft.sortOrder,
-        isActive: true,
-      });
+    mutationFn: async (payload: {
+      id?: string;
+      district: string;
+      fee: number;
+      sortOrder: number;
+      isActive: boolean;
+    }) => {
+      const result = await upsertDeliveryZoneAction(payload);
       if (!result.ok) throw new Error(result.error);
     },
     onSuccess: async () => {
-      setZoneDraft({ district: "", fee: 0, sortOrder: 0 });
+      setZoneError(null);
+      setZoneDraft(buildDefaultZoneDraft());
+      setEditingZone(null);
       await queryClient.invalidateQueries({ queryKey: ["delivery-zones"] });
+    },
+    onError: (error: Error) => {
+      setZoneError(zoneErrorMessage(error.message, tErrors));
     },
   });
 
@@ -87,133 +116,164 @@ export function DeliverySettingsContainer() {
     },
   });
 
+  const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
+
+  const labels: DeliverySettingsLabels = useMemo(
+    () => ({
+      title: t("title"),
+      subtitle: t("subtitle"),
+      loading: t("loading"),
+      loadError: t("loadError"),
+      sectionGlobal: t("sectionGlobal"),
+      pickupEnabled: t("pickupEnabled"),
+      pickupHint: t("pickupHint"),
+      deliveryEnabled: t("deliveryEnabled"),
+      deliveryHint: t("deliveryHint"),
+      fallbackFee: t("fallbackFee"),
+      fallbackHint: t("fallbackHint"),
+      saveSettings: t("saveSettings"),
+      savingSettings: t("savingSettings"),
+      settingsSaved: t("settingsSaved"),
+      sectionZones: t("sectionZones"),
+      district: t("district"),
+      districtPlaceholder: t("districtPlaceholder"),
+      fee: t("fee"),
+      feePlaceholder: t("feePlaceholder"),
+      addZone: t("addZone"),
+      addingZone: t("addingZone"),
+      columns: {
+        district: t("columns.district"),
+        fee: t("columns.fee"),
+        status: t("columns.status"),
+        order: t("columns.order"),
+        actions: t("columns.actions"),
+      },
+      statusActive: t("statusActive"),
+      statusInactive: t("statusInactive"),
+      edit: t("edit"),
+      delete: t("delete"),
+      save: t("save"),
+      cancel: t("cancel"),
+      emptyZones: t("emptyZones"),
+      formatPrice: (amount) => t("formatPrice", { amount: amount.toFixed(2) }),
+      formatOrder: (order) => t("orderValue", { order }),
+      formatPagination: (shown, total) => t("pagination", { shown, total }),
+      formatAriaEdit: (district) => t("ariaEdit", { district }),
+      formatAriaDelete: (district) => t("ariaDelete", { district }),
+      infoTip: t("infoTip"),
+      deleteConfirm: t("deleteConfirm"),
+      errors: {
+        validation: tErrors("validation"),
+        duplicateDistrict: tErrors("duplicateDistrict"),
+        default: tErrors("default"),
+      },
+    }),
+    [t, tErrors],
+  );
+
+  function handleAddZone() {
+    setZoneError(null);
+    saveZoneMutation.mutate({
+      district: zoneDraft.district.trim(),
+      fee: zoneDraft.fee,
+      sortOrder: nextZoneSortOrder(zones),
+      isActive: true,
+    });
+  }
+
+  function handleStartEditZone(zone: DeliveryZoneDTO) {
+    setZoneError(null);
+    setEditingZone({
+      id: zone.id,
+      district: zone.district,
+      fee: zone.fee,
+      sortOrder: zone.sortOrder,
+      isActive: zone.isActive,
+    });
+  }
+
+  function handleSaveEditZone() {
+    if (!editingZone) return;
+    setZoneError(null);
+    saveZoneMutation.mutate({
+      id: editingZone.id,
+      district: editingZone.district.trim(),
+      fee: editingZone.fee,
+      sortOrder: editingZone.sortOrder,
+      isActive: editingZone.isActive,
+    });
+  }
+
+  function handleToggleZoneActive(zone: DeliveryZoneDTO) {
+    setZoneError(null);
+    saveZoneMutation.mutate({
+      id: zone.id,
+      district: zone.district,
+      fee: zone.fee,
+      sortOrder: zone.sortOrder,
+      isActive: !zone.isActive,
+    });
+  }
+
+  function handleDeleteZone(id: string) {
+    const zone = zones.find((item) => item.id === id);
+    if (!zone) return;
+    if (!window.confirm(labels.deleteConfirm)) return;
+    deleteZoneMutation.mutate(id);
+  }
+
   if (zonesQuery.isLoading || settingsQuery.isLoading) {
-    return <p className="p-8 text-sm text-zinc-500">Cargando delivery…</p>;
+    return (
+      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col lg:p-8">
+        <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl border p-12 text-center">
+          <p className="font-body text-body-md text-on-surface-variant">
+            {labels.loading}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (zonesQuery.isError || settingsQuery.isError) {
+    return (
+      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col lg:p-8">
+        <div className="border-error/20 bg-error-container/40 rounded-4xl border p-12 text-center">
+          <p className="font-body text-body-md text-on-error-container">
+            {labels.loadError}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div>
-        <h1 className="text-3xl font-bold">Delivery — Piura</h1>
-        <p className="text-zinc-600">
-          Tarifas por distrito y configuración global
-        </p>
-      </div>
-
-      <section className="grid max-w-xl gap-4 rounded-lg border p-4">
-        <h2 className="text-lg font-semibold">Configuración global</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={settingsDraft.pickupEnabled}
-            onChange={(event) =>
-              setSettingsDraft((current) => ({
-                ...current,
-                pickupEnabled: event.target.checked,
-              }))
-            }
-          />
-          Recojo en tienda habilitado
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={settingsDraft.deliveryEnabled}
-            onChange={(event) =>
-              setSettingsDraft((current) => ({
-                ...current,
-                deliveryEnabled: event.target.checked,
-              }))
-            }
-          />
-          Delivery habilitado
-        </label>
-        <div>
-          <Label>Tarifa fallback (distrito no listado)</Label>
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            value={settingsDraft.fallbackFee}
-            onChange={(event) =>
-              setSettingsDraft((current) => ({
-                ...current,
-                fallbackFee: Number(event.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-        <Button
-          disabled={saveSettingsMutation.isPending}
-          onClick={() => saveSettingsMutation.mutate()}
-        >
-          Guardar configuración
-        </Button>
-      </section>
-
-      <section className="grid gap-4">
-        <h2 className="text-lg font-semibold">Distritos</h2>
-        <div className="grid max-w-xl gap-3 rounded-lg border p-4 md:grid-cols-3">
-          <Input
-            placeholder="Distrito"
-            value={zoneDraft.district}
-            onChange={(event) =>
-              setZoneDraft((current) => ({
-                ...current,
-                district: event.target.value,
-              }))
-            }
-          />
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            placeholder="Tarifa S/"
-            value={zoneDraft.fee}
-            onChange={(event) =>
-              setZoneDraft((current) => ({
-                ...current,
-                fee: Number(event.target.value) || 0,
-              }))
-            }
-          />
-          <Button
-            disabled={!zoneDraft.district || saveZoneMutation.isPending}
-            onClick={() => saveZoneMutation.mutate()}
-          >
-            Agregar distrito
-          </Button>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-zinc-50 text-left">
-              <tr>
-                <th className="px-4 py-3">Distrito</th>
-                <th className="px-4 py-3">Tarifa</th>
-                <th className="px-4 py-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(zonesQuery.data ?? []).map((zone) => (
-                <tr key={zone.id} className="border-t">
-                  <td className="px-4 py-3">{zone.district}</td>
-                  <td className="px-4 py-3">S/ {zone.fee.toFixed(2)}</td>
-                  <td className="px-4 py-3">
-                    <Button
-                      variant="secondary"
-                      disabled={deleteZoneMutation.isPending}
-                      onClick={() => deleteZoneMutation.mutate(zone.id)}
-                    >
-                      Eliminar
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+    <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:p-8">
+      <DeliverySettings
+        settings={settingsDraft}
+        zones={zones}
+        zoneDraft={zoneDraft}
+        editingZone={editingZone}
+        labels={labels}
+        settingsSubmitting={saveSettingsMutation.isPending}
+        zoneSubmitting={saveZoneMutation.isPending}
+        deletingZoneId={
+          deleteZoneMutation.isPending
+            ? (deleteZoneMutation.variables ?? null)
+            : null
+        }
+        settingsError={settingsError}
+        zoneError={zoneError}
+        onSettingsChange={setSettingsDraft}
+        onSaveSettings={() => saveSettingsMutation.mutate()}
+        onZoneDraftChange={setZoneDraft}
+        onAddZone={handleAddZone}
+        onStartEditZone={handleStartEditZone}
+        onCancelEditZone={() => setEditingZone(null)}
+        onEditZoneChange={setEditingZone}
+        onSaveEditZone={handleSaveEditZone}
+        onToggleZoneActive={handleToggleZoneActive}
+        onDeleteZone={handleDeleteZone}
+      />
     </div>
   );
 }

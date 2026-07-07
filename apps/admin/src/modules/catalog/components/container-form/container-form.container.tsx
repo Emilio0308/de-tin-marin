@@ -1,203 +1,140 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@de-tin-marin/ui/button";
-import { Input } from "@de-tin-marin/ui/input";
-import { Label } from "@de-tin-marin/ui/label";
+import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createSurpriseContainerAction } from "@/modules/catalog/actions/create-surprise-container";
-import { getSurpriseContainerAction } from "@/modules/catalog/actions/get-surprise-container";
 import { updateSurpriseContainerAction } from "@/modules/catalog/actions/update-surprise-container";
-import type { SurpriseContainerFormDTO } from "@/modules/catalog/types/surprise-container.dto";
+import { ContainerForm } from "./container-form";
+import type {
+  ContainerFormContainerProps,
+  ContainerFormLabels,
+  ContainerFormValues,
+} from "./container-form.types";
 
-type ContainerFormContainerProps = {
-  mode: "create" | "edit";
-  containerId?: string;
-};
-
-const emptyValues = {
-  sku: "",
-  name: "",
-  description: "",
-  netPrice: 0,
-  stockQuantity: 0,
-  isActive: true,
-};
+function containerErrorMessage(
+  result: { error: string; message?: string },
+  t: ReturnType<typeof useTranslations<"containerForm.errors">>,
+): string {
+  switch (result.error) {
+    case "DUPLICATE_SKU":
+      return t("duplicateSku");
+    case "VALIDATION":
+      return t("validation");
+    case "UNAUTHORIZED":
+      return t("unauthorized");
+    case "FORBIDDEN":
+      return t("forbidden");
+    case "NOT_FOUND":
+      return t("notFound");
+    default:
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("default");
+  }
+}
 
 export function ContainerFormContainer({
   mode,
-  containerId,
+  initial,
 }: ContainerFormContainerProps) {
+  const t = useTranslations("containerForm");
+  const tErrors = useTranslations("containerForm.errors");
   const router = useRouter();
-  const [values, setValues] = useState(emptyValues);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const containerQuery = useQuery({
-    queryKey: ["surprise-container", containerId],
-    enabled: mode === "edit" && Boolean(containerId),
-    queryFn: async () => {
-      const result = await getSurpriseContainerAction(containerId!);
-      if (!result.ok) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const labels: ContainerFormLabels = useMemo(
+    () => ({
+      breadcrumbParent: t("breadcrumbParent"),
+      breadcrumbCurrent:
+        mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      title: mode === "create" ? t("titleCreate") : t("titleEdit"),
+      sectionInfo: t("sectionInfo"),
+      sectionImage: t("sectionImage"),
+      sectionFinance: t("sectionFinance"),
+      sectionConfig: t("sectionConfig"),
+      sku: t("sku"),
+      skuRequired: t("skuRequired"),
+      skuPlaceholder: t("skuPlaceholder"),
+      name: t("name"),
+      nameRequired: t("nameRequired"),
+      namePlaceholder: t("namePlaceholder"),
+      description: t("description"),
+      descriptionPlaceholder: t("descriptionPlaceholder"),
+      imageUrl: t("imageUrl"),
+      imageUrlPlaceholder: t("imageUrlPlaceholder"),
+      imageVerify: t("imageVerify"),
+      imageInvalid: t("imageInvalid"),
+      imagePreview: t("imagePreview"),
+      imagePreviewEmpty: t("imagePreviewEmpty"),
+      imageHint: t("imageHint"),
+      imageAlt: t("imageAlt"),
+      netPrice: t("netPrice"),
+      netPriceRequired: t("netPriceRequired"),
+      stock: t("stock"),
+      stockShort: t("stockShort"),
+      stockRequired: t("stockRequired"),
+      stockDecrease: t("stockDecrease"),
+      stockIncrease: t("stockIncrease"),
+      statusActiveTitle: t("statusActiveTitle"),
+      statusActiveHint: t("statusActiveHint"),
+      statusYes: t("statusYes"),
+      statusNo: t("statusNo"),
+      tipTitle: t("tipTitle"),
+      tipBody: t("tipBody"),
+      previewLabel: t("previewLabel"),
+      previewFallback: t("previewFallback"),
+      cancel: t("cancel"),
+      save: t("save"),
+      saving: t("saving"),
+    }),
+    [t, mode],
+  );
 
-  useEffect(() => {
-    if (!containerQuery.data) return;
-    const data: SurpriseContainerFormDTO = containerQuery.data;
-    setValues({
-      sku: data.sku,
-      name: data.name,
-      description: data.description ?? "",
-      netPrice: data.netPrice,
-      stockQuantity: data.stockQuantity,
-      isActive: data.isActive,
-    });
-  }, [containerQuery.data]);
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function handleSubmit(values: ContainerFormValues) {
     setSubmitting(true);
     setError(null);
 
     const payload = {
       ...values,
       description: values.description || null,
+      imageUrl: values.imageUrl || null,
     };
 
     const result =
       mode === "create"
         ? await createSurpriseContainerAction(payload)
-        : await updateSurpriseContainerAction({ id: containerId, ...payload });
+        : await updateSurpriseContainerAction({
+            id: initial?.id,
+            ...payload,
+          });
 
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(
-        result.error === "DUPLICATE_SKU"
-          ? "El SKU ya existe"
-          : "No se pudo guardar el envase",
-      );
+      setError(containerErrorMessage(result, tErrors));
       return;
     }
 
     router.push("/containers");
+    router.refresh();
   }
 
-  if (mode === "edit" && containerQuery.isLoading) {
-    return <p className="p-8 text-sm text-zinc-500">Cargando envase…</p>;
+  function handleCancel() {
+    router.push("/containers");
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-8">
-      <div>
-        <h1 className="text-3xl font-bold">
-          {mode === "create" ? "Nuevo envase" : "Editar envase"}
-        </h1>
-      </div>
-
-      <form
-        onSubmit={(event) => void handleSubmit(event)}
-        className="grid gap-4"
-      >
-        <div>
-          <Label htmlFor="sku">SKU</Label>
-          <Input
-            id="sku"
-            required
-            value={values.sku}
-            onChange={(event) =>
-              setValues((current) => ({ ...current, sku: event.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="name">Nombre</Label>
-          <Input
-            id="name"
-            required
-            value={values.name}
-            onChange={(event) =>
-              setValues((current) => ({ ...current, name: event.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="description">Descripción</Label>
-          <Input
-            id="description"
-            value={values.description}
-            onChange={(event) =>
-              setValues((current) => ({
-                ...current,
-                description: event.target.value,
-              }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="netPrice">Precio (S/)</Label>
-          <Input
-            id="netPrice"
-            type="number"
-            min={0}
-            step="0.01"
-            required
-            value={values.netPrice}
-            onChange={(event) =>
-              setValues((current) => ({
-                ...current,
-                netPrice: Number(event.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="stockQuantity">Stock</Label>
-          <Input
-            id="stockQuantity"
-            type="number"
-            min={0}
-            step={1}
-            required
-            value={values.stockQuantity}
-            onChange={(event) =>
-              setValues((current) => ({
-                ...current,
-                stockQuantity: Number(event.target.value) || 0,
-              }))
-            }
-          />
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={values.isActive}
-            onChange={(event) =>
-              setValues((current) => ({
-                ...current,
-                isActive: event.target.checked,
-              }))
-            }
-          />
-          Activo
-        </label>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => router.push("/containers")}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Guardando…" : "Guardar"}
-          </Button>
-        </div>
-      </form>
+    <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-32 lg:p-8 lg:pb-8">
+      <ContainerForm
+        initial={initial}
+        labels={labels}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        submitting={submitting}
+        error={error}
+      />
     </div>
   );
 }

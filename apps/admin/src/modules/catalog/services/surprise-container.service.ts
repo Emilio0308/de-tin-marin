@@ -33,6 +33,8 @@ function toListItem(
     id: row.id,
     sku: row.sku,
     name: row.name,
+    description: row.description,
+    imageUrl: row.image_url,
     netPrice: parseContainerPricesJson(row.prices).netPrice,
     stockQuantity: row.stock_quantity,
     isActive: row.is_active,
