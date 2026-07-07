@@ -1,30 +1,54 @@
 import "server-only";
 
-import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   confirmPaymentInputSchema,
   refundPaymentInputSchema,
 } from "@de-tin-marin/validations/payment";
-import {
-  asJson,
-  getOrderByIdRepo,
-  updateOrderAfterPaymentRepo,
-  updateOrderPaymentStatusRepo,
-} from "../repositories/order.repository";
+import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   getPaymentByIdRepo,
-  insertPaymentRepo,
+  confirmPaymentWithStockDeductRepo,
   updatePaymentRepo,
 } from "../repositories/payment.repository";
+import { updateOrderPaymentStatusRepo } from "../repositories/order.repository";
 
-function appendPaymentMethod(
-  existing: unknown,
-  entry: { type: string; reference?: string; confirmedAt: string },
-): unknown[] {
-  const methods: unknown[] = Array.isArray(existing)
-    ? (existing as unknown[])
-    : [];
-  return [...methods, entry];
+type ConfirmPaymentError =
+  | "VALIDATION"
+  | "NOT_FOUND"
+  | "ORDER_NOT_PENDING"
+  | "ALREADY_CONFIRMED"
+  | "INSUFFICIENT_STOCK"
+  | "FORBIDDEN";
+
+type InsufficientStockDetails = {
+  kind: "product" | "container";
+  sku: string;
+};
+
+function parseConfirmPaymentError(message: string): {
+  error: ConfirmPaymentError;
+  details?: InsufficientStockDetails;
+} {
+  if (message.includes("INSUFFICIENT_STOCK")) {
+    const match = message.match(/INSUFFICIENT_STOCK:(product|container):(.+)/);
+    return {
+      error: "INSUFFICIENT_STOCK",
+      details:
+        match && match[2]
+          ? {
+              kind: match[1] as InsufficientStockDetails["kind"],
+              sku: match[2],
+            }
+          : undefined,
+    };
+  }
+  if (message.includes("NOT_FOUND")) return { error: "NOT_FOUND" };
+  if (message.includes("ORDER_NOT_PENDING"))
+    return { error: "ORDER_NOT_PENDING" };
+  if (message.includes("ALREADY_CONFIRMED"))
+    return { error: "ALREADY_CONFIRMED" };
+  if (message.includes("FORBIDDEN")) return { error: "FORBIDDEN" };
+  return { error: "NOT_FOUND" };
 }
 
 export async function confirmPaymentService(
@@ -35,52 +59,38 @@ export async function confirmPaymentService(
   | { ok: true; data: { orderId: string; paymentId: string; status: "paid" } }
   | {
       ok: false;
-      error:
-        "VALIDATION" | "NOT_FOUND" | "ORDER_NOT_PENDING" | "ALREADY_CONFIRMED";
+      error: ConfirmPaymentError;
+      details?: InsufficientStockDetails;
     }
 > {
   const parsed = confirmPaymentInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
-  const order = await getOrderByIdRepo(config, parsed.data.orderId);
-  if (!order) return { ok: false, error: "NOT_FOUND" };
+  try {
+    const data = await confirmPaymentWithStockDeductRepo(config, {
+      orderId: parsed.data.orderId,
+      staffUserId,
+      notes: parsed.data.notes ?? null,
+      paymentReference: parsed.data.paymentReference ?? null,
+    });
 
-  if (order.status !== "pending_payment") {
-    return { ok: false, error: "ORDER_NOT_PENDING" };
+    return {
+      ok: true,
+      data: {
+        orderId: data.orderId,
+        paymentId: data.paymentId,
+        status: "paid",
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const parsedError = parseConfirmPaymentError(message);
+    return {
+      ok: false,
+      error: parsedError.error,
+      details: parsedError.details,
+    };
   }
-
-  if (order.payment_status === "confirmed") {
-    return { ok: false, error: "ALREADY_CONFIRMED" };
-  }
-
-  const confirmedAt = new Date().toISOString();
-  const payment = await insertPaymentRepo(config, {
-    order_id: order.id,
-    amount: order.total,
-    currency_code: "PEN",
-    status: "confirmed",
-    method: "internal",
-    confirmed_by: staffUserId,
-    notes: parsed.data.notes ?? null,
-    confirmed_at: confirmedAt,
-  });
-
-  const paymentMethods = appendPaymentMethod(order.payment_methods, {
-    type: "internal",
-    reference: parsed.data.paymentReference,
-    confirmedAt,
-  });
-
-  await updateOrderAfterPaymentRepo(config, order.id, asJson(paymentMethods));
-
-  return {
-    ok: true,
-    data: {
-      orderId: order.id,
-      paymentId: payment.id,
-      status: "paid",
-    },
-  };
 }
 
 export async function refundPaymentService(

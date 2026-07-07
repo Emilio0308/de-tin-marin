@@ -122,11 +122,10 @@ Sin pasarela. El operador en admin:
 
 1. Registra/confirma pago (`payment_methods` y/o `commerce.payments`).
 2. Cambia orden a `paid` y `payment_status` a `confirmed`.
-3. _(S2A)_ Se ejecuta `deduct_stock_for_order`.
+3. Se ejecuta `commerce.confirm_payment_with_stock_deduct` (deduct atómico + `paid`).
+4. Si falta stock de producto o envase → orden permanece `pending_payment`.
 
-Hasta S2A, el operador puede revisar/ajustar `stock_sealed_packages` / `stock_loose_base_units` manualmente en admin (ver [inventory.md](inventory.md)).
-
-Ver Reglas 17–18.
+Ver Reglas 17–18. Reversión de stock en reembolso: manual (Regla 18).
 
 ## DTO de respuesta
 

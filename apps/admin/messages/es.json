@@ -140,7 +140,10 @@
       "cancelling": "Cancelando…",
       "cancelConfirm": "¿Cancelar esta orden?",
       "referencePrefix": "Ref",
-      "paymentReferencePlaceholder": "Yape, transferencia…"
+      "paymentReferencePlaceholder": "Yape, transferencia…",
+      "stockWarningTitle": "Stock insuficiente para confirmar el pago",
+      "stockWarningItem": "{sku}: se requieren {required} u., hay {available} disponibles",
+      "insufficientStockError": "No hay stock suficiente para confirmar el pago"
     }
   },
   "products": {

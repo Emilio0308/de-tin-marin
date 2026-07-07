@@ -154,17 +154,17 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S2A — Stock deduct al pagar
+## S2A — Stock deduct al pagar ✅
 
-**Goal:** Descuento atómico en **unidades base** (algoritmo sealed/loose) cuando la orden pasa a `paid` (confirmación manual del operador en S2C).
+**Goal:** Descuento atómico en **unidades base** (algoritmo sealed/loose) + envases cuando la orden pasa a `paid` (confirmación manual del operador en S2C).
 
-- Función `commerce.deduct_stock_for_order`
-- Enganchar en action de confirmar pago (S2C)
-- Validación pre-pago opcional (`checkOrderStock`)
-- Ajuste manual admin sealed/loose + `audit_log` (Regla 15)
-- Schema `inventory` → **v2**
+- [x] Migración `00010_deduct_stock_for_order.sql` + pgTAP
+- [x] RPC `commerce.confirm_payment_with_stock_deduct` (atómico con deduct)
+- [x] `checkOrderStock` en `@de-tin-marin/shared`
+- [x] Admin: warning stock + error `INSUFFICIENT_STOCK` al confirmar
+- Brief: [`docs/stages/S2A/01-stock-deduct-on-payment.md`](stages/S2A/01-stock-deduct-on-payment.md)
 
-**Depends on:** S1D, **S1E**, S2C
+**Depends on:** S1D, S1E, S2C
 
 ---
 

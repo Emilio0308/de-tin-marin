@@ -38,6 +38,9 @@ export type OrderDetailLabels = {
   statusLabels: Record<string, string>;
   paymentStatusLabels: Record<string, string>;
   shipmentStatusLabels: Record<string, string>;
+  stockWarningTitle: string;
+  stockWarningItem: string;
+  insufficientStockError: string;
 };
 
 export type OrderDetailViewProps = {

@@ -102,6 +102,9 @@ export function OrderDetailContainer() {
         shipped: t("shipmentStatus.shipped"),
         delivered: t("shipmentStatus.delivered"),
       },
+      stockWarningTitle: t("detail.stockWarningTitle"),
+      stockWarningItem: t("detail.stockWarningItem"),
+      insufficientStockError: t("detail.insufficientStockError"),
     };
   }, [t, tDashboard]);
 
@@ -145,7 +148,17 @@ export function OrderDetailContainer() {
         paymentReference: paymentReference || undefined,
         notes: paymentNotes || undefined,
       });
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        if (result.error === "INSUFFICIENT_STOCK") {
+          const sku = result.details?.sku;
+          throw new Error(
+            sku
+              ? `${labels.insufficientStockError} (${sku})`
+              : labels.insufficientStockError,
+          );
+        }
+        throw new Error(result.error);
+      }
     },
     onSuccess: async () => {
       setPaymentReference("");

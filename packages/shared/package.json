@@ -11,7 +11,8 @@
     "./bundle-price": "./src/bundle-price.ts",
     "./delivery-fee": "./src/delivery-fee.ts",
     "./final-price": "./src/final-price.ts",
-    "./order-cart": "./src/order-cart.ts"
+    "./order-cart": "./src/order-cart.ts",
+    "./check-order-stock": "./src/check-order-stock.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

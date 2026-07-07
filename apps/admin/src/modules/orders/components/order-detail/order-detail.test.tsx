@@ -40,6 +40,9 @@ const labels: OrderDetailLabels = {
   statusLabels: { pending_payment: "Pendiente de pago" },
   paymentStatusLabels: { pending: "Pendiente" },
   shipmentStatusLabels: { pending: "Pendiente" },
+  stockWarningTitle: "Stock insuficiente",
+  stockWarningItem: "{sku}: {required} / {available}",
+  insufficientStockError: "Stock insuficiente",
 };
 
 const order: OrderDetail = {

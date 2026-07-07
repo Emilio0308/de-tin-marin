@@ -153,6 +153,24 @@ export function OrderDetailView({
 
         {order.status === "pending_payment" && onConfirmPayment ? (
           <div className="mb-6 grid gap-4 md:grid-cols-2">
+            {order.stockCheck && !order.stockCheck.ok ? (
+              <div
+                className="border-error/20 bg-error-container/40 text-on-surface rounded-lg border p-4 text-sm md:col-span-2"
+                role="alert"
+              >
+                <p className="font-semibold">{labels.stockWarningTitle}</p>
+                <ul className="mt-2 list-disc pl-5">
+                  {order.stockCheck.shortages.map((shortage) => (
+                    <li key={`${shortage.kind}-${shortage.id}`}>
+                      {labels.stockWarningItem
+                        .replace("{sku}", shortage.sku)
+                        .replace("{required}", String(shortage.required))
+                        .replace("{available}", String(shortage.available))}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <Field label={labels.paymentReference}>
               <input
                 className={inputClassName}

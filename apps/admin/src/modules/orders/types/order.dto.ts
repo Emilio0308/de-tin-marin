@@ -5,8 +5,19 @@ import type {
 import {
   orderContactSchema,
   orderDetailSchema,
+  orderShoppingCartProductLineSchema,
+  orderShoppingCartBundleLineSchema,
 } from "@de-tin-marin/validations/order";
+import {
+  aggregateStockDemands,
+  checkOrderStock,
+} from "@de-tin-marin/shared/check-order-stock";
+import type { OrderShoppingCart } from "@de-tin-marin/shared/order-cart";
 import type { OrderRow } from "../repositories/order.repository";
+import {
+  getContainerStockByIdsRepo,
+  getProductStockByIdsRepo,
+} from "../repositories/order.repository";
 import { listPaymentsByOrderIdRepo } from "../repositories/payment.repository";
 import { getShipmentByOrderIdRepo } from "../repositories/shipment.repository";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
@@ -59,13 +70,80 @@ export function parseOrderDetail(row: OrderRow): OrderDetail {
   return parsed.data;
 }
 
+function parseShoppingCart(raw: unknown): OrderShoppingCart | null {
+  if (!raw || typeof raw !== "object" || !("lines" in raw)) return null;
+  const linesRaw = raw.lines;
+  if (!Array.isArray(linesRaw)) return null;
+
+  const lines: OrderShoppingCart["lines"] = [];
+  for (const line of linesRaw) {
+    if (!line || typeof line !== "object" || !("type" in line)) continue;
+    if ((line as { type: string }).type === "product") {
+      const parsed = orderShoppingCartProductLineSchema.safeParse(line);
+      if (parsed.success) lines.push(parsed.data);
+      continue;
+    }
+    if ((line as { type: string }).type === "bundle") {
+      const parsed = orderShoppingCartBundleLineSchema.safeParse(line);
+      if (parsed.success) lines.push(parsed.data);
+    }
+  }
+
+  if (lines.length === 0) return null;
+  return { lines };
+}
+
+async function buildOrderStockCheck(
+  config: SupabaseConfig,
+  shoppingCartRaw: unknown,
+) {
+  const cart = parseShoppingCart(shoppingCartRaw);
+  if (!cart) return undefined;
+
+  const { products, containers } = aggregateStockDemands(cart);
+  const [productRows, containerRows] = await Promise.all([
+    getProductStockByIdsRepo(config, [...products.keys()]),
+    getContainerStockByIdsRepo(config, [...containers.keys()]),
+  ]);
+
+  const productsById = new Map(
+    productRows.map((row) => [
+      row.id,
+      {
+        id: row.id,
+        sku: row.sku,
+        name: row.name,
+        stockSealedPackages: row.stock_sealed_packages,
+        stockLooseBaseUnits: row.stock_loose_base_units,
+        itemsPerPackage: row.items_per_package,
+      },
+    ]),
+  );
+  const containersById = new Map(
+    containerRows.map((row) => [
+      row.id,
+      {
+        id: row.id,
+        sku: row.sku,
+        name: row.name,
+        stockQuantity: row.stock_quantity,
+      },
+    ]),
+  );
+
+  return checkOrderStock(cart, productsById, containersById);
+}
+
 export async function parseOrderDetailWithRelations(
   config: SupabaseConfig,
   row: OrderRow,
 ): Promise<OrderDetail> {
-  const [payments, shipment] = await Promise.all([
+  const [payments, shipment, stockCheck] = await Promise.all([
     listPaymentsByOrderIdRepo(config, row.id),
     getShipmentByOrderIdRepo(config, row.id),
+    row.status === "pending_payment"
+      ? buildOrderStockCheck(config, row.shopping_cart)
+      : Promise.resolve(undefined),
   ]);
 
   const base = parseOrderDetail(row);
@@ -73,5 +151,6 @@ export async function parseOrderDetailWithRelations(
     ...base,
     payments: payments.map(parsePaymentSummary),
     shipment: shipment ? parseShipmentDto(shipment) : null,
+    stockCheck,
   };
 }

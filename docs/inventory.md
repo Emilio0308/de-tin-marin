@@ -9,7 +9,7 @@
 | **S1A** ✅    | Columna `stock_quantity` (legacy)                                         |
 | **S1D**       | `stock_sealed_packages` + `stock_loose_base_units`; drop `stock_quantity` |
 | **S2B / S2C** | Sin deduct ni validación de stock                                         |
-| **S2A**       | `deduct_stock_for_order` al confirmar pago (`paid`)                       |
+| **S2A** ✅    | `confirm_payment_with_stock_deduct` + `checkOrderStock`                   |
 
 ## Fuente de verdad (v1)
 
@@ -128,4 +128,5 @@ Reglas 4, 15, 18 en [`business-rules.md`](business-rules.md).
 
 ## Brief
 
-[S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
+- [S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
+- [S2A/01-stock-deduct-on-payment.md](stages/S2A/01-stock-deduct-on-payment.md)

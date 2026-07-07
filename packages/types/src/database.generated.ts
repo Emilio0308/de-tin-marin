@@ -103,48 +103,6 @@ export type Database = {
           },
         ]
       }
-      surprise_containers: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          description: string | null
-          id: string
-          image_url: string | null
-          is_active: boolean
-          name: string
-          prices: Json
-          sku: string
-          stock_quantity: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          name: string
-          prices?: Json
-          sku: string
-          stock_quantity?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          name?: string
-          prices?: Json
-          sku?: string
-          stock_quantity?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       categories: {
         Row: {
           created_at: string
@@ -255,12 +213,72 @@ export type Database = {
           },
         ]
       }
+      surprise_containers: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          prices: Json
+          sku: string
+          stock_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          prices?: Json
+          sku: string
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          prices?: Json
+          sku?: string
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _deduct_product_base_units: {
+        Args: {
+          p_items: number
+          p_loose: number
+          p_need: number
+          p_sealed: number
+        }
+        Returns: {
+          loose_base_units: number
+          sealed_packages: number
+        }[]
+      }
+      _normalize_product_stock: {
+        Args: { p_items: number; p_loose: number; p_sealed: number }
+        Returns: {
+          loose_base_units: number
+          sealed_packages: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -436,7 +454,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      confirm_payment_with_stock_deduct: {
+        Args: {
+          p_notes?: string
+          p_order_id: string
+          p_payment_reference?: string
+          p_staff_user_id: string
+        }
+        Returns: Json
+      }
+      deduct_stock_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

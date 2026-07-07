@@ -157,3 +157,55 @@ export async function getOrderProductsByIdsRepo(
   if (result.error) throw new Error(result.error.message);
   return result.data ?? [];
 }
+
+export type ProductStockRow = {
+  id: string;
+  sku: string;
+  name: string;
+  stock_sealed_packages: number;
+  stock_loose_base_units: number;
+  items_per_package: number;
+};
+
+export async function getProductStockByIdsRepo(
+  config: SupabaseConfig,
+  productIds: string[],
+): Promise<ProductStockRow[]> {
+  if (productIds.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const result = await supabase
+    .schema("catalog")
+    .from("products")
+    .select(
+      "id, sku, name, stock_sealed_packages, stock_loose_base_units, items_per_package",
+    )
+    .in("id", productIds);
+
+  if (result.error) throw new Error(result.error.message);
+  return result.data ?? [];
+}
+
+export type ContainerStockRow = {
+  id: string;
+  sku: string;
+  name: string;
+  stock_quantity: number;
+};
+
+export async function getContainerStockByIdsRepo(
+  config: SupabaseConfig,
+  containerIds: string[],
+): Promise<ContainerStockRow[]> {
+  if (containerIds.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const result = await supabase
+    .schema("catalog")
+    .from("surprise_containers")
+    .select("id, sku, name, stock_quantity")
+    .in("id", containerIds);
+
+  if (result.error) throw new Error(result.error.message);
+  return result.data ?? [];
+}

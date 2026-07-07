@@ -33,6 +33,8 @@ on conflict (id) do nothing;
 | `00006_commerce_orders.sql`                 | `commerce.orders` + grants                              |
 | `00007_commerce_payments_shipments.sql`     | `commerce.payments`, `commerce.shipments` + grants      |
 | `00008_catalog_products_packages_stock.sql` | S1D — presentaciones, `prices.unit`, stock sealed/loose |
+| `00009_surprise_containers_delivery.sql`    | S1E — envases + delivery                                |
+| `00010_deduct_stock_for_order.sql`          | S2A — deduct stock al confirmar pago                    |
 
 > **Importante:** exponer un schema en la API (Settings → API → Exposed schemas)
 > no basta. Los roles `anon`/`authenticated` también necesitan `GRANT USAGE` sobre

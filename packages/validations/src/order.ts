@@ -129,6 +129,23 @@ export const orderShoppingCartBundleLineSchema = z.object({
   ),
 });
 
+export const orderStockShortageSchema = z.object({
+  kind: z.enum(["product", "container"]),
+  id: z.string().uuid(),
+  sku: z.string(),
+  name: z.string().optional(),
+  required: z.number(),
+  available: z.number(),
+});
+
+export const orderStockCheckSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }),
+  z.object({
+    ok: z.literal(false),
+    shortages: z.array(orderStockShortageSchema),
+  }),
+]);
+
 export const orderDetailSchema = z.object({
   id: z.string().uuid(),
   orderId: z.string(),
@@ -154,6 +171,7 @@ export const orderDetailSchema = z.object({
   createdAt: z.string(),
   payments: z.array(paymentSummarySchema),
   shipment: shipmentDtoSchema.nullable(),
+  stockCheck: orderStockCheckSchema.optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderInputSchema>;

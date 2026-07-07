@@ -73,3 +73,32 @@ export async function updatePaymentRepo(
   if (result.error) throw new Error(result.error.message);
   return result.data as PaymentRow;
 }
+
+export type ConfirmPaymentRpcResult = {
+  orderId: string;
+  paymentId: string;
+  status: "paid";
+};
+
+export async function confirmPaymentWithStockDeductRepo(
+  config: SupabaseConfig,
+  input: {
+    orderId: string;
+    staffUserId: string;
+    notes?: string | null;
+    paymentReference?: string | null;
+  },
+): Promise<ConfirmPaymentRpcResult> {
+  const supabase = await createSupabaseServerClient(config);
+  const result = await supabase
+    .schema("commerce")
+    .rpc("confirm_payment_with_stock_deduct", {
+      p_order_id: input.orderId,
+      p_staff_user_id: input.staffUserId,
+      p_notes: input.notes ?? null,
+      p_payment_reference: input.paymentReference ?? null,
+    });
+
+  if (result.error) throw new Error(result.error.message);
+  return result.data as ConfirmPaymentRpcResult;
+}
