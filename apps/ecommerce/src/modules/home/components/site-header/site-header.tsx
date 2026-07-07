@@ -1,6 +1,11 @@
+import Link from "next/link";
 import { Search, ShoppingCart, User } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { SiteHeaderProps } from "./site-header.types";
+
+function isInternalRoute(href: string): boolean {
+  return href.startsWith("/");
+}
 
 export function SiteHeader({
   navLinks,
@@ -15,28 +20,36 @@ export function SiteHeader({
       )}
     >
       <div className="container-max px-gutter flex h-20 items-center justify-between">
-        <a
-          href="#top"
+        <Link
+          href="/"
           className="font-display text-primary md:text-display-lg text-[32px]"
         >
           De Tin Marín
-        </a>
+        </Link>
 
         <nav className="gap-stack-md hidden items-center md:flex">
-          {navLinks.map((link, index) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "font-label text-label-bold hover:text-secondary transition-all duration-300 hover:scale-105",
-                index === activeIndex
-                  ? "border-primary text-primary border-b-2 pb-1 font-bold"
-                  : "text-on-surface-variant",
-              )}
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link, index) => {
+            const className = cn(
+              "font-label text-label-bold hover:text-secondary transition-all duration-300 hover:scale-105",
+              index === activeIndex && activeIndex >= 0
+                ? "border-primary text-primary border-b-2 pb-1 font-bold"
+                : "text-on-surface-variant",
+            );
+
+            if (isInternalRoute(link.href)) {
+              return (
+                <Link key={link.href} href={link.href} className={className}>
+                  {link.label}
+                </Link>
+              );
+            }
+
+            return (
+              <a key={link.href} href={link.href} className={className}>
+                {link.label}
+              </a>
+            );
+          })}
         </nav>
 
         <div className="gap-stack-sm flex items-center">

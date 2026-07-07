@@ -11,17 +11,31 @@
     "addToCart": "Añadir",
     "iWantIt": "Lo quiero"
   },
-  "home": {
-    "nav": {
-      "sweets": "Dulces",
-      "surprises": "Sorpresas",
-      "about": "Nosotros"
-    },
-    "catalog": {
-      "title": "Nuestros dulces"
+  "nav": {
+    "sweets": "Dulces",
+    "surprises": "Sorpresas",
+    "about": "Nosotros"
+  },
+  "catalog": {
+    "backHome": "Volver al inicio",
+    "products": {
+      "title": "Nuestros dulces",
+      "comingSoon": "Estamos preparando el catálogo completo. Muy pronto podrás explorar todos nuestros dulces."
     },
     "bundles": {
-      "title": "Combos sorpresa"
+      "title": "Combos sorpresa",
+      "comingSoon": "Estamos preparando nuestros combos sorpresa. Muy pronto podrás armar el regalo perfecto."
+    }
+  },
+  "home": {
+    "hero": {
+      "titlePrefix": "¡Endulza cada ",
+      "titleHighlight": "sorpresa!",
+      "description": "Creamos despertares mágicos con los dulces más deliciosos y regalos personalizados que roban sonrisas. El toque perfecto para cada cumpleaños.",
+      "ctaSurprises": "Ver sorpresas",
+      "ctaProducts": "Ver dulces",
+      "imageAlt": "Caja de regalo de cumpleaños repleta de dulces artesanales y chocolates de colores",
+      "favoriteKit": "Kit Favorito"
     },
     "help": {
       "label": "¿Necesitas ayuda?"

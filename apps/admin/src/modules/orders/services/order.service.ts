@@ -1,15 +1,13 @@
 import "server-only";
 
 import {
-  computeFinalPrice,
-  toCampaignForPricing,
-} from "@de-tin-marin/shared/final-price";
-import { roundMoney } from "@de-tin-marin/shared/prices";
+  buildOrderCartWithTotals,
+  collectProductIdsFromOrderLines,
+  type OrderBundleSource,
+} from "@de-tin-marin/shared/build-order-cart";
 import {
-  buildShoppingCart,
-  canTransitionOrderStatus,
-  computeOrderTotals,
   formatOrderNumber,
+  canTransitionOrderStatus,
   type OrderStatus,
 } from "@de-tin-marin/shared/order-cart";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
@@ -18,11 +16,7 @@ import {
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
-import { parseContainerPricesJson } from "@/modules/catalog/repositories/surprise-container.repository";
-import {
-  listCampaignsByIdsRepo,
-  parsePricesJson,
-} from "@/modules/catalog/repositories/product.repository";
+import { listCampaignsByIdsRepo } from "@/modules/catalog/repositories/product.repository";
 import { resolveDeliveryFeeService } from "@/modules/delivery/services/delivery.service";
 import {
   asJson,
@@ -41,22 +35,45 @@ import {
 } from "../types/order.dto";
 
 function collectProductIds(
-  lines: Array<
-    | { type: "product"; productId: string }
-    | { type: "bundle"; components: Array<{ productId: string }> }
-  >,
+  lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
 ): string[] {
-  const ids = new Set<string>();
+  return collectProductIdsFromOrderLines(lines);
+}
+
+async function resolveBundlesById(
+  config: SupabaseConfig,
+  lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
+): Promise<Map<string, OrderBundleSource>> {
+  const bundlesById = new Map<string, OrderBundleSource>();
+
   for (const line of lines) {
-    if (line.type === "product") {
-      ids.add(line.productId);
+    if (line.type !== "bundle" || bundlesById.has(line.bundleId)) {
       continue;
     }
-    for (const component of line.components) {
-      ids.add(component.productId);
+
+    const bundle = await getBundleByIdRepo(config, line.bundleId);
+    if (!bundle) {
+      continue;
     }
+
+    const containerRow = bundle.surprise_containers;
+    bundlesById.set(line.bundleId, {
+      id: bundle.id,
+      name: bundle.name,
+      is_active: bundle.is_active,
+      deleted_at: bundle.deleted_at,
+      container: containerRow
+        ? {
+            id: containerRow.id,
+            sku: containerRow.sku,
+            name: containerRow.name,
+            prices: containerRow.prices,
+          }
+        : null,
+    });
   }
-  return [...ids];
+
+  return bundlesById;
 }
 
 function toListItem(row: OrderRow): OrderListItem {
@@ -126,96 +143,7 @@ export async function createOrderService(
     .map((product) => product.campaign_id)
     .filter((id): id is string => Boolean(id));
   const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
-  const campaignsById = new Map(
-    campaigns.map((campaign) => [campaign.id, campaign]),
-  );
-
-  const productsById = new Map(
-    products.map((product) => {
-      const { packageNetPrice, unitNetPrice } = parsePricesJson(product.prices);
-      const campaignRow = product.campaign_id
-        ? (campaignsById.get(product.campaign_id) ?? null)
-        : null;
-      const itemsPerPackage = product.items_per_package ?? 1;
-      const unitPrice = campaignRow
-        ? roundMoney(
-            computeFinalPrice(
-              packageNetPrice,
-              toCampaignForPricing(campaignRow),
-            ) / itemsPerPackage,
-          )
-        : unitNetPrice;
-      return [
-        product.id,
-        {
-          id: product.id,
-          sku: product.sku,
-          name: product.name,
-          unitPrice,
-        },
-      ] as const;
-    }),
-  );
-
-  const buildLines: Array<
-    | { type: "product"; productId: string; quantity: number }
-    | {
-        type: "bundle";
-        bundleId: string;
-        name: string;
-        quantity: number;
-        container: {
-          containerId: string;
-          sku: string;
-          name: string;
-          unitPrice: number;
-        };
-        components: Array<{ productId: string; quantityPerUnit: number }>;
-      }
-  > = [];
-
-  for (const line of parsed.data.lines) {
-    if (line.type === "product") {
-      buildLines.push(line);
-      continue;
-    }
-
-    const bundle = await getBundleByIdRepo(config, line.bundleId);
-    if (!bundle || !bundle.is_active || bundle.deleted_at) {
-      return { ok: false, error: "BUNDLE_NOT_FOUND" };
-    }
-
-    const containerRow = bundle.surprise_containers;
-    if (!containerRow) {
-      return { ok: false, error: "BUNDLE_NOT_FOUND" };
-    }
-
-    const componentIds = line.components.map((item) => item.productId);
-    if (new Set(componentIds).size !== componentIds.length) {
-      return { ok: false, error: "DUPLICATE_PRODUCT_IN_BUNDLE" };
-    }
-
-    buildLines.push({
-      type: "bundle",
-      bundleId: line.bundleId,
-      name: bundle.name,
-      quantity: line.quantity,
-      container: {
-        containerId: containerRow.id,
-        sku: containerRow.sku,
-        name: containerRow.name,
-        unitPrice: parseContainerPricesJson(containerRow.prices).netPrice,
-      },
-      components: line.components,
-    });
-  }
-
-  let shoppingCart;
-  try {
-    shoppingCart = buildShoppingCart({ lines: buildLines, productsById });
-  } catch {
-    return { ok: false, error: "PRODUCT_NOT_FOUND" };
-  }
+  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
 
   const shippingResult = await resolveDeliveryFeeService(config, {
     method: parsed.data.fulfillment.method,
@@ -224,10 +152,20 @@ export async function createOrderService(
   const shippingTotal =
     shippingResult.ok === true ? shippingResult.fee : parsed.data.shippingTotal;
 
-  const totals = computeOrderTotals(shoppingCart, {
+  const cartResult = buildOrderCartWithTotals({
+    lines: parsed.data.lines,
+    products,
+    campaigns,
+    bundlesById,
     discountTotal: parsed.data.discountTotal,
     shippingTotal,
   });
+
+  if (!cartResult.ok) {
+    return { ok: false, error: cartResult.error };
+  }
+
+  const { shoppingCart, totals } = cartResult;
 
   const datePrefix = formatOrderNumber(0).slice(0, 12);
   const sequence = (await countOrdersByDatePrefixRepo(config, datePrefix)) + 1;

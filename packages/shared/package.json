@@ -12,7 +12,8 @@
     "./delivery-fee": "./src/delivery-fee.ts",
     "./final-price": "./src/final-price.ts",
     "./order-cart": "./src/order-cart.ts",
-    "./check-order-stock": "./src/check-order-stock.ts"
+    "./check-order-stock": "./src/check-order-stock.ts",
+    "./build-order-cart": "./src/build-order-cart.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
