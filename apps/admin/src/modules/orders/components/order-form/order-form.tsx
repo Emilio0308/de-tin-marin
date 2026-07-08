@@ -1,179 +1,265 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  MapPin,
+  Receipt,
+  ShoppingBag,
+  User,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@de-tin-marin/shared/cn";
 import { Button } from "@de-tin-marin/ui/button";
-import { Input } from "@de-tin-marin/ui/input";
-import { Label } from "@de-tin-marin/ui/label";
-import type {
-  BundleOption,
-  OrderFormValues,
-  ProductOption,
-} from "./order-form.types";
+import { OrderFormBundleCustomize } from "./order-form-bundle-customize";
+import { buildBundleComponentLabels } from "./order-form-bundle.helpers";
+import { OrderFormCartLines } from "./order-form-cart-lines";
+import { resolveOrderFormProductBounds } from "./order-form-product.helpers";
+import type { OrderFormProps } from "./order-form.types";
 
-type OrderFormProps = {
-  values: OrderFormValues;
-  products: ProductOption[];
-  bundles: BundleOption[];
-  deliveryDistricts: string[];
-  totals: {
-    subtotal: number;
-    discountTotal: number;
-    shippingTotal: number;
-    total: number;
-  } | null;
-  submitting: boolean;
-  error: string | null;
-  onChange: (values: OrderFormValues) => void;
-  onAddProductLine: (productId: string, quantity: number) => void;
-  onAddBundleLine: (bundleId: string, quantity: number) => void;
-  onRemoveLine: (index: number) => void;
-  onSubmit: () => void;
-};
+const cardClass =
+  "bg-surface-container-lowest border-outline-variant/40 flex flex-col rounded-xl border p-5 shadow-sm md:p-6";
+
+const innerCardClass =
+  "border-outline-variant/40 bg-surface-container-low/50 flex flex-col gap-4 rounded-xl border-2 p-4";
+
+const labelClass =
+  "font-label text-label-bold text-on-surface-variant mb-1.5 block text-xs uppercase tracking-wide";
+
+const fieldClass =
+  "border-outline-variant/40 focus:border-secondary bg-surface-container-low font-body text-body-md text-on-surface w-full rounded-xl border-2 px-4 py-3 outline-none transition-colors";
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col">
+      <span className={labelClass}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+}: {
+  icon: LucideIcon;
+  title: string;
+}) {
+  return (
+    <div className="text-tertiary mb-4 flex items-center gap-2">
+      <Icon className="h-5 w-5 shrink-0" aria-hidden />
+      <h3 className="font-label text-label-bold text-sm uppercase tracking-wider">
+        {title}
+      </h3>
+    </div>
+  );
+}
+
+function methodPillClass(selected: boolean): string {
+  return cn(
+    "font-label text-label-bold cursor-pointer rounded-full border-2 px-5 py-2.5 text-sm transition-colors",
+    selected
+      ? "border-primary bg-primary/5 text-primary"
+      : "border-outline-variant/40 text-on-surface-variant hover:border-secondary/60",
+  );
+}
 
 export function OrderForm({
   values,
   products,
   bundles,
   deliveryDistricts,
+  bundleDraft,
+  bundleDraftLoading,
+  bundlePriceSummary,
+  bundleUnitPricesByProductId,
+  isBundlePricePending,
   totals,
   submitting,
   error,
+  labels,
   onChange,
   onAddProductLine,
-  onAddBundleLine,
+  onUpdateProductLineQuantity,
+  onStartBundleDraft,
+  onBundleDraftComponentsChange,
+  onBundleDraftQuantityChange,
+  onConfirmBundleDraft,
+  onCancelBundleDraft,
+  onEditBundleLine,
   onRemoveLine,
+  getLineTotal,
   onSubmit,
 }: OrderFormProps) {
   const [draftProductId, setDraftProductId] = useState("");
   const [draftProductQty, setDraftProductQty] = useState(1);
   const [draftBundleId, setDraftBundleId] = useState("");
-  const [draftBundleQty, setDraftBundleQty] = useState(1);
+
+  const selectedProduct = products.find(
+    (product) => product.id === draftProductId,
+  );
+  const selectedProductBounds = useMemo(
+    () =>
+      selectedProduct ? resolveOrderFormProductBounds(selectedProduct) : null,
+    [selectedProduct],
+  );
+
+  useEffect(() => {
+    if (!selectedProductBounds) return;
+    setDraftProductQty(selectedProductBounds.minQuantity);
+  }, [selectedProductBounds]);
+
+  const bundlesByName = useMemo(
+    () => new Map(bundles.map((bundle) => [bundle.id, bundle.name])),
+    [bundles],
+  );
+
+  const bundleComponentLabels = useMemo(() => {
+    if (!bundleDraft) return {};
+    return buildBundleComponentLabels(
+      bundleDraft.templateItems,
+      Object.fromEntries(products.map((product) => [product.id, product.name])),
+    );
+  }, [bundleDraft, products]);
 
   return (
     <form
-      className="flex flex-col gap-8"
+      className="flex flex-col gap-6 pb-28 md:pb-0"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
       <section className="grid gap-4 md:grid-cols-2">
-        <div>
-          <Label htmlFor="contact-name">Nombre</Label>
-          <Input
-            id="contact-name"
-            value={values.contact.name}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                contact: { ...values.contact, name: event.target.value },
-              })
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="contact-last-name">Apellido</Label>
-          <Input
-            id="contact-last-name"
-            value={values.contact.lastName}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                contact: { ...values.contact, lastName: event.target.value },
-              })
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="contact-phone">Teléfono</Label>
-          <Input
-            id="contact-phone"
-            value={values.contact.phone}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                contact: { ...values.contact, phone: event.target.value },
-              })
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="contact-email">Email</Label>
-          <Input
-            id="contact-email"
-            type="email"
-            value={values.contact.email}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                contact: { ...values.contact, email: event.target.value },
-              })
-            }
-          />
-        </div>
-      </section>
-
-      <section className="grid gap-4">
-        <h2 className="text-lg font-semibold">Entrega</h2>
-        <div className="flex gap-4">
-          {(["delivery", "pickup"] as const).map((method) => (
-            <label key={method} className="flex items-center gap-2 text-sm">
+        <div className={cardClass}>
+          <SectionHeader icon={User} title={labels.contactSection} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={labels.name}>
               <input
-                type="radio"
-                checked={values.fulfillment.method === method}
-                onChange={() =>
+                id="contact-name"
+                className={fieldClass}
+                value={values.contact.name}
+                onChange={(event) =>
                   onChange({
                     ...values,
-                    fulfillment: { ...values.fulfillment, method },
+                    contact: { ...values.contact, name: event.target.value },
                   })
                 }
               />
-              {method === "delivery" ? "Delivery" : "Recojo"}
-            </label>
-          ))}
+            </Field>
+            <Field label={labels.lastName}>
+              <input
+                id="contact-last-name"
+                className={fieldClass}
+                value={values.contact.lastName}
+                onChange={(event) =>
+                  onChange({
+                    ...values,
+                    contact: {
+                      ...values.contact,
+                      lastName: event.target.value,
+                    },
+                  })
+                }
+              />
+            </Field>
+            <Field label={labels.phone}>
+              <input
+                id="contact-phone"
+                className={fieldClass}
+                value={values.contact.phone}
+                onChange={(event) =>
+                  onChange({
+                    ...values,
+                    contact: { ...values.contact, phone: event.target.value },
+                  })
+                }
+              />
+            </Field>
+            <Field label={labels.email}>
+              <input
+                id="contact-email"
+                type="email"
+                className={fieldClass}
+                value={values.contact.email}
+                onChange={(event) =>
+                  onChange({
+                    ...values,
+                    contact: { ...values.contact, email: event.target.value },
+                  })
+                }
+              />
+            </Field>
+          </div>
         </div>
-        {values.fulfillment.method === "delivery" ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {(
-              [
-                ["recipientName", "Destinatario", "text"],
-                ["line1", "Dirección", "text"],
-                ["district", "Distrito", "district"],
-                ["city", "Ciudad", "text"],
-                ["province", "Provincia", "text"],
-                ["phone", "Teléfono entrega", "text"],
-                ["reference", "Referencia", "text"],
-              ] as const
-            ).map(([field, label, fieldType]) => (
-              <div key={field}>
-                <Label>{label}</Label>
-                {fieldType === "district" ? (
-                  <select
-                    className="block w-full rounded border px-3 py-2 text-sm"
-                    value={values.fulfillment.deliveryAddress.district}
-                    onChange={(event) =>
-                      onChange({
-                        ...values,
-                        fulfillment: {
-                          ...values.fulfillment,
-                          deliveryAddress: {
-                            ...values.fulfillment.deliveryAddress,
-                            district: event.target.value,
-                          },
+
+        <div className={cardClass}>
+          <SectionHeader icon={MapPin} title={labels.deliverySection} />
+          <div className="mb-4 flex flex-wrap gap-3">
+            {(["delivery", "pickup"] as const).map((method) => (
+              <label
+                key={method}
+                className={methodPillClass(
+                  values.fulfillment.method === method,
+                )}
+              >
+                <input
+                  type="radio"
+                  className="sr-only"
+                  checked={values.fulfillment.method === method}
+                  onChange={() =>
+                    onChange({
+                      ...values,
+                      fulfillment: { ...values.fulfillment, method },
+                    })
+                  }
+                />
+                {method === "delivery" ? labels.delivery : labels.pickup}
+              </label>
+            ))}
+          </div>
+          {values.fulfillment.method === "delivery" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={labels.recipientName}>
+                <input
+                  className={fieldClass}
+                  value={values.fulfillment.deliveryAddress.recipientName}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        deliveryAddress: {
+                          ...values.fulfillment.deliveryAddress,
+                          recipientName: event.target.value,
                         },
-                      })
-                    }
-                  >
-                    <option value="">Seleccionar distrito…</option>
-                    {deliveryDistricts.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    value={values.fulfillment.deliveryAddress[field]}
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <Field label={labels.deliveryPhone}>
+                <input
+                  className={fieldClass}
+                  value={values.fulfillment.deliveryAddress.phone}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        deliveryAddress: {
+                          ...values.fulfillment.deliveryAddress,
+                          phone: event.target.value,
+                        },
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label={labels.address}>
+                  <input
+                    className={fieldClass}
+                    value={values.fulfillment.deliveryAddress.line1}
                     onChange={(event) =>
                       onChange({
                         ...values,
@@ -181,186 +267,334 @@ export function OrderForm({
                           ...values.fulfillment,
                           deliveryAddress: {
                             ...values.fulfillment.deliveryAddress,
-                            [field]: event.target.value,
+                            line1: event.target.value,
                           },
                         },
                       })
                     }
                   />
-                )}
+                </Field>
               </div>
-            ))}
-          </div>
-        ) : null}
+              <Field label={labels.district}>
+                <select
+                  className={fieldClass}
+                  value={values.fulfillment.deliveryAddress.district}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        deliveryAddress: {
+                          ...values.fulfillment.deliveryAddress,
+                          district: event.target.value,
+                        },
+                      },
+                    })
+                  }
+                >
+                  <option value="">{labels.selectDistrict}</option>
+                  {deliveryDistricts.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={labels.city}>
+                <input
+                  className={fieldClass}
+                  value={values.fulfillment.deliveryAddress.city}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        deliveryAddress: {
+                          ...values.fulfillment.deliveryAddress,
+                          city: event.target.value,
+                        },
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <Field label={labels.province}>
+                <input
+                  className={fieldClass}
+                  value={values.fulfillment.deliveryAddress.province}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        deliveryAddress: {
+                          ...values.fulfillment.deliveryAddress,
+                          province: event.target.value,
+                        },
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label={labels.reference}>
+                  <input
+                    className={fieldClass}
+                    value={values.fulfillment.deliveryAddress.reference}
+                    onChange={(event) =>
+                      onChange({
+                        ...values,
+                        fulfillment: {
+                          ...values.fulfillment,
+                          deliveryAddress: {
+                            ...values.fulfillment.deliveryAddress,
+                            reference: event.target.value,
+                          },
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+            </div>
+          ) : (
+            <p className="text-on-surface-variant text-sm">{labels.pickup}</p>
+          )}
+        </div>
       </section>
 
-      <section className="grid gap-4">
-        <h2 className="text-lg font-semibold">Order shopping cart</h2>
+      <section className={cn(cardClass, "gap-4")}>
+        <SectionHeader icon={ShoppingBag} title={labels.cartSection} />
 
-        <div className="flex flex-wrap items-end gap-2 rounded border p-4">
-          <div>
-            <Label>Producto</Label>
+        <div
+          className={cn(
+            innerCardClass,
+            "md:grid md:grid-cols-[1fr_auto_auto] md:items-end",
+          )}
+        >
+          <Field label={labels.product}>
             <select
-              className="block min-w-48 rounded border px-3 py-2 text-sm"
+              className={fieldClass}
               value={draftProductId}
               onChange={(event) => setDraftProductId(event.target.value)}
             >
-              <option value="">Seleccionar…</option>
+              <option value="">{labels.selectProduct}</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
                   {product.name} (S/ {product.finalPrice.toFixed(2)})
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <Label>Cantidad</Label>
-            <Input
+          </Field>
+          <Field label={labels.quantity}>
+            <input
               type="number"
-              min={1}
-              className="w-24"
+              min={selectedProductBounds?.minQuantity ?? 1}
+              max={selectedProductBounds?.maxQuantity}
+              disabled={!selectedProduct || !selectedProductBounds?.purchasable}
+              className={cn(fieldClass, "md:w-28")}
               value={draftProductQty}
               onChange={(event) =>
                 setDraftProductQty(Number(event.target.value) || 1)
               }
             />
-          </div>
+            {selectedProductBounds ? (
+              <p className="text-on-surface-variant mt-1.5 text-xs">
+                {labels.quantityBounds(
+                  selectedProductBounds.minQuantity,
+                  selectedProductBounds.maxQuantity,
+                )}
+              </p>
+            ) : null}
+          </Field>
           <Button
             type="button"
             variant="secondary"
+            className="min-h-11 w-full md:w-auto"
+            disabled={!draftProductId || !selectedProductBounds?.purchasable}
             onClick={() => {
               if (!draftProductId) return;
               onAddProductLine(draftProductId, draftProductQty);
+              setDraftProductId("");
+              setDraftProductQty(1);
             }}
           >
-            Agregar producto
+            {labels.addProduct}
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-end gap-2 rounded border p-4">
-          <div>
-            <Label>Sorpresa (plantilla)</Label>
-            <select
-              className="block min-w-48 rounded border px-3 py-2 text-sm"
-              value={draftBundleId}
-              onChange={(event) => setDraftBundleId(event.target.value)}
+        <div className={innerCardClass}>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <Field label={labels.surprise}>
+              <select
+                className={fieldClass}
+                value={draftBundleId}
+                onChange={(event) => setDraftBundleId(event.target.value)}
+              >
+                <option value="">{labels.selectSurprise}</option>
+                {bundles.map((bundle) => (
+                  <option key={bundle.id} value={bundle.id}>
+                    {bundle.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 w-full sm:w-auto"
+              disabled={!draftBundleId || bundleDraftLoading}
+              onClick={() => {
+                if (!draftBundleId) return;
+                onStartBundleDraft(draftBundleId);
+              }}
             >
-              <option value="">Seleccionar…</option>
-              {bundles.map((bundle) => (
-                <option key={bundle.id} value={bundle.id}>
-                  {bundle.name}
-                </option>
-              ))}
-            </select>
+              {labels.configureSurprise}
+            </Button>
           </div>
-          <div>
-            <Label>Cant. sorpresas</Label>
-            <Input
+        </div>
+
+        {bundleDraft ? (
+          <OrderFormBundleCustomize
+            bundleName={bundleDraft.bundleName}
+            containerName={bundleDraft.containerName}
+            containerNetPrice={bundleDraft.containerNetPrice}
+            templateQuantity={bundleDraft.templateQuantity}
+            components={bundleDraft.components}
+            quantity={bundleDraft.quantity}
+            products={products}
+            labelsByProductId={bundleComponentLabels}
+            priceSummary={bundlePriceSummary}
+            unitPricesByProductId={bundleUnitPricesByProductId}
+            isPricePending={isBundlePricePending}
+            labels={{
+              title: labels.customizeTitle,
+              subtitle: labels.customizeSubtitle,
+              candyCount: labels.candyCount,
+              progressLabel: labels.customizationProgress,
+              minReached: labels.minCandiesReached,
+              maxReached: labels.maxCandiesReached,
+              removeCandy: labels.removeCandy,
+              addCandy: labels.addCandy,
+              surpriseQuantity: labels.surpriseQuantity,
+              surpriseQuantityHint: labels.surpriseQuantityHint,
+              templatePersonCount: labels.templatePersonCount,
+              priceCalculating: labels.priceCalculating,
+              confirm: labels.confirmSurprise,
+              cancel: labels.cancelCustomize,
+              validationMin: labels.validationMinCandies,
+              validationMax: labels.validationMaxCandies,
+              candiesSubtotal: labels.candiesSubtotal,
+              containerSubtotal: labels.containerSubtotal,
+              containerCostHint: labels.containerCostHint,
+              unitPriceSuffix: labels.unitPriceSuffix,
+              customizeTotal: labels.customizeTotal,
+              addCandyAction: labels.addCandyAction,
+              candyAlreadyAdded: labels.candyAlreadyAdded,
+              searchCandies: labels.searchCandies,
+              searchCandiesPlaceholder: labels.searchCandiesPlaceholder,
+              expandPicker: labels.expandPicker,
+              collapsePicker: labels.collapsePicker,
+            }}
+            onComponentsChange={onBundleDraftComponentsChange}
+            onQuantityChange={onBundleDraftQuantityChange}
+            onConfirm={() => {
+              onConfirmBundleDraft();
+              setDraftBundleId("");
+            }}
+            onCancel={() => {
+              onCancelBundleDraft();
+              setDraftBundleId("");
+            }}
+          />
+        ) : null}
+
+        <OrderFormCartLines
+          lines={values.lines}
+          products={products}
+          bundlesByName={bundlesByName}
+          labels={{
+            surpriseLine: labels.surpriseLine,
+            formatQuantityLabel: labels.formatQuantityLabel,
+            formatComponents: labels.formatComponents,
+            removeLine: labels.removeLine,
+            editSurprise: labels.editSurprise,
+            emptyLines: labels.emptyLines,
+          }}
+          onRemoveLine={onRemoveLine}
+          onUpdateProductQuantity={onUpdateProductLineQuantity}
+          onEditBundleLine={onEditBundleLine}
+          getLineTotal={getLineTotal}
+        />
+      </section>
+
+      <section className={cn(cardClass, "gap-4")}>
+        <SectionHeader icon={Receipt} title={labels.totalsSection} />
+        <div className="grid max-w-lg gap-4">
+          <Field label={labels.shipping}>
+            <input
               type="number"
-              min={1}
-              className="w-24"
-              value={draftBundleQty}
+              min={0}
+              step="0.01"
+              readOnly
+              className={cn(fieldClass, "bg-surface-container-low/80")}
+              value={values.shippingTotal}
+            />
+            <p className="font-body text-body-sm text-on-surface-variant mt-1.5">
+              {labels.shippingHint}
+            </p>
+          </Field>
+          <Field label={labels.discount}>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              className={fieldClass}
+              value={values.discountTotal}
               onChange={(event) =>
-                setDraftBundleQty(Number(event.target.value) || 1)
+                onChange({
+                  ...values,
+                  discountTotal: Number(event.target.value) || 0,
+                })
               }
             />
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              if (!draftBundleId) return;
-              onAddBundleLine(draftBundleId, draftBundleQty);
-            }}
-          >
-            Agregar sorpresa
-          </Button>
-        </div>
-
-        {values.lines.length === 0 ? (
-          <p className="text-sm text-zinc-500">Agrega al menos una línea.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {values.lines.map((line, index) => {
-              const label =
-                line.type === "product"
-                  ? products.find((product) => product.id === line.productId)
-                      ?.name
-                  : bundles.find((bundle) => bundle.id === line.bundleId)?.name;
-              return (
-                <li
-                  key={`${line.type}-${index}`}
-                  className="flex items-center justify-between rounded border px-3 py-2 text-sm"
-                >
-                  <span>
-                    {line.type === "product" ? "Producto" : "Sorpresa"}: {label}{" "}
-                    × {line.quantity}
-                    {line.type === "bundle"
-                      ? ` (${line.components.length} componentes)`
-                      : ""}
+          </Field>
+          {totals ? (
+            <div className="border-outline-variant/40 rounded-xl border-2 p-4">
+              <div className="font-body text-body-md text-on-surface-variant flex justify-between">
+                <span>{labels.subtotal}</span>
+                <span>S/ {totals.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="border-outline-variant/40 mt-4 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-label text-label-bold text-on-surface">
+                    {labels.total}
                   </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => onRemoveLine(index)}
-                  >
-                    Quitar
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                  <span className="font-display text-primary text-2xl font-extrabold">
+                    S/ {totals.total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
 
-      <section className="grid max-w-md gap-4">
-        <div>
-          <Label>Envío (S/)</Label>
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            readOnly
-            value={values.shippingTotal}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Calculado según distrito (Piura) o recojo en tienda.
-          </p>
-        </div>
-        <div>
-          <Label>Descuento (S/)</Label>
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            value={values.discountTotal}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                discountTotal: Number(event.target.value) || 0,
-              })
-            }
-          />
-        </div>
-        {totals ? (
-          <div className="rounded border p-4 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>S/ {totals.subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between font-semibold">
-              <span>Total</span>
-              <span>S/ {totals.total.toFixed(2)}</span>
-            </div>
-          </div>
-        ) : null}
-      </section>
+      {error ? (
+        <p className="text-error font-body text-body-sm" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
-      <Button type="submit" disabled={submitting || values.lines.length === 0}>
-        {submitting ? "Creando…" : "Crear orden"}
-      </Button>
+      <div className="border-outline-variant/40 bg-surface-container-lowest fixed inset-x-0 bottom-0 z-10 border-t p-4 md:static md:border-0 md:bg-transparent md:p-0">
+        <Button
+          type="submit"
+          disabled={submitting || values.lines.length === 0}
+          className="shadow-primary/20 min-h-12 w-full px-8 shadow-lg md:w-auto"
+        >
+          {submitting ? labels.creating : labels.createOrder}
+        </Button>
+      </div>
     </form>
   );
 }

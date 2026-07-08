@@ -48,6 +48,13 @@ export const customizeBundleInputSchema = z
     refineUniqueProductIds(value.components, ctx);
   });
 
+/** Preview admin: cantidad de sorpresas editable (a diferencia del wizard ecommerce). */
+export const previewAdminBundleLineInputSchema = z.object({
+  bundleId: z.string().uuid(),
+  quantity: z.number().int().min(1),
+  components: customizeBundleComponentsSchema,
+});
+
 export const getBundleForWizardInputSchema = z.object({
   bundleId: z.string().uuid(),
 });
@@ -75,6 +82,9 @@ export const bundleLinePreviewSchema = z.object({
 });
 
 export type CustomizeBundleInput = z.infer<typeof customizeBundleInputSchema>;
+export type PreviewAdminBundleLineInput = z.infer<
+  typeof previewAdminBundleLineInputSchema
+>;
 export type BundleWizardTemplate = z.infer<typeof bundleWizardTemplateSchema>;
 export type BundleLinePreview = z.infer<typeof bundleLinePreviewSchema>;
 

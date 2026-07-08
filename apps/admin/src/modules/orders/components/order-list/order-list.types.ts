@@ -1,15 +1,24 @@
 import type { OrderListItem } from "@de-tin-marin/validations/order";
 
-export type OrderListProps = {
-  orders: OrderListItem[];
+export type OrderListLabels = {
+  columns: {
+    orderNumber: string;
+    customer: string;
+    status: string;
+    payment: string;
+    total: string;
+    lines: string;
+    date: string;
+    actions: string;
+  };
+  view: string;
+  empty: string;
+  statusLabels: Record<string, string>;
+  paymentStatusLabels: Record<string, string>;
+  formatLines: (count: number) => string;
 };
 
-export const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending_payment: "Pendiente de pago",
-  paid: "Pagada",
-  preparing: "Preparando",
-  ready: "Lista",
-  delivered: "Entregada",
-  completed: "Completada",
-  cancelled: "Cancelada",
+export type OrderListProps = {
+  orders: OrderListItem[];
+  labels: OrderListLabels;
 };
