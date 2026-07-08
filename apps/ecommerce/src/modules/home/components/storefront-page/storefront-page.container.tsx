@@ -187,6 +187,7 @@ export function StorefrontPageContainer() {
             searchAriaLabel: t("filters.searchBundles"),
             sortLabel: t("filters.sort"),
             personalize: t("actions.personalize"),
+            price: t("actions.price"),
             empty: t("bundles.empty"),
             loading: tCommon("loading"),
             error: tCommon("error"),

@@ -16,7 +16,9 @@ export type ProductDetailPageProps = {
   product: PublicProductDetail;
   labels: ProductDetailPageLabels;
   quantity: number;
+  minQuantity: number;
   maxQuantity: number;
+  purchasable: boolean;
   onDecreaseQuantity: () => void;
   onIncreaseQuantity: () => void;
   onAddToCart?: () => void;

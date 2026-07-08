@@ -4,5 +4,6 @@ export interface ProductCardProps {
   product: HomeProduct;
   addToCartLabel?: string;
   detailHref?: string;
+  canAddToCart?: boolean;
   onAddToCart?: () => void;
 }

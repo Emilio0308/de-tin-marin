@@ -40,7 +40,8 @@
     },
     "actions": {
       "addToCart": "Añadir",
-      "personalize": "Personalizar"
+      "personalize": "Personalizar",
+      "price": "Precio"
     },
     "products": {
       "title": "Nuestros dulces",
@@ -169,6 +170,7 @@
     "errors": {
       "outOfCoverage": "No entregamos en esa ubicación.",
       "insufficientStock": "No hay stock suficiente para completar el pedido.",
+      "invalidPurchaseQuantity": "Una o más cantidades no cumplen el mínimo o máximo de compra del producto.",
       "validation": "Revisa los datos del formulario."
     }
   },

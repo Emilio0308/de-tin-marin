@@ -28,6 +28,8 @@ const baseProduct: PublicProductDetail = {
   description: "Gomitas suaves con sabores frutales.",
   productType: "package",
   packageLabel: "Paquete x4",
+  purchaseMinQuantity: 10,
+  purchaseMaxQuantity: 100,
 };
 
 const defaultLabels = {
@@ -45,7 +47,9 @@ const defaultLabels = {
 function renderProductDetail(overrides?: {
   onAddToCart?: () => void;
   quantity?: number;
+  minQuantity?: number;
   maxQuantity?: number;
+  purchasable?: boolean;
   onDecreaseQuantity?: () => void;
   onIncreaseQuantity?: () => void;
 }) {
@@ -56,8 +60,10 @@ function renderProductDetail(overrides?: {
     <ProductDetailPage
       product={baseProduct}
       labels={defaultLabels}
-      quantity={overrides?.quantity ?? 1}
+      quantity={overrides?.quantity ?? 10}
+      minQuantity={overrides?.minQuantity ?? 10}
       maxQuantity={overrides?.maxQuantity ?? 12}
+      purchasable={overrides?.purchasable ?? true}
       onDecreaseQuantity={onDecreaseQuantity}
       onIncreaseQuantity={onIncreaseQuantity}
       onAddToCart={overrides?.onAddToCart ?? vi.fn()}
@@ -74,7 +80,7 @@ describe("ProductDetailPage", () => {
     expect(
       screen.getByRole("heading", { name: "Gomitas Arcoíris" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("$8.50")).toBeInTheDocument();
+    expect(screen.getByText("S/8.50")).toBeInTheDocument();
     expect(screen.getByText("Haribo")).toBeInTheDocument();
     expect(screen.getByText("Gomitas")).toBeInTheDocument();
     expect(screen.getByText("Paquete x4")).toBeInTheDocument();
@@ -98,8 +104,10 @@ describe("ProductDetailPage", () => {
       <ProductDetailPage
         product={{ ...baseProduct, brand: null }}
         labels={{ ...defaultLabels, packageBadge: null }}
-        quantity={1}
+        quantity={10}
+        minQuantity={10}
         maxQuantity={12}
+        purchasable
         onDecreaseQuantity={vi.fn()}
         onIncreaseQuantity={vi.fn()}
         onAddToCart={vi.fn()}

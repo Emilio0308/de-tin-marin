@@ -61,7 +61,11 @@ describe("localStorageCartRepository", () => {
     const cartLineId = localStorageCartRepository.getLines()[0]?.cartLineId;
     expect(cartLineId).toBeTruthy();
 
-    localStorageCartRepository.updateProductQuantity(cartLineId!, 3);
+    localStorageCartRepository.updateProductQuantity(cartLineId!, 3, {
+      minQuantity: 1,
+      maxQuantity: 100,
+      purchasable: true,
+    });
     const updated = localStorageCartRepository.getLines()[0];
     expect(updated?.line.type).toBe("product");
     if (updated?.line.type === "product") {

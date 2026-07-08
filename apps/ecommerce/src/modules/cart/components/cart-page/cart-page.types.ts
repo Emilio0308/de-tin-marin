@@ -1,3 +1,4 @@
+import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import type { StoredCartLine } from "../../repositories/cart.repository";
 
 export type CartPageLabels = {
@@ -23,10 +24,15 @@ export type CartPageProps = {
   subtotal: number;
   labels: CartPageLabels;
   lineImageUrlByCartLineId: Record<string, string>;
+  productBoundsByCartLineId: Record<string, ProductPurchaseBounds>;
   formatBundlePersons: (count: number) => string;
   isStockPending: boolean;
   stockWarning: boolean;
   stockMessages: string[];
-  onUpdateQuantity: (cartLineId: string, quantity: number) => void;
+  onUpdateQuantity: (
+    cartLineId: string,
+    quantity: number,
+    bounds: ProductPurchaseBounds,
+  ) => void;
   onRemove: (cartLineId: string) => void;
 };

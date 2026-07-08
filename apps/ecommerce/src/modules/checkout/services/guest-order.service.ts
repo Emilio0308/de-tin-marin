@@ -12,12 +12,18 @@ import {
 } from "@de-tin-marin/shared/check-order-stock";
 import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
 import { formatOrderNumber } from "@de-tin-marin/shared/order-cart";
+import { resolveProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
+import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   createGuestOrderInputSchema,
   checkCartStockInputSchema,
 } from "@de-tin-marin/validations/checkout";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
+import {
+  getPublicProductsByIdsRepo,
+  type PublicProductRow,
+} from "@/modules/catalog/repositories/product.repository";
 import { getActiveContainersByIdsRepo } from "@/modules/catalog/repositories/surprise-container.repository";
 import {
   getWizardContainerStockByIdsRepo,
@@ -70,6 +76,46 @@ async function resolveBundlesById(
   }
 
   return bundlesById;
+}
+
+function validateProductPurchaseQuantities(
+  lines: { type: string; productId?: string; quantity?: number }[],
+  catalogProducts: PublicProductRow[],
+): boolean {
+  const productsById = new Map(catalogProducts.map((row) => [row.id, row]));
+
+  for (const line of lines) {
+    if (line.type !== "product" || !line.productId || line.quantity == null) {
+      continue;
+    }
+
+    const product = productsById.get(line.productId);
+    if (!product) return false;
+
+    const itemsPerPackage = product.items_per_package ?? 1;
+    const stockTotalBaseUnits = computeTotalBaseUnits(
+      product.stock_sealed_packages,
+      product.stock_loose_base_units,
+      itemsPerPackage,
+    );
+    const bounds = resolveProductPurchaseBounds({
+      productType: (product.product_type as "unit" | "package") ?? "unit",
+      itemsPerPackage,
+      stockTotalBaseUnits,
+      purchaseMinQuantity: product.purchase_min_quantity ?? 10,
+      purchaseMaxQuantity: product.purchase_max_quantity ?? 100,
+    });
+
+    if (
+      !bounds.purchasable ||
+      line.quantity < bounds.minQuantity ||
+      line.quantity > bounds.maxQuantity
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export async function checkCartStockService(
@@ -134,20 +180,31 @@ export async function createGuestOrderService(
         | "BUNDLE_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
         | "OUT_OF_COVERAGE"
-        | "INSUFFICIENT_STOCK";
+        | "INSUFFICIENT_STOCK"
+        | "INVALID_PURCHASE_QUANTITY";
     }
 > {
   const parsed = createGuestOrderInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const productIds = collectProductIdsFromOrderLines(parsed.data.lines);
-  const products = await getWizardProductsByIdsRepo(config, productIds);
+  const [products, catalogProducts] = await Promise.all([
+    getWizardProductsByIdsRepo(config, productIds),
+    getPublicProductsByIdsRepo(config, productIds),
+  ]);
   if (products.length !== productIds.length) {
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
 
   if (products.some((product) => !product.is_active)) {
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
+  }
+
+  if (
+    catalogProducts.length !== productIds.length ||
+    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts)
+  ) {
+    return { ok: false, error: "INVALID_PURCHASE_QUANTITY" };
   }
 
   const campaignIds = [

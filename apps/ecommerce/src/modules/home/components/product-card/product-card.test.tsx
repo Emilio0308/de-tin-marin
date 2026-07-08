@@ -16,7 +16,7 @@ describe("ProductCard", () => {
     render(<ProductCard product={baseProduct} addToCartLabel="Añadir" />);
 
     expect(screen.getByText("Paleta Arcoiris")).toBeInTheDocument();
-    expect(screen.getByText("$5.50")).toBeInTheDocument();
+    expect(screen.getByText("S/5.50")).toBeInTheDocument();
     expect(screen.getByAltText("Paleta arcoíris")).toBeInTheDocument();
   });
 

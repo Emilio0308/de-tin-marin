@@ -19,14 +19,18 @@ function ProductDetailMeta({ label, value }: { label: string; value: string }) {
 
 function ProductQuantitySelector({
   quantity,
+  minQuantity,
   maxQuantity,
+  disabled,
   decreaseLabel,
   increaseLabel,
   onDecrease,
   onIncrease,
 }: {
   quantity: number;
+  minQuantity: number;
   maxQuantity: number;
+  disabled?: boolean;
   decreaseLabel: string;
   increaseLabel: string;
   onDecrease: () => void;
@@ -37,7 +41,7 @@ function ProductQuantitySelector({
       <button
         type="button"
         onClick={onDecrease}
-        disabled={quantity <= 1}
+        disabled={disabled || quantity <= minQuantity}
         aria-label={decreaseLabel}
         className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-11 w-11 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
       >
@@ -53,7 +57,7 @@ function ProductQuantitySelector({
       <button
         type="button"
         onClick={onIncrease}
-        disabled={quantity >= maxQuantity}
+        disabled={disabled || quantity >= maxQuantity}
         aria-label={increaseLabel}
         className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-11 w-11 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
       >
@@ -66,17 +70,20 @@ function ProductQuantitySelector({
 function AddToCartButton({
   label,
   onClick,
+  disabled,
   className,
 }: {
   label: string;
   onClick?: () => void;
+  disabled?: boolean;
   className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container flex min-h-12 items-center justify-center gap-2 rounded-full px-8 py-3 transition-all duration-300 hover:scale-[1.02] ${className ?? ""}`}
+      disabled={disabled}
+      className={`press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container disabled:bg-on-surface-variant/20 disabled:text-on-surface-variant/60 flex min-h-12 items-center justify-center gap-2 rounded-full px-8 py-3 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:hover:scale-100 ${className ?? ""}`}
     >
       <ShoppingCart className="h-5 w-5" aria-hidden />
       {label}
@@ -86,7 +93,9 @@ function AddToCartButton({
 
 function ProductDetailActions({
   quantity,
+  minQuantity,
   maxQuantity,
+  purchasable,
   labels,
   onDecreaseQuantity,
   onIncreaseQuantity,
@@ -94,7 +103,9 @@ function ProductDetailActions({
   className,
 }: {
   quantity: number;
+  minQuantity: number;
   maxQuantity: number;
+  purchasable: boolean;
   labels: ProductDetailPageProps["labels"];
   onDecreaseQuantity: () => void;
   onIncreaseQuantity: () => void;
@@ -105,13 +116,19 @@ function ProductDetailActions({
     <div className={`gap-stack-sm flex items-center ${className ?? ""}`}>
       <ProductQuantitySelector
         quantity={quantity}
+        minQuantity={minQuantity}
         maxQuantity={maxQuantity}
+        disabled={!purchasable}
         decreaseLabel={labels.decreaseQuantity}
         increaseLabel={labels.increaseQuantity}
         onDecrease={onDecreaseQuantity}
         onIncrease={onIncreaseQuantity}
       />
-      <AddToCartButton label={labels.addToCart} onClick={onAddToCart} />
+      <AddToCartButton
+        label={labels.addToCart}
+        onClick={onAddToCart}
+        disabled={!purchasable}
+      />
     </div>
   );
 }
@@ -120,7 +137,9 @@ export function ProductDetailPage({
   product,
   labels,
   quantity,
+  minQuantity,
   maxQuantity,
+  purchasable,
   onDecreaseQuantity,
   onIncreaseQuantity,
   onAddToCart,
@@ -197,7 +216,9 @@ export function ProductDetailPage({
 
             <ProductDetailActions
               quantity={quantity}
+              minQuantity={minQuantity}
               maxQuantity={maxQuantity}
+              purchasable={purchasable}
               labels={labels}
               onDecreaseQuantity={onDecreaseQuantity}
               onIncreaseQuantity={onIncreaseQuantity}
@@ -211,7 +232,9 @@ export function ProductDetailPage({
       <div className="border-outline-variant/20 bg-surface/95 fixed inset-x-0 bottom-0 z-40 border-t p-4 backdrop-blur-md md:hidden">
         <ProductDetailActions
           quantity={quantity}
+          minQuantity={minQuantity}
           maxQuantity={maxQuantity}
+          purchasable={purchasable}
           labels={labels}
           onDecreaseQuantity={onDecreaseQuantity}
           onIncreaseQuantity={onIncreaseQuantity}

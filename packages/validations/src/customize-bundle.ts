@@ -6,7 +6,7 @@ import {
   orderStockCheckSchema,
 } from "./order";
 
-export const BUNDLE_CUSTOMIZATION_MIN = 5;
+export const BUNDLE_CUSTOMIZATION_MIN = 8;
 export const BUNDLE_CUSTOMIZATION_MAX = 20;
 
 export const customizeBundleComponentSchema = orderBundleComponentInputSchema;

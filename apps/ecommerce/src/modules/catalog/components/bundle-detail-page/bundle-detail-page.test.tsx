@@ -54,7 +54,7 @@ describe("BundleDetailPage", () => {
     expect(
       screen.getByRole("heading", { name: "Combo Cumpleaños Arcoíris" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("$89.90")).toBeInTheDocument();
+    expect(screen.getByText("S/89.90")).toBeInTheDocument();
     expect(screen.getAllByText("Caja mediana").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Para 10 personas").length).toBeGreaterThan(0);
     expect(

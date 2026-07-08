@@ -42,6 +42,9 @@ export const publicProductListItemSchema = z.object({
   stockTotalBaseUnits: z.number(),
   stockDisplay: z.string(),
   itemsPerPackage: z.number(),
+  productType: z.enum(["unit", "package"]),
+  purchaseMinQuantity: z.number().int().min(1),
+  purchaseMaxQuantity: z.number().int().min(1),
 });
 
 export const publicBundleListItemSchema = z.object({

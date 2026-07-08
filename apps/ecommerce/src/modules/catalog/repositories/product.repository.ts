@@ -19,6 +19,8 @@ export type PublicProductRow = {
   stock_loose_base_units: number;
   package_label: string | null;
   product_type: string;
+  purchase_min_quantity: number;
+  purchase_max_quantity: number;
   categories: { name: string } | null;
 };
 
@@ -40,7 +42,7 @@ export async function listPublicProductsRepo(
     .schema("catalog")
     .from("products")
     .select(
-      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, categories(name)",
+      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, purchase_min_quantity, purchase_max_quantity, categories(name)",
     )
     .eq("is_active", true)
     .is("deleted_at", null);
@@ -68,7 +70,7 @@ export async function getPublicProductBySlugRepo(
     .schema("catalog")
     .from("products")
     .select(
-      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, categories(name)",
+      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, purchase_min_quantity, purchase_max_quantity, categories(name)",
     )
     .eq("slug", slug)
     .eq("is_active", true)
@@ -88,7 +90,7 @@ export async function getPublicProductByIdRepo(
     .schema("catalog")
     .from("products")
     .select(
-      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, categories(name)",
+      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, purchase_min_quantity, purchase_max_quantity, categories(name)",
     )
     .eq("id", id)
     .eq("is_active", true)
@@ -97,4 +99,25 @@ export async function getPublicProductByIdRepo(
 
   if (error) throw new Error(error.message);
   return data as PublicProductRow | null;
+}
+
+export async function getPublicProductsByIdsRepo(
+  config: SupabaseConfig,
+  productIds: string[],
+): Promise<PublicProductRow[]> {
+  if (productIds.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("catalog")
+    .from("products")
+    .select(
+      "id, sku, slug, name, brand, description, category_id, image_url, prices, items_per_package, stock_sealed_packages, stock_loose_base_units, package_label, product_type, purchase_min_quantity, purchase_max_quantity, categories(name)",
+    )
+    .in("id", productIds)
+    .eq("is_active", true)
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as PublicProductRow[];
 }

@@ -6,16 +6,21 @@ import { StorefrontLayout } from "@/modules/home/components/storefront-layout/st
 import { storefrontTabHref } from "@/modules/home/helpers/storefront-url";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { StockBannerSection } from "@/shared/components/stock-banner/stock-banner";
+import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import type { CartPageProps } from "./cart-page.types";
 
 function CartQuantitySelector({
   quantity,
+  minQuantity,
+  maxQuantity,
   decreaseLabel,
   increaseLabel,
   onDecrease,
   onIncrease,
 }: {
   quantity: number;
+  minQuantity: number;
+  maxQuantity: number;
   decreaseLabel: string;
   increaseLabel: string;
   onDecrease: () => void;
@@ -26,7 +31,7 @@ function CartQuantitySelector({
       <button
         type="button"
         onClick={onDecrease}
-        disabled={quantity <= 1}
+        disabled={quantity <= minQuantity}
         aria-label={decreaseLabel}
         className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
       >
@@ -42,8 +47,9 @@ function CartQuantitySelector({
       <button
         type="button"
         onClick={onIncrease}
+        disabled={quantity >= maxQuantity}
         aria-label={increaseLabel}
-        className="text-primary hover:bg-primary-container flex h-10 w-10 items-center justify-center rounded-full transition-colors"
+        className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
       >
         <Plus className="h-4 w-4" aria-hidden />
       </button>
@@ -102,6 +108,7 @@ function CartProductLine({
   quantity,
   lineTotal,
   imageUrl,
+  bounds,
   labels,
   onUpdateQuantity,
   onRemove,
@@ -112,8 +119,13 @@ function CartProductLine({
   quantity: number;
   lineTotal: number;
   imageUrl: string;
+  bounds: ProductPurchaseBounds;
   labels: CartPageProps["labels"];
-  onUpdateQuantity: (cartLineId: string, quantity: number) => void;
+  onUpdateQuantity: (
+    cartLineId: string,
+    quantity: number,
+    bounds: ProductPurchaseBounds,
+  ) => void;
   onRemove: (cartLineId: string) => void;
 }) {
   return (
@@ -138,10 +150,12 @@ function CartProductLine({
       <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
         <CartQuantitySelector
           quantity={quantity}
+          minQuantity={bounds.minQuantity}
+          maxQuantity={bounds.maxQuantity}
           decreaseLabel={labels.decreaseQuantity}
           increaseLabel={labels.increaseQuantity}
-          onDecrease={() => onUpdateQuantity(cartLineId, quantity - 1)}
-          onIncrease={() => onUpdateQuantity(cartLineId, quantity + 1)}
+          onDecrease={() => onUpdateQuantity(cartLineId, quantity - 1, bounds)}
+          onIncrease={() => onUpdateQuantity(cartLineId, quantity + 1, bounds)}
         />
         <p className="font-display text-price-display text-primary min-w-20 text-right">
           {formatPrice(lineTotal)}
@@ -232,6 +246,7 @@ export function CartPage({
   subtotal,
   labels,
   lineImageUrlByCartLineId,
+  productBoundsByCartLineId,
   isStockPending,
   stockWarning,
   stockMessages,
@@ -294,6 +309,13 @@ export function CartPage({
                         imageUrl={
                           lineImageUrlByCartLineId[entry.cartLineId] ??
                           CATALOG_PLACEHOLDER_IMAGE
+                        }
+                        bounds={
+                          productBoundsByCartLineId[entry.cartLineId] ?? {
+                            minQuantity: 1,
+                            maxQuantity: entry.line.quantity,
+                            purchasable: true,
+                          }
                         }
                         labels={labels}
                         onUpdateQuantity={onUpdateQuantity}

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { ProductDetailPageLabels } from "./product-detail-page.types";
 import type { PublicProductDetail } from "@de-tin-marin/validations/public-catalog";
 import { useCart } from "@/modules/cart/hooks/use-cart";
-import { resolveProductMaxQuantity } from "./product-detail-page.helpers";
+import { resolveProductPurchaseLimits } from "./product-detail-page.helpers";
 import { ProductDetailPage } from "./product-detail-page";
 
 export type ProductDetailPageContainerProps = {
@@ -17,23 +17,24 @@ export function ProductDetailPageContainer({
   labels,
 }: ProductDetailPageContainerProps) {
   const { addProduct } = useCart();
-  const maxQuantity = useMemo(
-    () => resolveProductMaxQuantity(product),
+  const bounds = useMemo(
+    () => resolveProductPurchaseLimits(product),
     [product],
   );
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(bounds.minQuantity);
 
   function handleDecreaseQuantity() {
-    setQuantity((current) => Math.max(1, current - 1));
+    setQuantity((current) => Math.max(bounds.minQuantity, current - 1));
   }
 
   function handleIncreaseQuantity() {
-    setQuantity((current) => Math.min(maxQuantity, current + 1));
+    setQuantity((current) => Math.min(bounds.maxQuantity, current + 1));
   }
 
   function handleAddToCart() {
+    if (!bounds.purchasable) return;
     addProduct(product, quantity);
-    setQuantity(1);
+    setQuantity(bounds.minQuantity);
   }
 
   return (
@@ -41,10 +42,12 @@ export function ProductDetailPageContainer({
       product={product}
       labels={labels}
       quantity={quantity}
-      maxQuantity={maxQuantity}
+      minQuantity={bounds.minQuantity}
+      maxQuantity={bounds.maxQuantity}
+      purchasable={bounds.purchasable}
       onDecreaseQuantity={handleDecreaseQuantity}
       onIncreaseQuantity={handleIncreaseQuantity}
-      onAddToCart={handleAddToCart}
+      onAddToCart={bounds.purchasable ? handleAddToCart : undefined}
     />
   );
 }

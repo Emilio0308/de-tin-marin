@@ -83,17 +83,20 @@ describe("validateBundleCustomization", () => {
       { productId: productId(2), quantityPerUnit: 1 },
       { productId: productId(3), quantityPerUnit: 1 },
       { productId: productId(4), quantityPerUnit: 1 },
+      { productId: productId(5), quantityPerUnit: 1 },
+      { productId: productId(6), quantityPerUnit: 1 },
+      { productId: productId(7), quantityPerUnit: 1 },
     ]);
 
     expect(result).toEqual({ ok: false, error: "DUPLICATE_PRODUCT" });
   });
 
   it("acepta composición válida", () => {
-    const components = buildComponents(6);
+    const components = buildComponents(BUNDLE_CUSTOMIZATION_MIN);
     const result = validateBundleCustomization(components);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data).toHaveLength(6);
+      expect(result.data).toHaveLength(BUNDLE_CUSTOMIZATION_MIN);
     }
   });
 });

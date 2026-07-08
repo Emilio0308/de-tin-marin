@@ -1,4 +1,5 @@
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
+import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import type { CartRepository, StoredCartLine } from "./cart.repository";
 import {
   addBundleCartLine,
@@ -8,6 +9,12 @@ import {
 } from "../helpers/cart-lines";
 
 const STORAGE_KEY = "dtm-cart-lines";
+
+const LEGACY_UNBOUNDED_BOUNDS: ProductPurchaseBounds = {
+  minQuantity: 1,
+  maxQuantity: Number.MAX_SAFE_INTEGER,
+  purchasable: true,
+};
 
 function readLines(): StoredCartLine[] {
   if (typeof window === "undefined") return [];
@@ -49,7 +56,7 @@ export const localStorageCartRepository: CartRepository = {
     const current = readLines();
     const next =
       line.type === "product"
-        ? mergeProductCartLine(current, line)
+        ? mergeProductCartLine(current, line, LEGACY_UNBOUNDED_BOUNDS)
         : addBundleCartLine(current, line);
     writeLines(next);
     notify();
@@ -60,8 +67,17 @@ export const localStorageCartRepository: CartRepository = {
     notify();
   },
 
-  updateProductQuantity(cartLineId: string, quantity: number) {
-    const next = updateStoredProductQuantity(readLines(), cartLineId, quantity);
+  updateProductQuantity(
+    cartLineId: string,
+    quantity: number,
+    bounds: ProductPurchaseBounds,
+  ) {
+    const next = updateStoredProductQuantity(
+      readLines(),
+      cartLineId,
+      quantity,
+      bounds,
+    );
     writeLines(next);
     notify();
   },

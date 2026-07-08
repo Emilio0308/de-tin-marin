@@ -116,6 +116,8 @@ function toListItem(
       itemsPerPackage,
       packageLabel: row.package_label,
     }),
+    purchaseMinQuantity: row.purchase_min_quantity ?? 10,
+    purchaseMaxQuantity: row.purchase_max_quantity ?? 100,
     isActive: row.is_active,
     imageUrl: row.image_url,
   };
@@ -148,6 +150,8 @@ function toFormDTO(
     ),
     categoryId: row.category_id,
     imageUrl: row.image_url,
+    purchaseMinQuantity: row.purchase_min_quantity ?? 10,
+    purchaseMaxQuantity: row.purchase_max_quantity ?? 100,
     isActive: row.is_active,
   };
 }
@@ -250,6 +254,8 @@ export async function createProductService(
     stock_loose_base_units: normalized.stock.looseBaseUnits,
     category_id: data.categoryId,
     is_active: data.isActive,
+    purchase_min_quantity: data.purchaseMinQuantity,
+    purchase_max_quantity: data.purchaseMaxQuantity,
   });
 
   return { ok: true as const, id: row.id };
@@ -315,6 +321,12 @@ export async function updateProductService(
   if (fields.imageUrl !== undefined)
     updatePayload.image_url = normalizeImageUrl(fields.imageUrl);
   if (fields.isActive !== undefined) updatePayload.is_active = fields.isActive;
+  if (fields.purchaseMinQuantity !== undefined) {
+    updatePayload.purchase_min_quantity = fields.purchaseMinQuantity;
+  }
+  if (fields.purchaseMaxQuantity !== undefined) {
+    updatePayload.purchase_max_quantity = fields.purchaseMaxQuantity;
+  }
   updatePayload.items_per_package = normalized.itemsPerPackage;
   updatePayload.product_type = normalized.productType;
   if (fields.packageLabel !== undefined || fields.productType !== undefined) {

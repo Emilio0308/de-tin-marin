@@ -157,7 +157,7 @@ describe("BundleWizardPage", () => {
   it("muestra precio y habilita agregar al carrito cuando la composición es válida", () => {
     render(<BundleWizardPage {...defaultProps} />);
 
-    expect(screen.getAllByText("$89.90").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("S/89.90").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("button", { name: /agregar al carrito/i }),
     ).toBeEnabled();

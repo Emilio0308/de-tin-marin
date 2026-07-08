@@ -56,6 +56,7 @@ export type StorefrontBundlesTabProps = {
   sortOptions: Array<{ value: PublicCatalogSort; label: string }>;
   labels: StorefrontToolbarLabels & {
     personalize: string;
+    price: string;
   };
   isLoading: boolean;
   isError: boolean;

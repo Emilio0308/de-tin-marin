@@ -8,6 +8,7 @@
     "./slugify": "./src/slugify.ts",
     "./prices": "./src/prices.ts",
     "./product-stock": "./src/product-stock.ts",
+    "./product-purchase-limits": "./src/product-purchase-limits.ts",
     "./bundle-price": "./src/bundle-price.ts",
     "./delivery-fee": "./src/delivery-fee.ts",
     "./final-price": "./src/final-price.ts",

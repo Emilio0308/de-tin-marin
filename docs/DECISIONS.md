@@ -37,6 +37,7 @@
 | 28 | Precios dual en JSONB | ✅ | **`prices.normal`** = precio presentación; **`prices.unit`** = precio unidad base. Ambos persistidos; **`unit` calculado al guardar** desde `normal` + `items_per_package`. Coherencia validada (Regla 2). Campaña aplica sobre `normal`; `finalUnitPrice` derivado |
 | 29 | Stock por paquetes | ✅ | Reemplaza **`stock_quantity`**: **`stock_sealed_packages`** + **`stock_loose_base_units`**. Total = `sealed × items_per_package + loose`. Normalización post-movimiento. Deduct (S2A): consumir loose primero, abrir paquetes, sobrante a loose |
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
+| 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
 
 ## Docs sincronizados (2026-07-02)
 

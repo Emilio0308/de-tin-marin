@@ -13,9 +13,9 @@ export function BundleSection({ bundles }: BundleSectionProps) {
             La mezcla perfecta de dulces y sorpresas para celebrar a lo grande.
           </p>
         </div>
-        <div className="gap-stack-lg grid grid-cols-1 md:grid-cols-2">
+        <div className="gap-stack-lg grid grid-cols-1 lg:grid-cols-2">
           {bundles.map((bundle) => (
-            <BundleCard key={bundle.id} bundle={bundle} />
+            <BundleCard key={bundle.id} bundle={bundle} variant="featured" />
           ))}
         </div>
       </div>

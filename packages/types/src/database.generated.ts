@@ -155,6 +155,8 @@ export type Database = {
           package_label: string | null
           prices: Json
           product_type: string
+          purchase_max_quantity: number
+          purchase_min_quantity: number
           sku: string
           slug: string
           stock_loose_base_units: number
@@ -176,6 +178,8 @@ export type Database = {
           package_label?: string | null
           prices?: Json
           product_type?: string
+          purchase_max_quantity?: number
+          purchase_min_quantity?: number
           sku: string
           slug: string
           stock_loose_base_units?: number
@@ -197,6 +201,8 @@ export type Database = {
           package_label?: string | null
           prices?: Json
           product_type?: string
+          purchase_max_quantity?: number
+          purchase_min_quantity?: number
           sku?: string
           slug?: string
           stock_loose_base_units?: number
@@ -466,6 +472,10 @@ export type Database = {
       deduct_stock_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
+      }
+      get_guest_order: {
+        Args: { p_email: string; p_order_number: string }
+        Returns: Json
       }
     }
     Enums: {

@@ -78,6 +78,12 @@ const bundleLine: StoredCartLine = {
   },
 };
 
+const defaultBounds = {
+  minQuantity: 1,
+  maxQuantity: 100,
+  purchasable: true,
+};
+
 describe("CartPage", () => {
   it("muestra estado vacío con enlace para seguir comprando", () => {
     render(
@@ -90,6 +96,7 @@ describe("CartPage", () => {
         stockMessages={[]}
         formatBundlePersons={(count) => `Para ${count} personas`}
         lineImageUrlByCartLineId={{}}
+        productBoundsByCartLineId={{}}
         onUpdateQuantity={vi.fn()}
         onRemove={vi.fn()}
       />,
@@ -118,6 +125,9 @@ describe("CartPage", () => {
           "line-1": "https://example.com/gomitas.png",
           "line-2": "https://example.com/combo.png",
         }}
+        productBoundsByCartLineId={{
+          "line-1": defaultBounds,
+        }}
         onUpdateQuantity={vi.fn()}
         onRemove={vi.fn()}
       />,
@@ -126,7 +136,7 @@ describe("CartPage", () => {
     expect(screen.getByText("Gomitas Ácidas")).toBeInTheDocument();
     expect(screen.getByText("Combo Cumpleaños Arcoíris")).toBeInTheDocument();
     expect(screen.getByText("Para 10 personas · 1 dulces")).toBeInTheDocument();
-    expect(screen.getAllByText("$94.90").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("S/94.90").length).toBeGreaterThan(0);
     expect(
       screen.getAllByRole("link", { name: /ir a checkout/i }).length,
     ).toBeGreaterThan(0);
@@ -145,6 +155,7 @@ describe("CartPage", () => {
         stockMessages={[]}
         formatBundlePersons={(count) => `Para ${count} personas`}
         lineImageUrlByCartLineId={{}}
+        productBoundsByCartLineId={{}}
         onUpdateQuantity={vi.fn()}
         onRemove={onRemove}
       />,
@@ -165,6 +176,7 @@ describe("CartPage", () => {
         stockMessages={[]}
         formatBundlePersons={(count) => `Para ${count} personas`}
         lineImageUrlByCartLineId={{}}
+        productBoundsByCartLineId={{}}
         onUpdateQuantity={vi.fn()}
         onRemove={vi.fn()}
       />,

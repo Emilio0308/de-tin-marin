@@ -8,6 +8,7 @@ import {
   mapBundleToCard,
   mapProductToCard,
 } from "@/modules/catalog/helpers/map-catalog-cards";
+import { isProductPurchasable } from "@/modules/catalog/helpers/product-purchase-limits";
 import { BundleCard } from "@/modules/home/components/bundle-card/bundle-card";
 import { HeroSectionContainer } from "@/modules/home/components/hero-section/hero-section.container";
 import { ProductCard } from "@/modules/home/components/product-card/product-card";
@@ -177,8 +178,11 @@ function StorefrontProductsTab({
                         product={mapProductToCard(product)}
                         detailHref={`/productos/${product.slug}`}
                         addToCartLabel={labels.addToCart}
+                        canAddToCart={isProductPurchasable(product)}
                         onAddToCart={
-                          onAddProduct ? () => onAddProduct(product) : undefined
+                          onAddProduct && isProductPurchasable(product)
+                            ? () => onAddProduct(product)
+                            : undefined
                         }
                       />
                       <p className="font-body text-body-sm text-on-surface-variant text-center">
@@ -249,13 +253,15 @@ function StorefrontBundlesTab({
 
         {showGrid ? (
           <>
-            <div className="gap-stack-lg grid grid-cols-1 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
               {bundles.map((bundle) => (
                 <BundleCard
                   key={bundle.id}
                   bundle={mapBundleToCard(bundle)}
                   detailHref={`/sorpresas/${bundle.id}`}
                   personalizeLabel={labels.personalize}
+                  priceLabel={labels.price}
+                  variant="listing"
                 />
               ))}
             </div>

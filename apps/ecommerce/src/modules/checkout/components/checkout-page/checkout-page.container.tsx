@@ -32,6 +32,7 @@ import { CheckoutPage } from "./checkout-page";
 type GuestOrderErrorCode =
   | "OUT_OF_COVERAGE"
   | "INSUFFICIENT_STOCK"
+  | "INVALID_PURCHASE_QUANTITY"
   | "VALIDATION"
   | "PRODUCT_NOT_FOUND"
   | "BUNDLE_NOT_FOUND"
@@ -220,6 +221,7 @@ export function CheckoutPageContainer() {
       const messageMap: Record<GuestOrderErrorCode, string> = {
         OUT_OF_COVERAGE: t("errors.outOfCoverage"),
         INSUFFICIENT_STOCK: t("errors.insufficientStock"),
+        INVALID_PURCHASE_QUANTITY: t("errors.invalidPurchaseQuantity"),
         VALIDATION: t("errors.validation"),
         PRODUCT_NOT_FOUND: t("errors.validation"),
         BUNDLE_NOT_FOUND: t("errors.validation"),

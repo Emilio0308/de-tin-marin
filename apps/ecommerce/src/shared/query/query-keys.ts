@@ -18,6 +18,8 @@ export const queryKeys = {
     current: () => [...queryKeys.cart.all, "current"] as const,
     lineImages: (cartLineIds: string[]) =>
       [...queryKeys.cart.all, "line-images", cartLineIds] as const,
+    productMeta: (cartLineIds: string[]) =>
+      [...queryKeys.cart.all, "product-meta", cartLineIds] as const,
   },
   wizard: {
     all: ["wizard"] as const,

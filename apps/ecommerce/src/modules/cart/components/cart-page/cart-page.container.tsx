@@ -3,9 +3,11 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import { getPublicBundleAction } from "@/modules/catalog/actions/get-public-bundle";
 import { getPublicProductAction } from "@/modules/catalog/actions/get-public-product";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
+import { resolveProductPurchaseLimits } from "@/modules/catalog/helpers/product-purchase-limits";
 import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
 import { formatStockShortageMessages } from "@/shared/components/stock-banner/stock-banner";
 import { queryKeys } from "@/shared/query/query-keys";
@@ -14,6 +16,11 @@ import { useCart } from "../../hooks/use-cart";
 import type { StoredCartLine } from "../../repositories/cart.repository";
 import { CartPage } from "./cart-page";
 
+type CartProductLineMeta = {
+  imageUrl?: string;
+  bounds: ProductPurchaseBounds;
+};
+
 function resolveStoredLineImageUrl(
   line: StoredCartLine["line"],
 ): string | null {
@@ -21,6 +28,40 @@ function resolveStoredLineImageUrl(
     return line.imageUrl;
   }
   return null;
+}
+
+async function fetchCartProductMetadata(
+  lines: StoredCartLine[],
+): Promise<Record<string, CartProductLineMeta>> {
+  const meta: Record<string, CartProductLineMeta> = {};
+
+  await Promise.all(
+    lines.map(async (entry) => {
+      if (entry.line.type !== "product") return;
+
+      const result = await getPublicProductAction({
+        id: entry.line.productId,
+      });
+
+      if (result.ok) {
+        meta[entry.cartLineId] = {
+          imageUrl: result.data.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
+          bounds: resolveProductPurchaseLimits(result.data),
+        };
+        return;
+      }
+
+      meta[entry.cartLineId] = {
+        bounds: {
+          minQuantity: 1,
+          maxQuantity: entry.line.quantity,
+          purchasable: false,
+        },
+      };
+    }),
+  );
+
+  return meta;
 }
 
 async function fetchMissingCartLineImages(
@@ -58,6 +99,20 @@ export function CartPageContainer() {
   const t = useTranslations("cart");
   const { lines, totals, updateProductQuantity, removeLine } = useCart();
 
+  const productLineIds = useMemo(
+    () =>
+      lines
+        .filter((entry) => entry.line.type === "product")
+        .map((entry) => entry.cartLineId),
+    [lines],
+  );
+
+  const productMetaQuery = useQuery({
+    queryKey: queryKeys.cart.productMeta(productLineIds),
+    queryFn: () => fetchCartProductMetadata(lines),
+    enabled: productLineIds.length > 0,
+  });
+
   const missingImageLineIds = useMemo(
     () =>
       lines
@@ -77,14 +132,33 @@ export function CartPageContainer() {
 
     for (const entry of lines) {
       const stored = resolveStoredLineImageUrl(entry.line);
+      const fromProductMeta =
+        productMetaQuery.data?.[entry.cartLineId]?.imageUrl;
       resolved[entry.cartLineId] =
         stored ??
+        fromProductMeta ??
         imagesQuery.data?.[entry.cartLineId] ??
         CATALOG_PLACEHOLDER_IMAGE;
     }
 
     return resolved;
-  }, [imagesQuery.data, lines]);
+  }, [imagesQuery.data, lines, productMetaQuery.data]);
+
+  const productBoundsByCartLineId = useMemo(() => {
+    const bounds: Record<string, ProductPurchaseBounds> = {};
+
+    for (const entry of lines) {
+      if (entry.line.type !== "product") continue;
+      bounds[entry.cartLineId] = productMetaQuery.data?.[entry.cartLineId]
+        ?.bounds ?? {
+        minQuantity: 1,
+        maxQuantity: entry.line.quantity,
+        purchasable: true,
+      };
+    }
+
+    return bounds;
+  }, [lines, productMetaQuery.data]);
 
   const stockQuery = useQuery({
     queryKey: queryKeys.checkout.stock(toShoppingCartLines(lines)),
@@ -108,6 +182,7 @@ export function CartPageContainer() {
       lines={lines}
       subtotal={totals.subtotal}
       lineImageUrlByCartLineId={lineImageUrlByCartLineId}
+      productBoundsByCartLineId={productBoundsByCartLineId}
       isStockPending={stockQuery.isLoading || stockQuery.isFetching}
       stockWarning={Boolean(stockQuery.data && !stockQuery.data.ok)}
       stockMessages={stockMessages}

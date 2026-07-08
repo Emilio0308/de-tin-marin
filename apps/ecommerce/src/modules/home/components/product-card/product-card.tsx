@@ -8,6 +8,7 @@ export function ProductCard({
   product,
   addToCartLabel = "Añadir",
   detailHref,
+  canAddToCart = true,
   onAddToCart,
 }: ProductCardProps) {
   const imageBlock = (
@@ -51,7 +52,8 @@ export function ProductCard({
       <button
         type="button"
         onClick={onAddToCart}
-        className="press-down bg-secondary-container font-label text-label-bold text-on-secondary-container hover:bg-secondary hover:text-on-secondary flex w-full items-center justify-center gap-2 rounded-xl py-3 transition-all duration-300"
+        disabled={!canAddToCart}
+        className="press-down bg-secondary-container font-label text-label-bold text-on-secondary-container hover:bg-secondary hover:text-on-secondary disabled:bg-on-surface-variant/20 disabled:text-on-surface-variant/60 flex w-full items-center justify-center gap-2 rounded-xl py-3 transition-all duration-300 disabled:cursor-not-allowed"
       >
         <ShoppingCart className="h-5 w-5" />
         {addToCartLabel}

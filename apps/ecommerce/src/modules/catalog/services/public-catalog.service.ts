@@ -82,6 +82,9 @@ function toProductListItem(row: PublicProductRow): PublicProductListItem {
       packageLabel: row.package_label,
     }),
     itemsPerPackage,
+    productType: (row.product_type as "unit" | "package") ?? "unit",
+    purchaseMinQuantity: row.purchase_min_quantity ?? 10,
+    purchaseMaxQuantity: row.purchase_max_quantity ?? 100,
   };
 }
 
