@@ -35,6 +35,7 @@ describe("GuestOrderLookupPage", () => {
             paymentStatus: "Pago",
             deliveryTitle: "Entrega",
             pickupTitle: "Recojo",
+            bundleBadge: "Sorpresa",
             bundleComponents: "dulces",
             formatBundlePersons: (count) => `Para ${count} personas`,
             formatStatus: (status) => status,
@@ -42,6 +43,8 @@ describe("GuestOrderLookupPage", () => {
           },
           payment: {
             title: "Instrucciones de pago",
+            yapeLabel: "Yape",
+            transferLabel: "Transferencia bancaria",
             yape: "Yape",
             transfer: "Transferencia",
             note: "Nota",

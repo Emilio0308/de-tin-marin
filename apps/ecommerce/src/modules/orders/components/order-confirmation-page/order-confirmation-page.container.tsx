@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
 import { getGuestOrderAction } from "@/modules/orders/actions/get-guest-order";
+import { buildPaymentInstructionLabels } from "@/modules/orders/helpers/build-payment-instruction-labels";
 import {
   GUEST_ORDER_STATUS_LABEL_KEYS,
   GUEST_PAYMENT_STATUS_LABEL_KEYS,
@@ -86,6 +87,11 @@ export function OrderConfirmationPageContainer() {
     [t],
   );
 
+  const paymentLabels = useMemo(
+    () => buildPaymentInstructionLabels((key, values) => t(key, values)),
+    [t],
+  );
+
   const errorMessage = lookupFailed ? tLookup("notFound") : null;
 
   return (
@@ -103,6 +109,7 @@ export function OrderConfirmationPageContainer() {
         missingParams: t("missingParams"),
         loading: tCommon("loading"),
         lookupLink: t("lookupLink"),
+        continueShopping: t("continueShopping"),
         detail: {
           subtotal: t("summary.subtotal"),
           shipping: t("summary.shipping"),
@@ -112,6 +119,7 @@ export function OrderConfirmationPageContainer() {
           paymentStatus: t("summary.paymentStatus"),
           deliveryTitle: t("summary.deliveryTitle"),
           pickupTitle: t("summary.pickupTitle"),
+          bundleBadge: t("summary.bundleBadge"),
           bundleComponents: t("summary.bundleComponents"),
           formatBundlePersons: (count) => t("summary.bundlePersons", { count }),
           formatStatus: (status) =>
@@ -119,12 +127,7 @@ export function OrderConfirmationPageContainer() {
           formatPaymentStatus: (paymentStatus) =>
             resolveGuestPaymentStatusLabel(paymentStatus, paymentStatusLabels),
         },
-        payment: {
-          title: t("paymentInstructions.title"),
-          yape: t("paymentInstructions.yape"),
-          transfer: t("paymentInstructions.transfer"),
-          note: t("paymentInstructions.note"),
-        },
+        payment: paymentLabels,
       }}
     />
   );

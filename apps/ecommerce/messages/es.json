@@ -178,6 +178,7 @@
     "missingOrderNumber": "No encontramos el número de pedido.",
     "missingParams": "Usa el enlace completo de confirmación o consulta tu pedido en Mis pedidos.",
     "lookupLink": "Consultar en Mis pedidos",
+    "continueShopping": "Seguir comprando",
     "summary": {
       "subtotal": "Subtotal",
       "shipping": "Envío",
@@ -187,6 +188,7 @@
       "paymentStatus": "Pago",
       "deliveryTitle": "Entrega",
       "pickupTitle": "Recojo en tienda",
+      "bundleBadge": "Sorpresa",
       "bundleComponents": "dulces",
       "bundlePersons": "Para {count} personas"
     },
@@ -206,8 +208,10 @@
     },
     "paymentInstructions": {
       "title": "Instrucciones de pago",
-      "yape": "Yape al número 999 888 777 a nombre de De Tin Marín.",
-      "transfer": "Transferencia BCP — cuenta 191-12345678-0-12 (De Tin Marín SAC).",
+      "yapeLabel": "Yape",
+      "transferLabel": "Transferencia bancaria",
+      "yape": "Yape al número {phone} a nombre de {holder}.",
+      "transfer": "Transferencia {bank} — cuenta {account} ({holder}).",
       "note": "Envía el voucher por WhatsApp indicando tu número de pedido. Confirmaremos tu pago en breve."
     }
   },

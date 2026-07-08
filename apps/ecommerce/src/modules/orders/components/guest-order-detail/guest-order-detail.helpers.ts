@@ -12,6 +12,7 @@ export function summarizeGuestOrderLines(
     if (line.type === "product") {
       return {
         key: line.productId,
+        kind: "product",
         name: line.name,
         detail: `${line.quantity} ud.`,
         lineTotal: line.lineTotal,
@@ -20,6 +21,7 @@ export function summarizeGuestOrderLines(
 
     return {
       key: line.bundleId,
+      kind: "bundle",
       name: line.name,
       detail: `${labels.formatBundlePersons(line.quantity)} · ${line.components.length} ${labels.bundleComponents}`,
       lineTotal: line.lineTotal,

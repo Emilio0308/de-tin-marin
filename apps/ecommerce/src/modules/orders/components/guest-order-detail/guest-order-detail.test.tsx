@@ -57,6 +57,7 @@ const labels = {
   paymentStatus: "Pago",
   deliveryTitle: "Entrega",
   pickupTitle: "Recojo",
+  bundleBadge: "Sorpresa",
   bundleComponents: "dulces",
   formatBundlePersons: (count: number) => `Para ${count} personas`,
   formatStatus: (status: string) => status,

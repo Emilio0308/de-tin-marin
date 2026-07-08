@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
 import { getGuestOrderAction } from "@/modules/orders/actions/get-guest-order";
+import { buildPaymentInstructionLabels } from "@/modules/orders/helpers/build-payment-instruction-labels";
 import {
   GUEST_ORDER_STATUS_LABEL_KEYS,
   GUEST_PAYMENT_STATUS_LABEL_KEYS,
@@ -99,6 +100,14 @@ export function GuestOrderLookupPageContainer() {
     [tConfirmation],
   );
 
+  const paymentLabels = useMemo(
+    () =>
+      buildPaymentInstructionLabels((key, values) =>
+        tConfirmation(key, values),
+      ),
+    [tConfirmation],
+  );
+
   return (
     <GuestOrderLookupPage
       form={form}
@@ -121,6 +130,7 @@ export function GuestOrderLookupPageContainer() {
           paymentStatus: tConfirmation("summary.paymentStatus"),
           deliveryTitle: tConfirmation("summary.deliveryTitle"),
           pickupTitle: tConfirmation("summary.pickupTitle"),
+          bundleBadge: tConfirmation("summary.bundleBadge"),
           bundleComponents: tConfirmation("summary.bundleComponents"),
           formatBundlePersons: (count) =>
             tConfirmation("summary.bundlePersons", { count }),
@@ -129,12 +139,7 @@ export function GuestOrderLookupPageContainer() {
           formatPaymentStatus: (paymentStatus) =>
             resolveGuestPaymentStatusLabel(paymentStatus, paymentStatusLabels),
         },
-        payment: {
-          title: tConfirmation("paymentInstructions.title"),
-          yape: tConfirmation("paymentInstructions.yape"),
-          transfer: tConfirmation("paymentInstructions.transfer"),
-          note: tConfirmation("paymentInstructions.note"),
-        },
+        payment: paymentLabels,
       }}
       onChange={(field, value) => {
         setForm((current) => ({ ...current, [field]: value }));

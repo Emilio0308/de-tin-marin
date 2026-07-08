@@ -1,5 +1,8 @@
 import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
-import type { GuestOrderDetailLabels } from "../guest-order-detail/guest-order-detail.types";
+import type {
+  GuestOrderDetailLabels,
+  PaymentInstructionsLabels,
+} from "../guest-order-detail/guest-order-detail.types";
 
 export type GuestOrderLookupPageProps = {
   form: {
@@ -17,12 +20,7 @@ export type GuestOrderLookupPageProps = {
     submit: string;
     submitting: string;
     detail: GuestOrderDetailLabels;
-    payment: {
-      title: string;
-      yape: string;
-      transfer: string;
-      note: string;
-    };
+    payment: PaymentInstructionsLabels;
   };
   onChange: (field: "orderNumber" | "email", value: string) => void;
   onSubmit: () => void;
