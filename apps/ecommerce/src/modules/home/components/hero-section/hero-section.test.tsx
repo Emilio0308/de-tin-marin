@@ -21,10 +21,10 @@ describe("HeroSection", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /ver sorpresas/i }),
-    ).toHaveAttribute("href", "/sorpresas");
+    ).toHaveAttribute("href", "/?tab=sorpresas");
     expect(screen.getByRole("link", { name: /ver dulces/i })).toHaveAttribute(
       "href",
-      "/productos",
+      "/?tab=productos",
     );
   });
 });

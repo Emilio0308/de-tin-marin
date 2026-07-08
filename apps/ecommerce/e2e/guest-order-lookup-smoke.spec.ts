@@ -4,7 +4,7 @@ test.describe("lookup guest", () => {
   test("checkout → confirmación → mis pedidos", async ({ page }) => {
     const testEmail = `guest-${Date.now()}@example.com`;
 
-    await page.goto("/productos");
+    await page.goto("/?tab=productos");
     const addButtons = page.getByRole("button", { name: /^añadir$/i });
     if ((await addButtons.count()) === 0) {
       test.skip();

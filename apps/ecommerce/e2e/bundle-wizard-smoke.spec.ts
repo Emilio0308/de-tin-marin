@@ -4,10 +4,11 @@ test.describe("wizard de personalización", () => {
   test("personaliza sorpresa, cambia composición y ve total", async ({
     page,
   }) => {
-    await page.goto("/sorpresas");
-    await expect(
-      page.getByRole("heading", { name: /combos sorpresa/i }),
-    ).toBeVisible();
+    await page.goto("/?tab=sorpresas");
+    await expect(page.getByRole("tab", { name: /sorpresas/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
 
     const personalizeLinks = page.getByRole("link", { name: /personalizar/i });
     const linkCount = await personalizeLinks.count();
@@ -61,7 +62,7 @@ test.describe("wizard de personalización", () => {
   });
 
   test("agregar al carrito redirige a /carrito", async ({ page }) => {
-    await page.goto("/sorpresas");
+    await page.goto("/?tab=sorpresas");
     const personalizeLinks = page.getByRole("link", { name: /personalizar/i });
     if ((await personalizeLinks.count()) === 0) {
       test.skip();
@@ -85,7 +86,7 @@ test.describe("wizard de personalización", () => {
   test("doble click en agregar al carrito no duplica la línea", async ({
     page,
   }) => {
-    await page.goto("/sorpresas");
+    await page.goto("/?tab=sorpresas");
     const personalizeLinks = page.getByRole("link", { name: /personalizar/i });
     if ((await personalizeLinks.count()) === 0) {
       test.skip();

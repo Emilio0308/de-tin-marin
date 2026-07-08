@@ -4,8 +4,8 @@ import { SiteHeader } from "./site-header";
 import type { HomeNavLink } from "@/modules/home/types/home.types";
 
 const navLinks: HomeNavLink[] = [
-  { label: "Dulces", href: "/productos" },
-  { label: "Sorpresas", href: "/sorpresas" },
+  { label: "Dulces", href: "/?tab=productos" },
+  { label: "Sorpresas", href: "/?tab=sorpresas" },
   { label: "Mis pedidos", href: "/mis-pedidos" },
 ];
 

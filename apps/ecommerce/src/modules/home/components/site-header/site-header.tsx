@@ -7,6 +7,10 @@ function isInternalRoute(href: string): boolean {
   return href.startsWith("/");
 }
 
+function isStorefrontTabLink(href: string): boolean {
+  return href.includes("tab=");
+}
+
 export function SiteHeader({
   navLinks,
   activeIndex,
@@ -39,7 +43,12 @@ export function SiteHeader({
 
             if (isInternalRoute(link.href)) {
               return (
-                <Link key={link.href} href={link.href} className={className}>
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  scroll={!isStorefrontTabLink(link.href)}
+                  className={className}
+                >
                   {link.label}
                 </Link>
               );

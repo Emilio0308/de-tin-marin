@@ -11,7 +11,7 @@ import {
 import {
   addBundleCartLine,
   createProductCartLine,
-  mergeProductLine,
+  mergeProductCartLine,
   toShoppingCartLines,
 } from "../helpers/cart-lines";
 import type { StoredCartLine } from "../repositories/cart.repository";
@@ -54,13 +54,16 @@ export function useCart() {
 
   const itemCount = useMemo(() => lines.length, [lines]);
 
-  const addProduct = useCallback((product: PublicProductListItem) => {
-    const next = mergeProductLine(
-      localStorageCartRepository.getLines(),
-      product,
-    );
-    localStorageCartRepository.replaceLines(next);
-  }, []);
+  const addProduct = useCallback(
+    (product: PublicProductListItem, quantity = 1) => {
+      const next = mergeProductCartLine(
+        localStorageCartRepository.getLines(),
+        createProductCartLine(product, quantity),
+      );
+      localStorageCartRepository.replaceLines(next);
+    },
+    [],
+  );
 
   const addBundleLine = useCallback((line: OrderShoppingCartBundleLine) => {
     const next = addBundleCartLine(localStorageCartRepository.getLines(), line);

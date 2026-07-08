@@ -2,9 +2,9 @@ import { test, expect } from "@playwright/test";
 
 test.describe("checkout guest", () => {
   test("carrito → checkout → confirmación", async ({ page }) => {
-    await page.goto("/productos");
+    await page.goto("/?tab=productos");
     await expect(
-      page.getByRole("heading", { name: /nuestros dulces/i }),
+      page.getByPlaceholder(/buscar por nombre o sku/i),
     ).toBeVisible();
 
     const addButtons = page.getByRole("button", { name: /^añadir$/i });

@@ -10,7 +10,7 @@ export function StorefrontLayout({ children }: StorefrontLayoutProps) {
   return (
     <div id="top" className="bg-background text-on-surface">
       <SiteHeaderContainer />
-      <main className="pt-20">{children}</main>
+      <main className="pt-storefront-header">{children}</main>
       <SiteFooter />
       <HelpFab />
     </div>

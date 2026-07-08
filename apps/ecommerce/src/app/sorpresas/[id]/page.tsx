@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPublicBundleAction } from "@/modules/catalog/actions/get-public-bundle";
-import { BundleDetailPage } from "@/modules/catalog/components/bundle-detail-page/bundle-detail-page";
+import { BundleDetailPageContainer } from "@/modules/catalog/components/bundle-detail-page/bundle-detail-page.container";
 
 type BundleDetailRouteProps = {
   params: Promise<{ id: string }>;
@@ -20,12 +20,13 @@ export default async function BundleDetailRoute({
   }
 
   return (
-    <BundleDetailPage
+    <BundleDetailPageContainer
       bundle={result.data}
       labels={{
         back: t("bundles.backToList"),
         container: t("bundles.container"),
         quantity: t("bundles.quantity"),
+        personCount: t("wizard.personCount", { count: result.data.quantity }),
         items: t("bundles.items"),
         personalize: t("actions.personalize"),
         description: t("bundles.description"),

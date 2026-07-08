@@ -6,8 +6,8 @@ export interface HomeNavRoute {
 }
 
 export const HOME_NAV_ROUTES: HomeNavRoute[] = [
-  { href: "/productos", labelKey: "sweets" },
-  { href: "/sorpresas", labelKey: "surprises" },
+  { href: "/?tab=productos", labelKey: "sweets" },
+  { href: "/?tab=sorpresas", labelKey: "surprises" },
   { href: "/mis-pedidos", labelKey: "myOrders" },
   { href: "#about", labelKey: "about" },
 ];

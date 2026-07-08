@@ -2,10 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test.describe("catálogo público", () => {
   test("listado de productos carga con filtros", async ({ page }) => {
-    await page.goto("/productos");
-    await expect(
-      page.getByRole("heading", { name: /nuestros dulces/i }),
-    ).toBeVisible();
+    await page.goto("/?tab=productos");
+    await expect(page.getByRole("tab", { name: /dulces/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect(
       page.getByPlaceholder(/buscar por nombre o sku/i),
     ).toBeVisible();
@@ -14,7 +15,7 @@ test.describe("catálogo público", () => {
   });
 
   test("filtrar por categoría actualiza la URL", async ({ page }) => {
-    await page.goto("/productos");
+    await page.goto("/?tab=productos");
     const categoryButtons = page
       .locator("aside nav button")
       .filter({ hasNotText: /^todas$/i });
@@ -29,7 +30,7 @@ test.describe("catálogo público", () => {
   });
 
   test("búsqueda por SKU actualiza la URL", async ({ page }) => {
-    await page.goto("/productos");
+    await page.goto("/?tab=productos");
     const searchInput = page.getByPlaceholder(/buscar por nombre o sku/i);
     await searchInput.fill("SKU-TEST-404");
     await searchInput.press("Enter");
@@ -37,10 +38,11 @@ test.describe("catálogo público", () => {
   });
 
   test("listado de sorpresas carga", async ({ page }) => {
-    await page.goto("/sorpresas");
-    await expect(
-      page.getByRole("heading", { name: /combos sorpresa/i }),
-    ).toBeVisible();
+    await page.goto("/?tab=sorpresas");
+    await expect(page.getByRole("tab", { name: /sorpresas/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect(
       page.getByRole("searchbox", { name: /buscar sorpresas…/i }),
     ).toBeVisible();

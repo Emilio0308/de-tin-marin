@@ -50,7 +50,10 @@
       "sku": "SKU",
       "category": "Categoría",
       "description": "Descripción",
-      "backToList": "← Volver al catálogo"
+      "backToList": "Volver al catálogo",
+      "packageUnits": "Paquete x{count}",
+      "decreaseQuantity": "Disminuir cantidad",
+      "increaseQuantity": "Aumentar cantidad"
     },
     "bundles": {
       "title": "Combos sorpresa",
@@ -60,7 +63,7 @@
       "quantity": "Cantidad",
       "items": "Incluye",
       "description": "Descripción",
-      "backToList": "← Volver a sorpresas",
+      "backToList": "Volver a sorpresas",
       "backToDetail": "Volver al combo"
     },
     "wizard": {

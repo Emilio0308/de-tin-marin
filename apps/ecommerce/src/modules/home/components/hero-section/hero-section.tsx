@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import type { HeroSectionProps } from "./hero-section.types";
+import { storefrontTabHref } from "@/modules/home/helpers/storefront-url";
 
 const HERO_IMAGE_URL =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDc5FMBIxWj0PpOIyY67f8C27ZZ-i2I6SgndhcTSAJr-8b8gaRw4PssOD6J-X2x58UnXFF9b-TIBChWEnLfaaLTpH_Xd6Jp1eu0tREtPJKbIuDZoIy3ZmQ6NG0EcwbR_jlz5AqydaCCtyUxuTCceTHl_SxfnSE2iTm6txCVV7PUKbcO3H2lcqeaKRQW-lpa3d5mMjQ20h0cyxd6kEac3yvY4BNbC_58r2Bxrb5b_4HdWQ_ZalJj9TsT91gklkrpjo79Ft9Xusxf-kc";
@@ -28,13 +29,13 @@ export function HeroSection({
           </p>
           <div className="gap-stack-sm flex flex-wrap justify-center pt-4 lg:justify-start">
             <Link
-              href="/sorpresas"
+              href={storefrontTabHref("sorpresas")}
               className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary rounded-full px-10 py-4 transition-all duration-300 hover:scale-105"
             >
               {ctaSurprises}
             </Link>
             <Link
-              href="/productos"
+              href={storefrontTabHref("productos")}
               className="border-primary text-primary font-label text-label-bold hover:bg-primary-container rounded-full border-2 px-10 py-4 transition-all duration-300 hover:scale-105"
             >
               {ctaProducts}

@@ -10,16 +10,18 @@ test("home page loads", async ({ page }) => {
     page.getByRole("link", { name: /ver sorpresas/i }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: /ver dulces/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /dulces/i })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 });
 
-test("catalog routes load", async ({ page }) => {
-  await page.goto("/productos");
-  await expect(
-    page.getByRole("heading", { name: /nuestros dulces/i }),
-  ).toBeVisible();
+test("storefront tabs load catalog", async ({ page }) => {
+  await page.goto("/?tab=productos");
+  await expect(page.getByPlaceholder(/buscar por nombre o sku/i)).toBeVisible();
 
-  await page.goto("/sorpresas");
+  await page.goto("/?tab=sorpresas");
   await expect(
-    page.getByRole("heading", { name: /combos sorpresa/i }),
+    page.getByRole("searchbox", { name: /buscar sorpresas…/i }),
   ).toBeVisible();
 });
