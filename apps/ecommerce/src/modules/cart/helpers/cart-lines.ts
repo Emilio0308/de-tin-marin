@@ -4,7 +4,15 @@ import type {
   OrderShoppingCartProductLine,
 } from "@de-tin-marin/shared/order-cart";
 import { roundMoney } from "@de-tin-marin/shared/prices";
+import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import type { StoredCartLine } from "../repositories/cart.repository";
+
+function normalizeCartImageUrl(imageUrl: string | null | undefined): string {
+  if (!imageUrl || imageUrl.trim() === "") {
+    return CATALOG_PLACEHOLDER_IMAGE;
+  }
+  return imageUrl;
+}
 
 export function createProductCartLine(
   product: PublicProductListItem,
@@ -19,6 +27,7 @@ export function createProductCartLine(
     quantity,
     unitPrice,
     lineTotal: roundMoney(unitPrice * quantity),
+    imageUrl: normalizeCartImageUrl(product.imageUrl),
   };
 }
 
@@ -59,6 +68,7 @@ export function mergeProductCartLine(
             ...existing.line,
             quantity: nextQuantity,
             lineTotal: roundMoney(unitPrice * nextQuantity),
+            imageUrl: existing.line.imageUrl ?? line.imageUrl,
           },
         }
       : entry,

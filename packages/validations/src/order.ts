@@ -100,6 +100,7 @@ export const orderShoppingCartProductLineSchema = z.object({
   quantity: z.number(),
   unitPrice: z.number(),
   lineTotal: z.number(),
+  imageUrl: z.string().nullable().optional(),
 });
 
 export const orderShoppingCartBundleContainerSchema = z.object({
@@ -127,6 +128,7 @@ export const orderShoppingCartBundleLineSchema = z.object({
       unitPrice: z.number(),
     }),
   ),
+  imageUrl: z.string().nullable().optional(),
 });
 
 export const orderStockShortageSchema = z.object({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -10,15 +10,34 @@ import { toShoppingCartLines } from "@/modules/cart/helpers/cart-lines";
 import { useCart } from "@/modules/cart/hooks/use-cart";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
+import { formatStockShortageMessages } from "@/shared/components/stock-banner/stock-banner";
 import { createGuestOrderAction } from "@/modules/checkout/actions/create-guest-order";
 import { listCheckoutDeliveryZonesAction } from "@/modules/checkout/actions/list-checkout-delivery-zones";
 import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/resolve-checkout-delivery-fee";
 import { queryKeys } from "@/shared/query/query-keys";
 import type { MapPin } from "@de-tin-marin/validations/checkout";
 import { defaultMapPin } from "../delivery-map/delivery-map.constants";
+import {
+  getCheckoutFieldErrorKey,
+  getCheckoutFieldErrorKeys,
+  hasCheckoutFieldError,
+  mapCheckoutFieldError,
+  mapCheckoutFieldErrors,
+  type CheckoutFieldErrors,
+  type CheckoutFormField,
+  type CheckoutFormValues,
+} from "./checkout-form.helpers";
 import { CheckoutPage } from "./checkout-page";
 
-const initialForm = {
+type GuestOrderErrorCode =
+  | "OUT_OF_COVERAGE"
+  | "INSUFFICIENT_STOCK"
+  | "VALIDATION"
+  | "PRODUCT_NOT_FOUND"
+  | "BUNDLE_NOT_FOUND"
+  | "DUPLICATE_PRODUCT_IN_BUNDLE";
+
+const initialForm: CheckoutFormValues = {
   name: "",
   lastName: "",
   phone: "",
@@ -40,6 +59,48 @@ export function CheckoutPageContainer() {
   const orderPlacedRef = useRef(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CheckoutFieldErrors>({});
+  const [showValidationSummary, setShowValidationSummary] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+
+  const validationLabels = useMemo(
+    () => ({
+      required: t("validation.required"),
+      invalidEmail: t("validation.invalidEmail"),
+    }),
+    [t],
+  );
+
+  const validateForm = useCallback(
+    (values: CheckoutFormValues) => {
+      const errorKeys = getCheckoutFieldErrorKeys(values);
+      const mappedErrors = mapCheckoutFieldErrors(errorKeys, validationLabels);
+      setFieldErrors(mappedErrors);
+      const isValid = Object.keys(mappedErrors).length === 0;
+      setShowValidationSummary(!isValid);
+      return isValid;
+    },
+    [validationLabels],
+  );
+
+  const validateField = useCallback(
+    (field: CheckoutFormField, values: CheckoutFormValues) => {
+      const errorKey = getCheckoutFieldErrorKey(values, field);
+      const message = mapCheckoutFieldError(field, errorKey, validationLabels);
+
+      setFieldErrors((current) => {
+        const next = { ...current };
+        if (message) next[field] = message;
+        else delete next[field];
+        return next;
+      });
+
+      if (Object.keys(getCheckoutFieldErrorKeys(values)).length === 0) {
+        setShowValidationSummary(false);
+      }
+    },
+    [validationLabels],
+  );
 
   const zonesQuery = useQuery({
     queryKey: queryKeys.delivery.zones(),
@@ -85,14 +146,18 @@ export function CheckoutPageContainer() {
   const shippingTotal = deliveryQuery.data?.fee ?? 0;
   const covered = deliveryQuery.data?.covered ?? false;
   const total = totals.subtotal + shippingTotal - totals.discountTotal;
+  const isDeliveryPending =
+    Boolean(form.district) &&
+    (deliveryQuery.isLoading || deliveryQuery.isFetching);
 
-  const stockMessages = useMemo(() => {
-    if (!stockQuery.data || stockQuery.data.ok) return [];
-    return stockQuery.data.shortages.map(
-      (shortage) =>
-        `${shortage.kind === "product" ? t("stockProduct") : t("stockContainer")} ${shortage.name ?? shortage.sku}: ${shortage.available}/${shortage.required}`,
-    );
-  }, [stockQuery.data, t]);
+  const stockMessages = useMemo(
+    () =>
+      formatStockShortageMessages(stockQuery.data, {
+        product: t("stockProduct"),
+        container: t("stockContainer"),
+      }),
+    [stockQuery.data, t],
+  );
 
   const stockBlocked =
     storeFeatures.strictStockValidationOnCheckout &&
@@ -115,27 +180,31 @@ export function CheckoutPageContainer() {
   }
 
   const handleSubmit = async () => {
+    setHasAttemptedSubmit(true);
+    if (!validateForm(form)) return;
+
     if (!covered || lines.length === 0) return;
+
     setIsSubmitting(true);
     setErrorMessage(null);
 
     const result = await createGuestOrderAction({
       contact: {
-        name: form.name,
-        lastName: form.lastName,
-        phone: form.phone,
-        email: form.email,
+        name: form.name.trim(),
+        lastName: form.lastName.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
       },
       fulfillment: {
         method: "delivery",
         deliveryAddress: {
-          recipientName: `${form.name} ${form.lastName}`.trim(),
-          line1: form.line1,
-          district: form.district,
-          city: form.city,
-          province: form.province,
-          reference: form.reference || null,
-          phone: form.phone,
+          recipientName: `${form.name.trim()} ${form.lastName.trim()}`.trim(),
+          line1: form.line1.trim(),
+          district: form.district.trim(),
+          city: form.city.trim(),
+          province: form.province.trim(),
+          reference: form.reference.trim() || null,
+          phone: form.phone.trim(),
         },
         notes: null,
       },
@@ -148,7 +217,7 @@ export function CheckoutPageContainer() {
     setIsSubmitting(false);
 
     if (!result.ok) {
-      const messageMap: Record<string, string> = {
+      const messageMap: Record<GuestOrderErrorCode, string> = {
         OUT_OF_COVERAGE: t("errors.outOfCoverage"),
         INSUFFICIENT_STOCK: t("errors.insufficientStock"),
         VALIDATION: t("errors.validation"),
@@ -156,7 +225,8 @@ export function CheckoutPageContainer() {
         BUNDLE_NOT_FOUND: t("errors.validation"),
         DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.validation"),
       };
-      setErrorMessage(messageMap[result.error] ?? t("errors.validation"));
+      const errorCode = result.error as GuestOrderErrorCode;
+      setErrorMessage(messageMap[errorCode] ?? t("errors.validation"));
       return;
     }
 
@@ -164,22 +234,27 @@ export function CheckoutPageContainer() {
     setOrderPlaced(true);
     clear();
     router.replace(
-      `/pedido/confirmacion?orderNumber=${encodeURIComponent(result.data.orderNumber)}&email=${encodeURIComponent(form.email)}`,
+      `/pedido/confirmacion?orderNumber=${encodeURIComponent(result.data.orderNumber)}&email=${encodeURIComponent(form.email.trim())}`,
     );
   };
 
   return (
     <CheckoutPage
       form={form}
+      fieldErrors={fieldErrors}
+      showValidationSummary={showValidationSummary}
       districts={zonesQuery.data ?? []}
       mapPin={mapPin}
       subtotal={totals.subtotal}
       shippingTotal={shippingTotal}
       total={total}
       covered={covered}
+      isDeliveryPending={isDeliveryPending}
       isSubmitting={isSubmitting}
       errorMessage={errorMessage}
       stockBlocked={stockBlocked}
+      isStockPending={stockQuery.isLoading || stockQuery.isFetching}
+      stockWarning={Boolean(stockQuery.data && !stockQuery.data.ok)}
       stockMessages={stockMessages}
       labels={{
         title: t("title"),
@@ -192,22 +267,44 @@ export function CheckoutPageContainer() {
         email: t("email"),
         line1: t("line1"),
         district: t("district"),
+        districtPlaceholder: t("districtPlaceholder"),
         city: t("city"),
         province: t("province"),
         reference: t("reference"),
+        referenceHint: t("referenceHint"),
+        requiredHint: t("requiredHint"),
         mapTitle: t("mapTitle"),
         mapHint: t("mapHint"),
         subtotal: t("subtotal"),
         shipping: t("shipping"),
+        shippingPending: t("shippingPending"),
         total: t("total"),
         submit: t("submit"),
         submitting: t("submitting"),
         outOfCoverage: t("outOfCoverage"),
         stockTitle: t("stockTitle"),
+        stockChecking: t("stockChecking"),
         emptyCart: t("emptyCart"),
+        validationSummary: t("validationSummary"),
+        validation: {
+          required: t("validation.required"),
+          invalidEmail: t("validation.invalidEmail"),
+        },
       }}
       onChange={(field, value) => {
-        setForm((current) => ({ ...current, [field]: value }));
+        setForm((current) => {
+          const next = { ...current, [field]: value };
+          if (hasAttemptedSubmit || hasCheckoutFieldError(fieldErrors, field)) {
+            validateField(field, next);
+          }
+          return next;
+        });
+        if (errorMessage) setErrorMessage(null);
+      }}
+      onFieldBlur={(field, values) => {
+        if (hasAttemptedSubmit || hasCheckoutFieldError(fieldErrors, field)) {
+          validateField(field, values);
+        }
       }}
       onMapPinChange={setMapPin}
       onSubmit={() => {

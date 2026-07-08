@@ -146,6 +146,7 @@ export function BundleWizardPageContainer({
         title: t("title"),
         personCount: t("personCount", { count: template.personCount }),
         addToCart: t("addToCart"),
+        addToCartLoading: t("addToCartLoading"),
         validationMin: t("validation.min", { min: BUNDLE_CUSTOMIZATION_MIN }),
         validationMax: t("validation.max", { max: BUNDLE_CUSTOMIZATION_MAX }),
         validationDuplicate: t("validation.duplicate"),
@@ -159,6 +160,11 @@ export function BundleWizardPageContainer({
             current: components.length,
             max: BUNDLE_CUSTOMIZATION_MAX,
           }),
+          progressLabel: t("componentList.progressLabel", {
+            current: components.length,
+            max: BUNDLE_CUSTOMIZATION_MAX,
+          }),
+          unitPriceSuffix: t("componentList.unitPriceSuffix"),
         },
         picker: {
           title: t("picker.title"),
@@ -171,6 +177,8 @@ export function BundleWizardPageContainer({
           loading: tCommon("loading"),
           error: tCommon("error"),
           retry: tCommon("retry"),
+          expand: t("picker.expand"),
+          collapse: t("picker.collapse"),
         },
         price: {
           total: t("price.total"),
@@ -181,6 +189,7 @@ export function BundleWizardPageContainer({
         },
         stock: {
           title: t("stock.title"),
+          checking: t("stock.checking"),
           productShortage: t("stock.productShortage"),
           containerShortage: t("stock.containerShortage"),
         },

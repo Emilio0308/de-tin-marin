@@ -1,9 +1,15 @@
 import type { OrderStockCheckResult } from "@de-tin-marin/shared/check-order-stock";
+import {
+  formatStockShortageMessages,
+  StockBannerSection,
+} from "@/shared/components/stock-banner/stock-banner";
 
 export type WizardStockBannerProps = {
   stockCheck: OrderStockCheckResult | null;
+  isStockPending: boolean;
   labels: {
     title: string;
+    checking: string;
     productShortage: string;
     containerShortage: string;
   };
@@ -11,29 +17,21 @@ export type WizardStockBannerProps = {
 
 export function WizardStockBanner({
   stockCheck,
+  isStockPending,
   labels,
 }: WizardStockBannerProps) {
-  if (!stockCheck || stockCheck.ok) return null;
+  const messages = formatStockShortageMessages(stockCheck, {
+    product: labels.productShortage,
+    container: labels.containerShortage,
+  });
 
   return (
-    <div
-      role="status"
-      className="border-outline-variant bg-error-container rounded-2xl border px-4 py-3"
-    >
-      <p className="font-label text-label-bold text-on-error-container mb-2">
-        {labels.title}
-      </p>
-      <ul className="font-body text-body-sm text-on-error-container space-y-1">
-        {stockCheck.shortages.map((shortage) => (
-          <li key={`${shortage.kind}-${shortage.id}`}>
-            {shortage.kind === "product"
-              ? labels.productShortage
-              : labels.containerShortage}{" "}
-            {shortage.name ?? shortage.sku}: {shortage.available}/
-            {shortage.required}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <StockBannerSection
+      isStockPending={isStockPending}
+      stockWarning={Boolean(stockCheck && !stockCheck.ok)}
+      title={labels.title}
+      checkingLabel={labels.checking}
+      messages={messages}
+    />
   );
 }

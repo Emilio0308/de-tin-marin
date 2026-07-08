@@ -68,9 +68,10 @@
     },
     "wizard": {
       "title": "Personaliza tu sorpresa",
-      "back": "← Volver al combo",
+      "back": "Volver al combo",
       "personCount": "Para {count} personas",
       "addToCart": "Agregar al carrito",
+      "addToCartLoading": "Agregando…",
       "validation": {
         "min": "Agrega al menos {min} dulces para continuar.",
         "max": "Puedes incluir como máximo {max} dulces.",
@@ -80,7 +81,9 @@
         "title": "Tus dulces",
         "remove": "Quitar",
         "minReached": "Necesitas al menos {min} dulces en tu sorpresa.",
-        "count": "{current} de {max} dulces"
+        "count": "{current} de {max} dulces",
+        "progressLabel": "{current} de {max} dulces seleccionados",
+        "unitPriceSuffix": "/ ud."
       },
       "picker": {
         "title": "Agregar dulce",
@@ -89,7 +92,9 @@
         "add": "Agregar",
         "empty": "No encontramos dulces con esa búsqueda.",
         "maxReached": "Ya alcanzaste el máximo de {max} dulces.",
-        "alreadyAdded": "Agregado"
+        "alreadyAdded": "Agregado",
+        "expand": "Mostrar buscador",
+        "collapse": "Ocultar buscador"
       },
       "price": {
         "total": "Total de tu sorpresa",
@@ -99,6 +104,7 @@
       },
       "stock": {
         "title": "Stock limitado",
+        "checking": "Verificando stock…",
         "productShortage": "Dulce",
         "containerShortage": "Envase"
       }
@@ -107,19 +113,25 @@
   "cart": {
     "title": "Tu carrito",
     "empty": "Tu carrito está vacío.",
+    "continueShopping": "Seguir comprando",
     "checkout": "Ir a checkout",
     "remove": "Quitar",
     "subtotal": "Subtotal",
+    "unitPriceSuffix": "/ ud.",
+    "decreaseQuantity": "Disminuir cantidad",
+    "increaseQuantity": "Aumentar cantidad",
     "quantity": "Cant.",
     "bundlePersons": "Para {count} personas",
+    "bundleBadge": "Sorpresa",
     "components": "dulces",
     "stockTitle": "Stock limitado",
+    "stockChecking": "Verificando stock…",
     "stockProduct": "Dulce",
     "stockContainer": "Envase"
   },
   "checkout": {
     "title": "Checkout",
-    "backToCart": "← Volver al carrito",
+    "backToCart": "Volver al carrito",
     "contactTitle": "Datos de contacto",
     "addressTitle": "Dirección de entrega",
     "name": "Nombre",
@@ -128,19 +140,29 @@
     "email": "Correo electrónico",
     "line1": "Dirección",
     "district": "Distrito",
+    "districtPlaceholder": "Selecciona tu distrito",
     "city": "Ciudad",
     "province": "Provincia",
-    "reference": "Referencia",
+    "reference": "Referencia (opcional)",
+    "referenceHint": "Ej. casa color verde, portón negro",
+    "requiredHint": "Campo obligatorio",
     "mapTitle": "Ubicación en el mapa",
     "mapHint": "Arrastra el pin o haz clic para indicar tu ubicación en Piura.",
     "subtotal": "Subtotal",
     "shipping": "Envío",
+    "shippingPending": "Calculando…",
     "total": "Total",
     "submit": "Confirmar pedido",
     "submitting": "Creando pedido…",
     "redirecting": "Preparando confirmación…",
     "outOfCoverage": "Sin cobertura en esta zona.",
+    "validationSummary": "Revisa los campos marcados en rojo antes de continuar.",
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "invalidEmail": "Ingresa un correo electrónico válido"
+    },
     "stockTitle": "Stock limitado",
+    "stockChecking": "Verificando stock…",
     "stockProduct": "Dulce",
     "stockContainer": "Envase",
     "emptyCart": "Tu carrito está vacío.",

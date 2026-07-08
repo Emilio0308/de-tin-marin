@@ -1,84 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { BundleWizardTemplate } from "@de-tin-marin/validations/customize-bundle";
-import type { CustomizeBundleComponent } from "@de-tin-marin/validations/customize-bundle";
+import { ArrowLeft, ShoppingCart } from "lucide-react";
 import {
   BUNDLE_CUSTOMIZATION_MAX,
   BUNDLE_CUSTOMIZATION_MIN,
 } from "@de-tin-marin/validations/customize-bundle";
-import type { OrderStockCheckResult } from "@de-tin-marin/shared/check-order-stock";
-import type { PublicProductListItem } from "@de-tin-marin/validations/public-catalog";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { WizardComponentList } from "../wizard-component-list/wizard-component-list";
 import { WizardPriceSummary } from "../wizard-price-summary/wizard-price-summary";
 import { WizardProductPicker } from "../wizard-product-picker/wizard-product-picker";
 import { WizardStockBanner } from "../wizard-stock-banner/wizard-stock-banner";
-
-export type BundleWizardPageProps = {
-  template: BundleWizardTemplate;
-  components: CustomizeBundleComponent[];
-  searchValue: string;
-  products: PublicProductListItem[];
-  selectedProductIds: Set<string>;
-  labelsByProductId: Record<string, string>;
-  unitPricesByProductId: Record<string, number>;
-  lineTotal: number | null;
-  stockCheck: OrderStockCheckResult | null;
-  isValid: boolean;
-  canRemove: boolean;
-  canAdd: boolean;
-  isPreviewLoading: boolean;
-  isPreviewError: boolean;
-  isProductsLoading: boolean;
-  isProductsError: boolean;
-  labels: {
-    back: string;
-    title: string;
-    personCount: string;
-    addToCart: string;
-    validationMin: string;
-    validationMax: string;
-    validationDuplicate: string;
-    componentList: {
-      title: string;
-      remove: string;
-      minReached: string;
-      count: string;
-    };
-    picker: {
-      title: string;
-      searchPlaceholder: string;
-      searchAriaLabel: string;
-      add: string;
-      empty: string;
-      maxReached: string;
-      alreadyAdded: string;
-      loading: string;
-      error: string;
-      retry: string;
-    };
-    price: {
-      total: string;
-      loading: string;
-      invalid: string;
-      previewError: string;
-      retry: string;
-    };
-    stock: {
-      title: string;
-      productShortage: string;
-      containerShortage: string;
-    };
-  };
-  onRemove: (productId: string) => void;
-  onAdd: (product: PublicProductListItem) => void;
-  onSearchChange: (value: string) => void;
-  onSearchSubmit: () => void;
-  onProductsRetry: () => void;
-  onPreviewRetry: () => void;
-  onAddToCart: () => void;
-  isAddingToCart: boolean;
-};
+import type { BundleWizardPageProps } from "./bundle-wizard-page.types";
 
 function resolveBundleValidationMessage({
   isValid,
@@ -91,18 +23,18 @@ function resolveBundleValidationMessage({
     BundleWizardPageProps["labels"],
     "validationMin" | "validationMax" | "validationDuplicate"
   >;
-}): string | null {
+}): { message: string; severity: "error" | "muted" } | null {
   if (isValid) return null;
 
   if (componentCount < BUNDLE_CUSTOMIZATION_MIN) {
-    return labels.validationMin;
+    return { message: labels.validationMin, severity: "error" };
   }
 
   if (componentCount > BUNDLE_CUSTOMIZATION_MAX) {
-    return labels.validationMax;
+    return { message: labels.validationMax, severity: "error" };
   }
 
-  return labels.validationDuplicate;
+  return { message: labels.validationDuplicate, severity: "muted" };
 }
 
 export function BundleWizardPage({
@@ -132,122 +64,152 @@ export function BundleWizardPage({
   onPreviewRetry,
   onAddToCart,
 }: BundleWizardPageProps) {
-  const validationMessage = resolveBundleValidationMessage({
+  const validation = resolveBundleValidationMessage({
     isValid,
     componentCount: components.length,
     labels,
   });
 
+  const isCtaDisabled =
+    !isValid ||
+    isPreviewLoading ||
+    isPreviewError ||
+    lineTotal === null ||
+    isAddingToCart;
+
   return (
     <StorefrontLayout>
-      <section className="container-max px-gutter py-section-lg">
-        <Link
-          href={`/sorpresas/${template.bundleId}`}
-          className="font-label text-label-bold text-primary hover:text-secondary mb-8 inline-block"
-        >
-          {labels.back}
-        </Link>
+      <section className="bg-tertiary/5 pt-stack-md md:pt-stack-lg pb-44 md:pb-36">
+        <div className="container-max px-gutter">
+          <Link
+            href={`/sorpresas/${template.bundleId}`}
+            className="font-label text-label-bold text-primary hover:text-secondary inline-flex items-center gap-2 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            {labels.back}
+          </Link>
 
-        <div className="gap-stack-lg mb-stack-lg grid grid-cols-1 items-start lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-          <div className="space-y-4">
-            <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-[32px]">
-              <Image
-                src={template.imageUrl ?? ""}
-                alt={template.name}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 20rem"
-                className="object-cover"
+          <div className="gap-stack-lg mt-stack-md grid grid-cols-1 items-start lg:grid-cols-2">
+            <div className="space-y-stack-md">
+              <div className="surprise-card-border soft-glow-pink bg-surface-container-lowest rounded-[32px] p-4 md:p-6">
+                <div className="bg-surface-container-low relative aspect-square w-full overflow-hidden rounded-[24px]">
+                  <Image
+                    src={template.imageUrl ?? ""}
+                    alt={template.name}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 32rem"
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-stack-sm">
+                <h1 className="font-display text-display-lg-mobile text-on-surface md:text-display-lg">
+                  {labels.title}
+                </h1>
+                <p className="font-display text-headline-md text-on-surface">
+                  {template.name}
+                </p>
+                <div className="gap-stack-sm flex flex-wrap">
+                  <span className="border-outline-variant text-primary font-label text-label-bold rounded-full border px-4 py-1.5">
+                    {template.container.name}
+                  </span>
+                  <span className="bg-secondary-container text-on-secondary-container font-label text-label-bold rounded-full px-4 py-1.5">
+                    {labels.personCount}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-stack-md">
+              <WizardComponentList
+                components={components}
+                labelsByProductId={labelsByProductId}
+                unitPricesByProductId={unitPricesByProductId}
+                labels={labels.componentList}
+                canRemove={canRemove}
+                onRemove={onRemove}
+              />
+
+              <WizardProductPicker
+                searchValue={searchValue}
+                products={products}
+                selectedProductIds={selectedProductIds}
+                labels={labels.picker}
+                canAdd={canAdd}
+                isLoading={isProductsLoading}
+                isError={isProductsError}
+                onSearchChange={onSearchChange}
+                onSearchSubmit={onSearchSubmit}
+                onRetry={onProductsRetry}
+                onAdd={onAdd}
               />
             </div>
-            <div>
-              <h1 className="font-display text-display-md-mobile text-on-surface md:text-display-md mb-2">
-                {labels.title}
-              </h1>
-              <p className="font-display text-headline-sm text-on-surface mb-1">
-                {template.name}
-              </p>
-              <span className="bg-primary-container font-label text-label-bold text-on-primary-container inline-block rounded-full px-4 py-1">
-                {labels.personCount}
-              </span>
-            </div>
           </div>
-
-          <div className="space-y-8">
-            <WizardComponentList
-              components={components}
-              labelsByProductId={labelsByProductId}
-              unitPricesByProductId={unitPricesByProductId}
-              labels={{
-                ...labels.componentList,
-                count: labels.componentList.count,
-              }}
-              canRemove={canRemove}
-              onRemove={onRemove}
-            />
-
-            <WizardProductPicker
-              searchValue={searchValue}
-              products={products}
-              selectedProductIds={selectedProductIds}
-              labels={labels.picker}
-              canAdd={canAdd}
-              isLoading={isProductsLoading}
-              isError={isProductsError}
-              onSearchChange={onSearchChange}
-              onSearchSubmit={onSearchSubmit}
-              onRetry={onProductsRetry}
-              onAdd={onAdd}
-            />
-          </div>
-        </div>
-
-        <div className="gap-stack-md border-outline-variant bg-surface-container-lowest sticky bottom-4 grid rounded-3xl border p-6 shadow-lg lg:grid-cols-[1fr_auto] lg:items-end">
-          <div className="space-y-4">
-            <WizardPriceSummary
-              total={lineTotal}
-              labels={labels.price}
-              isLoading={isPreviewLoading}
-              isValid={isValid}
-            />
-            {isPreviewError ? (
-              <div className="text-center">
-                <p className="font-body text-body-sm text-error mb-3">
-                  {labels.price.previewError}
-                </p>
-                <button
-                  type="button"
-                  onClick={onPreviewRetry}
-                  className="bg-primary text-on-primary font-label text-label-bold rounded-full px-6 py-2"
-                >
-                  {labels.price.retry}
-                </button>
-              </div>
-            ) : null}
-            <WizardStockBanner stockCheck={stockCheck} labels={labels.stock} />
-            {validationMessage ? (
-              <p className="font-body text-body-sm text-on-surface-variant">
-                {validationMessage}
-              </p>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            disabled={
-              !isValid ||
-              isPreviewLoading ||
-              isPreviewError ||
-              lineTotal === null ||
-              isAddingToCart
-            }
-            onClick={onAddToCart}
-            className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary w-full rounded-full px-8 py-3 disabled:cursor-not-allowed disabled:opacity-60 lg:w-auto"
-          >
-            {labels.addToCart}
-          </button>
         </div>
       </section>
+
+      <footer className="border-outline-variant/20 bg-surface/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md">
+        <div className="container-max px-gutter mx-auto py-3 md:py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+            <div className="min-w-0 flex-1 space-y-2">
+              <WizardPriceSummary
+                total={lineTotal}
+                labels={labels.price}
+                isLoading={isPreviewLoading}
+                isValid={isValid}
+                compact
+              />
+
+              {isPreviewError ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="font-body text-body-sm text-error">
+                    {labels.price.previewError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onPreviewRetry}
+                    className="press-down bg-primary text-on-primary font-label text-label-bold rounded-full px-4 py-1.5"
+                  >
+                    {labels.price.retry}
+                  </button>
+                </div>
+              ) : null}
+
+              <WizardStockBanner
+                stockCheck={stockCheck}
+                isStockPending={isPreviewLoading}
+                labels={labels.stock}
+              />
+
+              {validation ? (
+                <p
+                  role="alert"
+                  className={`font-body text-body-sm ${
+                    validation.severity === "error"
+                      ? "text-error"
+                      : "text-on-surface-variant"
+                  }`}
+                >
+                  {validation.message}
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              disabled={isCtaDisabled}
+              onClick={onAddToCart}
+              aria-disabled={isCtaDisabled}
+              className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full px-8 py-3 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 lg:w-auto lg:min-w-[220px]"
+            >
+              <ShoppingCart className="h-5 w-5" aria-hidden />
+              {isAddingToCart ? labels.addToCartLoading : labels.addToCart}
+            </button>
+          </div>
+        </div>
+      </footer>
     </StorefrontLayout>
   );
 }

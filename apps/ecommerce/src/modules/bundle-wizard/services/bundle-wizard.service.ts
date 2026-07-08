@@ -244,7 +244,10 @@ export async function previewBundleLineService(
     ok: true,
     data: {
       lineTotal: bundleLine.lineTotal,
-      line: bundleLine,
+      line: {
+        ...bundleLine,
+        imageUrl: normalizeImageUrl(bundleRow.image_url),
+      },
       stockCheck,
     },
   };
