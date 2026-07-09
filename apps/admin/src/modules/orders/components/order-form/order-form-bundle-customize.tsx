@@ -137,7 +137,6 @@ function ProductThumb({
         src={imageUrl}
         alt={name}
         fill
-        unoptimized
         sizes="56px"
         className="object-cover"
       />
