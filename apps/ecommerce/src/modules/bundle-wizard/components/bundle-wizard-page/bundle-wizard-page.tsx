@@ -44,7 +44,7 @@ export function BundleWizardPage({
   products,
   selectedProductIds,
   labelsByProductId,
-  unitPricesByProductId,
+  imagesByProductId,
   lineTotal,
   stockCheck,
   isValid,
@@ -53,6 +53,8 @@ export function BundleWizardPage({
   isPreviewLoading,
   isPreviewError,
   isProductsLoading,
+  isProductsFetchingNextPage,
+  hasMoreProducts,
   isProductsError,
   isAddingToCart,
   labels,
@@ -61,6 +63,7 @@ export function BundleWizardPage({
   onSearchChange,
   onSearchSubmit,
   onProductsRetry,
+  onLoadMoreProducts,
   onPreviewRetry,
   onAddToCart,
 }: BundleWizardPageProps) {
@@ -125,8 +128,9 @@ export function BundleWizardPage({
             <div className="space-y-stack-md">
               <WizardComponentList
                 components={components}
+                personCount={template.personCount}
                 labelsByProductId={labelsByProductId}
-                unitPricesByProductId={unitPricesByProductId}
+                imagesByProductId={imagesByProductId}
                 labels={labels.componentList}
                 canRemove={canRemove}
                 onRemove={onRemove}
@@ -139,10 +143,13 @@ export function BundleWizardPage({
                 labels={labels.picker}
                 canAdd={canAdd}
                 isLoading={isProductsLoading}
+                isFetchingNextPage={isProductsFetchingNextPage}
+                hasNextPage={hasMoreProducts}
                 isError={isProductsError}
                 onSearchChange={onSearchChange}
                 onSearchSubmit={onSearchSubmit}
                 onRetry={onProductsRetry}
+                onLoadMore={onLoadMoreProducts}
                 onAdd={onAdd}
               />
             </div>

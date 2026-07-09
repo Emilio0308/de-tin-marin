@@ -66,3 +66,20 @@ export function buildComponentLabels(
 
   return labels;
 }
+
+export function buildComponentImages(
+  templateItems: Array<{ productId: string; imageUrl: string }>,
+  pickerImages: Record<string, string>,
+): Record<string, string> {
+  const images: Record<string, string> = {};
+
+  for (const item of templateItems) {
+    images[item.productId] = item.imageUrl;
+  }
+
+  for (const [productId, imageUrl] of Object.entries(pickerImages)) {
+    images[productId] = imageUrl;
+  }
+
+  return images;
+}

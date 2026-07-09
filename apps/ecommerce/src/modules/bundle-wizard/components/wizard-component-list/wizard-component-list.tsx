@@ -1,25 +1,11 @@
-import type { CustomizeBundleComponent } from "@de-tin-marin/validations/customize-bundle";
+import Image from "next/image";
 import {
   BUNDLE_CUSTOMIZATION_MAX,
   BUNDLE_CUSTOMIZATION_MIN,
 } from "@de-tin-marin/validations/customize-bundle";
-import { formatPrice } from "@/modules/home/components/product-card/product-card.helpers";
-
-export type WizardComponentListProps = {
-  components: CustomizeBundleComponent[];
-  labelsByProductId: Record<string, string>;
-  unitPricesByProductId: Record<string, number>;
-  labels: {
-    title: string;
-    remove: string;
-    minReached: string;
-    count: string;
-    progressLabel: string;
-    unitPriceSuffix: string;
-  };
-  canRemove: boolean;
-  onRemove: (productId: string) => void;
-};
+import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
+import { resolveComponentTotalQuantity } from "./wizard-component-list.helpers";
+import type { WizardComponentListProps } from "./wizard-component-list.types";
 
 function WizardProgressBar({
   current,
@@ -58,8 +44,9 @@ function WizardProgressBar({
 
 export function WizardComponentList({
   components,
+  personCount,
   labelsByProductId,
-  unitPricesByProductId,
+  imagesByProductId,
   labels,
   canRemove,
   onRemove,
@@ -96,22 +83,36 @@ export function WizardComponentList({
       <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
         {components.map((component) => {
           const name = labelsByProductId[component.productId] ?? "—";
-          const unitPrice = unitPricesByProductId[component.productId];
+          const imageUrl =
+            imagesByProductId[component.productId] ?? CATALOG_PLACEHOLDER_IMAGE;
+          const perPerson = component.quantityPerUnit;
+          const total = resolveComponentTotalQuantity(perPerson, personCount);
 
           return (
             <li
               key={component.productId}
-              className="border-outline-variant/30 bg-surface-container-lowest flex items-center justify-between gap-4 rounded-2xl border px-4 py-3"
+              className="border-outline-variant/30 bg-surface-container-lowest flex items-center gap-3 rounded-2xl border px-3 py-3"
             >
-              <div className="min-w-0">
+              <div className="bg-surface-container-lowest relative h-14 w-14 shrink-0 overflow-hidden rounded-xl shadow-sm">
+                <Image
+                  src={imageUrl}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
                 <p className="font-label text-label-bold text-on-surface truncate">
                   {name}
                 </p>
-                {typeof unitPrice === "number" ? (
-                  <p className="font-body text-body-sm text-on-surface-variant">
-                    {formatPrice(unitPrice)} {labels.unitPriceSuffix}
-                  </p>
-                ) : null}
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  {labels.formatQuantityBreakdown({
+                    perPerson,
+                    surprises: personCount,
+                    total,
+                  })}
+                </p>
               </div>
               <button
                 type="button"

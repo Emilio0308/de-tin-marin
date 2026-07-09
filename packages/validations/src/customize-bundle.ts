@@ -69,6 +69,7 @@ export const bundleWizardTemplateSchema = z.object({
     z.object({
       productId: z.string().uuid(),
       productName: z.string(),
+      imageUrl: z.string(),
       unitsPerPerson: z.number().int().min(1),
     }),
   ),

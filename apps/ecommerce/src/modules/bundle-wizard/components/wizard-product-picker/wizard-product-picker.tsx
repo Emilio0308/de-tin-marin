@@ -1,38 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, Search } from "lucide-react";
-import type { PublicProductListItem } from "@de-tin-marin/validations/public-catalog";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { formatPrice } from "@/modules/home/components/product-card/product-card.helpers";
-
-export type WizardProductPickerProps = {
-  searchValue: string;
-  products: PublicProductListItem[];
-  selectedProductIds: Set<string>;
-  labels: {
-    title: string;
-    searchPlaceholder: string;
-    searchAriaLabel: string;
-    add: string;
-    empty: string;
-    maxReached: string;
-    alreadyAdded: string;
-    loading: string;
-    error: string;
-    retry: string;
-    expand: string;
-    collapse: string;
-  };
-  canAdd: boolean;
-  isLoading: boolean;
-  isError: boolean;
-  onSearchChange: (value: string) => void;
-  onSearchSubmit: () => void;
-  onRetry: () => void;
-  onAdd: (product: PublicProductListItem) => void;
-};
+import type { WizardProductPickerProps } from "./wizard-product-picker.types";
 
 export function WizardProductPicker({
   searchValue,
@@ -41,13 +14,46 @@ export function WizardProductPicker({
   labels,
   canAdd,
   isLoading,
+  isFetchingNextPage,
+  hasNextPage,
   isError,
   onSearchChange,
   onSearchSubmit,
   onRetry,
+  onLoadMore,
   onAdd,
 }: WizardProductPickerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isExpanded || !hasNextPage || isFetchingNextPage) return;
+
+    const root = listRef.current;
+    const target = sentinelRef.current;
+    if (!root || !target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { root, rootMargin: "48px" },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [
+    hasNextPage,
+    isExpanded,
+    isFetchingNextPage,
+    onLoadMore,
+    products.length,
+  ]);
+
+  const showInitialLoading = isLoading && products.length === 0;
 
   return (
     <section className="border-outline-variant/30 bg-surface-container-lowest soft-glow-pink rounded-3xl border p-4 md:p-5">
@@ -105,7 +111,7 @@ export function WizardProductPicker({
             </div>
           </form>
 
-          {isLoading ? (
+          {showInitialLoading ? (
             <p
               role="status"
               className="font-body text-body-md text-on-surface-variant py-4 text-center"
@@ -129,14 +135,17 @@ export function WizardProductPicker({
             </div>
           ) : null}
 
-          {!isLoading && !isError && products.length === 0 ? (
+          {!showInitialLoading && !isError && products.length === 0 ? (
             <p className="font-body text-body-md text-on-surface-variant py-4 text-center">
               {labels.empty}
             </p>
           ) : null}
 
-          {!isLoading && !isError && products.length > 0 ? (
-            <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
+          {!showInitialLoading && !isError && products.length > 0 ? (
+            <ul
+              ref={listRef}
+              className="max-h-56 space-y-2 overflow-y-auto pr-1"
+            >
               {products.map((product) => {
                 const isSelected = selectedProductIds.has(product.id);
                 const disabled = !canAdd || isSelected;
@@ -181,7 +190,19 @@ export function WizardProductPicker({
                   </li>
                 );
               })}
+              <li aria-hidden>
+                <div ref={sentinelRef} className="h-1" />
+              </li>
             </ul>
+          ) : null}
+
+          {isFetchingNextPage ? (
+            <p
+              role="status"
+              className="font-body text-body-sm text-on-surface-variant text-center"
+            >
+              {labels.loadingMore}
+            </p>
           ) : null}
         </div>
       ) : null}

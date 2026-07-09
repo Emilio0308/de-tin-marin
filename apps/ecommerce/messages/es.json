@@ -84,7 +84,7 @@
         "minReached": "Necesitas al menos {min} dulces en tu sorpresa.",
         "count": "{current} de {max} dulces",
         "progressLabel": "{current} de {max} dulces seleccionados",
-        "unitPriceSuffix": "/ ud."
+        "quantityBreakdown": "{perPerson} × {surprises} = {total} unidades"
       },
       "picker": {
         "title": "Agregar dulce",
@@ -94,6 +94,7 @@
         "empty": "No encontramos dulces con esa búsqueda.",
         "maxReached": "Ya alcanzaste el máximo de {max} dulces.",
         "alreadyAdded": "Agregado",
+        "loadingMore": "Cargando más dulces…",
         "expand": "Mostrar buscador",
         "collapse": "Ocultar buscador"
       },

@@ -35,6 +35,7 @@ const baseTemplate: BundleWizardTemplate = {
     {
       productId: "44444444-4444-4444-4444-444444444444",
       productName: "Gomitas",
+      imageUrl: "https://example.com/gomitas.png",
       unitsPerPerson: 1,
     },
   ],
@@ -64,7 +65,8 @@ const defaultLabels: BundleWizardPageLabels = {
     minReached: "Necesitas al menos 5 dulces en tu sorpresa.",
     count: "7 de 20 dulces",
     progressLabel: "7 de 20 dulces seleccionados",
-    unitPriceSuffix: "/ ud.",
+    formatQuantityBreakdown: ({ perPerson, surprises, total }) =>
+      `${perPerson} × ${surprises} = ${total}`,
   },
   picker: {
     title: "Agregar dulce",
@@ -75,6 +77,7 @@ const defaultLabels: BundleWizardPageLabels = {
     maxReached: "Ya alcanzaste el máximo de 20 dulces.",
     alreadyAdded: "Agregado",
     loading: "Cargando…",
+    loadingMore: "Cargando más dulces…",
     error: "Error",
     retry: "Reintentar",
     expand: "Mostrar buscador",
@@ -112,8 +115,14 @@ const defaultProps = {
     "99999999-9999-9999-9999-999999999999": "Mentita",
     "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa": "Trufas",
   },
-  unitPricesByProductId: {
-    "44444444-4444-4444-4444-444444444444": 2.5,
+  imagesByProductId: {
+    "44444444-4444-4444-4444-444444444444": "https://example.com/gomitas.png",
+    "55555555-5555-5555-5555-555555555555": "https://example.com/chocolate.png",
+    "66666666-6666-6666-6666-666666666666": "https://example.com/paleta.png",
+    "77777777-7777-7777-7777-777777777777": "https://example.com/chicle.png",
+    "88888888-8888-8888-8888-888888888888": "https://example.com/caramelo.png",
+    "99999999-9999-9999-9999-999999999999": "https://example.com/mentita.png",
+    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa": "https://example.com/trufas.png",
   },
   lineTotal: 89.9,
   stockCheck: null,
@@ -123,6 +132,8 @@ const defaultProps = {
   isPreviewLoading: false,
   isPreviewError: false,
   isProductsLoading: false,
+  isProductsFetchingNextPage: false,
+  hasMoreProducts: false,
   isProductsError: false,
   isAddingToCart: false,
   labels: defaultLabels,
@@ -131,6 +142,7 @@ const defaultProps = {
   onSearchChange: vi.fn(),
   onSearchSubmit: vi.fn(),
   onProductsRetry: vi.fn(),
+  onLoadMoreProducts: vi.fn(),
   onPreviewRetry: vi.fn(),
   onAddToCart: vi.fn(),
 };

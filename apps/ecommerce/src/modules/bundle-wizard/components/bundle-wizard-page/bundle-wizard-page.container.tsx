@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   BUNDLE_CUSTOMIZATION_MAX,
@@ -15,14 +21,21 @@ import { listPublicProductsAction } from "@/modules/catalog/actions/list-public-
 import { previewBundleLineAction } from "@/modules/bundle-wizard/actions/preview-bundle-line";
 import {
   addComponent,
+  buildComponentImages,
   buildComponentLabels,
   canAddComponent,
   canRemoveComponent,
   removeComponent,
 } from "@/modules/bundle-wizard/helpers/wizard-state";
 import { clearPendingCartLines } from "@/modules/bundle-wizard/helpers/pending-cart";
+import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { useCart } from "@/modules/cart/hooks/use-cart";
 import { queryKeys } from "@/shared/query/query-keys";
+import { WIZARD_PRODUCT_PICKER_PAGE_SIZE } from "../wizard-product-picker/wizard-product-picker.constants";
+import {
+  flattenProductPickerPages,
+  getNextProductPickerPage,
+} from "../wizard-product-picker/wizard-product-picker.helpers";
 import { BundleWizardPage } from "./bundle-wizard-page";
 
 export type BundleWizardPageContainerProps = {
@@ -45,6 +58,7 @@ export function BundleWizardPageContainer({
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pickerLabels, setPickerLabels] = useState<Record<string, string>>({});
+  const [pickerImages, setPickerImages] = useState<Record<string, string>>({});
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
@@ -70,19 +84,46 @@ export function BundleWizardPageContainer({
     [pickerLabels, template.items],
   );
 
-  const productsQuery = useQuery({
+  const imagesByProductId = useMemo(
+    () => buildComponentImages(template.items, pickerImages),
+    [pickerImages, template.items],
+  );
+
+  const productsQuery = useInfiniteQuery({
     queryKey: queryKeys.wizard.productSearch(searchQuery),
-    queryFn: async () => {
+    queryFn: async ({ pageParam }) => {
       const result = await listPublicProductsAction({
-        page: 1,
-        pageSize: 12,
+        page: pageParam,
+        pageSize: WIZARD_PRODUCT_PICKER_PAGE_SIZE,
         search: searchQuery || undefined,
         sort: "name_asc",
       });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
+    initialPageParam: 1,
+    getNextPageParam: getNextProductPickerPage,
   });
+
+  const {
+    data: productsData,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    isLoading: isProductsLoading,
+    isError: isProductsError,
+    refetch: refetchProducts,
+  } = productsQuery;
+
+  const pickerProducts = useMemo(
+    () => flattenProductPickerPages(productsData?.pages),
+    [productsData?.pages],
+  );
+
+  const handleLoadMoreProducts = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const previewQuery = useQuery({
     queryKey: queryKeys.wizard.preview(template.bundleId, debouncedComponents),
@@ -97,20 +138,20 @@ export function BundleWizardPageContainer({
     enabled: validateBundleCustomization(debouncedComponents).ok,
   });
 
-  const unitPricesByProductId = useMemo(() => {
-    const prices: Record<string, number> = {};
-    for (const component of previewQuery.data?.line.components ?? []) {
-      prices[component.productId] = component.unitPrice;
-    }
-    return prices;
-  }, [previewQuery.data?.line.components]);
-
   const handleRemove = (productId: string) => {
     setComponents((current) => removeComponent(current, productId));
   };
 
-  const handleAdd = (product: { id: string; name: string }) => {
+  const handleAdd = (product: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  }) => {
     setPickerLabels((current) => ({ ...current, [product.id]: product.name }));
+    setPickerImages((current) => ({
+      ...current,
+      [product.id]: product.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
+    }));
     setComponents((current) => addComponent(current, product.id));
   };
 
@@ -127,10 +168,10 @@ export function BundleWizardPageContainer({
       template={template}
       components={components}
       searchValue={searchDraft}
-      products={productsQuery.data?.items ?? []}
+      products={pickerProducts}
       selectedProductIds={selectedProductIds}
       labelsByProductId={labelsByProductId}
-      unitPricesByProductId={unitPricesByProductId}
+      imagesByProductId={imagesByProductId}
       lineTotal={previewQuery.data?.lineTotal ?? null}
       stockCheck={previewQuery.data?.stockCheck ?? null}
       isValid={isValid}
@@ -138,8 +179,10 @@ export function BundleWizardPageContainer({
       canAdd={canAddComponent(components)}
       isPreviewLoading={previewQuery.isFetching}
       isPreviewError={previewQuery.isError}
-      isProductsLoading={productsQuery.isLoading}
-      isProductsError={productsQuery.isError}
+      isProductsLoading={isProductsLoading}
+      isProductsFetchingNextPage={isFetchingNextPage}
+      hasMoreProducts={hasNextPage ?? false}
+      isProductsError={isProductsError}
       isAddingToCart={isAddingToCart}
       labels={{
         back: t("back"),
@@ -164,7 +207,12 @@ export function BundleWizardPageContainer({
             current: components.length,
             max: BUNDLE_CUSTOMIZATION_MAX,
           }),
-          unitPriceSuffix: t("componentList.unitPriceSuffix"),
+          formatQuantityBreakdown: ({ perPerson, surprises, total }) =>
+            t("componentList.quantityBreakdown", {
+              perPerson,
+              surprises,
+              total,
+            }),
         },
         picker: {
           title: t("picker.title"),
@@ -175,6 +223,7 @@ export function BundleWizardPageContainer({
           maxReached: t("picker.maxReached", { max: BUNDLE_CUSTOMIZATION_MAX }),
           alreadyAdded: t("picker.alreadyAdded"),
           loading: tCommon("loading"),
+          loadingMore: t("picker.loadingMore"),
           error: tCommon("error"),
           retry: tCommon("retry"),
           expand: t("picker.expand"),
@@ -203,8 +252,9 @@ export function BundleWizardPageContainer({
         });
       }}
       onProductsRetry={() => {
-        void productsQuery.refetch();
+        void refetchProducts();
       }}
+      onLoadMoreProducts={handleLoadMoreProducts}
       onPreviewRetry={() => {
         void previewQuery.refetch();
       }}

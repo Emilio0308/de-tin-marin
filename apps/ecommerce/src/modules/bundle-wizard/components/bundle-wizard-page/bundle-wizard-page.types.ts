@@ -18,7 +18,11 @@ export type BundleWizardPageLabels = {
     minReached: string;
     count: string;
     progressLabel: string;
-    unitPriceSuffix: string;
+    formatQuantityBreakdown: (values: {
+      perPerson: number;
+      surprises: number;
+      total: number;
+    }) => string;
   };
   picker: {
     title: string;
@@ -29,6 +33,7 @@ export type BundleWizardPageLabels = {
     maxReached: string;
     alreadyAdded: string;
     loading: string;
+    loadingMore: string;
     error: string;
     retry: string;
     expand: string;
@@ -56,7 +61,7 @@ export type BundleWizardPageProps = {
   products: PublicProductListItem[];
   selectedProductIds: Set<string>;
   labelsByProductId: Record<string, string>;
-  unitPricesByProductId: Record<string, number>;
+  imagesByProductId: Record<string, string>;
   lineTotal: number | null;
   stockCheck: OrderStockCheckResult | null;
   isValid: boolean;
@@ -65,6 +70,8 @@ export type BundleWizardPageProps = {
   isPreviewLoading: boolean;
   isPreviewError: boolean;
   isProductsLoading: boolean;
+  isProductsFetchingNextPage: boolean;
+  hasMoreProducts: boolean;
   isProductsError: boolean;
   isAddingToCart: boolean;
   labels: BundleWizardPageLabels;
@@ -73,6 +80,7 @@ export type BundleWizardPageProps = {
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
   onProductsRetry: () => void;
+  onLoadMoreProducts: () => void;
   onPreviewRetry: () => void;
   onAddToCart: () => void;
 };

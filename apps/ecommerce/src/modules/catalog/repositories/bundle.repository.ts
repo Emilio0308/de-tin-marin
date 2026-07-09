@@ -12,6 +12,7 @@ export type PublicBundleItemRow = {
   units_per_person: number;
   products: {
     name: string;
+    image_url: string | null;
     prices: Json;
     is_active: boolean;
     deleted_at: string | null;
@@ -79,7 +80,7 @@ export async function listPublicBundleItemsByBundleIdsRepo(
     .schema("catalog")
     .from("bundle_items")
     .select(
-      "bundle_id, product_id, units_per_person, products(name, prices, is_active, deleted_at)",
+      "bundle_id, product_id, units_per_person, products(name, image_url, prices, is_active, deleted_at)",
     )
     .in("bundle_id", bundleIds);
 

@@ -95,6 +95,7 @@ export async function getBundleForWizardService(
       items: activeItems.map((item) => ({
         productId: item.product_id,
         productName: item.products?.name ?? "—",
+        imageUrl: normalizeImageUrl(item.products?.image_url),
         unitsPerPerson: item.units_per_person,
       })),
       initialComponents: toInitialComponents(items),
