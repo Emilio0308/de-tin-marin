@@ -5,6 +5,9 @@ const ecommerceSrc = fileURLToPath(
   new URL("./apps/ecommerce/src", import.meta.url),
 );
 const adminSrc = fileURLToPath(new URL("./apps/admin/src", import.meta.url));
+const serverOnlyStub = fileURLToPath(
+  new URL("./test-stubs/server-only.ts", import.meta.url),
+);
 
 const jsxAutomatic = { jsx: "automatic" as const };
 
@@ -21,7 +24,9 @@ export default defineConfig({
       },
       {
         esbuild: jsxAutomatic,
-        resolve: { alias: { "@": ecommerceSrc } },
+        resolve: {
+          alias: { "@": ecommerceSrc, "server-only": serverOnlyStub },
+        },
         test: {
           name: "ecommerce",
           environment: "jsdom",
@@ -31,7 +36,9 @@ export default defineConfig({
       },
       {
         esbuild: jsxAutomatic,
-        resolve: { alias: { "@": adminSrc } },
+        resolve: {
+          alias: { "@": adminSrc, "server-only": serverOnlyStub },
+        },
         test: {
           name: "admin",
           environment: "jsdom",

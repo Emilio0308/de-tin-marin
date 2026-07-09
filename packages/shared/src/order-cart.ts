@@ -24,6 +24,7 @@ export type OrderShoppingCartProductLine = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  imageUrl?: string | null;
 };
 
 export type OrderShoppingCartBundleComponent = {
@@ -52,6 +53,7 @@ export type OrderShoppingCartBundleLine = {
   serviceFee?: number;
   lineTotal: number;
   components: OrderShoppingCartBundleComponent[];
+  imageUrl?: string | null;
 };
 
 export type OrderShoppingCartLine =

@@ -11,17 +11,231 @@
     "addToCart": "Añadir",
     "iWantIt": "Lo quiero"
   },
-  "home": {
-    "nav": {
-      "sweets": "Dulces",
-      "surprises": "Sorpresas",
-      "about": "Nosotros"
+  "nav": {
+    "sweets": "Dulces",
+    "surprises": "Sorpresas",
+    "myOrders": "Mis pedidos",
+    "about": "Nosotros"
+  },
+  "catalog": {
+    "backHome": "Volver al inicio",
+    "filters": {
+      "categories": "Categorías",
+      "allCategories": "Todas",
+      "search": "Buscar",
+      "searchProducts": "Buscar por nombre o SKU…",
+      "searchBundles": "Buscar sorpresas…",
+      "sort": "Ordenar por"
     },
-    "catalog": {
-      "title": "Nuestros dulces"
+    "sort": {
+      "nameAsc": "Nombre A → Z",
+      "nameDesc": "Nombre Z → A",
+      "priceAsc": "Precio ↑",
+      "priceDesc": "Precio ↓"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {page} de {total}"
+    },
+    "actions": {
+      "addToCart": "Añadir",
+      "personalize": "Personalizar",
+      "price": "Precio"
+    },
+    "products": {
+      "title": "Nuestros dulces",
+      "subtitle": "Explora todos nuestros dulces con stock y precios actualizados.",
+      "empty": "No encontramos dulces con esos filtros.",
+      "stock": "Stock",
+      "sku": "SKU",
+      "category": "Categoría",
+      "description": "Descripción",
+      "backToList": "Volver al catálogo",
+      "packageUnits": "Paquete x{count}",
+      "decreaseQuantity": "Disminuir cantidad",
+      "increaseQuantity": "Aumentar cantidad"
     },
     "bundles": {
-      "title": "Combos sorpresa"
+      "title": "Combos sorpresa",
+      "subtitle": "La mezcla perfecta de dulces y sorpresas para celebrar a lo grande.",
+      "empty": "No encontramos combos con esos filtros.",
+      "container": "Envase",
+      "quantity": "Cantidad",
+      "items": "Incluye",
+      "description": "Descripción",
+      "backToList": "Volver a sorpresas",
+      "backToDetail": "Volver al combo"
+    },
+    "wizard": {
+      "title": "Personaliza tu sorpresa",
+      "back": "Volver al combo",
+      "personCount": "Para {count} personas",
+      "addToCart": "Agregar al carrito",
+      "addToCartLoading": "Agregando…",
+      "validation": {
+        "min": "Agrega al menos {min} dulces para continuar.",
+        "max": "Puedes incluir como máximo {max} dulces.",
+        "duplicate": "No puedes repetir el mismo dulce."
+      },
+      "componentList": {
+        "title": "Tus dulces",
+        "remove": "Quitar",
+        "minReached": "Necesitas al menos {min} dulces en tu sorpresa.",
+        "count": "{current} de {max} dulces",
+        "progressLabel": "{current} de {max} dulces seleccionados",
+        "quantityBreakdown": "{perPerson} × {surprises} = {total} unidades"
+      },
+      "picker": {
+        "title": "Agregar dulce",
+        "searchPlaceholder": "Buscar por nombre o SKU…",
+        "searchAriaLabel": "Buscar dulces para agregar",
+        "add": "Agregar",
+        "empty": "No encontramos dulces con esa búsqueda.",
+        "maxReached": "Ya alcanzaste el máximo de {max} dulces.",
+        "alreadyAdded": "Agregado",
+        "loadingMore": "Cargando más dulces…",
+        "expand": "Mostrar buscador",
+        "collapse": "Ocultar buscador"
+      },
+      "price": {
+        "total": "Total de tu sorpresa",
+        "loading": "Calculando precio…",
+        "invalid": "Ajusta tu selección para ver el total.",
+        "previewError": "No pudimos calcular el precio. Intenta de nuevo."
+      },
+      "stock": {
+        "title": "Stock limitado",
+        "checking": "Verificando stock…",
+        "productShortage": "Dulce",
+        "containerShortage": "Envase"
+      }
+    }
+  },
+  "cart": {
+    "title": "Tu carrito",
+    "empty": "Tu carrito está vacío.",
+    "continueShopping": "Seguir comprando",
+    "checkout": "Ir a checkout",
+    "remove": "Quitar",
+    "subtotal": "Subtotal",
+    "unitPriceSuffix": "/ ud.",
+    "decreaseQuantity": "Disminuir cantidad",
+    "increaseQuantity": "Aumentar cantidad",
+    "quantity": "Cant.",
+    "bundlePersons": "Para {count} personas",
+    "bundleBadge": "Sorpresa",
+    "components": "dulces",
+    "stockTitle": "Stock limitado",
+    "stockChecking": "Verificando stock…",
+    "stockProduct": "Dulce",
+    "stockContainer": "Envase"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "backToCart": "Volver al carrito",
+    "contactTitle": "Datos de contacto",
+    "addressTitle": "Dirección de entrega",
+    "name": "Nombre",
+    "lastName": "Apellido",
+    "phone": "Teléfono",
+    "email": "Correo electrónico",
+    "line1": "Dirección",
+    "district": "Distrito",
+    "districtPlaceholder": "Selecciona tu distrito",
+    "city": "Ciudad",
+    "province": "Provincia",
+    "reference": "Referencia (opcional)",
+    "referenceHint": "Ej. casa color verde, portón negro",
+    "requiredHint": "Campo obligatorio",
+    "mapTitle": "Ubicación en el mapa",
+    "mapHint": "Arrastra el pin o haz clic para indicar tu ubicación en Piura.",
+    "subtotal": "Subtotal",
+    "shipping": "Envío",
+    "shippingPending": "Calculando…",
+    "total": "Total",
+    "submit": "Confirmar pedido",
+    "submitting": "Creando pedido…",
+    "redirecting": "Preparando confirmación…",
+    "outOfCoverage": "Sin cobertura en esta zona.",
+    "validationSummary": "Revisa los campos marcados en rojo antes de continuar.",
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "invalidEmail": "Ingresa un correo electrónico válido"
+    },
+    "stockTitle": "Stock limitado",
+    "stockChecking": "Verificando stock…",
+    "stockProduct": "Dulce",
+    "stockContainer": "Envase",
+    "emptyCart": "Tu carrito está vacío.",
+    "errors": {
+      "outOfCoverage": "No entregamos en esa ubicación.",
+      "insufficientStock": "No hay stock suficiente para completar el pedido.",
+      "invalidPurchaseQuantity": "Una o más cantidades no cumplen el mínimo o máximo de compra del producto.",
+      "validation": "Revisa los datos del formulario."
+    }
+  },
+  "orderConfirmation": {
+    "title": "¡Pedido registrado!",
+    "orderNumber": "Número de pedido: {orderNumber}",
+    "missingOrderNumber": "No encontramos el número de pedido.",
+    "missingParams": "Usa el enlace completo de confirmación o consulta tu pedido en Mis pedidos.",
+    "lookupLink": "Consultar en Mis pedidos",
+    "continueShopping": "Seguir comprando",
+    "summary": {
+      "subtotal": "Subtotal",
+      "shipping": "Envío",
+      "total": "Total",
+      "lines": "Tu pedido",
+      "status": "Estado",
+      "paymentStatus": "Pago",
+      "deliveryTitle": "Entrega",
+      "pickupTitle": "Recojo en tienda",
+      "bundleBadge": "Sorpresa",
+      "bundleComponents": "dulces",
+      "bundlePersons": "Para {count} personas"
+    },
+    "status": {
+      "pending_payment": "Pendiente de pago",
+      "paid": "Pagado",
+      "preparing": "En preparación",
+      "ready": "Listo",
+      "delivered": "Entregado",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    },
+    "paymentStatus": {
+      "pending": "Pendiente",
+      "confirmed": "Confirmado",
+      "refunded": "Reembolsado"
+    },
+    "paymentInstructions": {
+      "title": "Instrucciones de pago",
+      "yapeLabel": "Yape",
+      "transferLabel": "Transferencia bancaria",
+      "yape": "Yape al número {phone} a nombre de {holder}.",
+      "transfer": "Transferencia {bank} — cuenta {account} ({holder}).",
+      "note": "Envía el voucher por WhatsApp indicando tu número de pedido. Confirmaremos tu pago en breve."
+    }
+  },
+  "guestOrderLookup": {
+    "title": "Mis pedidos",
+    "subtitle": "Consulta tu pedido con el número de orden y el correo que usaste al comprar.",
+    "orderNumber": "Número de pedido",
+    "email": "Correo electrónico",
+    "submit": "Buscar pedido",
+    "submitting": "Buscando…",
+    "notFound": "No encontramos un pedido con esos datos. Revisa el número y el correo."
+  },
+  "home": {
+    "hero": {
+      "titlePrefix": "¡Endulza cada ",
+      "titleHighlight": "sorpresa!",
+      "description": "Creamos despertares mágicos con los dulces más deliciosos y regalos personalizados que roban sonrisas. El toque perfecto para cada cumpleaños.",
+      "ctaSurprises": "Ver sorpresas",
+      "ctaProducts": "Ver dulces",
+      "imageAlt": "Caja de regalo de cumpleaños repleta de dulces artesanales y chocolates de colores",
+      "favoriteKit": "Kit Favorito"
     },
     "help": {
       "label": "¿Necesitas ayuda?"

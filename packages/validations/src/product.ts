@@ -21,6 +21,8 @@ const productFieldsSchema = z.object({
   packageNetPrice: netPriceInputSchema,
   stockSealedPackages: z.number().int().nonnegative().default(0),
   stockLooseBaseUnits: z.number().int().nonnegative().default(0),
+  purchaseMinQuantity: z.number().int().min(1).default(10),
+  purchaseMaxQuantity: z.number().int().min(1).default(100),
   categoryId: z.string().uuid(),
   imageUrl: z.string().url().optional().nullable().or(z.literal("")),
   isActive: z.boolean().default(true),
@@ -30,6 +32,8 @@ function refineProductPresentation(
   data: {
     productType?: "unit" | "package";
     itemsPerPackage?: number;
+    purchaseMinQuantity?: number;
+    purchaseMaxQuantity?: number;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -53,6 +57,18 @@ function refineProductPresentation(
       code: z.ZodIssueCode.custom,
       message: "Package products must have itemsPerPackage >= 2",
       path: ["itemsPerPackage"],
+    });
+  }
+
+  if (
+    data.purchaseMinQuantity !== undefined &&
+    data.purchaseMaxQuantity !== undefined &&
+    data.purchaseMaxQuantity < data.purchaseMinQuantity
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "purchaseMaxQuantity must be >= purchaseMinQuantity",
+      path: ["purchaseMaxQuantity"],
     });
   }
 }
@@ -96,6 +112,8 @@ export const productListItemSchema = z.object({
   stockLooseBaseUnits: z.number(),
   stockTotalBaseUnits: z.number(),
   stockDisplay: z.string(),
+  purchaseMinQuantity: z.number().int().min(1),
+  purchaseMaxQuantity: z.number().int().min(1),
   isActive: z.boolean(),
   imageUrl: z.string().nullable(),
 });

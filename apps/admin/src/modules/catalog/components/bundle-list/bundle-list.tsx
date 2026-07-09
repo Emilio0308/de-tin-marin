@@ -38,14 +38,7 @@ function BundleThumb({
     <div
       className={cn("bg-surface-container relative overflow-hidden", className)}
     >
-      <Image
-        src={url}
-        alt={name}
-        fill
-        unoptimized
-        sizes="80px"
-        className="object-cover"
-      />
+      <Image src={url} alt={name} fill sizes="80px" className="object-cover" />
     </div>
   );
 }

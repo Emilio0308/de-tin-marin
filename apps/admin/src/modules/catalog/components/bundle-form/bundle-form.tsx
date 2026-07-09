@@ -237,7 +237,6 @@ export function BundleForm({
                   src={values.imageUrl}
                   alt={labels.imageAlt}
                   fill
-                  unoptimized
                   sizes="(max-width: 1024px) 100vw, 400px"
                   className="object-cover"
                 />

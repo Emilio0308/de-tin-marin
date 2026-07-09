@@ -3,6 +3,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@de-tin-marin/db/server";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import type { Database, Json } from "@de-tin-marin/types/database";
+import { parseContainerPricesJson as parseContainerPricesFromShared } from "@de-tin-marin/shared/prices";
 
 type SurpriseContainerRow =
   Database["catalog"]["Tables"]["surprise_containers"]["Row"];
@@ -16,10 +17,7 @@ export type { SurpriseContainerRow };
 export function parseContainerPricesJson(prices: Json | null | undefined): {
   netPrice: number;
 } {
-  const record = (prices ?? {}) as Record<string, unknown>;
-  return {
-    netPrice: Number(record.netPrice ?? 0),
-  };
+  return parseContainerPricesFromShared(prices);
 }
 
 export async function listSurpriseContainersRepo(

@@ -106,23 +106,25 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 **`catalog.products`** (columnas clave):
 
-| Columna                  | Tipo          | Notas                                                    |
-| ------------------------ | ------------- | -------------------------------------------------------- |
-| `sku`                    | text unique   | Obligatorio                                              |
-| `name`, `description`    | text          |                                                          |
-| `slug`                   | text unique   | URL amigable                                             |
-| `brand`                  | text          | Marca (texto libre)                                      |
-| `image_url`              | text          | URL imagen principal (S1A)                               |
-| `product_type`           | text          | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)    |
-| `items_per_package`      | int           | Unidades base por presentación (`>= 1`; default 1) (S1D) |
-| `package_label`          | text nullable | Solo UX: `"tira"`, `"paquete"` (S1D)                     |
-| `prices`                 | jsonb         | Ver estructura arriba (`normal` + `unit`)                |
-| `stock_sealed_packages`  | int           | Paquetes/tiras **cerrados** (`>= 0`) (S1D)               |
-| `stock_loose_base_units` | int           | Unidades base sueltas de paquetes abiertos (S1D)         |
-| `category_id`            | uuid          | → `categories`                                           |
-| `campaign_id`            | uuid nullable | → `pricing.campaigns` (**1:1**, S1C)                     |
-| `is_active`              | boolean       |                                                          |
-| `deleted_at`             | timestamptz   | Soft-delete                                              |
+| Columna                  | Tipo          | Notas                                                               |
+| ------------------------ | ------------- | ------------------------------------------------------------------- |
+| `sku`                    | text unique   | Obligatorio                                                         |
+| `name`, `description`    | text          |                                                                     |
+| `slug`                   | text unique   | URL amigable                                                        |
+| `brand`                  | text          | Marca (texto libre)                                                 |
+| `image_url`              | text          | URL imagen principal (S1A)                                          |
+| `product_type`           | text          | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)               |
+| `items_per_package`      | int           | Unidades base por presentación (`>= 1`; default 1) (S1D)            |
+| `package_label`          | text nullable | Solo UX: `"tira"`, `"paquete"` (S1D)                                |
+| `prices`                 | jsonb         | Ver estructura arriba (`normal` + `unit`)                           |
+| `stock_sealed_packages`  | int           | Paquetes/tiras **cerrados** (`>= 0`) (S1D)                          |
+| `stock_loose_base_units` | int           | Unidades base sueltas de paquetes abiertos (S1D)                    |
+| `category_id`            | uuid          | → `categories`                                                      |
+| `campaign_id`            | uuid nullable | → `pricing.campaigns` (**1:1**, S1C)                                |
+| `is_active`              | boolean       |                                                                     |
+| `purchase_min_quantity`  | int           | Mín. presentaciones por pedido (default **10**) (DECISIONS #31)     |
+| `purchase_max_quantity`  | int           | Máx. presentaciones por pedido (default **100**); acotado por stock |
+| `deleted_at`             | timestamptz   | Soft-delete                                                         |
 
 > **Stock total disponible:**
 >

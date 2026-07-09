@@ -198,6 +198,19 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Fallo:** Stock insuficiente al pagar → Regla 15 revierte.
 - **Nota:** Sin sealed/loose en envases (distinto de productos, Regla 4).
 
+### Regla 21 — Límites min/max de compra (productos sueltos)
+
+- **Trigger:** Agregar al carrito, editar cantidad en carrito, checkout guest.
+- **Alcance:** Solo líneas `type: product`. **No** aplica a sorpresas/bundles ni wizard.
+- **Pasos:**
+  1. Leer `purchase_min_quantity` y `purchase_max_quantity` del producto (cantidad en **presentación** vendida: unidad o paquete/tira).
+  2. `stock_presentaciones` = unidades base totales si `product_type = unit`; si `package` → `floor(totalBaseUnits / items_per_package)`.
+  3. `max_efectivo = min(purchase_max_quantity, stock_presentaciones)`.
+  4. Comprable solo si `stock_presentaciones >= purchase_min_quantity`.
+  5. Cantidad de línea debe cumplir `purchase_min_quantity <= quantity <= max_efectivo`.
+  6. “Añadir rápido” agrega `purchase_min_quantity` por defecto.
+- **Fallo:** Rechazar checkout si cantidad fuera de rango; UI deshabilita compra si no hay stock para el mínimo.
+
 ---
 
 ## Futuro (v2 — no implementar en v1)
@@ -222,3 +235,4 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 13–16 | Orders             | Snapshot, estados, stock al pagar, no recalcular              |
 | 17–18 | Payments           | Manual confirm / refund                                       |
 | 19–20 | Delivery / Envases | Tarifa por distrito; stock envase 1:1 sorpresa                |
+| 21    | Products           | Min/max compra por presentación (default 10/100)              |

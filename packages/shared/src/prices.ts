@@ -48,3 +48,48 @@ export function buildPricesFromNetPrice(netPrice: number): Prices {
 export function buildSinglePriceFromNetPrice(netPrice: number): PriceNormal {
   return buildPriceBlock(netPrice);
 }
+
+function readNetPrice(value: unknown): number | null {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "netPrice" in value &&
+    typeof value.netPrice === "number"
+  ) {
+    return value.netPrice;
+  }
+
+  return null;
+}
+
+export function parseProductPricesJson(prices: unknown): {
+  packageNetPrice: number;
+  unitNetPrice: number;
+} {
+  if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
+    return { packageNetPrice: 0, unitNetPrice: 0 };
+  }
+
+  const record = prices as Record<string, unknown>;
+  const packageNetPrice = readNetPrice(record.normal) ?? 0;
+  const unitNetPrice = readNetPrice(record.unit) ?? packageNetPrice;
+
+  return { packageNetPrice, unitNetPrice };
+}
+
+export function parseContainerPricesJson(prices: unknown): {
+  netPrice: number;
+} {
+  if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
+    return { netPrice: 0 };
+  }
+
+  const record = prices as Record<string, unknown>;
+  return {
+    netPrice:
+      typeof record.netPrice === "number"
+        ? record.netPrice
+        : Number(record.netPrice ?? 0),
+  };
+}
