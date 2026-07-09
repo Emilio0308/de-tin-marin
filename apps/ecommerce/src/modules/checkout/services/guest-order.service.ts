@@ -12,12 +12,14 @@ import {
 } from "@de-tin-marin/shared/check-order-stock";
 import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
 import { formatOrderNumber } from "@de-tin-marin/shared/order-cart";
+import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import { resolveProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   createGuestOrderInputSchema,
   checkCartStockInputSchema,
+  previewGuestCartInputSchema,
 } from "@de-tin-marin/validations/checkout";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import {
@@ -167,6 +169,111 @@ export async function checkCartStockService(
   };
 }
 
+export async function previewGuestOrderCartService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        subtotal: number;
+        discountTotal: number;
+        shippingTotal: number;
+        total: number;
+        lineTotals: number[];
+        lines: OrderShoppingCartLine[];
+      };
+    }
+  | {
+      ok: false;
+      error:
+        | "VALIDATION"
+        | "PRODUCT_NOT_FOUND"
+        | "BUNDLE_NOT_FOUND"
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_PURCHASE_QUANTITY";
+    }
+> {
+  const parsed = previewGuestCartInputSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  if (parsed.data.lines.length === 0) {
+    return {
+      ok: true,
+      data: {
+        subtotal: 0,
+        discountTotal: parsed.data.discountTotal,
+        shippingTotal: parsed.data.shippingTotal,
+        total: parsed.data.shippingTotal - parsed.data.discountTotal,
+        lineTotals: [],
+        lines: [],
+      },
+    };
+  }
+
+  const productIds = collectProductIdsFromOrderLines(parsed.data.lines);
+  const [products, catalogProducts] = await Promise.all([
+    getWizardProductsByIdsRepo(config, productIds),
+    getPublicProductsByIdsRepo(config, productIds),
+  ]);
+
+  if (products.length !== productIds.length) {
+    return { ok: false, error: "PRODUCT_NOT_FOUND" };
+  }
+
+  if (products.some((product) => !product.is_active)) {
+    return { ok: false, error: "PRODUCT_NOT_FOUND" };
+  }
+
+  if (
+    catalogProducts.length !== productIds.length ||
+    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts)
+  ) {
+    return { ok: false, error: "INVALID_PURCHASE_QUANTITY" };
+  }
+
+  const campaignIds = [
+    ...new Set(
+      products
+        .map((product) => product.campaign_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
+  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+
+  const cartResult = buildOrderCartWithTotals({
+    lines: parsed.data.lines,
+    products,
+    campaigns,
+    bundlesById,
+    discountTotal: parsed.data.discountTotal,
+    shippingTotal: parsed.data.shippingTotal,
+  });
+
+  if (!cartResult.ok) {
+    if (cartResult.error === "DUPLICATE_PRODUCT_IN_BUNDLE") {
+      return { ok: false, error: "DUPLICATE_PRODUCT_IN_BUNDLE" };
+    }
+    if (cartResult.error === "PRODUCT_NOT_FOUND") {
+      return { ok: false, error: "PRODUCT_NOT_FOUND" };
+    }
+    return { ok: false, error: "BUNDLE_NOT_FOUND" };
+  }
+
+  return {
+    ok: true,
+    data: {
+      subtotal: cartResult.totals.subtotal,
+      discountTotal: cartResult.totals.discountTotal,
+      shippingTotal: cartResult.totals.shippingTotal,
+      total: cartResult.totals.total,
+      lineTotals: cartResult.shoppingCart.lines.map((line) => line.lineTotal),
+      lines: cartResult.shoppingCart.lines,
+    },
+  };
+}
+
 export async function createGuestOrderService(
   config: SupabaseConfig,
   raw: unknown,
@@ -261,11 +368,7 @@ export async function createGuestOrderService(
   const stockCheck = await checkCartStockService(config, {
     lines: cartResult.shoppingCart.lines,
   });
-  if (
-    stockCheck.ok &&
-    !stockCheck.data.ok &&
-    storeFeatures.strictStockValidationOnCheckout
-  ) {
+  if (stockCheck.ok && !stockCheck.data.ok) {
     return { ok: false, error: "INSUFFICIENT_STOCK" };
   }
 

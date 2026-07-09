@@ -3,6 +3,7 @@ import {
   createOrderInputSchema,
   orderShoppingCartBundleLineSchema,
   orderShoppingCartProductLineSchema,
+  previewOrderCartInputSchema,
 } from "./order";
 
 export const mapPinSchema = z.object({
@@ -40,9 +41,13 @@ export const checkCartStockInputSchema = z.object({
   ),
 });
 
+/** Preview de carrito guest: mismas líneas que create order, sin contacto/envío. */
+export const previewGuestCartInputSchema = previewOrderCartInputSchema;
+
 export type CreateGuestOrderInput = z.infer<typeof createGuestOrderInputSchema>;
 export type ResolveCheckoutDeliveryFeeInput = z.infer<
   typeof resolveCheckoutDeliveryFeeInputSchema
 >;
 export type CheckCartStockInput = z.infer<typeof checkCartStockInputSchema>;
+export type PreviewGuestCartInput = z.infer<typeof previewGuestCartInputSchema>;
 export type MapPin = z.infer<typeof mapPinSchema>;

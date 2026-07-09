@@ -38,6 +38,7 @@
 | 29 | Stock por paquetes | ✅ | Reemplaza **`stock_quantity`**: **`stock_sealed_packages`** + **`stock_loose_base_units`**. Total = `sealed × items_per_package + loose`. Normalización post-movimiento. Deduct (S2A): consumir loose primero, abrir paquetes, sobrante a loose |
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
+| 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable (home listados, detalle producto/sorpresa, template wizard). **CSR + React Query fresco** (`staleTime: 0`) en carrito, checkout y preview de precio/stock para evitar discrepancias al pagar. **Caché cliente catálogo:** `staleTime` y `gcTime` = **15 min** en `QueryClient`. **Sin Next.js Data Cache** por defecto en catálogo. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
 
 ## Docs sincronizados (2026-07-02)
 
@@ -95,6 +96,17 @@
 - `business-rules.md` — Reglas 2, 4, 8, 9, 15
 - `pricing.md`, `inventory.md`, `roadmap.md`
 - DECISIONS #13, #15, #25 actualizadas; #27, #28, #29, #30 nuevas
+
+## Docs sincronizados (2026-07-09 — SSR, caché y data fetching)
+
+- DECISIONS #32 nueva (SSR vs CSR, 15 min catálogo, fresco en funnel de compra)
+- `docs/rules/50-data-fetching-cache-ssr.md` — reglas de fetching, query keys, anti-patrones
+- `docs/rules/00-architecture.md` — sección fetching y caché
+- `docs/rules/85-react-components.md` — SSR vs RQ en containers
+- `apps/ecommerce/src/modules/catalog/README.md` — matriz SSR/CSR por ruta
+- `apps/ecommerce/src/modules/cart/README.md` — patrón RQ fresco
+- `apps/admin/src/modules/orders/README.md` — preview y actions
+- `apps/ecommerce` y `apps/admin`: `query-cache.ts`, `QueryProvider` con defaults 15 min
 
 ## Cómo añadir una decisión
 

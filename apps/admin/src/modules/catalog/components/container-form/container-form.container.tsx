@@ -1,10 +1,12 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createSurpriseContainerAction } from "@/modules/catalog/actions/create-surprise-container";
 import { updateSurpriseContainerAction } from "@/modules/catalog/actions/update-surprise-container";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { ContainerForm } from "./container-form";
 import type {
   ContainerFormContainerProps,
@@ -41,6 +43,7 @@ export function ContainerFormContainer({
   const t = useTranslations("containerForm");
   const tErrors = useTranslations("containerForm.errors");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,6 +119,8 @@ export function ContainerFormContainer({
       setError(containerErrorMessage(result, tErrors));
       return;
     }
+
+    await invalidateAdminCatalogLists(queryClient, "surpriseContainers");
 
     router.push("/containers");
     router.refresh();

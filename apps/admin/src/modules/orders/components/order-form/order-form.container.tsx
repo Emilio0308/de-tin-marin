@@ -16,6 +16,7 @@ import {
 import { createOrderAction } from "@/modules/orders/actions/create-order";
 import { previewAdminBundleLineAction } from "@/modules/orders/actions/preview-admin-bundle-line";
 import { previewOrderCartAction } from "@/modules/orders/actions/preview-order-cart";
+import { freshQueryOptions } from "@/shared/query/query-cache";
 import { validateBundleCustomization } from "@de-tin-marin/validations/customize-bundle";
 import { OrderForm } from "./order-form";
 import { buildInitialBundleComponents } from "./order-form-bundle.helpers";
@@ -267,6 +268,7 @@ export function OrderFormContainer() {
   }, [bundleDraft]);
 
   const bundlePreviewQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: [
       "admin-order",
       "bundle-preview",
@@ -305,6 +307,7 @@ export function OrderFormContainer() {
   );
 
   const cartPreviewQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: [
       "admin-order",
       "cart-preview",

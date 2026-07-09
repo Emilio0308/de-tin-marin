@@ -50,7 +50,45 @@ describe("resolveProductsForOrder", () => {
       sku: "SKU-1",
       name: "Producto A",
       unitPrice: 10,
+      presentationPrice: 10,
     });
+  });
+
+  it("usa presentationPrice en línea producto y unitPrice en bundle", () => {
+    const packageProduct = {
+      id: "p3",
+      sku: "SKU-3",
+      name: "Paquete",
+      prices: { normal: { netPrice: 20 }, unit: { netPrice: 2 } },
+      campaign_id: null,
+      items_per_package: 10,
+    };
+
+    const map = resolveProductsForOrder([packageProduct], []);
+    expect(map.get("p3")).toEqual({
+      id: "p3",
+      sku: "SKU-3",
+      name: "Paquete",
+      unitPrice: 2,
+      presentationPrice: 20,
+    });
+
+    const result = buildOrderCart({
+      lines: [{ type: "product", productId: "p3", quantity: 2 }],
+      products: [packageProduct],
+      campaigns: [],
+      bundlesById: new Map(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const line = result.shoppingCart.lines[0];
+    expect(line?.type).toBe("product");
+    if (line?.type === "product") {
+      expect(line.unitPrice).toBe(20);
+      expect(line.lineTotal).toBe(40);
+    }
   });
 });
 

@@ -30,6 +30,23 @@ export type OrderStockCheckResult =
   { ok: true } | { ok: false; shortages: StockShortage[] };
 
 export type StockDemand = {
+  sku: string;
+  name?: string;
+  /** Cantidad en presentaciones vendidas (líneas `type: product`). */
+  presentationQuantity: number;
+  /** Unidades base consumidas (componentes de bundle). */
+  baseUnits: number;
+};
+
+export function resolveProductBaseUnitsNeed(
+  demand: StockDemand,
+  itemsPerPackage: number,
+): number {
+  const safeItems = Math.max(1, Math.floor(itemsPerPackage));
+  return demand.presentationQuantity * safeItems + demand.baseUnits;
+}
+
+export type ContainerStockDemand = {
   need: number;
   sku: string;
   name?: string;
@@ -37,16 +54,18 @@ export type StockDemand = {
 
 export function aggregateStockDemands(cart: OrderShoppingCart): {
   products: Map<string, StockDemand>;
-  containers: Map<string, StockDemand>;
+  containers: Map<string, ContainerStockDemand>;
 } {
   const products = new Map<string, StockDemand>();
-  const containers = new Map<string, StockDemand>();
+  const containers = new Map<string, ContainerStockDemand>();
 
   for (const line of cart.lines) {
     if (line.type === "product") {
       const existing = products.get(line.productId);
       products.set(line.productId, {
-        need: (existing?.need ?? 0) + line.quantity,
+        presentationQuantity:
+          (existing?.presentationQuantity ?? 0) + line.quantity,
+        baseUnits: existing?.baseUnits ?? 0,
         sku: line.sku,
         name: line.name,
       });
@@ -56,7 +75,8 @@ export function aggregateStockDemands(cart: OrderShoppingCart): {
     for (const component of line.components) {
       const existing = products.get(component.productId);
       products.set(component.productId, {
-        need: (existing?.need ?? 0) + component.totalQuantity,
+        presentationQuantity: existing?.presentationQuantity ?? 0,
+        baseUnits: (existing?.baseUnits ?? 0) + component.totalQuantity,
         sku: component.sku,
         name: component.productName,
       });
@@ -86,12 +106,13 @@ export function checkOrderStock(
   for (const [productId, demand] of products) {
     const product = productsById.get(productId);
     if (!product) {
+      const baseUnitsNeed = resolveProductBaseUnitsNeed(demand, 1);
       shortages.push({
         kind: "product",
         id: productId,
         sku: demand.sku,
         name: demand.name,
-        required: demand.need,
+        required: baseUnitsNeed,
         available: 0,
       });
       continue;
@@ -102,11 +123,15 @@ export function checkOrderStock(
       product.stockLooseBaseUnits,
       product.itemsPerPackage,
     );
+    const baseUnitsNeed = resolveProductBaseUnitsNeed(
+      demand,
+      product.itemsPerPackage,
+    );
     const result = deductBaseUnits(
       product.stockSealedPackages,
       product.stockLooseBaseUnits,
       product.itemsPerPackage,
-      demand.need,
+      baseUnitsNeed,
     );
 
     if (result === "INSUFFICIENT_STOCK") {
@@ -115,7 +140,7 @@ export function checkOrderStock(
         id: productId,
         sku: product.sku,
         name: product.name ?? demand.name,
-        required: demand.need,
+        required: baseUnitsNeed,
         available,
       });
     }

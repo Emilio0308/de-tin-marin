@@ -5,6 +5,7 @@ import {
   addBundleCartLine,
   mergeProductCartLine,
   removeStoredCartLine,
+  sanitizeStoredCartLines,
   updateStoredProductQuantity,
 } from "../helpers/cart-lines";
 
@@ -24,13 +25,14 @@ function readLines(): StoredCartLine[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
+    const lines = parsed.filter(
       (entry): entry is StoredCartLine =>
         Boolean(entry) &&
         typeof entry === "object" &&
         "cartLineId" in entry &&
         "line" in entry,
     );
+    return sanitizeStoredCartLines(lines);
   } catch {
     return [];
   }

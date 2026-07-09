@@ -1,12 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createProductAction } from "@/modules/catalog/actions/create-product";
 import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
 import { updateProductAction } from "@/modules/catalog/actions/update-product";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import type { ProductFormDTO } from "@/modules/catalog/types/product.dto";
 import { ProductForm } from "./product-form";
 import type {
@@ -56,6 +58,7 @@ export function ProductFormContainer({
   const t = useTranslations("productForm");
   const tErrors = useTranslations("productForm.errors");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,7 +123,7 @@ export function ProductFormContainer({
   );
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: queryKeys.catalog.categories(),
     queryFn: async () => {
       const result = await listCategoriesAction();
       if (!result.ok) {
@@ -153,6 +156,8 @@ export function ProductFormContainer({
       setError(productErrorMessage(result, tErrors));
       return;
     }
+
+    await invalidateAdminCatalogLists(queryClient, "products");
 
     router.push("/products");
     router.refresh();

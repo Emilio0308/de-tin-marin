@@ -130,7 +130,11 @@ export function CheckoutPage({
   onSubmit,
 }: CheckoutPageProps) {
   const canSubmit =
-    covered && !isSubmitting && !stockBlocked && !isDeliveryPending;
+    covered &&
+    !isSubmitting &&
+    !stockBlocked &&
+    !isDeliveryPending &&
+    !isStockPending;
 
   return (
     <StorefrontLayout>

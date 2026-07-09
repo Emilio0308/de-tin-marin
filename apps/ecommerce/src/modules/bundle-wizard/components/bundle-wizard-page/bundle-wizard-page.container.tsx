@@ -31,6 +31,7 @@ import { clearPendingCartLines } from "@/modules/bundle-wizard/helpers/pending-c
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { useCart } from "@/modules/cart/hooks/use-cart";
 import { queryKeys } from "@/shared/query/query-keys";
+import { freshQueryOptions } from "@/shared/query/query-cache";
 import { WIZARD_PRODUCT_PICKER_PAGE_SIZE } from "../wizard-product-picker/wizard-product-picker.constants";
 import {
   flattenProductPickerPages,
@@ -126,6 +127,7 @@ export function BundleWizardPageContainer({
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const previewQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.wizard.preview(template.bundleId, debouncedComponents),
     queryFn: async () => {
       const result = await previewBundleLineAction({

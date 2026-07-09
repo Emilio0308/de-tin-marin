@@ -17,6 +17,14 @@ export function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/** Convierte valores corruptos o ausentes en un monto finito redondeado. */
+export function coerceMoney(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return roundMoney(value);
+  }
+  return 0;
+}
+
 function buildPriceBlock(netPrice: number): PriceNormal {
   const roundedNet = roundMoney(netPrice);
   const subtotal = roundMoney(roundedNet / (1 + IGV_RATE));

@@ -3,6 +3,7 @@ import type { OrderShoppingCart } from "./order-cart";
 import {
   aggregateStockDemands,
   checkOrderStock,
+  resolveProductBaseUnitsNeed,
   type StockInventoryContainer,
   type StockInventoryProduct,
 } from "./check-order-stock";
@@ -25,6 +26,17 @@ function productCart(quantity: number): OrderShoppingCart {
     ],
   };
 }
+
+describe("resolveProductBaseUnitsNeed", () => {
+  it("convierte presentaciones a unidades base", () => {
+    expect(
+      resolveProductBaseUnitsNeed(
+        { presentationQuantity: 10, baseUnits: 0, sku: "X" },
+        10,
+      ),
+    ).toBe(100);
+  });
+});
 
 describe("aggregateStockDemands", () => {
   it("sums bundle components and container needs", () => {
@@ -58,7 +70,8 @@ describe("aggregateStockDemands", () => {
 
     const { products, containers } = aggregateStockDemands(cart);
     expect(products.get(productId)).toEqual({
-      need: 2,
+      presentationQuantity: 0,
+      baseUnits: 2,
       sku: "LAYS-10",
       name: "Lay's",
     });
@@ -66,6 +79,16 @@ describe("aggregateStockDemands", () => {
       need: 2,
       sku: "CAJA-M",
       name: "Caja mediana",
+    });
+  });
+
+  it("acumula presentaciones en líneas producto", () => {
+    const { products } = aggregateStockDemands(productCart(10));
+    expect(products.get(productId)).toEqual({
+      presentationQuantity: 10,
+      baseUnits: 0,
+      sku: "LAYS-10",
+      name: "Lay's",
     });
   });
 
@@ -108,7 +131,7 @@ describe("checkOrderStock", () => {
     itemsPerPackage: 10,
   };
 
-  it("passes when loose stock covers product line", () => {
+  it("passes when loose stock covers product line in presentations", () => {
     const products = new Map<string, StockInventoryProduct>([
       [
         productId,
@@ -120,20 +143,20 @@ describe("checkOrderStock", () => {
       ],
     ]);
 
-    const result = checkOrderStock(productCart(25), products, new Map());
+    const result = checkOrderStock(productCart(3), products, new Map());
     expect(result).toEqual({ ok: true });
   });
 
-  it("passes for Lay's 25 of 50 sealed packages", () => {
+  it("passes for 2 presentations with 5 sealed packages of 10", () => {
     const products = new Map<string, StockInventoryProduct>([
       [productId, laysProduct],
     ]);
 
-    const result = checkOrderStock(productCart(25), products, new Map());
+    const result = checkOrderStock(productCart(2), products, new Map());
     expect(result).toEqual({ ok: true });
   });
 
-  it("reports product shortage", () => {
+  it("reports product shortage when presentations exceed stock", () => {
     const products = new Map<string, StockInventoryProduct>([
       [
         productId,
@@ -141,13 +164,30 @@ describe("checkOrderStock", () => {
       ],
     ]);
 
-    const result = checkOrderStock(productCart(15), products, new Map());
+    const result = checkOrderStock(productCart(10), products, new Map());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.shortages[0]).toMatchObject({
       kind: "product",
       sku: "LAYS-10",
-      required: 15,
+      required: 100,
+      available: 10,
+    });
+  });
+
+  it("reports shortage for more presentations than sealed packages allow", () => {
+    const products = new Map<string, StockInventoryProduct>([
+      [
+        productId,
+        { ...laysProduct, stockSealedPackages: 1, stockLooseBaseUnits: 0 },
+      ],
+    ]);
+
+    const result = checkOrderStock(productCart(2), products, new Map());
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.shortages[0]).toMatchObject({
+      required: 20,
       available: 10,
     });
   });

@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { PublicProductListItem } from "@de-tin-marin/validations/public-catalog";
 import {
+  applyServerCartPricing,
   createProductCartLine,
   mergeProductCartLine,
+  sanitizeStoredCartLine,
+  shouldSyncCartPricing,
   updateStoredProductQuantity,
 } from "./cart-lines";
 import type { StoredCartLine } from "../repositories/cart.repository";
@@ -99,6 +102,102 @@ describe("cart-lines purchase limits", () => {
     const decreased = updateStoredProductQuantity(lines, "line-1", 5, bounds);
     if (decreased[0]?.line.type === "product") {
       expect(decreased[0].line.quantity).toBe(10);
+    }
+  });
+});
+
+describe("applyServerCartPricing", () => {
+  it("actualiza unitPrice y lineTotal desde el servidor", () => {
+    const stored: StoredCartLine[] = [
+      {
+        cartLineId: "line-1",
+        line: {
+          type: "product",
+          productId: "p1",
+          sku: "SKU-1",
+          name: "Producto 1",
+          quantity: 10,
+          unitPrice: 5,
+          lineTotal: 50,
+        },
+      },
+    ];
+
+    const server = [
+      {
+        type: "product" as const,
+        productId: "p1",
+        sku: "SKU-1",
+        name: "Producto 1",
+        quantity: 10,
+        unitPrice: 6,
+        lineTotal: 60,
+      },
+    ];
+
+    expect(shouldSyncCartPricing(stored, server)).toBe(true);
+
+    const synced = applyServerCartPricing(stored, server);
+    expect(synced[0]?.line.type).toBe("product");
+    if (synced[0]?.line.type === "product") {
+      expect(synced[0].line.unitPrice).toBe(6);
+      expect(synced[0].line.lineTotal).toBe(60);
+    }
+  });
+
+  it("coerce precios nulos del servidor", () => {
+    const stored: StoredCartLine[] = [
+      {
+        cartLineId: "line-1",
+        line: {
+          type: "product",
+          productId: "p1",
+          sku: "SKU-1",
+          name: "Producto 1",
+          quantity: 2,
+          unitPrice: 5,
+          lineTotal: 10,
+        },
+      },
+    ];
+
+    const synced = applyServerCartPricing(stored, [
+      {
+        type: "product",
+        productId: "p1",
+        sku: "SKU-1",
+        name: "Producto 1",
+        quantity: 2,
+        unitPrice: null as unknown as number,
+        lineTotal: null as unknown as number,
+      },
+    ]);
+
+    if (synced[0]?.line.type === "product") {
+      expect(synced[0].line.unitPrice).toBe(0);
+      expect(synced[0].line.lineTotal).toBe(0);
+    }
+  });
+});
+
+describe("sanitizeStoredCartLine", () => {
+  it("normaliza unitPrice y lineTotal nulos en producto", () => {
+    const sanitized = sanitizeStoredCartLine({
+      cartLineId: "line-1",
+      line: {
+        type: "product",
+        productId: "p1",
+        sku: "SKU-1",
+        name: "Producto 1",
+        quantity: 3,
+        unitPrice: null as unknown as number,
+        lineTotal: null as unknown as number,
+      },
+    });
+
+    if (sanitized.line.type === "product") {
+      expect(sanitized.line.unitPrice).toBe(0);
+      expect(sanitized.line.lineTotal).toBe(0);
     }
   });
 });

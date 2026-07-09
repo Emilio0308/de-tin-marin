@@ -6,9 +6,10 @@ import {
 import type { PublicProductListItem } from "@de-tin-marin/validations/public-catalog";
 import type {
   OrderShoppingCartBundleLine,
+  OrderShoppingCartLine,
   OrderShoppingCartProductLine,
 } from "@de-tin-marin/shared/order-cart";
-import { roundMoney } from "@de-tin-marin/shared/prices";
+import { coerceMoney, roundMoney } from "@de-tin-marin/shared/prices";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolveProductPurchaseLimits } from "@/modules/catalog/helpers/product-purchase-limits";
 import type { StoredCartLine } from "../repositories/cart.repository";
@@ -149,4 +150,135 @@ export function removeStoredCartLine(
 
 export function toShoppingCartLines(lines: StoredCartLine[]) {
   return lines.map((entry) => entry.line);
+}
+
+export function sanitizeStoredCartLine(entry: StoredCartLine): StoredCartLine {
+  const { line } = entry;
+
+  if (line.type === "product") {
+    const unitPrice = coerceMoney(line.unitPrice);
+    const quantity =
+      typeof line.quantity === "number" && line.quantity > 0
+        ? line.quantity
+        : 1;
+
+    return {
+      ...entry,
+      line: {
+        ...line,
+        quantity,
+        unitPrice,
+        lineTotal: roundMoney(unitPrice * quantity),
+      },
+    };
+  }
+
+  return {
+    ...entry,
+    line: {
+      ...line,
+      lineTotal: coerceMoney(line.lineTotal),
+      container: line.container
+        ? {
+            ...line.container,
+            unitPrice: coerceMoney(line.container.unitPrice),
+          }
+        : line.container,
+      components: line.components.map((component) => ({
+        ...component,
+        unitPrice: coerceMoney(component.unitPrice),
+      })),
+    },
+  };
+}
+
+export function sanitizeStoredCartLines(
+  lines: StoredCartLine[],
+): StoredCartLine[] {
+  return lines.map(sanitizeStoredCartLine);
+}
+
+export function applyServerCartPricing(
+  stored: StoredCartLine[],
+  serverLines: OrderShoppingCartLine[],
+): StoredCartLine[] {
+  if (stored.length !== serverLines.length) return stored;
+
+  return stored.map((entry, index) => {
+    const server = serverLines[index];
+    if (!server || entry.line.type !== server.type) return entry;
+
+    if (entry.line.type === "product" && server.type === "product") {
+      if (
+        entry.line.unitPrice === server.unitPrice &&
+        entry.line.lineTotal === server.lineTotal
+      ) {
+        return entry;
+      }
+
+      return {
+        ...entry,
+        line: {
+          ...entry.line,
+          unitPrice: coerceMoney(server.unitPrice),
+          lineTotal: coerceMoney(server.lineTotal),
+        },
+      };
+    }
+
+    if (entry.line.type === "bundle" && server.type === "bundle") {
+      const bundleLine = entry.line;
+      if (bundleLine.lineTotal === server.lineTotal) return entry;
+
+      return {
+        ...entry,
+        line: {
+          ...bundleLine,
+          lineTotal: coerceMoney(server.lineTotal),
+          components: server.components.map((component, componentIndex) => {
+            const existing = bundleLine.components[componentIndex];
+            return existing
+              ? {
+                  ...existing,
+                  unitPrice: coerceMoney(component.unitPrice),
+                  totalQuantity: component.totalQuantity,
+                }
+              : {
+                  ...component,
+                  unitPrice: coerceMoney(component.unitPrice),
+                };
+          }),
+          container: server.container
+            ? {
+                ...server.container,
+                unitPrice: coerceMoney(server.container.unitPrice),
+              }
+            : bundleLine.container,
+        },
+      };
+    }
+
+    return entry;
+  });
+}
+
+function cartPricingChanged(
+  stored: StoredCartLine[],
+  serverLines: OrderShoppingCartLine[],
+): boolean {
+  const next = applyServerCartPricing(stored, serverLines);
+  return next.some(
+    (entry, index) =>
+      entry.line.lineTotal !== stored[index]?.line.lineTotal ||
+      (entry.line.type === "product" &&
+        stored[index]?.line.type === "product" &&
+        entry.line.unitPrice !== stored[index].line.unitPrice),
+  );
+}
+
+export function shouldSyncCartPricing(
+  stored: StoredCartLine[],
+  serverLines: OrderShoppingCartLine[],
+): boolean {
+  return cartPricingChanged(stored, serverLines);
 }

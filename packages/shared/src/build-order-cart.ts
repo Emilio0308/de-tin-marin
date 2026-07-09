@@ -92,14 +92,17 @@ export function resolveProductsForOrder(
         ? (campaignsById.get(product.campaign_id) ?? null)
         : null;
       const itemsPerPackage = product.items_per_package ?? 1;
-      const unitPrice = campaignRow
-        ? roundMoney(
-            computeFinalPrice(
+      const presentationPrice = roundMoney(
+        campaignRow
+          ? computeFinalPrice(
               packageNetPrice,
               toCampaignForPricing(campaignRow),
-            ) / itemsPerPackage,
-          )
-        : unitNetPrice;
+            )
+          : packageNetPrice,
+      );
+      const unitPrice = roundMoney(
+        campaignRow ? presentationPrice / itemsPerPackage : unitNetPrice,
+      );
 
       return [
         product.id,
@@ -108,6 +111,7 @@ export function resolveProductsForOrder(
           sku: product.sku,
           name: product.name,
           unitPrice,
+          presentationPrice,
         },
       ] as const;
     }),

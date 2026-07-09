@@ -8,6 +8,8 @@ import { Plus, Search } from "lucide-react";
 import { Button } from "@de-tin-marin/ui/button";
 import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
 import { softDeleteCategoryAction } from "@/modules/catalog/actions/soft-delete-category";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import { CategoryList } from "./category-list";
 import type { CategoryListLabels } from "./category-list.types";
 
@@ -51,7 +53,7 @@ export function CategoryListContainer() {
   const [status, setStatus] = useState<StatusFilter>("all");
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: queryKeys.catalog.categories(),
     queryFn: async () => {
       const result = await listCategoriesAction();
       if (!result.ok) {
@@ -69,7 +71,7 @@ export function CategoryListContainer() {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await invalidateAdminCatalogLists(queryClient, "categories", "products");
     },
   });
 

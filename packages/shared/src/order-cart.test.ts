@@ -8,8 +8,26 @@ import {
 } from "./order-cart";
 
 const productsById = new Map([
-  ["p1", { id: "p1", sku: "SKU-1", name: "Gomitas", unitPrice: 8 }],
-  ["p2", { id: "p2", sku: "SKU-2", name: "Chocolates", unitPrice: 2 }],
+  [
+    "p1",
+    {
+      id: "p1",
+      sku: "SKU-1",
+      name: "Gomitas",
+      unitPrice: 8,
+      presentationPrice: 8,
+    },
+  ],
+  [
+    "p2",
+    {
+      id: "p2",
+      sku: "SKU-2",
+      name: "Chocolates",
+      unitPrice: 2,
+      presentationPrice: 2,
+    },
+  ],
 ]);
 
 describe("buildShoppingCart", () => {
