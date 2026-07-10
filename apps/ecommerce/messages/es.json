@@ -172,7 +172,11 @@
       "outOfCoverage": "No entregamos en esa ubicación.",
       "insufficientStock": "No hay stock suficiente para completar el pedido.",
       "invalidPurchaseQuantity": "Una o más cantidades no cumplen el mínimo o máximo de compra del producto.",
-      "validation": "Revisa los datos del formulario."
+      "validation": "Revisa los datos del formulario.",
+      "productNotFound": "Uno o más productos del carrito ya no están disponibles.",
+      "bundleNotFound": "Una o más sorpresas del carrito ya no están disponibles.",
+      "duplicateProductInBundle": "Hay productos duplicados en una sorpresa. Vuelve a personalizarla.",
+      "unexpected": "No pudimos crear el pedido. Intenta de nuevo en unos minutos."
     }
   },
   "orderConfirmation": {

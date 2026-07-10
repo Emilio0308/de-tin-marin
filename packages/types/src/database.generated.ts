@@ -477,6 +477,20 @@ export type Database = {
         Args: { p_email: string; p_order_number: string }
         Returns: Json
       }
+      insert_guest_order: {
+        Args: {
+          p_contact: Json
+          p_fulfillment: Json
+          p_shopping_cart: Json
+          p_subtotal: number
+          p_discount_total: number
+          p_shipping_total: number
+          p_total: number
+          p_pricing_snapshot: Json
+          p_metadata?: Json
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

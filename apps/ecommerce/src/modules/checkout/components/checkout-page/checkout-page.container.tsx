@@ -38,7 +38,8 @@ type GuestOrderErrorCode =
   | "VALIDATION"
   | "PRODUCT_NOT_FOUND"
   | "BUNDLE_NOT_FOUND"
-  | "DUPLICATE_PRODUCT_IN_BUNDLE";
+  | "DUPLICATE_PRODUCT_IN_BUNDLE"
+  | "UNEXPECTED";
 
 const initialForm: CheckoutFormValues = {
   name: "",
@@ -243,12 +244,13 @@ export function CheckoutPageContainer() {
         INSUFFICIENT_STOCK: t("errors.insufficientStock"),
         INVALID_PURCHASE_QUANTITY: t("errors.invalidPurchaseQuantity"),
         VALIDATION: t("errors.validation"),
-        PRODUCT_NOT_FOUND: t("errors.validation"),
-        BUNDLE_NOT_FOUND: t("errors.validation"),
-        DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.validation"),
+        PRODUCT_NOT_FOUND: t("errors.productNotFound"),
+        BUNDLE_NOT_FOUND: t("errors.bundleNotFound"),
+        DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.duplicateProductInBundle"),
+        UNEXPECTED: t("errors.unexpected"),
       };
-      const errorCode = result.error as GuestOrderErrorCode;
-      setErrorMessage(messageMap[errorCode] ?? t("errors.validation"));
+      const errorCode = result.error;
+      setErrorMessage(messageMap[errorCode] ?? t("errors.unexpected"));
       return;
     }
 

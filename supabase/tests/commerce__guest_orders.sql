@@ -1,5 +1,5 @@
 begin;
-select plan(8);
+select plan(11);
 
 select ok(
   (
@@ -108,6 +108,45 @@ select is(
 select ok(
   commerce.get_guest_order('TM-GUEST-RPC-0001', 'LOOKUP@EXAMPLE.COM') is not null,
   'get_guest_order matches email case-insensitively'
+);
+
+select ok(
+  (
+    select proname
+    from pg_proc
+    where proname = 'insert_guest_order'
+      and pronamespace = 'commerce'::regnamespace
+  ) is not null,
+  'commerce.insert_guest_order exists'
+);
+
+select lives_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"insert@example.com"}'::jsonb,
+       '{"method":"delivery","deliveryAddress":{"recipientName":"Ana Garcia","line1":"Av 1","district":"Piura","city":"Piura","province":"Piura","reference":null,"phone":"999"}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1,
+       0,
+       8,
+       9,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":8,"total":9}'::jsonb,
+       '{"mapPin":{"lat":-5.1,"lng":-80.6}}'::jsonb
+     ) $$,
+  'anon can create guest order via insert_guest_order RPC'
+);
+
+select ok(
+  (
+    select (commerce.insert_guest_order(
+      '{"name":"Ana","lastName":"Garcia","phone":"999","email":"insert2@example.com"}'::jsonb,
+      '{"method":"delivery","deliveryAddress":{"recipientName":"Ana Garcia","line1":"Av 1","district":"Piura","city":"Piura","province":"Piura","reference":null,"phone":"999"}}'::jsonb,
+      '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+      1, 0, 8, 9,
+      '{"subtotal":1,"discountTotal":0,"shippingTotal":8,"total":9}'::jsonb,
+      '{}'::jsonb
+    ) ->> 'orderNumber') is not null
+  ),
+  'insert_guest_order returns orderNumber'
 );
 
 select * from finish();
