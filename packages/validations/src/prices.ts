@@ -24,9 +24,16 @@ export const pricesSchema = z.object({
 export function pricesSchemaWithCoherence(itemsPerPackage: number) {
   const safeItems = Math.max(1, Math.floor(itemsPerPackage));
   return pricesSchema.refine(
-    (data) =>
-      Math.abs(data.unit.netPrice * safeItems - data.normal.netPrice) <=
-      MONEY_TOLERANCE,
+    (data) => {
+      const unitNetPrice = data.unit.netPrice * safeItems;
+      const normalNetPrice = data.normal.netPrice;
+      const diff = unitNetPrice - normalNetPrice;
+      const isUnitNetPriceGreaterThanNormalNetPrice = diff > 0;
+      return (
+        Math.abs(diff) <= MONEY_TOLERANCE ||
+        isUnitNetPriceGreaterThanNormalNetPrice
+      );
+    },
     { message: "unit.netPrice × items_per_package must equal normal.netPrice" },
   );
 }
