@@ -92,7 +92,7 @@ function CheckoutSummaryPanel({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container flex min-h-12 w-full items-center justify-center rounded-full px-6 py-3 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+          className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container hidden min-h-12 w-full items-center justify-center rounded-full px-6 py-3 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 lg:flex"
         >
           {isSubmitting ? labels.submitting : labels.submit}
         </button>
@@ -343,7 +343,7 @@ export function CheckoutPage({
         </div>
       </section>
 
-      <footer className="border-outline-variant/20 bg-surface/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md lg:hidden">
+      <footer className="border-outline-variant/20 bg-surface/95 z-9999 fixed inset-x-0 bottom-0 border-t backdrop-blur-md lg:hidden">
         <div className="container-max px-gutter mx-auto py-3">
           <CheckoutSummaryPanel
             subtotal={subtotal}
