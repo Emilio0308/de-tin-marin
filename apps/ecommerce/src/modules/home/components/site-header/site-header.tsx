@@ -25,7 +25,7 @@ export function SiteHeader({
         scrolled ? "py-1" : "py-base",
       )}
     >
-      <div className="container-max px-gutter flex h-20 items-center justify-around">
+      <div className="container-max md:px-gutter flex h-20 items-center justify-around px-1">
         <Link
           href="/"
           className="relative mr-2.5 flex h-14 w-auto shrink-0 items-center"
