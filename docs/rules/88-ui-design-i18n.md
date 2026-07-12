@@ -13,17 +13,20 @@
 ## Textos en i18n
 
 - **Prohibido** hardcodear copy de UI en español/inglés en JSX (títulos, labels, botones, empty states, errores visibles).
-- Admin: `apps/admin/messages/es.json` + `useTranslations` en containers/layout; presentacionales reciben strings por props.
-- Ecommerce: `apps/ecommerce/messages/es.json` — mismo patrón.
+- **Nunca pasar labels como props** — cada componente gestiona sus textos con `useTranslations` y su namespace (`catalog.wizard.componentList`, etc.).
+- Admin: `apps/admin/messages/es.json`. Ecommerce: `apps/ecommerce/messages/es.json`.
 - Config compartida: `@de-tin-marin/config/i18n` (DECISIONS #23).
 
 ```tsx
-// ❌
+// ❌ hardcode + inyección de labels
 <h1>Productos</h1>
+<ProductList labels={{ title: t("title") }} />
 
-// ✅ container
-const t = useTranslations("products");
-<ProductList title={t("title")} ... />
+// ✅ el componente que renderiza el copy llama useTranslations
+function ProductList() {
+  const t = useTranslations("products");
+  return <h1>{t("title")}</h1>;
+}
 ```
 
 ## Validar textos e iconos
@@ -65,6 +68,7 @@ const productsQuery = useQuery({
 | Regla            | Tipo                 |
 | ---------------- | -------------------- |
 | i18n en UI       | Review + lint futuro |
+| Sin labels props | Review               |
 | Paleta tokens    | Review + Prettier    |
 | Sin mock en prod | Review               |
 | Responsive       | Review + Playwright  |

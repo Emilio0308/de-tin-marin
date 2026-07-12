@@ -84,7 +84,7 @@
         "minReached": "Necesitas al menos {min} dulces en tu sorpresa.",
         "count": "{current} de {max} dulces",
         "progressLabel": "{current} de {max} dulces seleccionados",
-        "quantityBreakdown": "{perPerson} × {surprises} = {total} unidades"
+        "quantityBreakdown": "{perPerson} × {surprises} = {total} unidades - S/ {price}"
       },
       "picker": {
         "title": "Agregar dulce",
@@ -244,5 +244,19 @@
     "help": {
       "label": "¿Necesitas ayuda?"
     }
+  },
+  "about": {
+    "storyTitle": "Nuestra Historia",
+    "storyImageAlt": "Selección de dulces artesanales de colores",
+    "missionTitle": "Nuestra Misión",
+    "visionTitle": "Nuestra Visión",
+    "valuesTitle": "Lo que nos mueve",
+    "contactTitle": "¿Quieres conocernos más?",
+    "contactSubtitle": "Estamos listos para escucharte y ayudarte a crear el detalle perfecto. ¡Hablemos de dulzura!",
+    "whatsappCta": "Escríbenos por WhatsApp",
+    "socialInstagram": "Instagram",
+    "socialTiktok": "TikTok",
+    "socialFacebook": "Facebook",
+    "socialEmail": "Gmail"
   }
 }

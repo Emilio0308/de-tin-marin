@@ -27,6 +27,9 @@ components/
 - El **presentational** no importa repositories, actions ni clientes Supabase.
 - El **container** no contiene markup complejo — delega al presentational.
 - Si el componente es trivial (solo UI estática), puede ser un solo archivo sin container.
+- **Props mínimas:** solo datos de dominio + handlers de interacción. No saturar con bags de labels, formatters ni callbacks “por si acaso”.
+- **Evitar inyección de dependencias en UI:** no pasar funciones de formateo/i18n como props; el componente que renderiza el copy usa `useTranslations` (ver [`88-ui-design-i18n.md`](88-ui-design-i18n.md)).
+- **Tipos compartidos:** un solo `type`/`interface` exportado y reutilizado entre archivos; no redeclarar la misma firma en varios `*.types.ts`.
 
 ## Archivos colaterales (obligatorios cuando aplique)
 
@@ -215,6 +218,7 @@ Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-ca
 | --------------------------------- | ------------------------ |
 | No barrels                        | Mecánico — ESLint (S0)   |
 | `*.types.ts` / `*.helpers.ts`     | Convención + review      |
+| Props mínimas / sin labels bag    | Convención + review      |
 | Test de render por presentational | Convención + review + CI |
 | Orden interno del archivo         | Convención + review      |
 

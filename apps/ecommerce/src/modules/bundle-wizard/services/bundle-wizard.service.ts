@@ -97,6 +97,7 @@ export async function getBundleForWizardService(
         productName: item.products?.name ?? "—",
         imageUrl: normalizeImageUrl(item.products?.image_url),
         unitsPerPerson: item.units_per_person,
+        prices: item.products?.prices,
       })),
       initialComponents: toInitialComponents(items),
     },

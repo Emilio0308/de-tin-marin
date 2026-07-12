@@ -20,3 +20,11 @@ export function getNextProductPickerPage(
   if (loadedCount >= lastPage.total) return undefined;
   return lastPage.page + 1;
 }
+
+/**
+ * Whether to show the prices in the product picker.
+ *
+ * This is a temporary flag to hide the prices in the product picker.
+ * It will be removed once we have a proper pricing system.
+ */
+export const SHOWN_PRICES = false;

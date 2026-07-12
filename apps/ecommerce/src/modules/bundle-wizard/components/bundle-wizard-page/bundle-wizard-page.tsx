@@ -45,6 +45,7 @@ export function BundleWizardPage({
   selectedProductIds,
   labelsByProductId,
   imagesByProductId,
+  unitPricesByProductId,
   lineTotal,
   stockCheck,
   isValid,
@@ -131,7 +132,7 @@ export function BundleWizardPage({
                 personCount={template.personCount}
                 labelsByProductId={labelsByProductId}
                 imagesByProductId={imagesByProductId}
-                labels={labels.componentList}
+                unitPricesByProductId={unitPricesByProductId}
                 canRemove={canRemove}
                 onRemove={onRemove}
               />
