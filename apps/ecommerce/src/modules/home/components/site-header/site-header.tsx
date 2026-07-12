@@ -28,7 +28,7 @@ export function SiteHeader({
       <div className="container-max px-gutter flex h-20 items-center justify-around">
         <Link
           href="/"
-          className="relative flex h-14 w-auto shrink-0 items-center"
+          className="relative mr-2.5 flex h-14 w-auto shrink-0 items-center"
         >
           <Image
             src="/brand/detinmarin-logo.png"
@@ -40,7 +40,7 @@ export function SiteHeader({
           />
         </Link>
 
-        <nav className="gap-stack-md hidden items-center md:flex">
+        <nav className="gap-stack-sm text-body-xs md:text-body-md md:gap-stack-md flex flex-wrap items-center justify-around">
           {navLinks.map((link, index) => {
             const className = cn(
               "font-label text-label-bold hover:text-secondary transition-all duration-300 hover:scale-105",
