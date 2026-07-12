@@ -35,6 +35,11 @@ const labels: OrderDetailLabels = {
   summaryTitle: "Resumen",
   surpriseLine: "Sorpresa",
   formatQuantityLabel: (quantity) => `Cantidad: ${quantity}`,
+  formatComponentsLabel: (count) => `Ver componentes (${count})`,
+  componentSku: "SKU",
+  componentName: "Nombre",
+  componentPrice: "Precio",
+  componentQuantity: "Cantidad",
   taxesIncluded: "Impuestos incluidos",
   stockWarningBanner: "Stock limitado",
   cart: "Carrito",
@@ -206,5 +211,40 @@ describe("OrderDetailView", () => {
     expect(
       screen.getByRole("button", { name: "Preparando" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows surprise components in a collapsible list", () => {
+    renderDetail({
+      ...baseOrder,
+      shoppingCart: {
+        lines: [
+          {
+            type: "bundle",
+            bundleId: "00000000-0000-0000-0000-000000000010",
+            name: "Sorpresa mediana",
+            quantity: 1,
+            lineTotal: 25,
+            components: [
+              {
+                productId: "00000000-0000-0000-0000-000000000011",
+                productName: "Gomitas",
+                sku: "GOM-01",
+                quantityPerUnit: 2,
+                totalQuantity: 2,
+                unitPrice: 3.5,
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Ver componentes (1)")).toBeInTheDocument();
+    expect(screen.getByText("GOM-01")).toBeInTheDocument();
+    expect(screen.getByText("Gomitas")).toBeInTheDocument();
+    expect(screen.getByText("S/ 3.50")).toBeInTheDocument();
+    expect(screen.getByText("GOM-01").closest("li")?.textContent).toContain(
+      "2",
+    );
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Search, ShoppingCart, User } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { SiteHeaderProps } from "./site-header.types";
+import Image from "next/image";
 
 function isInternalRoute(href: string): boolean {
   return href.startsWith("/");
@@ -24,12 +25,19 @@ export function SiteHeader({
         scrolled ? "py-1" : "py-base",
       )}
     >
-      <div className="container-max px-gutter flex h-20 items-center justify-between">
+      <div className="container-max px-gutter flex h-20 items-center justify-around">
         <Link
           href="/"
-          className="font-display text-primary md:text-display-lg text-[32px]"
+          className="relative flex h-14 w-auto shrink-0 items-center"
         >
-          De Tin Marín
+          <Image
+            src="/brand/detinmarin-logo.png"
+            alt="De Tin Marín"
+            width={160}
+            height={56}
+            className="h-12 w-auto object-contain md:h-14"
+            priority
+          />
         </Link>
 
         <nav className="gap-stack-md hidden items-center md:flex">
