@@ -32,12 +32,14 @@
 
 - **Trigger:** Consultar disponibilidad / confirmar orden / ajuste admin.
 - **Pasos:**
-  1. Fuente de verdad: `stock_sealed_packages` + `stock_loose_base_units` + `items_per_package`.
-  2. Total disponible: `totalBaseUnits = sealed × items_per_package + loose`.
-  3. Tras cada movimiento, normalizar: si `loose >= items_per_package`, convertir excedente a paquetes cerrados.
-  4. Display: `"X {package_label} + Y bolsas"` derivado de sealed/loose.
+  1. Fuente de verdad: `product_type` + `stock_sealed_packages` + `stock_loose_base_units` + `items_per_package`.
+  2. Disponibilidad vendible según tipo:
+     - `product_type = 'package'`: `totalBaseUnits = sealed × items_per_package + loose` (se pueden abrir paquetes).
+     - `product_type = 'unit'`: solo `stock_loose_base_units` (los `stock_sealed_packages` **no** se abren ni cuentan como vendibles hasta pasarlos a loose en admin).
+  3. Tras cada movimiento en `package`, normalizar: si `loose >= items_per_package`, convertir excedente a paquetes cerrados. En `unit` no se normaliza sealed↔loose automáticamente.
+  4. Display: `"X {package_label} + Y bolsas"` derivado de sealed/loose (o `"N u."` si `items_per_package = 1`).
 - **Fallo:** Si stock insuficiente al pagar → Regla 15 revierte.
-- **Nota:** Todas las cantidades en órdenes y bundles usan **unidad base** (bolsa).
+- **Nota:** Líneas `type: product` congelan `quantity` en **presentaciones** vendidas. Componentes de bundle usan **unidad base** (`totalQuantity`).
 
 ---
 
@@ -139,17 +141,19 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 ### Regla 15 — Descuento de stock al pagar (v1)
 
 - **Trigger:** Operador confirma pago → orden `paid` (Regla 17).
-- **Pasos (transacción atómica — implementación S2A):**
-  1. Por cada línea `type: product` en `shopping_cart.lines`: descontar `quantity` **unidades base** (algoritmo sealed/loose).
-  2. Por cada `component` en líneas `type: bundle`: descontar `totalQuantity` **unidades base** del producto.
-  3. Algoritmo deduct por producto (`need` = unidades base requeridas):
-     - Consumir `stock_loose_base_units` primero.
-     - Si falta, abrir paquetes cerrados (`stock_sealed_packages -= 1`) y volcar sobrante a loose.
-     - Normalizar loose/sealed tras cada producto.
+- **Pasos (transacción atómica — `commerce.deduct_stock_for_order`):**
+  1. Agregar demandas por `product_id`:
+     - Líneas `type: product`: `presentationQuantity += quantity` (presentaciones vendidas).
+     - Componentes de líneas `type: bundle`: `baseUnits += totalQuantity` (unidad base).
+  2. Por producto, `need` en unidades base:
+     - `need = presentationQuantity × items_per_package + baseUnits` (con `items_per_package >= 1`).
+  3. Deduct según `product_type` (helpers shared: `deductProductStock` / SQL alineado):
+     - **`package`:** consumir loose primero; si falta, abrir sealed y volcar sobrante a loose; normalizar (`deductBaseUnits`).
+     - **`unit`:** descontar **solo** `stock_loose_base_units`; **no** tocar `stock_sealed_packages` (`deductUnitProductLoose`). Si loose < need → insuficiente aunque haya sealed.
   4. Por cada línea bundle con `container` congelado: descontar `line.quantity` de `surprise_containers.stock_quantity` (Regla 20). Líneas legacy solo con `serviceFee` → omitir envase.
   5. Si cualquier producto **o envase** queda con stock insuficiente → **ROLLBACK** completo; orden no queda `paid`.
 - **Fallo:** Notificar operador; stock no mutado.
-- **Tests:** Integración obligatoria (ej. Lay’s: 50 bolsas, pedido 25 → sealed=2, loose=5; bundle 25 sorpresas → -25 envases).
+- **Tests:** Lay’s `package` 5 tiras × 10: pedido 3 presentaciones → sealed=2, loose=0; producto `unit` con sealed=50, loose=20, pedido 10 → loose=10, sealed intacto; bundle 25 sorpresas → -25 envases.
 
 ### Regla 16 — Orders no recalcula precios
 
@@ -204,7 +208,9 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Alcance:** Solo líneas `type: product`. **No** aplica a sorpresas/bundles ni wizard.
 - **Pasos:**
   1. Leer `purchase_min_quantity` y `purchase_max_quantity` del producto (cantidad en **presentación** vendida: unidad o paquete/tira).
-  2. `stock_presentaciones` = unidades base totales si `product_type = unit`; si `package` → `floor(totalBaseUnits / items_per_package)`.
+  2. `stock_presentaciones` alineado con disponibilidad vendible (Regla 4):
+     - `unit` → `stock_loose_base_units` (solo sueltas).
+     - `package` → `floor(totalBaseUnits / items_per_package)` con `totalBaseUnits = sealed × items_per_package + loose`.
   3. `max_efectivo = min(purchase_max_quantity, stock_presentaciones)`.
   4. Comprable solo si `stock_presentaciones >= purchase_min_quantity`.
   5. Cantidad de línea debe cumplir `purchase_min_quantity <= quantity <= max_efectivo`.
@@ -227,12 +233,12 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ## Índice rápido
 
-| ID    | Dominio            | Resumen                                                       |
-| ----- | ------------------ | ------------------------------------------------------------- |
-| 1–4   | Products           | SKU, prices JSONB (normal+unit), activo, stock sealed/loose   |
-| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio |
-| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único          |
-| 13–16 | Orders             | Snapshot, estados, stock al pagar, no recalcular              |
-| 17–18 | Payments           | Manual confirm / refund                                       |
-| 19–20 | Delivery / Envases | Tarifa por distrito; stock envase 1:1 sorpresa                |
-| 21    | Products           | Min/max compra por presentación (default 10/100)              |
+| ID    | Dominio            | Resumen                                                            |
+| ----- | ------------------ | ------------------------------------------------------------------ |
+| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package) |
+| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio      |
+| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
+| 13–16 | Orders             | Snapshot, estados, stock al pagar, no recalcular                   |
+| 17–18 | Payments           | Manual confirm / refund                                            |
+| 19–20 | Delivery / Envases | Tarifa por distrito; stock envase 1:1 sorpresa                     |
+| 21    | Products           | Min/max compra por presentación (default 10/100)                   |

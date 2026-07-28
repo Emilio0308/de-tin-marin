@@ -113,6 +113,7 @@ async function buildOrderStockCheck(
         id: row.id,
         sku: row.sku,
         name: row.name,
+        productType: row.product_type ?? "unit",
         stockSealedPackages: row.stock_sealed_packages,
         stockLooseBaseUnits: row.stock_loose_base_units,
         itemsPerPackage: row.items_per_package,

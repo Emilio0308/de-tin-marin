@@ -39,8 +39,10 @@ Container: `order-form.container.tsx`
 
 - `order.service.ts` — carrito congelado, transiciones
 - `order-preview.service.ts` — preview bundle/cart (`buildOrderCartWithTotals`)
-- `payment.service.ts` — confirmar / reembolsar pago
+- `payment.service.ts` — confirmar / reembolsar pago (deduct atómico S2A)
 - `shipment.service.ts` — upsert envío
+
+Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29).
 
 ## Repositories
 

@@ -33,9 +33,9 @@
 | 25  | Stock deduct — timing     | ✅     | **Regla de negocio:** descontar stock al pasar orden a `paid` (operador confirma pago manual). **Implementación:** S2A, después de S2C y **S1D**. S2B y S2C no incluyen deduct; algoritmo sealed/loose en unidades base                                                                                                                                                                                                       |
 
 | 26 | Order shopping cart | ✅ | Detalle del pedido en **`commerce.orders.shopping_cart`** (JSONB). Sin tablas `order_items` / `order_bundle_items` en v1. Productos y sorpresas (bundles) congelados al pasar a `pending_payment` |
-| 27 | Presentaciones de producto | ✅ | **`product_type`** (`package` \| `unit`), **`items_per_package`** (>= 1), **`package_label`** (UX). v1 productos existentes = `unit` + `items_per_package=1`. Proveedor entrega presentaciones; consumo en unidad base (bolsa) |
+| 27 | Presentaciones de producto | ✅ | **`product_type`** (`package` \| `unit`), **`items_per_package`** (>= 1), **`package_label`** (UX). Default histórico = `unit` + `items_per_package=1`. Líneas producto venden **presentaciones**; bundles consumen **unidad base**. `unit` y `package` tienen semántica de stock distinta (#29) |
 | 28 | Precios dual en JSONB | ✅ | **`prices.normal`** = precio presentación; **`prices.unit`** = precio unidad base. Ambos persistidos; **`unit` calculado al guardar** desde `normal` + `items_per_package`. Coherencia validada (Regla 2). Campaña aplica sobre `normal`; `finalUnitPrice` derivado |
-| 29 | Stock por paquetes | ✅ | Reemplaza **`stock_quantity`**: **`stock_sealed_packages`** + **`stock_loose_base_units`**. Total = `sealed × items_per_package + loose`. Normalización post-movimiento. Deduct (S2A): consumir loose primero, abrir paquetes, sobrante a loose |
+| 29 | Stock por paquetes + tipo | ✅ | **`stock_sealed_packages`** + **`stock_loose_base_units`**. **`package`:** vendible = sealed×ipp+loose; deduct abre paquetes (`deductBaseUnits`). **`unit`:** vendible/deduct = **solo loose** (`deductUnitProductLoose`); sealed no se abre. Líneas product: `need = presentationQty × ipp + baseUnits` bundle. Migración `00014` |
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
 | 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable (home listados, detalle producto/sorpresa, template wizard). **CSR + React Query fresco** (`staleTime: 0`) en carrito, checkout y preview de precio/stock para evitar discrepancias al pagar. **Caché cliente catálogo:** `staleTime` y `gcTime` = **15 min** en `QueryClient`. **Sin Next.js Data Cache** por defecto en catálogo. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
@@ -107,6 +107,15 @@
 - `apps/ecommerce/src/modules/cart/README.md` — patrón RQ fresco
 - `apps/admin/src/modules/orders/README.md` — preview y actions
 - `apps/ecommerce` y `apps/admin`: `query-cache.ts`, `QueryProvider` con defaults 15 min
+
+## Docs sincronizados (2026-07-28 — stock unit vs package + presentaciones)
+
+- DECISIONS #27, #29 — `unit` solo loose; líneas product en presentaciones
+- `business-rules.md` — Reglas 4, 15, 21
+- `inventory.md`, `database.md`, `orders.md`
+- `docs/stages/S2A/01-stock-deduct-on-payment.md` — algoritmo + helpers
+- `docs/stages/S1D/01-products-packages-stock.md` — nota supersede OUT `unit`
+- Código: `product-stock` (`deductProductStock`, …), `checkOrderStock`, migración `00014`
 
 ## Cómo añadir una decisión
 

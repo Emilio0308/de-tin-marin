@@ -218,6 +218,7 @@ export async function previewBundleLineService(
         id: product.id,
         sku: product.sku,
         name: product.name,
+        productType: product.product_type ?? "unit",
         stockSealedPackages: product.stock_sealed_packages,
         stockLooseBaseUnits: product.stock_loose_base_units,
         itemsPerPackage: product.items_per_package,

@@ -42,7 +42,7 @@ Los productos modelan presentación + unidad base: precios `normal` (paquete) y 
 - **NO `deduct_stock_for_order`** — S2A → _premature stock deduct_
 - **NO cambiar `shopping_cart` schema** — ya usa `unitPrice` por línea; S2A leerá `totalQuantity` en unidad base
 - **NO envases de sorpresa / quitar `service_fee`** — etapa futura → _scope creep_
-- **NO `product_type = 'unit'` operativo distinto de package** — reservado; v1 solo `package` con `items_per_package >= 1`
+- **NO `product_type = 'unit'` operativo distinto de package** — ~~reservado en S1D~~; **superseded** (2026-07-28): `unit` solo vende/descuenta loose; ver DECISIONS #29 y fix `00014`
 - **NO schema `inventory` ledger** — v2
 - **NO ecommerce** → S3A
 - **NO CRUD campañas** — S1C fundación sin cambio
@@ -95,10 +95,16 @@ Si `items_per_package = 1`, `normal` y `unit` deben ser idénticos.
 ### Stock — fuente de verdad
 
 ```text
+# package (vendible + deduct abre sealed)
 totalBaseUnits = stock_sealed_packages × items_per_package + stock_loose_base_units
+
+# unit (vendible / deduct = solo loose; sealed no se abre)
+available = stock_loose_base_units
 ```
 
-**Normalización** (después de cada movimiento):
+> **Post-S1D (2026-07-28):** `product_type = 'unit'` es operativo y distinto de `package` — ver Regla 4 / DECISIONS #29 / migración `00014`.
+
+**Normalización** (después de cada movimiento en **`package`**):
 
 ```text
 si stock_loose_base_units >= items_per_package:

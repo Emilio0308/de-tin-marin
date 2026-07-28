@@ -1,10 +1,14 @@
-import { computeTotalBaseUnits, deductBaseUnits } from "./product-stock";
+import {
+  deductProductStock,
+  resolveProductStockAvailability,
+} from "./product-stock";
 import type { OrderShoppingCart } from "./order-cart";
 
 export type StockInventoryProduct = {
   id: string;
   sku: string;
   name?: string;
+  productType: "unit" | "package";
   stockSealedPackages: number;
   stockLooseBaseUnits: number;
   itemsPerPackage: number;
@@ -118,19 +122,23 @@ export function checkOrderStock(
       continue;
     }
 
-    const available = computeTotalBaseUnits(
-      product.stockSealedPackages,
-      product.stockLooseBaseUnits,
-      product.itemsPerPackage,
-    );
+    const available = resolveProductStockAvailability({
+      productType: product.productType,
+      stockSealedPackages: product.stockSealedPackages,
+      stockLooseBaseUnits: product.stockLooseBaseUnits,
+      itemsPerPackage: product.itemsPerPackage,
+    });
     const baseUnitsNeed = resolveProductBaseUnitsNeed(
       demand,
       product.itemsPerPackage,
     );
-    const result = deductBaseUnits(
-      product.stockSealedPackages,
-      product.stockLooseBaseUnits,
-      product.itemsPerPackage,
+    const result = deductProductStock(
+      {
+        productType: product.productType,
+        stockSealedPackages: product.stockSealedPackages,
+        stockLooseBaseUnits: product.stockLooseBaseUnits,
+        itemsPerPackage: product.itemsPerPackage,
+      },
       baseUnitsNeed,
     );
 

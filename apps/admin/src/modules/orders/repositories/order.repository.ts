@@ -165,6 +165,7 @@ export type ProductStockRow = {
   stock_sealed_packages: number;
   stock_loose_base_units: number;
   items_per_package: number;
+  product_type: "unit" | "package";
 };
 
 export async function getProductStockByIdsRepo(
@@ -178,7 +179,7 @@ export async function getProductStockByIdsRepo(
     .schema("catalog")
     .from("products")
     .select(
-      "id, sku, name, stock_sealed_packages, stock_loose_base_units, items_per_package",
+      "id, sku, name, stock_sealed_packages, stock_loose_base_units, items_per_package, product_type",
     )
     .in("id", productIds);
 

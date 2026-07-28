@@ -126,6 +126,7 @@ describe("checkOrderStock", () => {
     id: productId,
     sku: "LAYS-10",
     name: "Lay's",
+    productType: "package",
     stockSealedPackages: 5,
     stockLooseBaseUnits: 0,
     itemsPerPackage: 10,
@@ -189,6 +190,46 @@ describe("checkOrderStock", () => {
     expect(result.shortages[0]).toMatchObject({
       required: 20,
       available: 10,
+    });
+  });
+
+  it("valida solo loose para productos unitarios", () => {
+    const unitProductId = "44444444-4444-4444-4444-444444444444";
+    const products = new Map<string, StockInventoryProduct>([
+      [
+        unitProductId,
+        {
+          id: unitProductId,
+          sku: "MINI-CAN",
+          name: "Mini cañonazo",
+          productType: "unit",
+          stockSealedPackages: 50,
+          stockLooseBaseUnits: 8,
+          itemsPerPackage: 1,
+        },
+      ],
+    ]);
+
+    const cart: OrderShoppingCart = {
+      lines: [
+        {
+          type: "product",
+          productId: unitProductId,
+          sku: "MINI-CAN",
+          name: "Mini cañonazo",
+          quantity: 10,
+          unitPrice: 1,
+          lineTotal: 10,
+        },
+      ],
+    };
+
+    const result = checkOrderStock(cart, products, new Map());
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.shortages[0]).toMatchObject({
+      required: 10,
+      available: 8,
     });
   });
 

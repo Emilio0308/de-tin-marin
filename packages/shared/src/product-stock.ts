@@ -27,6 +27,66 @@ export function normalizeProductStock(
 export type DeductBaseUnitsResult =
   { sealedPackages: number; looseBaseUnits: number } | "INSUFFICIENT_STOCK";
 
+export type ProductStockDeductInput = {
+  productType: "unit" | "package";
+  stockSealedPackages: number;
+  stockLooseBaseUnits: number;
+  itemsPerPackage: number;
+};
+
+export function deductUnitProductLoose(
+  looseBaseUnits: number,
+  need: number,
+): number | "INSUFFICIENT_STOCK" {
+  if (need <= 0) {
+    return Math.max(0, looseBaseUnits);
+  }
+
+  if (looseBaseUnits < need) {
+    return "INSUFFICIENT_STOCK";
+  }
+
+  return looseBaseUnits - need;
+}
+
+export function deductProductStock(
+  product: ProductStockDeductInput,
+  need: number,
+): DeductBaseUnitsResult {
+  if (product.productType === "unit") {
+    const nextLoose = deductUnitProductLoose(product.stockLooseBaseUnits, need);
+    if (nextLoose === "INSUFFICIENT_STOCK") {
+      return "INSUFFICIENT_STOCK";
+    }
+
+    return {
+      sealedPackages: 0,
+      looseBaseUnits: nextLoose,
+    };
+  }
+
+  return deductBaseUnits(
+    product.stockSealedPackages,
+    product.stockLooseBaseUnits,
+    product.itemsPerPackage,
+    need,
+  );
+}
+
+export function resolveProductStockAvailability(
+  product: ProductStockDeductInput,
+): number {
+  if (product.productType === "unit") {
+    return product.stockLooseBaseUnits;
+  }
+
+  return computeTotalBaseUnits(
+    product.stockSealedPackages,
+    product.stockLooseBaseUnits,
+    product.itemsPerPackage,
+  );
+}
+
 export function deductBaseUnits(
   sealedPackages: number,
   looseBaseUnits: number,
