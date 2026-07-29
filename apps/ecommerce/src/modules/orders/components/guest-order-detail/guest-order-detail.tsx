@@ -97,6 +97,7 @@ export function PaymentInstructions({ labels }: PaymentInstructionsProps) {
 export function GuestOrderDetailView({ order, labels }: GuestOrderDetailProps) {
   const lineSummaries = summarizeGuestOrderLines(order, {
     bundleComponents: labels.bundleComponents,
+    packComponents: labels.packComponents,
     formatBundlePersons: labels.formatBundlePersons,
   });
   const deliveryAddress = formatDeliveryAddress(order);
@@ -151,6 +152,11 @@ export function GuestOrderDetailView({ order, labels }: GuestOrderDetailProps) {
                 {line.kind === "bundle" ? (
                   <span className="bg-secondary-container text-on-secondary-container font-label text-label-bold inline-block rounded-full px-3 py-1 text-xs">
                     {labels.bundleBadge}
+                  </span>
+                ) : null}
+                {line.kind === "pack" ? (
+                  <span className="bg-tertiary-container text-on-tertiary-container font-label text-label-bold inline-block rounded-full px-3 py-1 text-xs">
+                    {labels.packBadge}
                   </span>
                 ) : null}
                 <p className="font-label text-label-bold text-on-surface">

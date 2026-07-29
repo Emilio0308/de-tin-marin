@@ -2,7 +2,7 @@
 
 Órdenes manuales con **Order shopping cart** congelado en JSONB.
 
-Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [orders.md](../../../docs/orders.md)
+Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [orders.md](../../../docs/orders.md)
 
 ## Capas
 
@@ -29,11 +29,11 @@ actions/ → services/ → repositories/ → Supabase schema commerce
 
 Container: `order-form.container.tsx`
 
-| Query                                         | Fresco                         | Motivo                                  |
-| --------------------------------------------- | ------------------------------ | --------------------------------------- |
-| `bundle-preview`                              | Sí (`freshQueryOptions`)       | Total alineado con `createOrderService` |
-| `cart-preview`                                | Sí (`freshQueryOptions`)       | Totales de líneas al crear orden        |
-| Catálogo auxiliar (productos, bundles, zonas) | 15 min (default `QueryClient`) | Listados estables en sesión admin       |
+| Query                                                | Fresco                         | Motivo                                  |
+| ---------------------------------------------------- | ------------------------------ | --------------------------------------- |
+| `bundle-preview`                                     | Sí (`freshQueryOptions`)       | Total alineado con `createOrderService` |
+| `cart-preview`                                       | Sí (`freshQueryOptions`)       | Totales de líneas al crear orden        |
+| Catálogo auxiliar (productos, bundles, packs, zonas) | 15 min (default `QueryClient`) | Listados estables en sesión admin       |
 
 ## Services
 
@@ -42,7 +42,7 @@ Container: `order-form.container.tsx`
 - `payment.service.ts` — confirmar / reembolsar pago (deduct atómico S2A)
 - `shipment.service.ts` — upsert envío
 
-Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29).
+Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29). Líneas `type: pack` aportan `totalPackages` a presentaciones (Regla 24 / DECISIONS #33).
 
 ## Repositories
 

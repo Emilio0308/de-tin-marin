@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { PublicProductListItem } from "@de-tin-marin/validations/public-catalog";
+import type {
+  PublicPackListItem,
+  PublicProductListItem,
+} from "@de-tin-marin/validations/public-catalog";
 import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import type { OrderShoppingCartBundleLine } from "@de-tin-marin/shared/order-cart";
 import { computeOrderTotals } from "@de-tin-marin/shared/order-cart";
@@ -9,10 +12,13 @@ import {
   clearPendingCartLines,
   getPendingCartLines,
 } from "@/modules/bundle-wizard/helpers/pending-cart";
+import { resolvePackPurchaseLimits } from "@/modules/catalog/components/pack-detail-page/pack-detail-page.helpers";
 import { resolveProductPurchaseLimits } from "@/modules/catalog/helpers/product-purchase-limits";
 import {
   addBundleCartLine,
+  createPackCartLine,
   createProductCartLine,
+  mergePackCartLine,
   mergeProductCartLine,
   toShoppingCartLines,
 } from "../helpers/cart-lines";
@@ -75,6 +81,19 @@ export function useCart() {
     [],
   );
 
+  const addPack = useCallback((pack: PublicPackListItem, quantity?: number) => {
+    const bounds = resolvePackPurchaseLimits(pack);
+    if (!bounds.purchasable) return;
+
+    const line = createPackCartLine(pack, quantity ?? pack.purchaseMinQuantity);
+    const next = mergePackCartLine(
+      localStorageCartRepository.getLines(),
+      line,
+      bounds,
+    );
+    localStorageCartRepository.replaceLines(next);
+  }, []);
+
   const addBundleLine = useCallback((line: OrderShoppingCartBundleLine) => {
     const next = addBundleCartLine(localStorageCartRepository.getLines(), line);
     localStorageCartRepository.replaceLines(next);
@@ -105,6 +124,7 @@ export function useCart() {
     totals,
     itemCount,
     addProduct,
+    addPack,
     addBundleLine,
     updateProductQuantity,
     removeLine,

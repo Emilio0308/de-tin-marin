@@ -172,6 +172,85 @@ function CartProductLine({
   );
 }
 
+function CartPackLine({
+  cartLineId,
+  name,
+  unitPrice,
+  quantity,
+  lineTotal,
+  componentCount,
+  imageUrl,
+  bounds,
+  labels,
+  onUpdateQuantity,
+  onRemove,
+}: {
+  cartLineId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+  componentCount: number;
+  imageUrl: string;
+  bounds: ProductPurchaseBounds;
+  labels: CartPageProps["labels"];
+  onUpdateQuantity: (
+    cartLineId: string,
+    quantity: number,
+    bounds: ProductPurchaseBounds,
+  ) => void;
+  onRemove: (cartLineId: string) => void;
+}) {
+  return (
+    <li className="border-outline-variant bg-surface-container-lowest flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center">
+      <div className="bg-surface-container relative h-16 w-16 shrink-0 overflow-hidden rounded-xl shadow-sm">
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          sizes="64px"
+          className="object-cover"
+        />
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <span className="bg-tertiary-container text-on-tertiary-container font-label text-label-bold inline-block rounded-full px-3 py-1 text-xs">
+          {labels.packBadge}
+        </span>
+        <p className="font-label text-label-bold text-on-surface">{name}</p>
+        <p className="font-body text-body-sm text-on-surface-variant">
+          {formatPrice(unitPrice)} {labels.unitPriceSuffix}
+          {componentCount > 0
+            ? ` · ${componentCount} ${labels.packComponents}`
+            : null}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+        <CartQuantitySelector
+          quantity={quantity}
+          minQuantity={bounds.minQuantity}
+          maxQuantity={bounds.maxQuantity}
+          decreaseLabel={labels.decreaseQuantity}
+          increaseLabel={labels.increaseQuantity}
+          onDecrease={() => onUpdateQuantity(cartLineId, quantity - 1, bounds)}
+          onIncrease={() => onUpdateQuantity(cartLineId, quantity + 1, bounds)}
+        />
+        <p className="font-display text-price-display text-primary min-w-20 text-right">
+          {formatPrice(lineTotal)}
+        </p>
+        <button
+          type="button"
+          onClick={() => onRemove(cartLineId)}
+          className="font-label text-label-bold text-primary hover:text-secondary transition-colors"
+        >
+          {labels.remove}
+        </button>
+      </div>
+    </li>
+  );
+}
+
 function CartBundleLine({
   cartLineId,
   name,
@@ -306,6 +385,30 @@ export function CartPage({
                         unitPrice={entry.line.unitPrice}
                         quantity={entry.line.quantity}
                         lineTotal={entry.line.lineTotal}
+                        imageUrl={
+                          lineImageUrlByCartLineId[entry.cartLineId] ??
+                          CATALOG_PLACEHOLDER_IMAGE
+                        }
+                        bounds={
+                          productBoundsByCartLineId[entry.cartLineId] ?? {
+                            minQuantity: 1,
+                            maxQuantity: entry.line.quantity,
+                            purchasable: true,
+                          }
+                        }
+                        labels={labels}
+                        onUpdateQuantity={onUpdateQuantity}
+                        onRemove={onRemove}
+                      />
+                    ) : entry.line.type === "pack" ? (
+                      <CartPackLine
+                        key={entry.cartLineId}
+                        cartLineId={entry.cartLineId}
+                        name={entry.line.name}
+                        unitPrice={entry.line.unitPrice}
+                        quantity={entry.line.quantity}
+                        lineTotal={entry.line.lineTotal}
+                        componentCount={entry.line.components.length}
                         imageUrl={
                           lineImageUrlByCartLineId[entry.cartLineId] ??
                           CATALOG_PLACEHOLDER_IMAGE

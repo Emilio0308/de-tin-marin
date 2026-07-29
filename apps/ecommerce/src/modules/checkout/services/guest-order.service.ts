@@ -3,8 +3,10 @@ import "server-only";
 import { storeFeatures } from "@de-tin-marin/config/store-features";
 import {
   buildOrderCartWithTotals,
+  collectPackIdsFromOrderLines,
   collectProductIdsFromOrderLines,
   type OrderBundleSource,
+  type OrderPackSource,
 } from "@de-tin-marin/shared/build-order-cart";
 import {
   aggregateStockDemands,
@@ -12,7 +14,10 @@ import {
 } from "@de-tin-marin/shared/check-order-stock";
 import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
-import { resolveProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
+import {
+  resolveProductPurchaseBounds,
+  resolveStockInPresentations,
+} from "@de-tin-marin/shared/product-purchase-limits";
 import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
@@ -21,6 +26,11 @@ import {
   previewGuestCartInputSchema,
 } from "@de-tin-marin/validations/checkout";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
+import {
+  getPublicPackByIdRepo,
+  listPublicPackItemsByPackIdsRepo,
+  type PublicPackItemRow,
+} from "@/modules/catalog/repositories/pack.repository";
 import {
   getPublicProductsByIdsRepo,
   type PublicProductRow,
@@ -76,6 +86,100 @@ async function resolveBundlesById(
   return bundlesById;
 }
 
+function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
+  const active = items.filter(
+    (item) => item.products?.is_active && item.products.deleted_at === null,
+  );
+  if (active.length === 0) return 0;
+
+  let min = Number.POSITIVE_INFINITY;
+  for (const item of active) {
+    const product = item.products;
+    if (!product) return 0;
+    const itemsPerPackage = Math.max(1, product.items_per_package ?? 1);
+    const productType = (product.product_type as "unit" | "package") ?? "unit";
+    const stockTotalBaseUnits =
+      productType === "unit"
+        ? product.stock_loose_base_units
+        : computeTotalBaseUnits(
+            product.stock_sealed_packages,
+            product.stock_loose_base_units,
+            itemsPerPackage,
+          );
+    const presentations = resolveStockInPresentations({
+      productType,
+      itemsPerPackage,
+      stockTotalBaseUnits,
+    });
+    const packageQuantity = Math.max(1, item.package_quantity);
+    min = Math.min(min, Math.floor(presentations / packageQuantity));
+  }
+
+  return Number.isFinite(min) ? Math.max(0, min) : 0;
+}
+
+async function resolvePacksById(
+  config: SupabaseConfig,
+  lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
+): Promise<
+  Map<
+    string,
+    OrderPackSource & {
+      purchase_min_quantity: number;
+      purchase_max_quantity: number;
+      available_quantity: number;
+    }
+  >
+> {
+  const packsById = new Map<
+    string,
+    OrderPackSource & {
+      purchase_min_quantity: number;
+      purchase_max_quantity: number;
+      available_quantity: number;
+    }
+  >();
+
+  const packIds = collectPackIdsFromOrderLines(lines);
+  if (packIds.length === 0) return packsById;
+
+  const allItems = await listPublicPackItemsByPackIdsRepo(config, packIds);
+  const itemsByPack = new Map<string, PublicPackItemRow[]>();
+  for (const item of allItems) {
+    const list = itemsByPack.get(item.pack_id) ?? [];
+    list.push(item);
+    itemsByPack.set(item.pack_id, list);
+  }
+
+  await Promise.all(
+    packIds.map(async (packId) => {
+      const pack = await getPublicPackByIdRepo(config, packId);
+      if (!pack) return;
+
+      const items = itemsByPack.get(packId) ?? [];
+      packsById.set(packId, {
+        id: pack.id,
+        sku: pack.sku,
+        name: pack.name,
+        prices: pack.prices,
+        campaign_id: pack.campaign_id,
+        image_url: pack.image_url,
+        is_active: pack.is_active,
+        deleted_at: pack.deleted_at,
+        items: items.map((item) => ({
+          product_id: item.product_id,
+          package_quantity: item.package_quantity,
+        })),
+        purchase_min_quantity: pack.purchase_min_quantity ?? 1,
+        purchase_max_quantity: pack.purchase_max_quantity ?? 100,
+        available_quantity: computePackAvailableQuantity(items),
+      });
+    }),
+  );
+
+  return packsById;
+}
+
 function validateProductPurchaseQuantities(
   lines: { type: string; productId?: string; quantity?: number }[],
   catalogProducts: PublicProductRow[],
@@ -102,6 +206,45 @@ function validateProductPurchaseQuantities(
       stockTotalBaseUnits,
       purchaseMinQuantity: product.purchase_min_quantity ?? 10,
       purchaseMaxQuantity: product.purchase_max_quantity ?? 100,
+    });
+
+    if (
+      !bounds.purchasable ||
+      line.quantity < bounds.minQuantity ||
+      line.quantity > bounds.maxQuantity
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function validatePackPurchaseQuantities(
+  lines: { type: string; packId?: string; quantity?: number }[],
+  packsById: Map<
+    string,
+    {
+      purchase_min_quantity: number;
+      purchase_max_quantity: number;
+      available_quantity: number;
+    }
+  >,
+): boolean {
+  for (const line of lines) {
+    if (line.type !== "pack" || !line.packId || line.quantity == null) {
+      continue;
+    }
+
+    const pack = packsById.get(line.packId);
+    if (!pack) return false;
+
+    const bounds = resolveProductPurchaseBounds({
+      productType: "unit",
+      itemsPerPackage: 1,
+      stockTotalBaseUnits: pack.available_quantity,
+      purchaseMinQuantity: pack.purchase_min_quantity,
+      purchaseMaxQuantity: pack.purchase_max_quantity,
     });
 
     if (
@@ -187,6 +330,7 @@ export async function previewGuestOrderCartService(
         | "VALIDATION"
         | "PRODUCT_NOT_FOUND"
         | "BUNDLE_NOT_FOUND"
+        | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
         | "INVALID_PURCHASE_QUANTITY";
     }
@@ -208,7 +352,17 @@ export async function previewGuestOrderCartService(
     };
   }
 
-  const productIds = collectProductIdsFromOrderLines(parsed.data.lines);
+  const packsById = await resolvePacksById(config, parsed.data.lines);
+  for (const line of parsed.data.lines) {
+    if (line.type === "pack" && !packsById.has(line.packId)) {
+      return { ok: false, error: "PACK_NOT_FOUND" };
+    }
+  }
+
+  const productIds = collectProductIdsFromOrderLines(
+    parsed.data.lines,
+    packsById,
+  );
   const [products, catalogProducts] = await Promise.all([
     getWizardProductsByIdsRepo(config, productIds),
     getPublicProductsByIdsRepo(config, productIds),
@@ -224,17 +378,21 @@ export async function previewGuestOrderCartService(
 
   if (
     catalogProducts.length !== productIds.length ||
-    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts)
+    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts) ||
+    !validatePackPurchaseQuantities(parsed.data.lines, packsById)
   ) {
     return { ok: false, error: "INVALID_PURCHASE_QUANTITY" };
   }
 
   const campaignIds = [
-    ...new Set(
-      products
+    ...new Set([
+      ...products
         .map((product) => product.campaign_id)
         .filter((id): id is string => Boolean(id)),
-    ),
+      ...[...packsById.values()]
+        .map((pack) => pack.campaign_id)
+        .filter((id): id is string => Boolean(id)),
+    ]),
   ];
   const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
   const bundlesById = await resolveBundlesById(config, parsed.data.lines);
@@ -244,6 +402,7 @@ export async function previewGuestOrderCartService(
     products,
     campaigns,
     bundlesById,
+    packsById,
     discountTotal: parsed.data.discountTotal,
     shippingTotal: parsed.data.shippingTotal,
   });
@@ -254,6 +413,9 @@ export async function previewGuestOrderCartService(
     }
     if (cartResult.error === "PRODUCT_NOT_FOUND") {
       return { ok: false, error: "PRODUCT_NOT_FOUND" };
+    }
+    if (cartResult.error === "PACK_NOT_FOUND") {
+      return { ok: false, error: "PACK_NOT_FOUND" };
     }
     return { ok: false, error: "BUNDLE_NOT_FOUND" };
   }
@@ -282,6 +444,7 @@ export async function createGuestOrderService(
         | "VALIDATION"
         | "PRODUCT_NOT_FOUND"
         | "BUNDLE_NOT_FOUND"
+        | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
         | "OUT_OF_COVERAGE"
         | "INSUFFICIENT_STOCK"
@@ -304,7 +467,17 @@ export async function createGuestOrderService(
     mapPin: parsed.data.mapPin,
   });
 
-  const productIds = collectProductIdsFromOrderLines(parsed.data.lines);
+  const packsById = await resolvePacksById(config, parsed.data.lines);
+  for (const line of parsed.data.lines) {
+    if (line.type === "pack" && !packsById.has(line.packId)) {
+      return { ok: false, error: "PACK_NOT_FOUND" };
+    }
+  }
+
+  const productIds = collectProductIdsFromOrderLines(
+    parsed.data.lines,
+    packsById,
+  );
   const [products, catalogProducts] = await Promise.all([
     getWizardProductsByIdsRepo(config, productIds),
     getPublicProductsByIdsRepo(config, productIds),
@@ -332,7 +505,8 @@ export async function createGuestOrderService(
 
   if (
     catalogProducts.length !== productIds.length ||
-    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts)
+    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts) ||
+    !validatePackPurchaseQuantities(parsed.data.lines, packsById)
   ) {
     logServerError(scope, {
       message: "INVALID_PURCHASE_QUANTITY",
@@ -343,11 +517,14 @@ export async function createGuestOrderService(
   }
 
   const campaignIds = [
-    ...new Set(
-      products
+    ...new Set([
+      ...products
         .map((product) => product.campaign_id)
         .filter((id): id is string => Boolean(id)),
-    ),
+      ...[...packsById.values()]
+        .map((pack) => pack.campaign_id)
+        .filter((id): id is string => Boolean(id)),
+    ]),
   ];
   const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
   const bundlesById = await resolveBundlesById(config, parsed.data.lines);
@@ -387,6 +564,7 @@ export async function createGuestOrderService(
     products,
     campaigns,
     bundlesById,
+    packsById,
     discountTotal: parsed.data.discountTotal,
     shippingTotal: deliveryResult.fee,
   });
@@ -398,6 +576,12 @@ export async function createGuestOrderService(
     });
     if (cartResult.error === "DUPLICATE_PRODUCT_IN_BUNDLE") {
       return { ok: false, error: "DUPLICATE_PRODUCT_IN_BUNDLE" };
+    }
+    if (cartResult.error === "PACK_NOT_FOUND") {
+      return { ok: false, error: "PACK_NOT_FOUND" };
+    }
+    if (cartResult.error === "PRODUCT_NOT_FOUND") {
+      return { ok: false, error: "PRODUCT_NOT_FOUND" };
     }
     return { ok: false, error: "BUNDLE_NOT_FOUND" };
   }

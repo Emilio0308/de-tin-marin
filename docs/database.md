@@ -14,7 +14,7 @@
 
 ```text
 core       → staff, settings, audit
-catalog    → products, bundles, categories, surprise_containers
+catalog    → products, bundles, categories, surprise_containers, packs
 pricing    → campaigns, delivery_zones, delivery_settings (+ FK en products)
 commerce   → orders, payments, shipments
 crm        → customers
@@ -93,6 +93,8 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `catalog.surprise_containers` | Insumo envase de sorpresa (S1E)          |
 | `catalog.bundles`             | Plantilla de sorpresa (sin stock propio) |
 | `catalog.bundle_items`        | Composición base de la plantilla         |
+| `catalog.packs`               | Combo vendible (sin stock propio)        |
+| `catalog.pack_items`          | BOM fija en presentaciones/paquetes      |
 
 **`catalog.categories`** (columnas clave):
 
@@ -133,7 +135,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 > unit    → available = stock_loose_base_units   # sealed no se abre ni vende
 > ```
 >
-> Líneas `type: product` descuentan `quantity` en **presentaciones** (`need = quantity × items_per_package` + demanda bundle en base). Normalizar sealed/loose tras deduct solo en `package`. Ver [inventory.md](inventory.md).
+> Líneas `type: product` y componentes `type: pack` aportan **presentaciones**; componentes bundle aportan **unidad base**. Ver [inventory.md](inventory.md) y Reglas 15/24.
 
 > **`stock_quantity` (S1A):** deprecada — eliminada en migración S1D (`00008`). Backfill: `stock_loose_base_units = stock_quantity`, `stock_sealed_packages = 0`.
 
@@ -175,6 +177,28 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 > Con campaña activa en preview: usar `finalUnitPrice` por componente.
 
 **`catalog.bundle_items`**: `bundle_id`, `product_id`, `units_per_person` (unidades **base** de ese producto por sorpresa/persona; **v1 fija en 1**). Unique `(bundle_id, product_id)`.
+
+**`catalog.packs`** (combo — sin stock propio; precio persistido):
+
+| Columna                 | Tipo          | Notas                                                          |
+| ----------------------- | ------------- | -------------------------------------------------------------- |
+| `sku`                   | text unique   | Unique global (constraint `packs_sku_unique`)                  |
+| `name`, `description`   | text          |                                                                |
+| `slug`                  | text unique   | URL amigable                                                   |
+| `image_url`             | text          | URL texto (sin Storage v1)                                     |
+| `prices`                | jsonb         | `{ normal, reference }` cada uno `{ netPrice, igv, subtotal }` |
+| `campaign_id`           | uuid nullable | → `pricing.campaigns` (**1:1**, DECISIONS #33)                 |
+| `purchase_min_quantity` | int           | Default **1**                                                  |
+| `purchase_max_quantity` | int           | Default **100**; `max >= min`                                  |
+| `is_active`             | boolean       |                                                                |
+| `deleted_at`            | timestamptz   | Soft-delete                                                    |
+
+> **`reference`** = suma de `product.prices.normal.netPrice × package_quantity` (recalculada al guardar).
+> **`normal`** = precio de venta del combo (admin). Invariante: `normal.netPrice >= reference.netPrice`.
+> Campaña aplica sobre `normal` → `finalPrice` en listado/orden.
+> Sin columnas de stock. Futuro: cantidades en unidad base / fracciones (no v1).
+
+**`catalog.pack_items`**: `pack_id`, `product_id`, `package_quantity` (presentaciones/paquetes del producto por combo; `>= 1`). Unique `(pack_id, product_id)`. Solo productos (no packs anidados).
 
 ### Schema `pricing`
 
@@ -300,6 +324,8 @@ erDiagram
   surprise_containers ||--o{ bundles : packages
   bundles ||--o{ bundle_items : template
   products ||--o{ bundle_items : part_of
+  packs ||--o{ pack_items : bom
+  products ||--o{ pack_items : part_of
   customers ||--o{ orders : places
   orders ||--o{ payments : has
   orders ||--o| shipments : ships_via
@@ -309,25 +335,26 @@ erDiagram
 
 ## RLS (postura resumida)
 
-| Tabla                         | Lectura                       | Escritura                   |
-| ----------------------------- | ----------------------------- | --------------------------- |
-| `catalog.products` activos    | Público                       | Staff                       |
-| `catalog.surprise_containers` | Público activos               | Staff                       |
-| `pricing.campaigns`           | Staff                         | Staff                       |
-| `pricing.delivery_zones`      | Público activos               | Staff                       |
-| `pricing.delivery_settings`   | Público                       | Staff (update)              |
-| `commerce.orders`             | Cliente propias / staff todas | Server + staff              |
-| `commerce.payments`           | Staff                         | Staff (confirmación manual) |
-| `commerce.shipments`          | Staff                         | Staff                       |
+| Tabla                          | Lectura                       | Escritura                   |
+| ------------------------------ | ----------------------------- | --------------------------- |
+| `catalog.products` activos     | Público                       | Staff                       |
+| `catalog.surprise_containers`  | Público activos               | Staff                       |
+| `catalog.packs` / `pack_items` | Público activos               | Staff                       |
+| `pricing.campaigns`            | Staff                         | Staff                       |
+| `pricing.delivery_zones`       | Público activos               | Staff                       |
+| `pricing.delivery_settings`    | Público                       | Staff (update)              |
+| `commerce.orders`              | Cliente propias / staff todas | Server + staff              |
+| `commerce.payments`            | Staff                         | Staff (confirmación manual) |
+| `commerce.shipments`           | Staff                         | Staff                       |
 
 ---
 
 ## Queries planificadas
 
-| Query / RPC                                 | Uso                                                                                               |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                           |
-| `commerce.deduct_stock_for_order(order_id)` | S2A — descuenta dulces por `product_type` (unit=loose / package=sealed+loose) + envases al `paid` |
+| Query / RPC                                 | Uso                                                                                                 |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                             |
+| `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
 
 ---
 

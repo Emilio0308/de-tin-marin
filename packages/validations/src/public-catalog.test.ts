@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   paginateItems,
   parsePublicBundleListQuery,
+  parsePublicPackListQuery,
   parsePublicProductListQuery,
   sortPublicBundles,
+  sortPublicPacks,
   sortPublicProducts,
 } from "./public-catalog";
 
@@ -32,6 +34,21 @@ describe("parsePublicBundleListQuery", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.search).toBe("fiesta");
+    }
+  });
+});
+
+describe("parsePublicPackListQuery", () => {
+  it("aplica defaults y acepta búsqueda", () => {
+    const result = parsePublicPackListQuery({ search: "combo" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toMatchObject({
+        page: 1,
+        pageSize: 12,
+        sort: "name_asc",
+        search: "combo",
+      });
     }
   });
 });
@@ -76,5 +93,18 @@ describe("sortPublicBundles", () => {
       "price_desc",
     );
     expect(sorted.map((item) => item.total)).toEqual([30, 10]);
+  });
+});
+
+describe("sortPublicPacks", () => {
+  it("ordena por finalPrice ascendente", () => {
+    const sorted = sortPublicPacks(
+      [
+        { name: "B", finalPrice: 40 },
+        { name: "A", finalPrice: 20 },
+      ],
+      "price_asc",
+    );
+    expect(sorted.map((item) => item.finalPrice)).toEqual([20, 40]);
   });
 });

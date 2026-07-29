@@ -1,0 +1,116 @@
+import { computePackReference } from "@de-tin-marin/shared/pack-price";
+import {
+  computeFinalPrice,
+  toCampaignForPricing,
+} from "@de-tin-marin/shared/final-price";
+import type {
+  CampaignOption,
+  PackFormItemValues,
+  PackFormValues,
+  ProductOption,
+} from "./pack-form.types";
+import type { PackFormDTO } from "@/modules/catalog/types/pack.dto";
+
+export function buildDefaultPackValues(initial?: PackFormDTO): PackFormValues {
+  return {
+    sku: initial?.sku ?? "",
+    name: initial?.name ?? "",
+    description: initial?.description ?? "",
+    slug: initial?.slug ?? "",
+    imageUrl: initial?.imageUrl ?? "",
+    normalNetPrice: initial?.normalNetPrice ?? 0,
+    campaignId: initial?.campaignId ?? "",
+    purchaseMinQuantity: initial?.purchaseMinQuantity ?? 1,
+    purchaseMaxQuantity: initial?.purchaseMaxQuantity ?? 100,
+    isActive: initial?.isActive ?? true,
+    items:
+      initial?.items.map((item) => ({
+        productId: item.productId,
+        packageQuantity: item.packageQuantity,
+      })) ?? [],
+  };
+}
+
+export function computeLiveReference(
+  values: Pick<PackFormValues, "items">,
+  products: ProductOption[],
+): number {
+  const priceById = new Map(
+    products.map((product) => [product.id, product.packageNetPrice]),
+  );
+
+  return computePackReference(
+    values.items.map((item) => ({
+      packageNetPrice: priceById.get(item.productId) ?? 0,
+      packageQuantity: item.packageQuantity,
+    })),
+  ).referenceNetPrice;
+}
+
+export function computeLiveFinalPrice(
+  normalNetPrice: number,
+  campaignId: string,
+  campaigns: CampaignOption[],
+): number {
+  const campaign = campaigns.find((item) => item.id === campaignId);
+  if (!campaign) return normalNetPrice;
+
+  return computeFinalPrice(
+    normalNetPrice,
+    toCampaignForPricing({
+      percentage: campaign.percentage,
+      starts_at: campaign.startsAt,
+      ends_at: campaign.endsAt,
+      is_active: campaign.isActive,
+    }),
+  );
+}
+
+export function addPackItem(
+  items: PackFormItemValues[],
+  productId: string,
+): PackFormItemValues[] {
+  if (!productId || items.some((item) => item.productId === productId)) {
+    return items;
+  }
+
+  return [...items, { productId, packageQuantity: 1 }];
+}
+
+export function removePackItem(
+  items: PackFormItemValues[],
+  productId: string,
+): PackFormItemValues[] {
+  return items.filter((item) => item.productId !== productId);
+}
+
+export function setPackItemPackageQuantity(
+  items: PackFormItemValues[],
+  productId: string,
+  packageQuantity: number,
+): PackFormItemValues[] {
+  const next = Math.max(1, Math.floor(packageQuantity));
+  return items.map((item) =>
+    item.productId === productId ? { ...item, packageQuantity: next } : item,
+  );
+}
+
+export function isValidImageUrl(value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function canSubmitPackForm(values: PackFormValues): boolean {
+  return (
+    values.sku.trim().length > 0 &&
+    values.name.trim().length > 0 &&
+    values.items.length > 0 &&
+    values.normalNetPrice >= 0 &&
+    values.purchaseMaxQuantity >= values.purchaseMinQuantity
+  );
+}

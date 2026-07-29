@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import { getPublicBundleAction } from "@/modules/catalog/actions/get-public-bundle";
+import { getPublicPackAction } from "@/modules/catalog/actions/get-public-pack";
 import { getPublicProductAction } from "@/modules/catalog/actions/get-public-product";
+import { resolvePackPurchaseLimits } from "@/modules/catalog/components/pack-detail-page/pack-detail-page.helpers";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolveProductPurchaseLimits } from "@/modules/catalog/helpers/product-purchase-limits";
 import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
@@ -18,7 +20,7 @@ import { useCartPricingPreview } from "../../hooks/use-cart-pricing-preview";
 import type { StoredCartLine } from "../../repositories/cart.repository";
 import { CartPage } from "./cart-page";
 
-type CartProductLineMeta = {
+type CartQuantityLineMeta = {
   imageUrl?: string;
   bounds: ProductPurchaseBounds;
 };
@@ -32,34 +34,55 @@ function resolveStoredLineImageUrl(
   return null;
 }
 
-async function fetchCartProductMetadata(
+async function fetchCartQuantityMetadata(
   lines: StoredCartLine[],
-): Promise<Record<string, CartProductLineMeta>> {
-  const meta: Record<string, CartProductLineMeta> = {};
+): Promise<Record<string, CartQuantityLineMeta>> {
+  const meta: Record<string, CartQuantityLineMeta> = {};
 
   await Promise.all(
     lines.map(async (entry) => {
-      if (entry.line.type !== "product") return;
+      if (entry.line.type === "product") {
+        const result = await getPublicProductAction({
+          id: entry.line.productId,
+        });
 
-      const result = await getPublicProductAction({
-        id: entry.line.productId,
-      });
+        if (result.ok) {
+          meta[entry.cartLineId] = {
+            imageUrl: result.data.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
+            bounds: resolveProductPurchaseLimits(result.data),
+          };
+          return;
+        }
 
-      if (result.ok) {
         meta[entry.cartLineId] = {
-          imageUrl: result.data.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
-          bounds: resolveProductPurchaseLimits(result.data),
+          bounds: {
+            minQuantity: 1,
+            maxQuantity: entry.line.quantity,
+            purchasable: false,
+          },
         };
         return;
       }
 
-      meta[entry.cartLineId] = {
-        bounds: {
-          minQuantity: 1,
-          maxQuantity: entry.line.quantity,
-          purchasable: false,
-        },
-      };
+      if (entry.line.type === "pack") {
+        const result = await getPublicPackAction({ id: entry.line.packId });
+
+        if (result.ok) {
+          meta[entry.cartLineId] = {
+            imageUrl: result.data.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
+            bounds: resolvePackPurchaseLimits(result.data),
+          };
+          return;
+        }
+
+        meta[entry.cartLineId] = {
+          bounds: {
+            minQuantity: 1,
+            maxQuantity: entry.line.quantity,
+            purchasable: false,
+          },
+        };
+      }
     }),
   );
 
@@ -86,6 +109,15 @@ async function fetchMissingCartLineImages(
         return;
       }
 
+      if (entry.line.type === "pack") {
+        const result = await getPublicPackAction({ id: entry.line.packId });
+        images[entry.cartLineId] =
+          result.ok && result.data.imageUrl
+            ? result.data.imageUrl
+            : CATALOG_PLACEHOLDER_IMAGE;
+        return;
+      }
+
       const result = await getPublicBundleAction({ id: entry.line.bundleId });
       images[entry.cartLineId] =
         result.ok && result.data.imageUrl
@@ -103,19 +135,22 @@ export function CartPageContainer() {
   const { subtotal: previewSubtotal } = useCartPricingPreview(lines);
   const subtotal = previewSubtotal ?? totals.subtotal ?? 0;
 
-  const productLineIds = useMemo(
+  const quantityLineIds = useMemo(
     () =>
       lines
-        .filter((entry) => entry.line.type === "product")
+        .filter(
+          (entry) =>
+            entry.line.type === "product" || entry.line.type === "pack",
+        )
         .map((entry) => entry.cartLineId),
     [lines],
   );
 
-  const productMetaQuery = useQuery({
+  const quantityMetaQuery = useQuery({
     ...freshQueryOptions,
-    queryKey: queryKeys.cart.productMeta(productLineIds),
-    queryFn: () => fetchCartProductMetadata(lines),
-    enabled: productLineIds.length > 0,
+    queryKey: queryKeys.cart.productMeta(quantityLineIds),
+    queryFn: () => fetchCartQuantityMetadata(lines),
+    enabled: quantityLineIds.length > 0,
   });
 
   const missingImageLineIds = useMemo(
@@ -138,24 +173,25 @@ export function CartPageContainer() {
 
     for (const entry of lines) {
       const stored = resolveStoredLineImageUrl(entry.line);
-      const fromProductMeta =
-        productMetaQuery.data?.[entry.cartLineId]?.imageUrl;
+      const fromMeta = quantityMetaQuery.data?.[entry.cartLineId]?.imageUrl;
       resolved[entry.cartLineId] =
         stored ??
-        fromProductMeta ??
+        fromMeta ??
         imagesQuery.data?.[entry.cartLineId] ??
         CATALOG_PLACEHOLDER_IMAGE;
     }
 
     return resolved;
-  }, [imagesQuery.data, lines, productMetaQuery.data]);
+  }, [imagesQuery.data, lines, quantityMetaQuery.data]);
 
   const productBoundsByCartLineId = useMemo(() => {
     const bounds: Record<string, ProductPurchaseBounds> = {};
 
     for (const entry of lines) {
-      if (entry.line.type !== "product") continue;
-      bounds[entry.cartLineId] = productMetaQuery.data?.[entry.cartLineId]
+      if (entry.line.type !== "product" && entry.line.type !== "pack") {
+        continue;
+      }
+      bounds[entry.cartLineId] = quantityMetaQuery.data?.[entry.cartLineId]
         ?.bounds ?? {
         minQuantity: 1,
         maxQuantity: entry.line.quantity,
@@ -164,7 +200,7 @@ export function CartPageContainer() {
     }
 
     return bounds;
-  }, [lines, productMetaQuery.data]);
+  }, [lines, quantityMetaQuery.data]);
 
   const stockQuery = useQuery({
     ...freshQueryOptions,
@@ -205,11 +241,13 @@ export function CartPageContainer() {
         decreaseQuantity: t("decreaseQuantity"),
         increaseQuantity: t("increaseQuantity"),
         components: t("components"),
+        packComponents: t("packComponents"),
         stockTitle: t("stockTitle"),
         stockChecking: t("stockChecking"),
         stockProduct: t("stockProduct"),
         stockContainer: t("stockContainer"),
         bundleBadge: t("bundleBadge"),
+        packBadge: t("packBadge"),
       }}
       onUpdateQuantity={updateProductQuantity}
       onRemove={removeLine}

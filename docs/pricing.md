@@ -4,7 +4,7 @@
 
 > **Acotación v1 (DECISIONS #24):** `finalPrice` ya se expone en el listado de productos vía `computeFinalPrice`, pero **sin campañas asignadas** equivale a `normal.netPrice`. No hay descuentos activos hasta que se habilite la gestión de campañas.
 
-## v1 — Dos contextos
+## v1 — Tres contextos
 
 ### A) Productos sueltos — listado catálogo
 
@@ -63,6 +63,18 @@ Por cada component en una línea bundle del shopping_cart:
 Preview en admin (sin campaña): `prices.unit.netPrice × units_per_person`.
 
 **Regla:** 8.
+
+### C) Packs / combos — precio persistido
+
+```text
+reference = Σ (product.prices.normal.netPrice × package_quantity)   // al guardar
+normal    = precio admin  (≥ reference)
+finalPrice = computeFinalPrice(normal, campaign)                     // listado / orden
+```
+
+Línea orden: `unitPrice = finalPrice` congelado; BOM congelada para deduct.
+
+**Reglas:** 22–25. DECISIONS #33.
 
 ## Fuera de v1
 

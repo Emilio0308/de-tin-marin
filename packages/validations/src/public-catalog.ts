@@ -24,10 +24,18 @@ export const publicBundleListQuerySchema = z.object({
   sort: publicCatalogSortSchema.optional().default("name_asc"),
 });
 
+export const publicPackListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(48).optional().default(12),
+  search: z.string().trim().min(1).optional(),
+  sort: publicCatalogSortSchema.optional().default("name_asc"),
+});
+
 export type PublicProductListQuery = z.infer<
   typeof publicProductListQuerySchema
 >;
 export type PublicBundleListQuery = z.infer<typeof publicBundleListQuerySchema>;
+export type PublicPackListQuery = z.infer<typeof publicPackListQuerySchema>;
 
 export const publicProductListItemSchema = z.object({
   id: z.string().uuid(),
@@ -63,6 +71,26 @@ export const publicBundleListItemSchema = z.object({
   ),
 });
 
+export const publicPackListItemSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  imageUrl: z.string().nullable(),
+  finalPrice: z.number(),
+  itemCount: z.number(),
+  purchaseMinQuantity: z.number().int().min(1),
+  purchaseMaxQuantity: z.number().int().min(1),
+  availableQuantity: z.number().int().min(0),
+  isPurchasable: z.boolean(),
+  itemsPreview: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+    }),
+  ),
+});
+
 export const publicCategoryItemSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -85,6 +113,22 @@ export const publicBundleDetailSchema = publicBundleListItemSchema.extend({
   ),
 });
 
+export const publicPackDetailSchema = publicPackListItemSchema.extend({
+  description: z.string().nullable(),
+  items: z.array(
+    z.object({
+      productId: z.string().uuid(),
+      productName: z.string(),
+      description: z.string().nullable(),
+      imageUrl: z.string().nullable(),
+      packageQuantity: z.number(),
+      itemsPerPackage: z.number().int().min(1),
+      productType: z.enum(["unit", "package"]),
+      packageLabel: z.string().nullable(),
+    }),
+  ),
+});
+
 export const publicPaginatedProductsSchema = z.object({
   items: z.array(publicProductListItemSchema),
   page: z.number(),
@@ -99,6 +143,13 @@ export const publicPaginatedBundlesSchema = z.object({
   total: z.number(),
 });
 
+export const publicPaginatedPacksSchema = z.object({
+  items: z.array(publicPackListItemSchema),
+  page: z.number(),
+  pageSize: z.number(),
+  total: z.number(),
+});
+
 export const getPublicProductInputSchema = z.union([
   z.object({ slug: z.string().min(1) }),
   z.object({ id: z.string().uuid() }),
@@ -108,11 +159,18 @@ export const getPublicBundleInputSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const getPublicPackInputSchema = z.union([
+  z.object({ slug: z.string().min(1) }),
+  z.object({ id: z.string().uuid() }),
+]);
+
 export type PublicProductListItem = z.infer<typeof publicProductListItemSchema>;
 export type PublicBundleListItem = z.infer<typeof publicBundleListItemSchema>;
+export type PublicPackListItem = z.infer<typeof publicPackListItemSchema>;
 export type PublicCategoryItem = z.infer<typeof publicCategoryItemSchema>;
 export type PublicProductDetail = z.infer<typeof publicProductDetailSchema>;
 export type PublicBundleDetail = z.infer<typeof publicBundleDetailSchema>;
+export type PublicPackDetail = z.infer<typeof publicPackDetailSchema>;
 
 export function paginateItems<T>(
   items: T[],
@@ -171,6 +229,13 @@ export function sortPublicBundles(
   }
 }
 
+export function sortPublicPacks(
+  items: SortableByPrice[],
+  sort: PublicCatalogSort,
+): SortableByPrice[] {
+  return sortPublicProducts(items, sort);
+}
+
 export function parsePublicProductListQuery(
   raw: unknown,
 ):
@@ -187,6 +252,15 @@ export function parsePublicBundleListQuery(
   | { ok: true; data: PublicBundleListQuery }
   | { ok: false; error: "VALIDATION" } {
   const parsed = publicBundleListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+  return { ok: true, data: parsed.data };
+}
+
+export function parsePublicPackListQuery(
+  raw: unknown,
+):
+  { ok: true; data: PublicPackListQuery } | { ok: false; error: "VALIDATION" } {
+  const parsed = publicPackListQuerySchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
   return { ok: true, data: parsed.data };
 }

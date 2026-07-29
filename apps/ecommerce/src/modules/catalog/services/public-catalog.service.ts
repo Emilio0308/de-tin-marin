@@ -1,8 +1,15 @@
 import "server-only";
 
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
-import { computeFinalPrice } from "@de-tin-marin/shared/final-price";
-import { parseProductPricesJson } from "@de-tin-marin/shared/prices";
+import {
+  computeFinalPrice,
+  toCampaignForPricing,
+} from "@de-tin-marin/shared/final-price";
+import {
+  parsePackPricesJson,
+  parseProductPricesJson,
+} from "@de-tin-marin/shared/prices";
+import { resolveStockInPresentations } from "@de-tin-marin/shared/product-purchase-limits";
 import {
   computeTotalBaseUnits,
   formatStockDisplay,
@@ -10,18 +17,24 @@ import {
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   getPublicBundleInputSchema,
+  getPublicPackInputSchema,
   getPublicProductInputSchema,
   paginateItems,
   publicBundleListQuerySchema,
+  publicPackListQuerySchema,
   publicProductListQuerySchema,
   sortPublicBundles,
+  sortPublicPacks,
   sortPublicProducts,
   type PublicBundleDetail,
   type PublicBundleListItem,
   type PublicCategoryItem,
+  type PublicPackDetail,
+  type PublicPackListItem,
   type PublicProductDetail,
   type PublicProductListItem,
 } from "@de-tin-marin/validations/public-catalog";
+import { listWizardCampaignsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
 import { CATALOG_PLACEHOLDER_IMAGE } from "../constants";
 import {
   getPublicBundleByIdRepo,
@@ -31,6 +44,14 @@ import {
   type PublicBundleRow,
 } from "../repositories/bundle.repository";
 import { listPublicCategoriesRepo } from "../repositories/category.repository";
+import {
+  getPublicPackByIdRepo,
+  getPublicPackBySlugRepo,
+  listPublicPackItemsByPackIdsRepo,
+  listPublicPacksRepo,
+  type PublicPackItemRow,
+  type PublicPackRow,
+} from "../repositories/pack.repository";
 import {
   getPublicProductByIdRepo,
   getPublicProductBySlugRepo,
@@ -286,5 +307,202 @@ export async function getPublicBundleService(
   return {
     ok: true,
     data: toBundleDetail(row, items, containersById),
+  };
+}
+
+function isActivePackItem(item: PublicPackItemRow): boolean {
+  const product = item.products;
+  return Boolean(product?.is_active && product.deleted_at === null);
+}
+
+function packComponentPresentations(
+  product: NonNullable<PublicPackItemRow["products"]>,
+): number {
+  const itemsPerPackage = Math.max(1, product.items_per_package ?? 1);
+  const productType = (product.product_type as "unit" | "package") ?? "unit";
+  const stockTotalBaseUnits =
+    productType === "unit"
+      ? product.stock_loose_base_units
+      : computeTotalBaseUnits(
+          product.stock_sealed_packages,
+          product.stock_loose_base_units,
+          itemsPerPackage,
+        );
+
+  return resolveStockInPresentations({
+    productType,
+    itemsPerPackage,
+    stockTotalBaseUnits,
+  });
+}
+
+function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
+  const active = items.filter(isActivePackItem);
+  if (active.length === 0) return 0;
+
+  let min = Number.POSITIVE_INFINITY;
+  for (const item of active) {
+    const product = item.products;
+    if (!product) return 0;
+    const presentations = packComponentPresentations(product);
+    const packageQuantity = Math.max(1, item.package_quantity);
+    min = Math.min(min, Math.floor(presentations / packageQuantity));
+  }
+
+  return Number.isFinite(min) ? Math.max(0, min) : 0;
+}
+
+function buildPackItemsPreview(items: PublicPackItemRow[]) {
+  return items.filter(isActivePackItem).map((item) => ({
+    id: item.product_id,
+    label: `${item.products?.name ?? "—"} × ${item.package_quantity}`,
+  }));
+}
+
+function toPackListItem(
+  row: PublicPackRow,
+  items: PublicPackItemRow[],
+  campaign: ReturnType<typeof toCampaignForPricing> | null,
+): PublicPackListItem {
+  const { normalNetPrice } = parsePackPricesJson(row.prices);
+  const finalPrice = computeFinalPrice(normalNetPrice, campaign);
+  const availableQuantity = computePackAvailableQuantity(items);
+  const purchaseMinQuantity = row.purchase_min_quantity ?? 1;
+  const purchaseMaxQuantity = row.purchase_max_quantity ?? 100;
+
+  return {
+    id: row.id,
+    sku: row.sku,
+    slug: row.slug,
+    name: row.name,
+    imageUrl: normalizeImageUrl(row.image_url),
+    finalPrice,
+    itemCount: items.filter(isActivePackItem).length,
+    purchaseMinQuantity,
+    purchaseMaxQuantity,
+    availableQuantity,
+    isPurchasable: availableQuantity >= purchaseMinQuantity,
+    itemsPreview: buildPackItemsPreview(items).slice(0, 4),
+  };
+}
+
+function toPackDetail(
+  row: PublicPackRow,
+  items: PublicPackItemRow[],
+  campaign: ReturnType<typeof toCampaignForPricing> | null,
+): PublicPackDetail {
+  const activeItems = items.filter(isActivePackItem);
+
+  return {
+    ...toPackListItem(row, items, campaign),
+    description: row.description,
+    items: activeItems.map((item) => ({
+      productId: item.product_id,
+      productName: item.products?.name ?? "—",
+      description: item.products?.description ?? null,
+      imageUrl: normalizeImageUrl(item.products?.image_url),
+      packageQuantity: item.package_quantity,
+      itemsPerPackage: Math.max(1, item.products?.items_per_package ?? 1),
+      productType:
+        (item.products?.product_type as "unit" | "package") ?? "unit",
+      packageLabel: item.products?.package_label ?? null,
+    })),
+  };
+}
+
+async function buildPackCampaignsById(
+  config: SupabaseConfig,
+  rows: PublicPackRow[],
+): Promise<Map<string, ReturnType<typeof toCampaignForPricing>>> {
+  const campaignIds = [
+    ...new Set(
+      rows
+        .map((row) => row.campaign_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (campaignIds.length === 0) return new Map();
+
+  const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
+  return new Map(
+    campaigns.map((campaign) => [campaign.id, toCampaignForPricing(campaign)]),
+  );
+}
+
+export async function listPublicPacksService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        items: PublicPackListItem[];
+        page: number;
+        pageSize: number;
+        total: number;
+      };
+    }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = publicPackListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, sort } = parsed.data;
+  const rows = await listPublicPacksRepo(config, { search });
+  if (rows.length === 0) {
+    return {
+      ok: true,
+      data: { items: [], page, pageSize, total: 0 },
+    };
+  }
+
+  const packIds = rows.map((row) => row.id);
+  const allItems = await listPublicPackItemsByPackIdsRepo(config, packIds);
+  const itemsByPack = new Map<string, PublicPackItemRow[]>();
+  for (const item of allItems) {
+    const list = itemsByPack.get(item.pack_id) ?? [];
+    list.push(item);
+    itemsByPack.set(item.pack_id, list);
+  }
+
+  const campaignsById = await buildPackCampaignsById(config, rows);
+  const mapped = rows.map((row) =>
+    toPackListItem(
+      row,
+      itemsByPack.get(row.id) ?? [],
+      row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
+    ),
+  );
+  const sorted = sortPublicPacks(mapped, sort) as PublicPackListItem[];
+
+  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+}
+
+export async function getPublicPackService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: PublicPackDetail }
+  | { ok: false; error: "VALIDATION" | "NOT_FOUND" }
+> {
+  const parsed = getPublicPackInputSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const row =
+    "slug" in parsed.data
+      ? await getPublicPackBySlugRepo(config, parsed.data.slug)
+      : await getPublicPackByIdRepo(config, parsed.data.id);
+  if (!row) return { ok: false, error: "NOT_FOUND" };
+
+  const items = await listPublicPackItemsByPackIdsRepo(config, [row.id]);
+  const campaignsById = await buildPackCampaignsById(config, [row]);
+
+  return {
+    ok: true,
+    data: toPackDetail(
+      row,
+      items,
+      row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
+    ),
   };
 }

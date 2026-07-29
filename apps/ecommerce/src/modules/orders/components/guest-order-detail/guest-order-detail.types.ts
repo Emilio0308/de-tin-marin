@@ -2,7 +2,7 @@ import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
 
 export type GuestOrderLineSummary = {
   key: string;
-  kind: "product" | "bundle";
+  kind: "product" | "bundle" | "pack";
   name: string;
   detail: string;
   lineTotal: number;
@@ -18,7 +18,9 @@ export type GuestOrderDetailLabels = {
   deliveryTitle: string;
   pickupTitle: string;
   bundleBadge: string;
+  packBadge: string;
   bundleComponents: string;
+  packComponents: string;
   formatBundlePersons: (count: number) => string;
   formatStatus: (status: string) => string;
   formatPaymentStatus: (paymentStatus: string) => string;

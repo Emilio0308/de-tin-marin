@@ -9,7 +9,7 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 
 1. De Tin Marín = ecommerce de dulces y sorpresas · monorepo · Supabase · dominio-driven.
 2. Carga **solo** el dominio relevante (`docs/` + módulo + rules aplicables).
-3. **Pricing ≠ Orders ≠ Inventory** — responsabilidades separadas (invariantes 9–11).
+3. **Pricing ≠ Orders ≠ Inventory ≠ Packs** — packs sin stock propio; precio reference/normal (DECISIONS #33).
 4. Reglas de negocio en [`docs/business-rules.md`](docs/business-rules.md).
 5. Tablas canónicas en [`docs/database.md`](docs/database.md) — copiar nombres, no recordar.
 6. **Campaña 1:1** — `finalPrice` en backend; front no recalcula.

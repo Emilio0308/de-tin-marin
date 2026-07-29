@@ -7,9 +7,11 @@ import { useTranslations } from "next-intl";
 import { listPublicCategoriesAction } from "@/modules/catalog/actions/list-public-categories";
 import { listPublicProductsAction } from "@/modules/catalog/actions/list-public-products";
 import { listPublicBundlesAction } from "@/modules/catalog/actions/list-public-bundles";
+import { listPublicPacksAction } from "@/modules/catalog/actions/list-public-packs";
 import {
   catalogSortOptions,
   readBundleListQuery,
+  readPackListQuery,
   readProductListQuery,
 } from "@/modules/catalog/helpers/catalog-url";
 import { useCart } from "@/modules/cart/hooks/use-cart";
@@ -40,6 +42,9 @@ export function StorefrontPageContainer() {
   const [bundlesSearchDraft, setBundlesSearchDraft] = useState(
     () => searchParams.get("search") ?? "",
   );
+  const [packsSearchDraft, setPacksSearchDraft] = useState(
+    () => searchParams.get("search") ?? "",
+  );
 
   const productQuery = useMemo(
     () => readProductListQuery(searchParams),
@@ -47,6 +52,10 @@ export function StorefrontPageContainer() {
   );
   const bundleQuery = useMemo(
     () => readBundleListQuery(searchParams),
+    [searchParams],
+  );
+  const packQuery = useMemo(
+    () => readPackListQuery(searchParams),
     [searchParams],
   );
 
@@ -91,6 +100,16 @@ export function StorefrontPageContainer() {
     enabled: tab === "sorpresas",
   });
 
+  const packsQuery = useQuery({
+    queryKey: queryKeys.catalog.packsList(packQuery),
+    queryFn: async () => {
+      const result = await listPublicPacksAction(packQuery);
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+    enabled: tab === "combos",
+  });
+
   function pushParams(updates: Record<string, string | undefined>) {
     const params = buildStorefrontSearchParams(searchParams, updates);
     startTransition(() => {
@@ -123,6 +142,15 @@ export function StorefrontPageContainer() {
     ),
   );
 
+  const packsCurrentPage = packsQuery.data?.page ?? packQuery.page;
+  const packsTotalPages = Math.max(
+    1,
+    Math.ceil(
+      (packsQuery.data?.total ?? 0) /
+        (packsQuery.data?.pageSize ?? packQuery.pageSize),
+    ),
+  );
+
   return (
     <StorefrontLayout>
       <StorefrontPage
@@ -130,6 +158,7 @@ export function StorefrontPageContainer() {
         tabLabels={{
           products: tNav("sweets"),
           bundles: tNav("surprises"),
+          packs: tNav("combos"),
         }}
         onTabChange={handleTabChange}
         products={{
@@ -205,6 +234,41 @@ export function StorefrontPageContainer() {
           onSearchChange: setBundlesSearchDraft,
           onSearchSubmit: () =>
             pushParams({ search: bundlesSearchDraft, page: "1" }),
+          onSortChange: (sort: PublicCatalogSort) =>
+            pushParams({ sort, page: "1" }),
+          onPageChange: (page) => pushParams({ page: String(page) }),
+        }}
+        packs={{
+          packs: packsQuery.data?.items ?? [],
+          page: packsQuery.data?.page ?? packQuery.page,
+          pageSize: packsQuery.data?.pageSize ?? packQuery.pageSize,
+          total: packsQuery.data?.total ?? 0,
+          searchValue: packsSearchDraft,
+          sortValue: packQuery.sort,
+          sortOptions,
+          labels: {
+            searchPlaceholder: t("filters.searchPacks"),
+            searchAriaLabel: t("filters.searchPacks"),
+            sortLabel: t("filters.sort"),
+            viewCombo: t("actions.viewCombo"),
+            price: t("actions.price"),
+            empty: t("packs.empty"),
+            loading: tCommon("loading"),
+            error: tCommon("error"),
+            retry: tCommon("retry"),
+            previous: t("pagination.previous"),
+            next: t("pagination.next"),
+            page: t("pagination.page", {
+              page: packsCurrentPage,
+              total: packsTotalPages,
+            }),
+          },
+          isLoading: packsQuery.isLoading,
+          isError: packsQuery.isError,
+          onRetry: () => void packsQuery.refetch(),
+          onSearchChange: setPacksSearchDraft,
+          onSearchSubmit: () =>
+            pushParams({ search: packsSearchDraft, page: "1" }),
           onSortChange: (sort: PublicCatalogSort) =>
             pushParams({ sort, page: "1" }),
           onPageChange: (page) => pushParams({ page: String(page) }),

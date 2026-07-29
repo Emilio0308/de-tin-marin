@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   orderFulfillmentSchema,
   orderShoppingCartBundleLineSchema,
+  orderShoppingCartPackLineSchema,
   orderShoppingCartProductLineSchema,
 } from "./order";
 
@@ -24,6 +25,7 @@ export const guestOrderDetailSchema = z.object({
       z.discriminatedUnion("type", [
         orderShoppingCartProductLineSchema,
         orderShoppingCartBundleLineSchema,
+        orderShoppingCartPackLineSchema,
       ]),
     ),
   }),

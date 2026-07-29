@@ -53,6 +53,12 @@ export const orderBundleLineInputSchema = z.object({
   components: z.array(orderBundleComponentInputSchema).min(1),
 });
 
+export const orderPackLineInputSchema = z.object({
+  type: z.literal("pack"),
+  packId: z.string().uuid(),
+  quantity: z.number().int().min(1),
+});
+
 export const createOrderInputSchema = z.object({
   contact: orderContactSchema,
   fulfillment: orderFulfillmentSchema,
@@ -61,6 +67,7 @@ export const createOrderInputSchema = z.object({
       z.discriminatedUnion("type", [
         orderProductLineInputSchema,
         orderBundleLineInputSchema,
+        orderPackLineInputSchema,
       ]),
     )
     .min(1),
@@ -137,6 +144,26 @@ export const orderShoppingCartBundleLineSchema = z.object({
   imageUrl: z.string().nullable().optional(),
 });
 
+export const orderShoppingCartPackLineSchema = z.object({
+  type: z.literal("pack"),
+  packId: z.string().uuid(),
+  sku: z.string(),
+  name: z.string(),
+  quantity: z.number(),
+  unitPrice: z.number(),
+  lineTotal: z.number(),
+  components: z.array(
+    z.object({
+      productId: z.string().uuid(),
+      productName: z.string(),
+      sku: z.string(),
+      packageQuantity: z.number(),
+      totalPackages: z.number(),
+    }),
+  ),
+  imageUrl: z.string().nullable().optional(),
+});
+
 export const orderStockShortageSchema = z.object({
   kind: z.enum(["product", "container"]),
   id: z.string().uuid(),
@@ -164,6 +191,7 @@ export const orderDetailSchema = z.object({
       z.discriminatedUnion("type", [
         orderShoppingCartProductLineSchema,
         orderShoppingCartBundleLineSchema,
+        orderShoppingCartPackLineSchema,
       ]),
     ),
   }),

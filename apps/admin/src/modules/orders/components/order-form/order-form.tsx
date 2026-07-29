@@ -67,6 +67,7 @@ export function OrderForm({
   values,
   products,
   bundles,
+  packs,
   deliveryDistricts,
   bundleDraft,
   bundleDraftLoading,
@@ -80,6 +81,7 @@ export function OrderForm({
   onChange,
   onAddProductLine,
   onUpdateProductLineQuantity,
+  onAddPackLine,
   onStartBundleDraft,
   onBundleDraftComponentsChange,
   onBundleDraftQuantityChange,
@@ -93,6 +95,8 @@ export function OrderForm({
   const [draftProductId, setDraftProductId] = useState("");
   const [draftProductQty, setDraftProductQty] = useState(1);
   const [draftBundleId, setDraftBundleId] = useState("");
+  const [draftPackId, setDraftPackId] = useState("");
+  const [draftPackQty, setDraftPackQty] = useState(1);
 
   const selectedProduct = products.find(
     (product) => product.id === draftProductId,
@@ -112,6 +116,18 @@ export function OrderForm({
     () => new Map(bundles.map((bundle) => [bundle.id, bundle.name])),
     [bundles],
   );
+
+  const packsByName = useMemo(
+    () => new Map(packs.map((pack) => [pack.id, pack.name])),
+    [packs],
+  );
+
+  const selectedPack = packs.find((pack) => pack.id === draftPackId);
+
+  useEffect(() => {
+    if (!selectedPack) return;
+    setDraftPackQty(selectedPack.purchaseMinQuantity);
+  }, [selectedPack]);
 
   const bundleComponentLabels = useMemo(() => {
     if (!bundleDraft) return {};
@@ -454,6 +470,51 @@ export function OrderForm({
           </div>
         </div>
 
+        <div className={innerCardClass}>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+            <Field label={labels.combo}>
+              <select
+                className={fieldClass}
+                value={draftPackId}
+                onChange={(event) => setDraftPackId(event.target.value)}
+              >
+                <option value="">{labels.selectCombo}</option>
+                {packs.map((pack) => (
+                  <option key={pack.id} value={pack.id}>
+                    {pack.name} — S/ {pack.finalPrice.toFixed(2)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label={labels.quantity}>
+              <input
+                type="number"
+                min={selectedPack?.purchaseMinQuantity ?? 1}
+                max={selectedPack?.purchaseMaxQuantity ?? 100}
+                className={fieldClass}
+                value={draftPackQty}
+                onChange={(event) =>
+                  setDraftPackQty(Number(event.target.value) || 1)
+                }
+              />
+            </Field>
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 w-full sm:w-auto"
+              disabled={!draftPackId}
+              onClick={() => {
+                if (!draftPackId) return;
+                onAddPackLine(draftPackId, draftPackQty);
+                setDraftPackId("");
+                setDraftPackQty(1);
+              }}
+            >
+              {labels.addCombo}
+            </Button>
+          </div>
+        </div>
+
         {bundleDraft ? (
           <OrderFormBundleCustomize
             bundleName={bundleDraft.bundleName}
@@ -513,8 +574,10 @@ export function OrderForm({
           lines={values.lines}
           products={products}
           bundlesByName={bundlesByName}
+          packsByName={packsByName}
           labels={{
             surpriseLine: labels.surpriseLine,
+            comboLine: labels.comboLine,
             formatQuantityLabel: labels.formatQuantityLabel,
             formatComponents: labels.formatComponents,
             removeLine: labels.removeLine,

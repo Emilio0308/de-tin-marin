@@ -6,15 +6,18 @@ import { CatalogPagination } from "@/modules/catalog/components/catalog-paginati
 import { CatalogToolbar } from "@/modules/catalog/components/catalog-toolbar/catalog-toolbar";
 import {
   mapBundleToCard,
+  mapPackToCard,
   mapProductToCard,
 } from "@/modules/catalog/helpers/map-catalog-cards";
 import { isProductPurchasable } from "@/modules/catalog/helpers/product-purchase-limits";
 import { BundleCard } from "@/modules/home/components/bundle-card/bundle-card";
 import { HeroSectionContainer } from "@/modules/home/components/hero-section/hero-section.container";
+import { PackCard } from "@/modules/home/components/pack-card/pack-card";
 import { ProductCard } from "@/modules/home/components/product-card/product-card";
 import type { StorefrontTab } from "@/modules/home/helpers/storefront-url";
 import type {
   StorefrontBundlesTabProps,
+  StorefrontPacksTabProps,
   StorefrontPageProps,
   StorefrontProductsTabProps,
   StorefrontToolbarLabels,
@@ -32,6 +35,7 @@ function StorefrontTabs({
   const tabs: Array<{ id: StorefrontTab; label: string }> = [
     { id: "productos", label: tabLabels.products },
     { id: "sorpresas", label: tabLabels.bundles },
+    { id: "combos", label: tabLabels.packs },
   ];
 
   return (
@@ -286,6 +290,7 @@ export function StorefrontPage({
   tabLabels,
   products,
   bundles,
+  packs,
   onTabChange,
 }: StorefrontPageProps) {
   return (
@@ -300,9 +305,83 @@ export function StorefrontPage({
       </div>
       {tab === "productos" ? (
         <StorefrontProductsTab {...products} />
-      ) : (
+      ) : tab === "sorpresas" ? (
         <StorefrontBundlesTab {...bundles} />
+      ) : (
+        <StorefrontPacksTab {...packs} />
       )}
     </>
+  );
+}
+
+function StorefrontPacksTab({
+  packs,
+  page,
+  pageSize,
+  total,
+  searchValue,
+  sortValue,
+  sortOptions,
+  labels,
+  isLoading,
+  isError,
+  onRetry,
+  onSearchChange,
+  onSearchSubmit,
+  onSortChange,
+  onPageChange,
+}: StorefrontPacksTabProps) {
+  const showGrid = !isLoading && !isError && packs.length > 0;
+
+  return (
+    <section className="bg-surface py-20">
+      <div className="container-max px-gutter">
+        <CatalogToolbar
+          searchValue={searchValue}
+          searchPlaceholder={labels.searchPlaceholder}
+          searchAriaLabel={labels.searchAriaLabel}
+          sortLabel={labels.sortLabel}
+          sortValue={sortValue}
+          sortOptions={sortOptions}
+          onSearchChange={onSearchChange}
+          onSearchSubmit={onSearchSubmit}
+          onSortChange={onSortChange}
+        />
+
+        <CatalogStatus
+          labels={labels}
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={!isLoading && !isError && packs.length === 0}
+          onRetry={onRetry}
+        />
+
+        {showGrid ? (
+          <>
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+              {packs.map((pack) => (
+                <PackCard
+                  key={pack.id}
+                  pack={mapPackToCard(pack)}
+                  detailHref={`/combos/${pack.slug}`}
+                  viewComboLabel={labels.viewCombo}
+                  priceLabel={labels.price}
+                  variant="listing"
+                />
+              ))}
+            </div>
+            <CatalogPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              previousLabel={labels.previous}
+              nextLabel={labels.next}
+              pageLabel={labels.page}
+              onPageChange={onPageChange}
+            />
+          </>
+        ) : null}
+      </div>
+    </section>
   );
 }

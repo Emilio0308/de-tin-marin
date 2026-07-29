@@ -24,6 +24,7 @@ function resolveMobileTitle(
   if (pathname.startsWith("/products")) return pageTitles.products ?? "";
   if (pathname.startsWith("/containers")) return pageTitles.containers ?? "";
   if (pathname.startsWith("/bundles")) return pageTitles.bundles ?? "";
+  if (pathname.startsWith("/packs")) return pageTitles.packs ?? "";
   if (pathname.startsWith("/delivery")) return pageTitles.delivery ?? "";
   if (pathname.startsWith("/orders")) return pageTitles.orders ?? "";
   return pageTitles.dashboard ?? "Admin";

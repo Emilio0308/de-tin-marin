@@ -3,6 +3,8 @@ export const queryKeys = {
     products: () => ["products"] as const,
     categories: () => ["categories"] as const,
     bundles: () => ["bundles"] as const,
+    packs: () => ["packs"] as const,
+    activeCampaigns: () => ["active-campaigns"] as const,
     surpriseContainers: () => ["surprise-containers"] as const,
   },
   orders: {

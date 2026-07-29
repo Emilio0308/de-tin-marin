@@ -1,6 +1,6 @@
 "use client";
 
-import { Candy, Gift, Minus, Plus } from "lucide-react";
+import { Boxes, Candy, Gift, Minus, Plus } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { OrderFormLine, ProductOption } from "./order-form.types";
 import { resolveOrderFormProductBounds } from "./order-form-product.helpers";
@@ -9,8 +9,10 @@ type OrderFormCartLinesProps = {
   lines: OrderFormLine[];
   products: ProductOption[];
   bundlesByName: Map<string, string>;
+  packsByName: Map<string, string>;
   labels: {
     surpriseLine: string;
+    comboLine: string;
     formatQuantityLabel: (quantity: number) => string;
     formatComponents: (count: number) => string;
     removeLine: string;
@@ -27,6 +29,7 @@ export function OrderFormCartLines({
   lines,
   products,
   bundlesByName,
+  packsByName,
   labels,
   onRemoveLine,
   onUpdateProductQuantity,
@@ -92,6 +95,49 @@ export function OrderFormCartLines({
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                {lineTotal !== null ? (
+                  <p className="font-display text-primary text-lg font-extrabold">
+                    S/ {lineTotal.toFixed(2)}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="text-secondary font-label text-label-bold mt-2 text-sm hover:underline"
+                  onClick={() => onRemoveLine(index)}
+                >
+                  {labels.removeLine}
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        if (line.type === "pack") {
+          const packName = packsByName.get(line.packId) ?? "—";
+          return (
+            <div
+              key={`pack-${line.packId}-${index}`}
+              className="border-outline-variant/50 bg-surface flex items-center justify-between gap-4 rounded-lg border p-4"
+            >
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="bg-secondary-container/40 flex h-16 w-16 shrink-0 items-center justify-center rounded-md">
+                  <Boxes className="text-secondary h-7 w-7" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-label text-label-bold text-on-surface truncate">
+                      {packName}
+                    </p>
+                    <span className="bg-secondary text-on-secondary rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase">
+                      {labels.comboLine}
+                    </span>
+                  </div>
+                  <p className="text-on-surface-variant text-sm">
+                    {labels.formatQuantityLabel(line.quantity)}
+                  </p>
                 </div>
               </div>
               <div className="shrink-0 text-right">

@@ -35,6 +35,15 @@ export interface HomeBundle {
   features: HomeBundleFeature[];
 }
 
+export interface HomePack {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  imageAlt: string;
+  features: HomeBundleFeature[];
+}
+
 export interface HomeNavLink {
   label: string;
   href: string;

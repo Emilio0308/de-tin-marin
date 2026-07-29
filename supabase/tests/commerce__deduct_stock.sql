@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(16);
 
 -- Helpers (pure math — no auth)
 select is(
@@ -411,6 +411,115 @@ select is(
   ),
   50,
   'unit product does not open sealed packages'
+);
+
+-- Pack line deducts component presentations
+do $$
+declare
+  v_category_id uuid := 'aaaaaaaa-0001-0001-0001-000000000001';
+  v_product_id uuid := 'aaaaaaaa-0001-0001-0001-000000000042';
+  v_order_id uuid := 'aaaaaaaa-0001-0001-0001-000000000025';
+begin
+  insert into catalog.products (
+    id,
+    sku,
+    name,
+    slug,
+    category_id,
+    prices,
+    stock_sealed_packages,
+    stock_loose_base_units,
+    items_per_package,
+    product_type
+  )
+  values (
+    v_product_id,
+    'PACK-COMP',
+    'Pack Component',
+    'pack-comp-deduct',
+    v_category_id,
+    '{"normal":{"netPrice":10,"igv":1.53,"subtotal":8.47},"unit":{"netPrice":1,"igv":0.15,"subtotal":0.85}}'::jsonb,
+    5,
+    0,
+    10,
+    'package'
+  )
+  on conflict (id) do update
+  set
+    stock_sealed_packages = 5,
+    stock_loose_base_units = 0,
+    items_per_package = 10,
+    product_type = 'package';
+
+  insert into commerce.orders (
+    id,
+    order_number,
+    status,
+    payment_status,
+    shopping_cart,
+    subtotal,
+    total
+  )
+  values (
+    v_order_id,
+    'TM-DEDUCT-TEST-005',
+    'pending_payment',
+    'pending',
+    jsonb_build_object(
+      'lines',
+      jsonb_build_array(
+        jsonb_build_object(
+          'type', 'pack',
+          'packId', 'bbbbbbbb-0001-0001-0001-000000000001',
+          'sku', 'COMBO-1',
+          'name', 'Combo Test',
+          'quantity', 2,
+          'unitPrice', 20,
+          'lineTotal', 40,
+          'components',
+          jsonb_build_array(
+            jsonb_build_object(
+              'productId', v_product_id,
+              'productName', 'Pack Component',
+              'sku', 'PACK-COMP',
+              'packageQuantity', 2,
+              'totalPackages', 4
+            )
+          )
+        )
+      )
+    ),
+    40,
+    40
+  )
+  on conflict (id) do update
+  set
+    status = 'pending_payment',
+    payment_status = 'pending',
+    shopping_cart = excluded.shopping_cart;
+
+  perform commerce.deduct_stock_for_order(v_order_id);
+end;
+$$;
+
+select is(
+  (
+    select stock_sealed_packages
+    from catalog.products
+    where id = 'aaaaaaaa-0001-0001-0001-000000000042'
+  ),
+  1,
+  'pack deduct opens packages for totalPackages presentations (4 × 10 = 40 base from 50)'
+);
+
+select is(
+  (
+    select stock_loose_base_units
+    from catalog.products
+    where id = 'aaaaaaaa-0001-0001-0001-000000000042'
+  ),
+  0,
+  'pack deduct leaves no loose after exact package multiples'
 );
 
 select * from finish();

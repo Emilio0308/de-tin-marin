@@ -11,6 +11,11 @@ export const queryKeys = {
       [...queryKeys.catalog.bundles(), "list", query] as const,
     bundleDetail: (id: string) =>
       [...queryKeys.catalog.bundles(), "detail", id] as const,
+    packs: () => [...queryKeys.catalog.all, "packs"] as const,
+    packsList: (query: Record<string, unknown>) =>
+      [...queryKeys.catalog.packs(), "list", query] as const,
+    packDetail: (slug: string) =>
+      [...queryKeys.catalog.packs(), "detail", slug] as const,
     categories: () => [...queryKeys.catalog.all, "categories"] as const,
   },
   cart: {

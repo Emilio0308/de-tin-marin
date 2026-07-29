@@ -1,38 +1,40 @@
 # Campaigns — De Tin Marín
 
-> **Responsabilidad:** definir campañas promocionales y asignarlas a productos (1:1). El **precio final** se calcula en el listado de productos (dominio Pricing).
+> **Responsabilidad:** definir campañas promocionales y asignarlas 1:1 a **productos** o **packs** (DECISIONS #24 / #33). El **precio final** se calcula en listado (dominio Pricing).
 
-> **Acotación v1 (DECISIONS #24):** el esquema y el helper `computeFinalPrice` existen, pero **no hay campañas activas ni UI admin en v1**. Sin asignaciones → `finalPrice === netPrice`. La activación operativa (CRUD campañas + asignar a productos) se implementará en una etapa posterior sin cambiar el contrato de DTOs.
+> **Acotación v1 (DECISIONS #24):** el esquema y el helper `computeFinalPrice` existen, pero **no hay campañas activas ni UI admin de campañas en v1**. Sin asignaciones → `finalPrice === netPrice`. La activación operativa (CRUD campañas) se implementará en una etapa posterior sin cambiar el contrato de DTOs. Admin de packs ya permite elegir `campaign_id` existente.
 
 ## Modelo v1
 
-Una sola tabla principal + FK en productos:
+Una sola tabla principal + FKs:
 
 | Entidad    | Tabla                                                |
 | ---------- | ---------------------------------------------------- |
 | Campaña    | `pricing.campaigns`                                  |
 | Asignación | `catalog.products.campaign_id` → campaigns (**1:1**) |
+| Asignación | `catalog.packs.campaign_id` → campaigns (**1:1**)    |
 
-> v1 **sin** `campaign_rules`, listas separadas ni múltiples campañas por producto.
+> v1 **sin** `campaign_rules`, listas separadas ni múltiples campañas por entidad.
 
 ## `pricing.campaigns`
 
-| Campo         | Tipo         | Notas                                                   |
-| ------------- | ------------ | ------------------------------------------------------- |
-| `id`          | uuid         | PK                                                      |
-| `name`        | text         |                                                         |
-| `description` | text         | Opcional                                                |
-| `percentage`  | numeric(5,2) | Descuento sobre `prices.normal.netPrice` (presentación) |
-| `starts_at`   | timestamptz  | Inicio                                                  |
-| `ends_at`     | timestamptz  | Fin                                                     |
-| `is_active`   | boolean      | Kill switch manual                                      |
+| Campo         | Tipo         | Notas                                                           |
+| ------------- | ------------ | --------------------------------------------------------------- |
+| `id`          | uuid         | PK                                                              |
+| `name`        | text         |                                                                 |
+| `description` | text         | Opcional                                                        |
+| `percentage`  | numeric(5,2) | Descuento sobre `prices.normal.netPrice` (presentación / combo) |
+| `starts_at`   | timestamptz  | Inicio                                                          |
+| `ends_at`     | timestamptz  | Fin                                                             |
+| `is_active`   | boolean      | Kill switch manual                                              |
 
-## Relación producto ↔ campaña
+## Relación producto/pack ↔ campaña
 
-- **Un producto = máximo una campaña** asignada (`products.campaign_id`).
-- Al asignar una campaña nueva a un producto que ya tenía otra → **reemplazar** el `campaign_id`.
-- Productos **sin** `campaign_id` o con campaña **expirada/inactiva** → precio = `prices.normal` sin descuento.
-- El descuento aplica **solo** a productos que tengan la campaña asignada y vigente — no es global automática.
+- **Un producto = máximo una campaña** (`products.campaign_id`).
+- **Un pack = máximo una campaña** (`packs.campaign_id`).
+- Al asignar una campaña nueva → **reemplazar** el `campaign_id`.
+- Sin `campaign_id` o campaña **expirada/inactiva** → precio = `prices.normal` sin descuento.
+- El descuento aplica **solo** a la entidad asignada y vigente — no es global automática.
 
 ## Cálculo de precio final
 
@@ -46,18 +48,20 @@ function applyCampaign(
 }
 ```
 
-El listado de productos (Server Action / repository) hace JOIN a `campaigns`, valida vigencia y devuelve `finalPrice` — **el front no recalcula**.
+Listados (producto o pack) hacen JOIN a `campaigns`, validan vigencia y devuelven `finalPrice` — **el front no recalcula**.
 
 Para bundles y costeo por sorpresa (S1D): `finalUnitPrice = finalPrice / items_per_package`. Sin campaña: `prices.unit.netPrice`.
 
+Para packs (S1F): campaña sobre `prices.normal` del combo; `reference` no se descuenta por separado.
+
 ## Admin — pantallas
 
-> **v1:** pantallas planificadas abajo — **no implementadas** hasta activación operativa de campañas (DECISIONS #24).
+> **v1:** CRUD de campañas planificado abajo — **no implementado** hasta activación operativa (DECISIONS #24). Asignación desde formulario de producto/pack sí existe como campo `campaignId`.
 
 - CRUD campañas (nombre, %, fechas, descripción)
-- Asignar campaña a producto(s) desde producto o desde campaña
+- Asignar campaña a producto(s) / pack(s) desde la entidad o desde campaña
 - Indicador: activa / programada / expirada
-- Al expirar: el producto sigue con `campaign_id` pero el backend ignora la campaña si fuera de fecha (opcional: job que limpia `campaign_id` — v2)
+- Al expirar: la entidad sigue con `campaign_id` pero el backend ignora la campaña si fuera de fecha (opcional: job que limpia `campaign_id` — v2)
 
 ## API (planificada)
 
@@ -72,9 +76,10 @@ Para bundles y costeo por sorpresa (S1D): `finalUnitPrice = finalPrice / items_p
 ## No hacer aquí
 
 - Calcular total de sorpresa/bundle → **Pricing** (`bundle-line-price`)
+- Calcular reference de pack → **Pricing** (`pack-price`)
 - Aplicar descuento en el frontend
 - Descontar stock → **Orders** al `paid`
 
 ## Reglas relacionadas
 
-Reglas 9–11 en [`business-rules.md`](business-rules.md).
+Reglas 9–11 y 23 en [`business-rules.md`](business-rules.md).

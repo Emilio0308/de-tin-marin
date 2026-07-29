@@ -12,7 +12,12 @@ import { SiteHeader } from "./site-header";
 function resolveActiveIndex(pathname: string, tab: string): number {
   if (pathname.startsWith("/productos")) return 0;
   if (pathname.startsWith("/sorpresas")) return 1;
-  if (pathname === "/") return tab === "sorpresas" ? 1 : 0;
+  if (pathname.startsWith("/combos")) return 2;
+  if (pathname === "/") {
+    if (tab === "sorpresas") return 1;
+    if (tab === "combos") return 2;
+    return 0;
+  }
 
   return HOME_NAV_ROUTES.findIndex(
     (route) => !route.href.startsWith("/?") && pathname === route.href,

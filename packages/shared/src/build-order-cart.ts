@@ -3,6 +3,7 @@ import {
   buildShoppingCart,
   computeOrderTotals,
   type BuildBundleLineInput,
+  type BuildPackLineInput,
   type BuildProductLineInput,
   type OrderShoppingCart,
   type OrderTotals,
@@ -10,6 +11,7 @@ import {
 } from "./order-cart";
 import {
   parseContainerPricesJson,
+  parsePackPricesJson,
   parseProductPricesJson,
   roundMoney,
 } from "./prices";
@@ -21,7 +23,8 @@ export type OrderLineInput =
       bundleId: string;
       quantity: number;
       components: Array<{ productId: string; quantityPerUnit: number }>;
-    };
+    }
+  | { type: "pack"; packId: string; quantity: number };
 
 export type OrderProductSource = {
   id: string;
@@ -53,11 +56,27 @@ export type OrderBundleSource = {
   } | null;
 };
 
+export type OrderPackSource = {
+  id: string;
+  sku: string;
+  name: string;
+  prices: unknown;
+  campaign_id: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  deleted_at: string | null;
+  items: Array<{ product_id: string; package_quantity: number }>;
+};
+
 export type BuildOrderCartError =
-  "PRODUCT_NOT_FOUND" | "BUNDLE_NOT_FOUND" | "DUPLICATE_PRODUCT_IN_BUNDLE";
+  | "PRODUCT_NOT_FOUND"
+  | "BUNDLE_NOT_FOUND"
+  | "PACK_NOT_FOUND"
+  | "DUPLICATE_PRODUCT_IN_BUNDLE";
 
 export function collectProductIdsFromOrderLines(
   lines: OrderLineInput[],
+  packsById?: Map<string, OrderPackSource>,
 ): string[] {
   const ids = new Set<string>();
 
@@ -67,12 +86,32 @@ export function collectProductIdsFromOrderLines(
       continue;
     }
 
+    if (line.type === "pack") {
+      const pack = packsById?.get(line.packId);
+      if (pack) {
+        for (const item of pack.items) {
+          ids.add(item.product_id);
+        }
+      }
+      continue;
+    }
+
     for (const component of line.components) {
       ids.add(component.productId);
     }
   }
 
   return [...ids];
+}
+
+export function collectPackIdsFromOrderLines(
+  lines: OrderLineInput[],
+): string[] {
+  return [
+    ...new Set(
+      lines.filter((line) => line.type === "pack").map((line) => line.packId),
+    ),
+  ];
 }
 
 export function resolveProductsForOrder(
@@ -118,15 +157,64 @@ export function resolveProductsForOrder(
   );
 }
 
+function resolvePackUnitPrice(
+  pack: OrderPackSource,
+  campaignsById: Map<string, OrderCampaignSource>,
+): number {
+  const { normalNetPrice } = parsePackPricesJson(pack.prices);
+  const campaignRow = pack.campaign_id
+    ? (campaignsById.get(pack.campaign_id) ?? null)
+    : null;
+  return roundMoney(
+    campaignRow
+      ? computeFinalPrice(normalNetPrice, toCampaignForPricing(campaignRow))
+      : normalNetPrice,
+  );
+}
+
 function buildEnrichedCartLines(
   lines: OrderLineInput[],
   bundlesById: Map<string, OrderBundleSource>,
-): Array<BuildProductLineInput | BuildBundleLineInput> | BuildOrderCartError {
-  const buildLines: Array<BuildProductLineInput | BuildBundleLineInput> = [];
+  packsById: Map<string, OrderPackSource>,
+  campaignsById: Map<string, OrderCampaignSource>,
+):
+  | Array<BuildProductLineInput | BuildBundleLineInput | BuildPackLineInput>
+  | BuildOrderCartError {
+  const buildLines: Array<
+    BuildProductLineInput | BuildBundleLineInput | BuildPackLineInput
+  > = [];
 
   for (const line of lines) {
     if (line.type === "product") {
       buildLines.push(line);
+      continue;
+    }
+
+    if (line.type === "pack") {
+      const pack = packsById.get(line.packId);
+      if (!pack || !pack.is_active || pack.deleted_at) {
+        return "PACK_NOT_FOUND";
+      }
+      if (pack.items.length === 0) {
+        return "PACK_NOT_FOUND";
+      }
+
+      buildLines.push({
+        type: "pack",
+        packId: pack.id,
+        quantity: line.quantity,
+        pack: {
+          id: pack.id,
+          sku: pack.sku,
+          name: pack.name,
+          unitPrice: resolvePackUnitPrice(pack, campaignsById),
+          imageUrl: pack.image_url,
+        },
+        components: pack.items.map((item) => ({
+          productId: item.product_id,
+          packageQuantity: item.package_quantity,
+        })),
+      });
       continue;
     }
 
@@ -168,16 +256,29 @@ export function buildOrderCart(input: {
   products: OrderProductSource[];
   campaigns: OrderCampaignSource[];
   bundlesById: Map<string, OrderBundleSource>;
+  packsById?: Map<string, OrderPackSource>;
 }):
   | { ok: true; shoppingCart: OrderShoppingCart }
   | { ok: false; error: BuildOrderCartError } {
-  const productIds = collectProductIdsFromOrderLines(input.lines);
-  if (input.products.length !== productIds.length) {
-    return { ok: false, error: "PRODUCT_NOT_FOUND" };
+  const packsById = input.packsById ?? new Map<string, OrderPackSource>();
+  const productIds = collectProductIdsFromOrderLines(input.lines, packsById);
+  const productIdSet = new Set(input.products.map((p) => p.id));
+  for (const id of productIds) {
+    if (!productIdSet.has(id)) {
+      return { ok: false, error: "PRODUCT_NOT_FOUND" };
+    }
   }
 
+  const campaignsById = new Map(
+    input.campaigns.map((campaign) => [campaign.id, campaign]),
+  );
   const productsById = resolveProductsForOrder(input.products, input.campaigns);
-  const enrichedLines = buildEnrichedCartLines(input.lines, input.bundlesById);
+  const enrichedLines = buildEnrichedCartLines(
+    input.lines,
+    input.bundlesById,
+    packsById,
+    campaignsById,
+  );
 
   if (typeof enrichedLines === "string") {
     return { ok: false, error: enrichedLines };
@@ -199,6 +300,7 @@ export function buildOrderCartWithTotals(input: {
   products: OrderProductSource[];
   campaigns: OrderCampaignSource[];
   bundlesById: Map<string, OrderBundleSource>;
+  packsById?: Map<string, OrderPackSource>;
   discountTotal?: number;
   shippingTotal?: number;
 }):

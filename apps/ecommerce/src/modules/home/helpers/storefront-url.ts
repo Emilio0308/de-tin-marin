@@ -1,4 +1,4 @@
-export type StorefrontTab = "productos" | "sorpresas";
+export type StorefrontTab = "productos" | "sorpresas" | "combos";
 
 export const STOREFRONT_TAB_PARAM = "tab";
 
@@ -6,7 +6,9 @@ export function readStorefrontTab(
   searchParams: URLSearchParams,
 ): StorefrontTab {
   const tab = searchParams.get(STOREFRONT_TAB_PARAM);
-  return tab === "sorpresas" ? "sorpresas" : "productos";
+  if (tab === "sorpresas") return "sorpresas";
+  if (tab === "combos") return "combos";
+  return "productos";
 }
 
 export function storefrontTabHref(tab: StorefrontTab): string {

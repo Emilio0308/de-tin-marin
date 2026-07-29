@@ -56,8 +56,30 @@ export type OrderShoppingCartBundleLine = {
   imageUrl?: string | null;
 };
 
+export type OrderShoppingCartPackComponent = {
+  productId: string;
+  productName: string;
+  sku: string;
+  packageQuantity: number;
+  totalPackages: number;
+};
+
+export type OrderShoppingCartPackLine = {
+  type: "pack";
+  packId: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  components: OrderShoppingCartPackComponent[];
+  imageUrl?: string | null;
+};
+
 export type OrderShoppingCartLine =
-  OrderShoppingCartProductLine | OrderShoppingCartBundleLine;
+  | OrderShoppingCartProductLine
+  | OrderShoppingCartBundleLine
+  | OrderShoppingCartPackLine;
 
 export type OrderShoppingCart = {
   lines: OrderShoppingCartLine[];
@@ -93,8 +115,32 @@ export type BuildBundleLineInput = {
   components: BundleComponentInput[];
 };
 
+export type PackComponentInput = {
+  productId: string;
+  packageQuantity: number;
+};
+
+export type PackForOrderLine = {
+  id: string;
+  sku: string;
+  name: string;
+  /** Precio de venta del combo (finalPrice con campaña). */
+  unitPrice: number;
+  imageUrl?: string | null;
+};
+
+export type BuildPackLineInput = {
+  type: "pack";
+  packId: string;
+  quantity: number;
+  pack: PackForOrderLine;
+  components: PackComponentInput[];
+};
+
 export type BuildShoppingCartInput = {
-  lines: Array<BuildProductLineInput | BuildBundleLineInput>;
+  lines: Array<
+    BuildProductLineInput | BuildBundleLineInput | BuildPackLineInput
+  >;
   productsById: Map<string, ProductForOrderLine>;
 };
 
@@ -200,6 +246,42 @@ export function buildBundleLine(
   };
 }
 
+export function buildPackLine(
+  pack: PackForOrderLine,
+  quantity: number,
+  components: PackComponentInput[],
+  productsById: Map<string, ProductForOrderLine>,
+): OrderShoppingCartPackLine {
+  const frozenComponents: OrderShoppingCartPackComponent[] = components.map(
+    (component) => {
+      const product = productsById.get(component.productId);
+      if (!product) {
+        throw new Error(`PRODUCT_NOT_FOUND:${component.productId}`);
+      }
+      return {
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        packageQuantity: component.packageQuantity,
+        totalPackages: component.packageQuantity * quantity,
+      };
+    },
+  );
+
+  const unitPrice = roundMoney(pack.unitPrice);
+  return {
+    type: "pack",
+    packId: pack.id,
+    sku: pack.sku,
+    name: pack.name,
+    quantity,
+    unitPrice,
+    lineTotal: roundMoney(unitPrice * quantity),
+    components: frozenComponents,
+    imageUrl: pack.imageUrl ?? null,
+  };
+}
+
 export function buildShoppingCart(
   input: BuildShoppingCartInput,
 ): OrderShoppingCart {
@@ -210,6 +292,15 @@ export function buildShoppingCart(
         throw new Error(`PRODUCT_NOT_FOUND:${line.productId}`);
       }
       return buildProductLine(product, line.quantity);
+    }
+
+    if (line.type === "pack") {
+      return buildPackLine(
+        line.pack,
+        line.quantity,
+        line.components,
+        input.productsById,
+      );
     }
 
     return buildBundleLine(

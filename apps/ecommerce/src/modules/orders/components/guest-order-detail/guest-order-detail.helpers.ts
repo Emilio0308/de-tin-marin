@@ -5,6 +5,7 @@ export function summarizeGuestOrderLines(
   order: GuestOrderDetail,
   labels: {
     bundleComponents: string;
+    packComponents: string;
     formatBundlePersons: (count: number) => string;
   },
 ): GuestOrderLineSummary[] {
@@ -12,16 +13,26 @@ export function summarizeGuestOrderLines(
     if (line.type === "product") {
       return {
         key: line.productId,
-        kind: "product",
+        kind: "product" as const,
         name: line.name,
         detail: `${line.quantity} ud.`,
         lineTotal: line.lineTotal,
       };
     }
 
+    if (line.type === "pack") {
+      return {
+        key: line.packId,
+        kind: "pack" as const,
+        name: line.name,
+        detail: `${line.quantity} ud. · ${line.components.length} ${labels.packComponents}`,
+        lineTotal: line.lineTotal,
+      };
+    }
+
     return {
       key: line.bundleId,
-      kind: "bundle",
+      kind: "bundle" as const,
       name: line.name,
       detail: `${labels.formatBundlePersons(line.quantity)} · ${line.components.length} ${labels.bundleComponents}`,
       lineTotal: line.lineTotal,

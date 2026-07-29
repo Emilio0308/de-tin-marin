@@ -21,6 +21,16 @@ export type BundleOption = {
   templateQuantity: number;
 };
 
+export type PackOption = {
+  id: string;
+  name: string;
+  sku: string;
+  finalPrice: number;
+  purchaseMinQuantity: number;
+  purchaseMaxQuantity: number;
+  itemCount: number;
+};
+
 export type OrderFormProductLine = {
   type: "product";
   productId: string;
@@ -39,7 +49,14 @@ export type OrderFormBundleLine = {
   components: OrderFormBundleComponent[];
 };
 
-export type OrderFormLine = OrderFormProductLine | OrderFormBundleLine;
+export type OrderFormPackLine = {
+  type: "pack";
+  packId: string;
+  quantity: number;
+};
+
+export type OrderFormLine =
+  OrderFormProductLine | OrderFormBundleLine | OrderFormPackLine;
 
 export type OrderFormValues = {
   contact: {
@@ -165,6 +182,10 @@ export type OrderFormLabels = {
   validationMinCandies: string;
   validationMaxCandies: string;
   editSurprise: string;
+  combo: string;
+  selectCombo: string;
+  addCombo: string;
+  comboLine: string;
   candiesSubtotal: string;
   containerSubtotal: string;
   containerCostHint: (unitPrice: string, quantity: number) => string;
@@ -185,6 +206,7 @@ export type OrderFormProps = {
   values: OrderFormValues;
   products: ProductOption[];
   bundles: BundleOption[];
+  packs: PackOption[];
   deliveryDistricts: string[];
   bundleDraft: OrderFormBundleDraft | null;
   bundleDraftLoading: boolean;
@@ -203,6 +225,7 @@ export type OrderFormProps = {
   onChange: (values: OrderFormValues) => void;
   onAddProductLine: (productId: string, quantity: number) => void;
   onUpdateProductLineQuantity: (index: number, quantity: number) => void;
+  onAddPackLine: (packId: string, quantity: number) => void;
   onStartBundleDraft: (bundleId: string) => void;
   onBundleDraftComponentsChange: (
     components: OrderFormBundleComponent[],

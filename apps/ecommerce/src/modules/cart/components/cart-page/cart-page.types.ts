@@ -17,6 +17,8 @@ export type CartPageLabels = {
   stockContainer: string;
   stockChecking: string;
   bundleBadge: string;
+  packBadge: string;
+  packComponents: string;
 };
 
 export type CartPageProps = {

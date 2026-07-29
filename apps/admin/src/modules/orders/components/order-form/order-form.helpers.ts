@@ -2,6 +2,7 @@ import {
   buildShoppingCart,
   computeOrderTotals,
   type BuildBundleLineInput,
+  type BuildPackLineInput,
   type BuildProductLineInput,
   type OrderShoppingCartLine,
   type ProductForOrderLine,
@@ -9,6 +10,7 @@ import {
 import type {
   OrderFormLine,
   OrderFormValues,
+  PackOption,
   ProductOption,
 } from "./order-form.types";
 
@@ -22,15 +24,41 @@ type BundleMeta = {
   };
 };
 
+type PackMeta = {
+  id: string;
+  sku: string;
+  name: string;
+  unitPrice: number;
+  components: Array<{ productId: string; packageQuantity: number }>;
+};
+
 function buildProductsByIdForLine(
   line: OrderFormLine,
   products: ProductOption[],
+  packsById: Map<string, PackMeta>,
 ): Map<string, ProductForOrderLine> {
   const map = new Map<string, ProductForOrderLine>();
 
   if (line.type === "product") {
     const product = products.find((item) => item.id === line.productId);
     if (product) {
+      map.set(product.id, {
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        unitPrice: product.finalUnitPrice,
+        presentationPrice: product.finalPrice,
+      });
+    }
+    return map;
+  }
+
+  if (line.type === "pack") {
+    const pack = packsById.get(line.packId);
+    if (!pack) return map;
+    const componentIds = new Set(pack.components.map((c) => c.productId));
+    for (const product of products) {
+      if (!componentIds.has(product.id)) continue;
       map.set(product.id, {
         id: product.id,
         sku: product.sku,
@@ -62,9 +90,27 @@ function buildProductsByIdForLine(
 function toBuildLine(
   line: OrderFormLine,
   bundlesById: Map<string, BundleMeta>,
-): BuildProductLineInput | BuildBundleLineInput | null {
+  packsById: Map<string, PackMeta>,
+): BuildProductLineInput | BuildBundleLineInput | BuildPackLineInput | null {
   if (line.type === "product") {
     return line;
+  }
+
+  if (line.type === "pack") {
+    const pack = packsById.get(line.packId);
+    if (!pack) return null;
+    return {
+      type: "pack",
+      packId: pack.id,
+      quantity: line.quantity,
+      pack: {
+        id: pack.id,
+        sku: pack.sku,
+        name: pack.name,
+        unitPrice: pack.unitPrice,
+      },
+      components: pack.components,
+    };
   }
 
   const bundle = bundlesById.get(line.bundleId);
@@ -85,11 +131,18 @@ export function estimateOrderFormLineTotal(
   line: OrderFormLine,
   products: ProductOption[],
   bundlesById: Map<string, BundleMeta>,
+  packsById: Map<string, PackMeta> = new Map(),
 ): number | null {
-  const buildLine = toBuildLine(line, bundlesById);
+  if (line.type === "pack") {
+    const pack = packsById.get(line.packId);
+    if (!pack) return null;
+    return Math.round(pack.unitPrice * line.quantity * 100) / 100;
+  }
+
+  const buildLine = toBuildLine(line, bundlesById, packsById);
   if (!buildLine) return null;
 
-  const productsById = buildProductsByIdForLine(line, products);
+  const productsById = buildProductsByIdForLine(line, products, packsById);
 
   try {
     const shoppingCart = buildShoppingCart({
@@ -107,6 +160,7 @@ export function previewOrderTotals(
   values: Pick<OrderFormValues, "lines" | "shippingTotal" | "discountTotal">,
   products: ProductOption[],
   bundlesById: Map<string, BundleMeta>,
+  packsById: Map<string, PackMeta> = new Map(),
 ) {
   if (values.lines.length === 0) {
     return computeOrderTotals({ lines: [] }, values);
@@ -116,12 +170,29 @@ export function previewOrderTotals(
 
   try {
     for (const line of values.lines) {
-      const buildLine = toBuildLine(line, bundlesById);
+      if (line.type === "pack") {
+        const pack = packsById.get(line.packId);
+        if (!pack) continue;
+        const unitPrice = pack.unitPrice;
+        builtLines.push({
+          type: "pack",
+          packId: pack.id,
+          sku: pack.sku,
+          name: pack.name,
+          quantity: line.quantity,
+          unitPrice,
+          lineTotal: Math.round(unitPrice * line.quantity * 100) / 100,
+          components: [],
+        });
+        continue;
+      }
+
+      const buildLine = toBuildLine(line, bundlesById, packsById);
       if (!buildLine) continue;
 
       const shoppingCart = buildShoppingCart({
         lines: [buildLine],
-        productsById: buildProductsByIdForLine(line, products),
+        productsById: buildProductsByIdForLine(line, products, packsById),
       });
       const built = shoppingCart.lines[0];
       if (built) builtLines.push(built);
@@ -153,19 +224,42 @@ export function toCreateOrderPayload(values: OrderFormValues) {
           : undefined,
       notes: values.fulfillment.notes || null,
     },
-    lines: values.lines.map((line) =>
-      line.type === "product"
-        ? line
-        : {
-            type: "bundle" as const,
-            bundleId: line.bundleId,
-            quantity: line.quantity,
-            components: line.components,
-          },
-    ),
+    lines: values.lines.map((line) => {
+      if (line.type === "product") return line;
+      if (line.type === "pack") {
+        return {
+          type: "pack" as const,
+          packId: line.packId,
+          quantity: line.quantity,
+        };
+      }
+      return {
+        type: "bundle" as const,
+        bundleId: line.bundleId,
+        quantity: line.quantity,
+        components: line.components,
+      };
+    }),
     shippingTotal: values.shippingTotal,
     discountTotal: values.discountTotal,
   };
 }
 
-export type { BundleMeta };
+export function buildPackMetaFromOptions(
+  packs: PackOption[],
+): Map<string, PackMeta> {
+  return new Map(
+    packs.map((pack) => [
+      pack.id,
+      {
+        id: pack.id,
+        sku: pack.sku,
+        name: pack.name,
+        unitPrice: pack.finalPrice,
+        components: [],
+      },
+    ]),
+  );
+}
+
+export type { BundleMeta, PackMeta };

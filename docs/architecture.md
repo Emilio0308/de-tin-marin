@@ -35,11 +35,12 @@ de-tin-marin/
 | Dominio       | Responsabilidad principal                                                             |
 | ------------- | ------------------------------------------------------------------------------------- |
 | Products      | CRUD, SKU, categorías, imágenes, `prices` JSONB (`normal`+`unit`), stock sealed/loose |
-| Bundles       | Plantillas sorpresa sin stock; `service_fee` editable                                 |
-| Pricing       | `finalPrice` en listado; total línea sorpresa                                         |
-| Campaigns     | Campañas %; asignación 1:1 a producto                                                 |
-| Orders        | Ciclo de vida; snapshot; personalización bundle                                       |
-| Inventory     | Stock v1 en products; deduct al `paid`                                                |
+| Bundles       | Plantillas sorpresa sin stock; composición + envase                                   |
+| Packs         | Combos vendibles BOM fija; `prices.reference`+`normal`; sin stock propio              |
+| Pricing       | `finalPrice` en listado; total línea sorpresa; reference pack                         |
+| Campaigns     | Campañas %; asignación 1:1 a producto o pack                                          |
+| Orders        | Ciclo de vida; snapshot product/bundle/pack                                           |
+| Inventory     | Stock v1 en products; deduct al `paid` (incl. componentes pack)                       |
 | Customers     | Perfiles de cliente (sin VIP v1)                                                      |
 | Payments      | Registro manual; operador confirma                                                    |
 | Shipping      | Envíos, tracking                                                                      |
@@ -101,14 +102,14 @@ Reglas detalladas: [`rules/00-architecture.md`](rules/00-architecture.md).
 
 ## Schemas Postgres (v1)
 
-| Schema      | Contenido                                                                                                       |
-| ----------- | --------------------------------------------------------------------------------------------------------------- |
-| `core`      | staff, settings, audit_log                                                                                      |
-| `catalog`   | products (`prices` JSONB, `stock_sealed_packages`, `stock_loose_base_units`), bundles, bundle_items, categories |
-| `pricing`   | campaigns (+ `products.campaign_id` 1:1)                                                                        |
-| `commerce`  | orders (`shopping_cart` JSONB), payments, shipments                                                             |
-| `crm`       | customers                                                                                                       |
-| `inventory` | ⏸ v2 — ledger de movimientos                                                                                    |
+| Schema      | Contenido                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| `core`      | staff, settings, audit_log                                                                                         |
+| `catalog`   | products (`prices` JSONB, sealed/loose), bundles, bundle_items, packs, pack_items, categories, surprise_containers |
+| `pricing`   | campaigns (+ `products.campaign_id` 1:1)                                                                           |
+| `commerce`  | orders (`shopping_cart` JSONB), payments, shipments                                                                |
+| `crm`       | customers                                                                                                          |
+| `inventory` | ⏸ v2 — ledger de movimientos                                                                                       |
 
 Moneda: **PEN** únicamente. Catálogo completo: [`database.md`](database.md).
 

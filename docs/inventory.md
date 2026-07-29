@@ -65,10 +65,11 @@ Ejemplo Lay’s (`product_type = package`, `items_per_package = 10`, `package_la
 
 ### Agregación desde `shopping_cart`
 
-| Origen                       | Campo en demanda       | Unidad                  |
-| ---------------------------- | ---------------------- | ----------------------- |
-| Línea `type: product`        | `presentationQuantity` | Presentaciones vendidas |
-| Componente de línea `bundle` | `baseUnits`            | Unidades base           |
+| Origen                       | Campo en demanda       | Unidad                                    |
+| ---------------------------- | ---------------------- | ----------------------------------------- |
+| Línea `type: product`        | `presentationQuantity` | Presentaciones vendidas                   |
+| Componente de línea `pack`   | `presentationQuantity` | `totalPackages` (= packageQty × line.qty) |
+| Componente de línea `bundle` | `baseUnits`            | Unidades base                             |
 
 ```text
 need = presentationQuantity × items_per_package + baseUnits
@@ -126,6 +127,12 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 - Disponibilidad = mínimo de componentes según disponibilidad vendible de cada producto (Regla 4).
 - Cantidades en snapshot de componentes = **unidades base** (`totalQuantity`).
 
+## Packs / combos
+
+- **Sin stock propio** en `packs` (DECISIONS #33).
+- Disponibilidad = mínimo de `floor(stock_presentaciones / package_quantity)`.
+- Al `paid`: componentes aportan `totalPackages` a `presentationQuantity` (igual que líneas product).
+
 ## Admin (v1)
 
 - Ver/editar `stock_sealed_packages` y `stock_loose_base_units` por producto
@@ -175,9 +182,10 @@ prices.unit = prices.normal
 
 ## Reglas relacionadas
 
-Reglas 4, 15, 18, 21 en [`business-rules.md`](business-rules.md).
+Reglas 4, 15, 18, 21, 22–24 en [`business-rules.md`](business-rules.md).
 
 ## Brief
 
 - [S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
 - [S2A/01-stock-deduct-on-payment.md](stages/S2A/01-stock-deduct-on-payment.md)
+- [S1F/01-catalog-packs.md](stages/S1F/01-catalog-packs.md)

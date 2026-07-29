@@ -12,10 +12,11 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 | **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
 | **S1D** | Presentaciones + stock     | `prices.unit`, paquetes, stock sealed/loose        |
 | **S1E** | Envases + delivery         | Insumos sorpresa + tarifas por distrito (Piura)    |
+| **S1F** | Packs / Combos             | Combos BOM fija + precio reference/normal (admin)  |
 | **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado            |
 | **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela       |
 | **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)   |
-| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…4)                |
+| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…5, incl. combos)  |
 | **S3B** | Admin app                  | Backoffice                                         |
 | **S4**  | Resto                      | Customers, Users, Notifications, Reports, Settings |
 
@@ -122,6 +123,22 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
+## S1F — Packs / Combos (admin)
+
+**Goal:** Combos vendibles con BOM fija de dulces (presentaciones), precio `reference`/`normal`, campaña 1:1, min/max; stock vía componentes al `paid`.
+
+- [x] Migración `00016_catalog_packs.sql` + pgTAP
+- [x] Tablas: `catalog.packs`, `catalog.pack_items`
+- [x] Shared: pack-price, order-cart `type: pack`, check/deduct stock
+- [x] Admin: CRUD Combos + línea pack en órdenes
+- Brief: [`docs/stages/S1F/01-catalog-packs.md`](stages/S1F/01-catalog-packs.md)
+
+**Depends on:** S1A, S1C, S1D, S2A, S2B
+
+**Bloquea:** —
+
+---
+
 ## S2B — Orders ✅
 
 **Goal:** Órdenes con productos y sorpresas personalizadas; snapshot congelado.
@@ -215,6 +232,14 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - Brief: [`docs/stages/S3A/04-order-confirmation-guest-lookup.md`](stages/S3A/04-order-confirmation-guest-lookup.md)
 
 **Depends on:** S3A-3
+
+### S3A-05 — Combos (packs) en ecommerce
+
+- Tab `/?tab=combos` + `/combos/[slug]`
+- Add-to-cart sin wizard; checkout guest con `type: pack`
+- Brief: [`docs/stages/S3A/05-catalog-packs-ecommerce.md`](stages/S3A/05-catalog-packs-ecommerce.md)
+
+**Depends on:** S1F, S3A-4
 
 **E2E:** Playwright happy path por sub-etapa (S3A-1…4)
 
