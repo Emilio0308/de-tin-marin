@@ -1,16 +1,16 @@
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 
 /** Contacto — editar aquí para actualizar WhatsApp, email y redes. */
-export const ABOUT_WHATSAPP_E164 = "51968860348";
-export const ABOUT_WHATSAPP_DISPLAY = "+51 968 860 348";
+export const ABOUT_WHATSAPP_E164 = "51980966238";
+export const ABOUT_WHATSAPP_DISPLAY = "+51 980 966 238";
 export const ABOUT_WHATSAPP_HREF = `https://wa.me/${ABOUT_WHATSAPP_E164}`;
 
 export const ABOUT_EMAIL = "detinmarindulcesyconfiteria@gmail.com";
 export const ABOUT_EMAIL_HREF = `mailto:${ABOUT_EMAIL}`;
 
-export const ABOUT_INSTAGRAM_HREF = "#";
-export const ABOUT_FACEBOOK_HREF = "#";
-export const ABOUT_TIKTOK_HREF = "#";
+export const ABOUT_FACEBOOK_HREF =
+  "https://www.facebook.com/profile.php?id=100085047342298";
+export const ABOUT_TIKTOK_HREF = "https://www.tiktok.com/@detinmarin.dyc";
 
 export const ABOUT_STORY_IMAGE_URL = CATALOG_PLACEHOLDER_IMAGE;
 
@@ -57,7 +57,6 @@ export interface AboutContactLinks {
   whatsappDisplay: string;
   emailHref: string;
   email: string;
-  instagramHref: string;
   facebookHref: string;
   tiktokHref: string;
 }
@@ -67,7 +66,6 @@ export const ABOUT_CONTACT_LINKS: AboutContactLinks = {
   whatsappDisplay: ABOUT_WHATSAPP_DISPLAY,
   emailHref: ABOUT_EMAIL_HREF,
   email: ABOUT_EMAIL,
-  instagramHref: ABOUT_INSTAGRAM_HREF,
   facebookHref: ABOUT_FACEBOOK_HREF,
   tiktokHref: ABOUT_TIKTOK_HREF,
 };

@@ -44,9 +44,6 @@ function SocialIcon({ className, path }: { className?: string; path: string }) {
   );
 }
 
-const INSTAGRAM_PATH =
-  "M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85C2.38 3.92 3.9 2.38 7.15 2.23 8.42 2.17 8.8 2.16 12 2.16zm0 1.8c-3.15 0-3.52.01-4.76.07-2.23.1-3.27 1.15-3.37 3.37-.06 1.24-.07 1.61-.07 4.76s.01 3.52.07 4.76c.1 2.22 1.14 3.27 3.37 3.37 1.24.06 1.61.07 4.76.07s3.52-.01 4.76-.07c2.23-.1 3.27-1.15 3.37-3.37.06-1.24.07-1.61.07-4.76s-.01-3.52-.07-4.76c-.1-2.22-1.14-3.27-3.37-3.37-1.24-.06-1.61-.07-4.76-.07zm0 3.06a5.08 5.08 0 1 1 0 10.16 5.08 5.08 0 0 1 0-10.16zm0 1.8a3.28 3.28 0 1 0 0 6.56 3.28 3.28 0 0 0 0-6.56zm6.41-2.04a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z";
-
 const FACEBOOK_PATH =
   "M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4z";
 
@@ -181,14 +178,9 @@ export function AboutPage({ content, contact }: AboutPageProps) {
 
             <div className="mt-stack-md gap-stack-md flex justify-center">
               <a
-                href={contact.instagramHref}
-                aria-label={t("socialInstagram")}
-                className="border-on-secondary-container/30 text-on-secondary-container hover:bg-secondary-fixed flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors"
-              >
-                <SocialIcon className="h-5 w-5" path={INSTAGRAM_PATH} />
-              </a>
-              <a
                 href={contact.tiktokHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label={t("socialTiktok")}
                 className="border-on-secondary-container/30 text-on-secondary-container hover:bg-secondary-fixed flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors"
               >
@@ -196,6 +188,8 @@ export function AboutPage({ content, contact }: AboutPageProps) {
               </a>
               <a
                 href={contact.facebookHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label={t("socialFacebook")}
                 className="border-on-secondary-container/30 text-on-secondary-container hover:bg-secondary-fixed flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors"
               >

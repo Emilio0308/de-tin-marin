@@ -269,7 +269,8 @@
       "favoriteKit": "Kit Favorito"
     },
     "help": {
-      "label": "¿Necesitas ayuda?"
+      "label": "¿Necesitas ayuda?",
+      "whatsappMessage": "Hola, deseo información sobre las sorpresas y dulces"
     }
   },
   "about": {
@@ -281,7 +282,6 @@
     "contactTitle": "¿Quieres conocernos más?",
     "contactSubtitle": "Estamos listos para escucharte y ayudarte a crear el detalle perfecto. ¡Hablemos de dulzura!",
     "whatsappCta": "Escríbenos por WhatsApp",
-    "socialInstagram": "Instagram",
     "socialTiktok": "TikTok",
     "socialFacebook": "Facebook",
     "socialEmail": "Gmail"

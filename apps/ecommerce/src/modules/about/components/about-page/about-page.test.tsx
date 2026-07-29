@@ -36,7 +36,6 @@ vi.mock("next-intl", () => ({
       contactSubtitle:
         "Estamos listos para escucharte y ayudarte a crear el detalle perfecto. ¡Hablemos de dulzura!",
       whatsappCta: "Escríbenos por WhatsApp",
-      socialInstagram: "Instagram",
       socialTiktok: "TikTok",
       socialFacebook: "Facebook",
       socialEmail: "Gmail",
