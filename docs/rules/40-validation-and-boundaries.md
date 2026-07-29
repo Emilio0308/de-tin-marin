@@ -44,6 +44,8 @@ Tipos: `type X = z.infer<typeof XSchema>`.
 
 ## Env
 
+Al agregar una variable nueva: schema + `runtimeEnv` + `.env.example` + **`turbo.json` → `tasks.build.env`** (si no, Vercel no la inyecta al build). Ver [`coding-guidelines.md`](../coding-guidelines.md) § Variables de entorno.
+
 ```typescript
 // packages/config/src/env.ts
 import { createEnv } from "@t3-oss/env-nextjs";
