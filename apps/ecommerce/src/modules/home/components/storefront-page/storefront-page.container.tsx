@@ -22,6 +22,7 @@ import {
   type StorefrontTab,
 } from "@/modules/home/helpers/storefront-url";
 import { queryKeys } from "@/shared/query/query-keys";
+import { catalogQueryOptions } from "@/shared/query/query-cache";
 import type { PublicCatalogSort } from "@de-tin-marin/validations/public-catalog";
 import { StorefrontPage } from "./storefront-page";
 
@@ -71,6 +72,7 @@ export function StorefrontPageContainer() {
   );
 
   const categoriesQuery = useQuery({
+    ...catalogQueryOptions,
     queryKey: queryKeys.catalog.categories(),
     queryFn: async () => {
       const result = await listPublicCategoriesAction();
@@ -81,6 +83,7 @@ export function StorefrontPageContainer() {
   });
 
   const productsQuery = useQuery({
+    ...catalogQueryOptions,
     queryKey: queryKeys.catalog.productsList(productQuery),
     queryFn: async () => {
       const result = await listPublicProductsAction(productQuery);
@@ -91,6 +94,7 @@ export function StorefrontPageContainer() {
   });
 
   const bundlesQuery = useQuery({
+    ...catalogQueryOptions,
     queryKey: queryKeys.catalog.bundlesList(bundleQuery),
     queryFn: async () => {
       const result = await listPublicBundlesAction(bundleQuery);
@@ -101,6 +105,7 @@ export function StorefrontPageContainer() {
   });
 
   const packsQuery = useQuery({
+    ...catalogQueryOptions,
     queryKey: queryKeys.catalog.packsList(packQuery),
     queryFn: async () => {
       const result = await listPublicPacksAction(packQuery);

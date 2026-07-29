@@ -46,10 +46,24 @@ export const checkCartStockInputSchema = z.object({
 /** Preview de carrito guest: mismas líneas que create order, sin contacto/envío. */
 export const previewGuestCartInputSchema = previewOrderCartInputSchema;
 
+/** Snapshot completo del carrito (con precios) para validar drift en checkout. */
+export const validateGuestCheckoutCartInputSchema = z.object({
+  lines: z.array(
+    z.discriminatedUnion("type", [
+      orderShoppingCartProductLineSchema,
+      orderShoppingCartBundleLineSchema,
+      orderShoppingCartPackLineSchema,
+    ]),
+  ),
+});
+
 export type CreateGuestOrderInput = z.infer<typeof createGuestOrderInputSchema>;
 export type ResolveCheckoutDeliveryFeeInput = z.infer<
   typeof resolveCheckoutDeliveryFeeInputSchema
 >;
 export type CheckCartStockInput = z.infer<typeof checkCartStockInputSchema>;
 export type PreviewGuestCartInput = z.infer<typeof previewGuestCartInputSchema>;
+export type ValidateGuestCheckoutCartInput = z.infer<
+  typeof validateGuestCheckoutCartInputSchema
+>;
 export type MapPin = z.infer<typeof mapPinSchema>;

@@ -13,6 +13,7 @@ import {
   softDeleteCategoryRepo,
   updateCategoryRepo,
 } from "../repositories/category.repository";
+import { bumpCatalogVersionSafe } from "../repositories/catalog-cache-meta.repository";
 import type { CategoryFormDTO, CategoryListItem } from "../types/category.dto";
 
 function toListItem(
@@ -82,6 +83,7 @@ export async function createCategoryService(
     is_active: parsed.data.isActive,
   });
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const, id: row.id };
 }
 
@@ -117,6 +119,7 @@ export async function updateCategoryService(
     ...(fields.isActive !== undefined ? { is_active: fields.isActive } : {}),
   });
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }
 
@@ -125,5 +128,6 @@ export async function softDeleteCategoryService(
   id: string,
 ) {
   await softDeleteCategoryRepo(config, id);
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }

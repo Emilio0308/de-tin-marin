@@ -33,6 +33,7 @@ import {
   updateProductRepo,
   type CampaignPricingRow,
 } from "../repositories/product.repository";
+import { bumpCatalogVersionSafe } from "../repositories/catalog-cache-meta.repository";
 import type { ProductFormDTO, ProductListItem } from "../types/product.dto";
 
 function normalizeProductInput(input: {
@@ -258,6 +259,7 @@ export async function createProductService(
     purchase_max_quantity: data.purchaseMaxQuantity,
   });
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const, id: row.id };
 }
 
@@ -368,6 +370,7 @@ export async function updateProductService(
   }
 
   await updateProductRepo(config, id, updatePayload);
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }
 
@@ -376,5 +379,6 @@ export async function softDeleteProductService(
   id: string,
 ) {
   await softDeleteProductRepo(config, id);
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }

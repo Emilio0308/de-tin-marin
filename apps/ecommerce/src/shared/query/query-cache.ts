@@ -1,16 +1,20 @@
-/** 15 minutes — catálogo y navegación (DECISIONS #32, rules/50). */
-export const CATALOG_QUERY_CACHE_MS = 15 * 60 * 1000;
+/** 24 hours — fallback default / admin-style TTL when version gate is not used. */
+export const CATALOG_QUERY_CACHE_MS = 24 * 60 * 60 * 1000;
 
-/** Carrito, checkout y preview de precio/stock: siempre fresco. */
+/** Listados ecommerce: frescura vía catalog_version, no TTL corto. */
+export const catalogQueryOptions = {
+  staleTime: Infinity,
+  gcTime: CATALOG_QUERY_CACHE_MS,
+} as const;
+
+/** Carrito sync, fee checkout y preview: siempre fresco. */
 export const freshQueryOptions = {
   staleTime: 0,
   gcTime: 0,
   refetchOnWindowFocus: true,
 } as const;
 
-/** Preview de precios en carrito/checkout: refetch periódico mientras la pestaña está activa. */
+/** @deprecated Prefer freshQueryOptions — polling 30s eliminado (validate al submit). */
 export const cartCheckoutPreviewOptions = {
   ...freshQueryOptions,
-  refetchInterval: 30_000,
-  refetchIntervalInBackground: false,
 } as const;

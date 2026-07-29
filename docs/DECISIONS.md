@@ -38,8 +38,18 @@
 | 29 | Stock por paquetes + tipo | ✅ | **`stock_sealed_packages`** + **`stock_loose_base_units`**. **`package`:** vendible = sealed×ipp+loose; deduct abre paquetes (`deductBaseUnits`). **`unit`:** vendible/deduct = **solo loose** (`deductUnitProductLoose`); sealed no se abre. Líneas product: `need = presentationQty × ipp + baseUnits` bundle. Migración `00014` |
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
-| 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable (home listados, detalle producto/sorpresa, template wizard). **CSR + React Query fresco** (`staleTime: 0`) en carrito, checkout y preview de precio/stock para evitar discrepancias al pagar. **Caché cliente catálogo:** `staleTime` y `gcTime` = **15 min** en `QueryClient`. **Sin Next.js Data Cache** por defecto en catálogo. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
+| 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable. **CSR + RQ fresco** en carrito (sync al montar) y checkout (validate al submit). **Caché cliente catálogo:** `staleTime` Infinity; invalidación vía `catalog.catalog_cache_meta.version_at` + **Realtime Broadcast** (`catalog-version`) al bump en admin/deduct. Sin poll. Sin Next.js Data Cache por defecto. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
 | 33 | Packs / combos | ✅ | **`catalog.packs` + `pack_items`**. Combo ≠ sorpresa: sin personas, sin envase, BOM fija. Precio JSONB `reference` (suma `product.prices.normal × package_quantity`) + `normal` (admin); **`normal >= reference`**. Descuentos solo vía campaña 1:1 (`campaign_id`). Sin stock propio; disponibilidad y deduct al `paid` descuentan **presentaciones** de componentes. Min/max compra como productos. UI admin: Combos. Futuro (no v1): UOM unidad base / fracciones. Brief: `docs/stages/S1F/01-catalog-packs.md` |
+
+## Docs sincronizados (2026-07-28 — catalog_version + Broadcast + funnel)
+
+- DECISIONS #32 — Infinity + Broadcast; carrito sync al montar; checkout validate al submit
+- Migraciones `00017_catalog_cache_meta.sql`, `00018_catalog_version_broadcast.sql`
+- `docs/rules/50-data-fetching-cache-ssr.md`, `00-architecture.md`, `85-react-components.md`
+- `docs/database.md` — `catalog_cache_meta` + `bump_catalog_version`
+- READMEs ecommerce catalog/cart/checkout + admin catalog/orders
+- `@de-tin-marin/shared/catalog-version` — topic/event
+- Gate: `useCatalogVersionGate` (Broadcast + visibility safety; sin poll)
 
 ## Docs sincronizados (2026-07-02)
 

@@ -199,12 +199,13 @@ Si el componente es Server Component (sin `'use client'`):
 
 Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).
 
-| Caso                                                  | Dónde fetch                          | Container                                                  |
-| ----------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
-| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)             | Recibe DTO por props; **sin** `useQuery` del mismo recurso |
-| Listados con filtros URL (home)                       | Objetivo: SSR + hidratación; hoy CSR | `useQuery` con keys de `query-keys.ts`; default 15 min     |
-| Carrito / checkout / preview                          | Container cliente                    | `useQuery` + `...freshQueryOptions` (`staleTime: 0`)       |
-| Admin order-form preview                              | Container cliente                    | `freshQueryOptions` en bundle/cart preview                 |
+| Caso                                                  | Dónde fetch                          | Container                                                               |
+| ----------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
+| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)             | Recibe DTO por props; **sin** `useQuery` del mismo recurso              |
+| Listados con filtros URL (home)                       | Objetivo: SSR + hidratación; hoy CSR | `useQuery` + `catalogQueryOptions` + gate `catalog_version` (Broadcast) |
+| Carrito                                               | Container cliente                    | Sync al montar con `freshQueryOptions`; rebuild vía `?sync=1`           |
+| Checkout                                              | Container cliente                    | Fee fresco; `validateGuestCheckoutCart` al submit (sin poll stock)      |
+| Admin order-form preview                              | Container cliente                    | `freshQueryOptions` en bundle/cart preview                              |
 
 **Reglas:**
 

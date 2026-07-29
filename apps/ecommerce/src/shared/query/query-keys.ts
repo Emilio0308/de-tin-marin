@@ -1,6 +1,7 @@
 export const queryKeys = {
   catalog: {
     all: ["catalog"] as const,
+    version: () => [...queryKeys.catalog.all, "version"] as const,
     products: () => [...queryKeys.catalog.all, "products"] as const,
     productsList: (query: Record<string, unknown>) =>
       [...queryKeys.catalog.products(), "list", query] as const,

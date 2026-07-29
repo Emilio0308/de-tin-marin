@@ -11,6 +11,7 @@ import {
   updatePaymentRepo,
 } from "../repositories/payment.repository";
 import { updateOrderPaymentStatusRepo } from "../repositories/order.repository";
+import { bumpCatalogVersionSafe } from "@/modules/catalog/repositories/catalog-cache-meta.repository";
 
 type ConfirmPaymentError =
   | "VALIDATION"
@@ -73,6 +74,8 @@ export async function confirmPaymentService(
       notes: parsed.data.notes ?? null,
       paymentReference: parsed.data.paymentReference ?? null,
     });
+
+    await bumpCatalogVersionSafe(config);
 
     return {
       ok: true,

@@ -93,6 +93,25 @@ export async function getPublicPackByIdRepo(
   return result.data as PublicPackRow | null;
 }
 
+export async function getPublicPacksByIdsRepo(
+  config: SupabaseConfig,
+  packIds: string[],
+): Promise<PublicPackRow[]> {
+  if (packIds.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("catalog")
+    .from("packs")
+    .select("*")
+    .in("id", packIds)
+    .eq("is_active", true)
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PublicPackRow[];
+}
+
 export async function listPublicPackItemsByPackIdsRepo(
   config: SupabaseConfig,
   packIds: string[],

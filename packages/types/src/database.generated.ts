@@ -204,6 +204,24 @@ export type Database = {
           },
         ]
       }
+      catalog_cache_meta: {
+        Row: {
+          id: string
+          singleton_key: string
+          version_at: string
+        }
+        Insert: {
+          id?: string
+          singleton_key?: string
+          version_at?: string
+        }
+        Update: {
+          id?: string
+          singleton_key?: string
+          version_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -386,6 +404,7 @@ export type Database = {
           sealed_packages: number
         }[]
       }
+      bump_catalog_version: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never

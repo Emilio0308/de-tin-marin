@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
+import { getCartLineMetaAction } from "@/modules/catalog/actions/get-cart-line-meta";
 import { getPublicBundleAction } from "@/modules/catalog/actions/get-public-bundle";
-import { getPublicPackAction } from "@/modules/catalog/actions/get-public-pack";
-import { getPublicProductAction } from "@/modules/catalog/actions/get-public-product";
 import { resolvePackPurchaseLimits } from "@/modules/catalog/components/pack-detail-page/pack-detail-page.helpers";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolveProductPurchaseLimits } from "@/modules/catalog/helpers/product-purchase-limits";
@@ -14,9 +15,18 @@ import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stoc
 import { formatStockShortageMessages } from "@/shared/components/stock-banner/stock-banner";
 import { queryKeys } from "@/shared/query/query-keys";
 import { freshQueryOptions } from "@/shared/query/query-cache";
-import { toShoppingCartLines } from "../../helpers/cart-lines";
+import {
+  applyServerCartPricing,
+  toShoppingCartLines,
+} from "../../helpers/cart-lines";
+import {
+  clearCartSyncPayload,
+  purgeCartLinesByStockAndBounds,
+  readCartSyncPayload,
+} from "../../helpers/cart-sync";
 import { useCart } from "../../hooks/use-cart";
 import { useCartPricingPreview } from "../../hooks/use-cart-pricing-preview";
+import { localStorageCartRepository } from "../../repositories/local-storage-cart.repository";
 import type { StoredCartLine } from "../../repositories/cart.repository";
 import { CartPage } from "./cart-page";
 
@@ -34,61 +44,6 @@ function resolveStoredLineImageUrl(
   return null;
 }
 
-async function fetchCartQuantityMetadata(
-  lines: StoredCartLine[],
-): Promise<Record<string, CartQuantityLineMeta>> {
-  const meta: Record<string, CartQuantityLineMeta> = {};
-
-  await Promise.all(
-    lines.map(async (entry) => {
-      if (entry.line.type === "product") {
-        const result = await getPublicProductAction({
-          id: entry.line.productId,
-        });
-
-        if (result.ok) {
-          meta[entry.cartLineId] = {
-            imageUrl: result.data.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
-            bounds: resolveProductPurchaseLimits(result.data),
-          };
-          return;
-        }
-
-        meta[entry.cartLineId] = {
-          bounds: {
-            minQuantity: 1,
-            maxQuantity: entry.line.quantity,
-            purchasable: false,
-          },
-        };
-        return;
-      }
-
-      if (entry.line.type === "pack") {
-        const result = await getPublicPackAction({ id: entry.line.packId });
-
-        if (result.ok) {
-          meta[entry.cartLineId] = {
-            imageUrl: result.data.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
-            bounds: resolvePackPurchaseLimits(result.data),
-          };
-          return;
-        }
-
-        meta[entry.cartLineId] = {
-          bounds: {
-            minQuantity: 1,
-            maxQuantity: entry.line.quantity,
-            purchasable: false,
-          },
-        };
-      }
-    }),
-  );
-
-  return meta;
-}
-
 async function fetchMissingCartLineImages(
   lines: StoredCartLine[],
 ): Promise<Record<string, string>> {
@@ -97,26 +52,7 @@ async function fetchMissingCartLineImages(
   await Promise.all(
     lines.map(async (entry) => {
       if (resolveStoredLineImageUrl(entry.line)) return;
-
-      if (entry.line.type === "product") {
-        const result = await getPublicProductAction({
-          id: entry.line.productId,
-        });
-        images[entry.cartLineId] =
-          result.ok && result.data.imageUrl
-            ? result.data.imageUrl
-            : CATALOG_PLACEHOLDER_IMAGE;
-        return;
-      }
-
-      if (entry.line.type === "pack") {
-        const result = await getPublicPackAction({ id: entry.line.packId });
-        images[entry.cartLineId] =
-          result.ok && result.data.imageUrl
-            ? result.data.imageUrl
-            : CATALOG_PLACEHOLDER_IMAGE;
-        return;
-      }
+      if (entry.line.type !== "bundle") return;
 
       const result = await getPublicBundleAction({ id: entry.line.bundleId });
       images[entry.cartLineId] =
@@ -129,8 +65,29 @@ async function fetchMissingCartLineImages(
   return images;
 }
 
+function showCartSyncToast(
+  t: ReturnType<typeof useTranslations<"cart">>,
+  priceChanged: boolean,
+  stockChanged: boolean,
+) {
+  if (priceChanged && stockChanged) {
+    toast.message(t("sync.priceAndStock"));
+    return;
+  }
+  if (priceChanged) {
+    toast.message(t("sync.priceUpdated"));
+    return;
+  }
+  if (stockChanged) {
+    toast.message(t("sync.stockRemoved"));
+  }
+}
+
 export function CartPageContainer() {
   const t = useTranslations("cart");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const syncHandledRef = useRef(false);
   const { lines, totals, updateProductQuantity, removeLine } = useCart();
   const { subtotal: previewSubtotal } = useCartPricingPreview(lines);
   const subtotal = previewSubtotal ?? totals.subtotal ?? 0;
@@ -146,17 +103,95 @@ export function CartPageContainer() {
     [lines],
   );
 
+  const productIds = useMemo(
+    () => [
+      ...new Set(
+        lines.flatMap((entry) =>
+          entry.line.type === "product" ? [entry.line.productId] : [],
+        ),
+      ),
+    ],
+    [lines],
+  );
+
+  const packIds = useMemo(
+    () => [
+      ...new Set(
+        lines.flatMap((entry) =>
+          entry.line.type === "pack" ? [entry.line.packId] : [],
+        ),
+      ),
+    ],
+    [lines],
+  );
+
   const quantityMetaQuery = useQuery({
     ...freshQueryOptions,
     queryKey: queryKeys.cart.productMeta(quantityLineIds),
-    queryFn: () => fetchCartQuantityMetadata(lines),
+    queryFn: async () => {
+      const result = await getCartLineMetaAction({ productIds, packIds });
+      if (!result.ok) throw new Error(result.error);
+
+      const productsById = new Map(
+        result.data.products.map((product) => [product.id, product]),
+      );
+      const packsById = new Map(
+        result.data.packs.map((pack) => [pack.id, pack]),
+      );
+      const meta: Record<string, CartQuantityLineMeta> = {};
+
+      for (const entry of lines) {
+        if (entry.line.type === "product") {
+          const product = productsById.get(entry.line.productId);
+          if (product) {
+            meta[entry.cartLineId] = {
+              imageUrl: product.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
+              bounds: resolveProductPurchaseLimits(product),
+            };
+          } else {
+            meta[entry.cartLineId] = {
+              bounds: {
+                minQuantity: 1,
+                maxQuantity: entry.line.quantity,
+                purchasable: false,
+              },
+            };
+          }
+          continue;
+        }
+
+        if (entry.line.type === "pack") {
+          const pack = packsById.get(entry.line.packId);
+          if (pack) {
+            meta[entry.cartLineId] = {
+              imageUrl: pack.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
+              bounds: resolvePackPurchaseLimits(pack),
+            };
+          } else {
+            meta[entry.cartLineId] = {
+              bounds: {
+                minQuantity: 1,
+                maxQuantity: entry.line.quantity,
+                purchasable: false,
+              },
+            };
+          }
+        }
+      }
+
+      return meta;
+    },
     enabled: quantityLineIds.length > 0,
   });
 
   const missingImageLineIds = useMemo(
     () =>
       lines
-        .filter((entry) => !resolveStoredLineImageUrl(entry.line))
+        .filter(
+          (entry) =>
+            entry.line.type === "bundle" &&
+            !resolveStoredLineImageUrl(entry.line),
+        )
         .map((entry) => entry.cartLineId),
     [lines],
   );
@@ -214,6 +249,43 @@ export function CartPageContainer() {
     },
     enabled: lines.length > 0,
   });
+
+  useEffect(() => {
+    if (syncHandledRef.current) return;
+    if (searchParams.get("sync") !== "1") return;
+
+    syncHandledRef.current = true;
+    const payload = readCartSyncPayload();
+    clearCartSyncPayload();
+
+    if (payload) {
+      const current = localStorageCartRepository.getLines();
+      const priced = applyServerCartPricing(current, payload.lines);
+      const emptyBounds: Record<string, ProductPurchaseBounds> = {};
+      for (const entry of priced) {
+        if (entry.line.type === "product" || entry.line.type === "pack") {
+          emptyBounds[entry.cartLineId] = {
+            minQuantity: 1,
+            maxQuantity: entry.line.quantity,
+            purchasable: true,
+          };
+        }
+      }
+      const purged = purgeCartLinesByStockAndBounds(
+        priced,
+        payload.stock,
+        emptyBounds,
+      );
+      localStorageCartRepository.replaceLines(purged.lines);
+      showCartSyncToast(
+        t,
+        payload.priceChanged,
+        payload.stockChanged || purged.removedCount > 0,
+      );
+    }
+
+    router.replace("/carrito", { scroll: false });
+  }, [router, searchParams, t]);
 
   const stockMessages = formatStockShortageMessages(stockQuery.data, {
     product: t("stockProduct"),

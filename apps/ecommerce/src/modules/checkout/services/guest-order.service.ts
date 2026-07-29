@@ -24,6 +24,8 @@ import {
   createGuestOrderInputSchema,
   checkCartStockInputSchema,
   previewGuestCartInputSchema,
+  validateGuestCheckoutCartInputSchema,
+  type ValidateGuestCheckoutCartInput,
 } from "@de-tin-marin/validations/checkout";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import {
@@ -626,5 +628,152 @@ export async function createGuestOrderService(
   return {
     ok: true,
     data: { id: inserted.id, orderNumber: inserted.orderNumber },
+  };
+}
+
+function snapshotLinesToOrderInput(
+  lines: ValidateGuestCheckoutCartInput["lines"],
+) {
+  return lines.map((line) => {
+    if (line.type === "product") {
+      return {
+        type: "product" as const,
+        productId: line.productId,
+        quantity: line.quantity,
+      };
+    }
+    if (line.type === "pack") {
+      return {
+        type: "pack" as const,
+        packId: line.packId,
+        quantity: line.quantity,
+      };
+    }
+    return {
+      type: "bundle" as const,
+      bundleId: line.bundleId,
+      quantity: line.quantity,
+      components: line.components.map((component) => ({
+        productId: component.productId,
+        quantityPerUnit: component.quantityPerUnit,
+      })),
+    };
+  });
+}
+
+function detectSnapshotPriceDrift(
+  snapshot: ValidateGuestCheckoutCartInput["lines"],
+  serverLines: OrderShoppingCartLine[],
+): boolean {
+  if (snapshot.length !== serverLines.length) return true;
+
+  for (let index = 0; index < snapshot.length; index += 1) {
+    const local = snapshot[index];
+    const server = serverLines[index];
+    if (!local || !server || local.type !== server.type) return true;
+
+    if (local.type === "product" && server.type === "product") {
+      if (
+        local.unitPrice !== server.unitPrice ||
+        local.lineTotal !== server.lineTotal
+      ) {
+        return true;
+      }
+      continue;
+    }
+
+    if (local.type === "pack" && server.type === "pack") {
+      if (
+        local.unitPrice !== server.unitPrice ||
+        local.lineTotal !== server.lineTotal
+      ) {
+        return true;
+      }
+      continue;
+    }
+
+    if (local.type === "bundle" && server.type === "bundle") {
+      if (local.lineTotal !== server.lineTotal) return true;
+    }
+  }
+
+  return false;
+}
+
+export async function validateGuestCheckoutCartService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        ok: boolean;
+        priceChanged: boolean;
+        stockOk: boolean;
+        lines: OrderShoppingCartLine[];
+        stock: ReturnType<typeof checkOrderStock>;
+      };
+    }
+  | {
+      ok: false;
+      error:
+        | "VALIDATION"
+        | "PRODUCT_NOT_FOUND"
+        | "BUNDLE_NOT_FOUND"
+        | "PACK_NOT_FOUND"
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_PURCHASE_QUANTITY";
+    }
+> {
+  const parsed = validateGuestCheckoutCartInputSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  if (parsed.data.lines.length === 0) {
+    return {
+      ok: true,
+      data: {
+        ok: true,
+        priceChanged: false,
+        stockOk: true,
+        lines: [],
+        stock: { ok: true },
+      },
+    };
+  }
+
+  const preview = await previewGuestOrderCartService(config, {
+    lines: snapshotLinesToOrderInput(parsed.data.lines),
+    shippingTotal: 0,
+    discountTotal: 0,
+  });
+
+  if (!preview.ok) {
+    return { ok: false, error: preview.error };
+  }
+
+  const priceChanged = detectSnapshotPriceDrift(
+    parsed.data.lines,
+    preview.data.lines,
+  );
+
+  const stockResult = await checkCartStockService(config, {
+    lines: preview.data.lines,
+  });
+  if (!stockResult.ok) {
+    return { ok: false, error: "VALIDATION" };
+  }
+
+  const stockOk = stockResult.data.ok;
+  const valid = !priceChanged && stockOk;
+
+  return {
+    ok: true,
+    data: {
+      ok: valid,
+      priceChanged,
+      stockOk,
+      lines: preview.data.lines,
+      stock: stockResult.data,
+    },
   };
 }

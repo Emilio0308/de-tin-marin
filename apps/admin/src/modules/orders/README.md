@@ -44,6 +44,8 @@ Container: `order-form.container.tsx`
 
 Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29). Líneas `type: pack` aportan `totalPackages` a presentaciones (Regla 24 / DECISIONS #33).
 
+Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock cambió → invalidar listados tienda).
+
 ## Repositories
 
 - `order.repository.ts`

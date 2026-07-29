@@ -3,6 +3,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { CATALOG_QUERY_CACHE_MS } from "@/shared/query/query-cache";
+import { useCatalogVersionGate } from "@/shared/query/use-catalog-version-gate";
+
+function CatalogVersionGate() {
+  useCatalogVersionGate();
+  return null;
+}
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -16,5 +22,10 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <CatalogVersionGate />
+      {children}
+    </QueryClientProvider>
+  );
 }

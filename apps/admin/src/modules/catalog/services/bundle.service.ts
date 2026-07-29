@@ -25,6 +25,7 @@ import {
   type BundleItemWithProduct,
   type BundleRow,
 } from "../repositories/bundle.repository";
+import { bumpCatalogVersionSafe } from "../repositories/catalog-cache-meta.repository";
 import type { BundleFormDTO, BundleFormItemDTO } from "../types/bundle.dto";
 import type { BundleListItem } from "@de-tin-marin/validations/bundle";
 
@@ -250,6 +251,7 @@ export async function createBundleService(
     throw error;
   }
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const, id: row.id };
 }
 
@@ -313,6 +315,7 @@ export async function updateBundleService(
     );
   }
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }
 
@@ -326,6 +329,7 @@ export async function softDeleteBundleService(
   }
 
   await softDeleteBundleRepo(config, id);
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }
 
