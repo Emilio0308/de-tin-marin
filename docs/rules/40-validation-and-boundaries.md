@@ -65,15 +65,16 @@ export const env = createEnv({
 
 ## Manejo de errores y logging (obligatorio)
 
-Regla: **nunca tragar un error en silencio.** Un error de Supabase/RLS o un
-`throw` de repositorio que no se registra deja la terminal vacía y la UI con un
-mensaje genérico inútil (lección S1A).
+Regla: **nunca tragar un error en silencio.** Un error de Supabase/RLS, un `throw`
+de repositorio, o un `Failed to fetch` (CORS) que no se registra deja la terminal /
+Vercel vacíos y la UI con un mensaje genérico inútil (lección S1A + media upload).
 
-Servicio de logging/errores: `apps/admin/src/shared/errors/server-error.ts`.
+Servicios:
 
-- `getErrorMessage(error: unknown): string` — mensaje legible de cualquier valor.
-- `logServerError(scope, error)` — `console.error` server-side con scope.
-- `guardAction(scope, run)` — envuelve el cuerpo del Server Action.
+| Helper                                               | Archivo                                        | Uso                                                             |
+| ---------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
+| `getErrorMessage` / `logServerError` / `guardAction` | `apps/admin/src/shared/errors/server-error.ts` | Server Actions y código `server-only` → **Vercel Runtime Logs** |
+| `getErrorMessage` / `logClientError`                 | `apps/admin/src/shared/errors/client-error.ts` | Containers `'use client'` → **consola del browser**             |
 
 ### Reglas
 
@@ -82,9 +83,13 @@ Servicio de logging/errores: `apps/admin/src/shared/errors/server-error.ts`.
    `{ ok: false, error: "UNEXPECTED", message }`.
 2. **Helpers server-only** (p. ej. `requireStaff`) que descartan un resultado por
    error deben `logServerError(...)` antes de devolver el código de error.
-3. **Nunca** `catch {}` vacío ni descartar `error` de una respuesta Supabase sin loguear.
+3. **Nunca** `catch {}` vacío ni `catch { setError(genérico) }` sin loguear.
+   En client: `logClientError(scope, error)` y preferir mostrar `message` en el backoffice.
 4. El `message` de `UNEXPECTED` puede mostrarse en la UI del backoffice (herramienta
    interna) para depurar; no exponer detalles crudos en superficies públicas.
+5. **PUT a S3 desde el browser** (presign) no genera logs en Vercel si falla por CORS —
+   solo en la consola del cliente (`putPresignedCatalogImage`). Si el presign sí
+   corre, verás `console.info` del service en Runtime Logs.
 
 ```typescript
 export async function createCategoryAction(raw: unknown) {

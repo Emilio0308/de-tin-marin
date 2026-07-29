@@ -8,7 +8,9 @@ import { createProductAction } from "@/modules/catalog/actions/create-product";
 import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
 import { updateProductAction } from "@/modules/catalog/actions/update-product";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import type { ProductFormDTO } from "@/modules/catalog/types/product.dto";
@@ -169,16 +171,12 @@ export function ProductFormContainer({
       };
     }
 
-    const putResponse = await fetch(presign.data.uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (!putResponse.ok) {
-      return { ok: false, error: t("imageUploadFailed") };
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
     }
 
     return { ok: true, publicUrl: presign.data.publicUrl };
@@ -236,8 +234,11 @@ export function ProductFormContainer({
 
       router.push("/products");
       router.refresh();
-    } catch {
-      setError(tErrors("default"));
+    } catch (error) {
+      logClientError("ProductFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
     } finally {
       setSubmitting(false);
     }

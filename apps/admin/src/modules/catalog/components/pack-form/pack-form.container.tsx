@@ -9,7 +9,9 @@ import { listActiveCampaignsAction } from "@/modules/catalog/actions/list-active
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { updatePackAction } from "@/modules/catalog/actions/update-pack";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { PackForm } from "./pack-form";
@@ -47,6 +49,10 @@ function packErrorMessage(
       return t("unauthorized");
     case "FORBIDDEN":
       return t("forbidden");
+    case "UNEXPECTED":
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("unexpected");
     default:
       return result.message
         ? t("defaultWithMessage", { message: result.message })
@@ -183,16 +189,12 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       };
     }
 
-    const putResponse = await fetch(presign.data.uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (!putResponse.ok) {
-      return { ok: false, error: t("imageUploadFailed") };
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
     }
 
     return { ok: true, publicUrl: presign.data.publicUrl };
@@ -244,8 +246,11 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       startTransition(() => {
         router.push("/packs");
       });
-    } catch {
-      setError(tErrors("unexpected"));
+    } catch (error) {
+      logClientError("PackFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
     } finally {
       setSubmitting(false);
     }
