@@ -34,6 +34,9 @@ export type PackFormValues = {
   items: PackFormItemValues[];
 };
 
+export type PackImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type PackFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
@@ -51,11 +54,13 @@ export type PackFormLabels = {
   slugPlaceholder: string;
   description: string;
   descriptionPlaceholder: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
   imageAlt: string;
   imageEmptyTitle: string;
   imageEmptyHint: string;
+  imageFileInvalid: string;
   productSelectPlaceholder: string;
   addProduct: string;
   emptyItems: string;
@@ -83,7 +88,11 @@ export type PackFormProps = {
   products: ProductOption[];
   campaigns: CampaignOption[];
   labels: PackFormLabels;
-  onSubmit: (values: PackFormValues) => Promise<void>;
+  /** `pendingImage` is set only when the user picked a new file; upload happens in the container on save. */
+  onSubmit: (
+    values: PackFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

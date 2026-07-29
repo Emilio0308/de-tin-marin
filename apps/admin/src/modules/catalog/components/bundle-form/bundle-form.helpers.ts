@@ -1,11 +1,15 @@
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
+import {
+  CATALOG_IMAGE_CONTENT_TYPES,
+  CATALOG_IMAGE_MAX_BYTES,
+} from "@/modules/media/schemas/presign-catalog-image.schema";
+import type { BundleFormDTO } from "@/modules/catalog/types/bundle.dto";
 import type {
   BundleFormItemValues,
   BundleFormValues,
   ContainerOption,
   ProductOption,
 } from "./bundle-form.types";
-import type { BundleFormDTO } from "@/modules/catalog/types/bundle.dto";
 
 export function buildDefaultBundleValues(
   initial?: BundleFormDTO,
@@ -78,10 +82,35 @@ export function isValidImageUrl(value: string): boolean {
   if (!value.trim()) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return (
+      url.protocol === "http:" ||
+      url.protocol === "https:" ||
+      url.protocol === "blob:"
+    );
   } catch {
     return false;
   }
+}
+
+export function isAllowedCatalogImageFile(file: File): boolean {
+  return (
+    (CATALOG_IMAGE_CONTENT_TYPES as readonly string[]).includes(file.type) &&
+    file.size > 0 &&
+    file.size <= CATALOG_IMAGE_MAX_BYTES
+  );
+}
+
+export function resolveBundleImageUrlForPersist(
+  imageUrl: string,
+  pendingImage: File | null,
+  uploadedPublicUrl: string | null,
+): string | null {
+  if (pendingImage) {
+    return uploadedPublicUrl;
+  }
+  const trimmed = imageUrl.trim();
+  if (!trimmed || trimmed.startsWith("blob:")) return null;
+  return trimmed;
 }
 
 export function getSelectedContainerNetPrice(

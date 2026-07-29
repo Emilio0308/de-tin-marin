@@ -6,7 +6,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 | Etapa   | Nombre                     | Entregable                                         |
 | ------- | -------------------------- | -------------------------------------------------- |
-| **S0**  | Fundación                  | Monorepo, packages base, CI, Supabase spine        |
+| **S0**  | Fundación                  | Monorepo, packages, CI, Supabase spine, media CDN  |
 | **S1A** | Catálogo                   | Products + Categories                              |
 | **S1B** | Bundles                    | Composición de sorpresas                           |
 | **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
@@ -34,6 +34,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - [x] Migración spine: schemas `core`, `catalog`, `pricing`, `commerce`, `crm`
 - [x] CI: `pnpm check` + build
 - [x] Brief: `docs/stages/S0/01-monorepo-foundation.md`
+- [x] Media CDN: S3 + CloudFront (CDK) — [`docs/infra.md`](infra.md) · [S0/02](stages/S0/02-infra-media-cdn.md)
+- [x] Admin upload imágenes catálogo (presign) — packs · products · bundles · containers · [S0/03](stages/S0/03-admin-pack-image-upload.md)
 
 ---
 

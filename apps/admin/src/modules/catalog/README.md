@@ -36,6 +36,17 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 | `softDeletePackAction`      | `softDeletePackService`     | Soft-delete                          |
 | `listActiveCampaignsAction` | —                           | Campañas activas para select de pack |
 
+Imágenes de catálogo: `createCatalogImageUploadUrlAction` — preview local; PUT S3 al Guardar (DECISIONS #35).
+
+| Form                       | Folder S3    |
+| -------------------------- | ------------ |
+| Combos (`pack-form`)       | `packs`      |
+| Productos (`product-form`) | `products`   |
+| Sorpresas (`bundle-form`)  | `bundles`    |
+| Envases (`container-form`) | `containers` |
+
+Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md](../../../docs/infra.md).
+
 ## Services (`services/`)
 
 - `category.service.ts`

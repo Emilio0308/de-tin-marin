@@ -1,0 +1,23 @@
+{
+  "name": "@de-tin-marin/infra-cdk",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "synth": "tsc && cdk synth",
+    "diff": "tsc && cdk diff",
+    "deploy": "tsc && cdk deploy --require-approval never",
+    "deploy:staging": "tsc && cdk deploy MediaStaging --require-approval never",
+    "deploy:production": "tsc && cdk deploy MediaProduction --require-approval never",
+    "bootstrap": "cdk bootstrap"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.202.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "aws-cdk": "^2.1020.0",
+    "typescript": "^5.8.3"
+  }
+}

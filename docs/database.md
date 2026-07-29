@@ -115,7 +115,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `name`, `description`    | text          |                                                                     |
 | `slug`                   | text unique   | URL amigable                                                        |
 | `brand`                  | text          | Marca (texto libre)                                                 |
-| `image_url`              | text          | URL imagen principal (S1A)                                          |
+| `image_url`              | text          | URL imagen principal (CDN CloudFront tras S0-03; texto libre)       |
 | `product_type`           | text          | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)               |
 | `items_per_package`      | int           | Unidades base por presentación (`>= 1`; default 1) (S1D)            |
 | `package_label`          | text nullable | Solo UX: `"tira"`, `"paquete"` (S1D)                                |
@@ -142,16 +142,16 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 **`catalog.surprise_containers`** (insumo — S1E, **no** es producto vendible):
 
-| Columna          | Tipo        | Notas                                              |
-| ---------------- | ----------- | -------------------------------------------------- |
-| `sku`            | text unique | Entre activos (`deleted_at IS NULL`)               |
-| `name`           | text        | Ej. "Caja mediana", "Bolsa kraft"                  |
-| `description`    | text        | Opcional                                           |
-| `image_url`      | text        | URL texto (sin Storage v1)                         |
-| `prices`         | jsonb       | Bloque único `{ netPrice, igv, subtotal }`         |
-| `stock_quantity` | int         | `>= 0`; **1 envase = 1 unidad** (sin sealed/loose) |
-| `is_active`      | boolean     |                                                    |
-| `deleted_at`     | timestamptz | Soft-delete                                        |
+| Columna          | Tipo        | Notas                                                |
+| ---------------- | ----------- | ---------------------------------------------------- |
+| `sku`            | text unique | Entre activos (`deleted_at IS NULL`)                 |
+| `name`           | text        | Ej. "Caja mediana", "Bolsa kraft"                    |
+| `description`    | text        | Opcional                                             |
+| `image_url`      | text        | URL CDN / texto (upload admin S0-03 → `containers/`) |
+| `prices`         | jsonb       | Bloque único `{ netPrice, igv, subtotal }`           |
+| `stock_quantity` | int         | `>= 0`; **1 envase = 1 unidad** (sin sealed/loose)   |
+| `is_active`      | boolean     |                                                      |
+| `deleted_at`     | timestamptz | Soft-delete                                          |
 
 > Sin `product_type`, `items_per_package`, `prices.unit`, campañas ni categorías. El precio entra al total de la sorpresa vía bundle/orden; no hay línea `type: "product"` en carrito.
 
@@ -160,7 +160,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | Columna               | Tipo        | Notas                                                      |
 | --------------------- | ----------- | ---------------------------------------------------------- |
 | `name`, `description` | text        |                                                            |
-| `image_url`           | text        | URL imagen principal (solo texto, sin Storage v1)          |
+| `image_url`           | text        | URL CDN / texto (upload admin S0-03 → `bundles/`)          |
 | `container_id`        | uuid        | FK → `catalog.surprise_containers` (S1E)                   |
 | `quantity`            | int         | Nº de personas/porciones a las que apunta el pack (`>= 1`) |
 | `is_active`           | boolean     |                                                            |
@@ -186,7 +186,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `sku`                   | text unique   | Unique global (constraint `packs_sku_unique`)                  |
 | `name`, `description`   | text          |                                                                |
 | `slug`                  | text unique   | URL amigable                                                   |
-| `image_url`             | text          | URL texto (sin Storage v1)                                     |
+| `image_url`             | text          | URL CDN / texto (upload admin S0-03 → `packs/`)                |
 | `prices`                | jsonb         | `{ normal, reference }` cada uno `{ netPrice, igv, subtotal }` |
 | `campaign_id`           | uuid nullable | → `pricing.campaigns` (**1:1**, DECISIONS #33)                 |
 | `purchase_min_quantity` | int           | Default **1**                                                  |

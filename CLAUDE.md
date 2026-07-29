@@ -117,6 +117,7 @@ Máquina de estados de órdenes: ver [`docs/orders.md`](docs/orders.md).
 | -------------------------------------------------------- | --------------------------------------------- |
 | [`docs/vision.md`](docs/vision.md)                       | Visión y objetivos                            |
 | [`docs/architecture.md`](docs/architecture.md)           | Monorepo, dominios, capas                     |
+| [`docs/infra.md`](docs/infra.md)                         | Media CDN (S3 + CloudFront), staging/prod     |
 | [`docs/database.md`](docs/database.md)                   | Modelo de datos canónico (catálogo de tablas) |
 | [`docs/pricing.md`](docs/pricing.md)                     | Pipeline de precios                           |
 | [`docs/campaigns.md`](docs/campaigns.md)                 | Promociones                                   |

@@ -8,13 +8,17 @@ import { createBundleAction } from "@/modules/catalog/actions/create-bundle";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
+import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { BundleForm } from "./bundle-form";
+import { resolveBundleImageUrlForPersist } from "./bundle-form.helpers";
 import type {
   BundleFormContainerProps,
   BundleFormLabels,
   BundleFormValues,
+  BundleImageUploadResult,
   ProductOption,
 } from "./bundle-form.types";
 
@@ -91,11 +95,13 @@ export function BundleFormContainer({
       namePlaceholder: t("namePlaceholder"),
       description: t("description"),
       descriptionPlaceholder: t("descriptionPlaceholder"),
-      imageUrl: t("imageUrl"),
-      imageUrlPlaceholder: t("imageUrlPlaceholder"),
+      imageUpload: t("imageUpload"),
+      imageUploading: t("imageUploading"),
+      imageClear: t("imageClear"),
       imageAlt: t("imageAlt"),
       imageEmptyTitle: t("imageEmptyTitle"),
       imageEmptyHint: t("imageEmptyHint"),
+      imageFileInvalid: t("imageFileInvalid"),
       productSelectPlaceholder: t("productSelectPlaceholder"),
       addProduct: t("addProduct"),
       emptyItems: t("emptyItems"),
@@ -119,17 +125,86 @@ export function BundleFormContainer({
     [t, mode],
   );
 
-  async function handleSubmit(values: BundleFormValues) {
+  async function uploadBundleImage(
+    file: File,
+  ): Promise<BundleImageUploadResult> {
+    const presign = await createCatalogImageUploadUrlAction({
+      folder: "bundles",
+      contentType: file.type as CatalogImageContentType,
+      contentLength: file.size,
+      fileName: file.name,
+    });
+
+    if (!presign.ok) {
+      if (presign.error === "UNAUTHORIZED") {
+        return { ok: false, error: tErrors("unauthorized") };
+      }
+      if (presign.error === "FORBIDDEN") {
+        return { ok: false, error: tErrors("forbidden") };
+      }
+      if (presign.error === "VALIDATION") {
+        return { ok: false, error: t("imageFileInvalid") };
+      }
+      return {
+        ok: false,
+        error:
+          "message" in presign && presign.message
+            ? t("imageUploadFailedWithMessage", { message: presign.message })
+            : t("imageUploadFailed"),
+      };
+    }
+
+    const putResponse = await fetch(presign.data.uploadUrl, {
+      method: "PUT",
+      body: file,
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
+
+    if (!putResponse.ok) {
+      return { ok: false, error: t("imageUploadFailed") };
+    }
+
+    return { ok: true, publicUrl: presign.data.publicUrl };
+  }
+
+  async function handleSubmit(
+    values: BundleFormValues,
+    pendingImage: File | null,
+  ) {
     setSubmitting(true);
     setError(null);
 
     try {
+      let uploadedPublicUrl: string | null = null;
+
+      if (pendingImage) {
+        const upload = await uploadBundleImage(pendingImage);
+        if (!upload.ok) {
+          setError(upload.error);
+          return;
+        }
+        uploadedPublicUrl = upload.publicUrl;
+      }
+
+      const imageUrl = resolveBundleImageUrlForPersist(
+        values.imageUrl,
+        pendingImage,
+        uploadedPublicUrl,
+      );
+
+      const base = {
+        ...values,
+        imageUrl,
+      };
+
       const payload =
         mode === "create"
-          ? values
+          ? base
           : {
               id: initial?.id,
-              ...values,
+              ...base,
             };
 
       const result =

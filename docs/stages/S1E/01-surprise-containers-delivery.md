@@ -61,7 +61,7 @@ Un operador staff puede CRUD **envases de sorpresa** (insumos con stock y precio
 | `sku`            | text        | Único entre activos (`deleted_at IS NULL`)                        |
 | `name`           | text        | Ej. "Caja mediana", "Bolsa kraft"                                 |
 | `description`    | text        | Opcional                                                          |
-| `image_url`      | text        | URL texto (sin Storage v1)                                        |
+| `image_url`      | text        | URL CDN / texto (upload admin S0-03 → `containers/`)              |
 | `prices`         | jsonb       | Bloque único `{ netPrice, igv, subtotal }` (Regla 2 simplificada) |
 | `stock_quantity` | int         | `>= 0`; **1 envase = 1 unidad**                                   |
 | `is_active`      | boolean     | default `true`                                                    |

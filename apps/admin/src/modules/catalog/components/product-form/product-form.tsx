@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   ChevronRight,
   ImageIcon,
@@ -17,6 +17,7 @@ import {
   buildInitialProductValues,
   computeStockTotalPreview,
   computeUnitNetPricePreview,
+  isAllowedCatalogImageFile,
   isValidImageUrl,
   slugify,
 } from "./product-form.helpers";
@@ -41,12 +42,48 @@ export function ProductForm({
     buildInitialProductValues(initial),
   );
   const [slugEdited, setSlugEdited] = useState(Boolean(initial?.slug));
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+  }, [previewObjectUrl]);
 
   function setField<K extends keyof ProductFormValues>(
     key: K,
     value: ProductFormValues[K],
   ) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setImageError(null);
+
+    if (!isAllowedCatalogImageFile(file)) {
+      setImageError(labels.imageFileInvalid);
+      return;
+    }
+
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objectUrl);
+    setPendingImage(file);
+    setField("imageUrl", objectUrl);
+  }
+
+  function clearImage() {
+    setImageError(null);
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    setPreviewObjectUrl(null);
+    setPendingImage(null);
+    setField("imageUrl", "");
   }
 
   function handleNameChange(name: string) {
@@ -91,9 +128,9 @@ export function ProductForm({
     values.itemsPerPackage,
   );
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(values);
+    await onSubmit(values, pendingImage);
   }
 
   return (
@@ -209,35 +246,66 @@ export function ProductForm({
           <span className={labelClass}>{labels.image}</span>
           <div className="border-outline-variant/60 bg-surface-container-high relative aspect-video w-full overflow-hidden rounded-xl border">
             {isValidImageUrl(values.imageUrl) ? (
-              <Image
-                src={values.imageUrl}
-                alt={labels.imageAlt}
-                fill
-                sizes="(max-width: 1024px) 100vw, 400px"
-                className="object-cover"
-              />
+              values.imageUrl.startsWith("blob:") ? (
+                // Local preview before save — next/image does not optimize blob URLs.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={values.imageUrl}
+                  alt={labels.imageAlt}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={values.imageUrl}
+                  alt={labels.imageAlt}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 400px"
+                  className="object-cover"
+                />
+              )
             ) : (
-              <div className="text-on-surface-variant/40 flex h-full flex-col items-center justify-center gap-2">
+              <div className="text-on-surface-variant/40 flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                 <ImageIcon className="h-12 w-12" aria-hidden />
                 <span className="font-label text-label-bold">
                   {labels.imagePreview}
                 </span>
+                <span className="text-xs">{labels.imageEmptyHint}</span>
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass} htmlFor="imageUrl">
-              {labels.imageUrl}
+          <div className="flex flex-col gap-2">
+            <label className={labelClass} htmlFor="productImageFile">
+              {labels.imageUpload}
             </label>
             <input
-              id="imageUrl"
-              name="imageUrl"
-              type="url"
-              value={values.imageUrl}
-              onChange={(event) => setField("imageUrl", event.target.value)}
-              placeholder={labels.imageUrlPlaceholder}
-              className={fieldClass}
+              id="productImageFile"
+              name="productImageFile"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              disabled={submitting}
+              onChange={handleImageFileChange}
+              className="font-body text-body-sm text-on-surface file:bg-primary file:text-on-primary file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-2 file:text-sm"
             />
+            {submitting && pendingImage ? (
+              <p className="font-body text-body-sm text-on-surface-variant">
+                {labels.imageUploading}
+              </p>
+            ) : null}
+            {imageError ? (
+              <p className="font-body text-body-sm text-error" role="alert">
+                {imageError}
+              </p>
+            ) : null}
+            {isValidImageUrl(values.imageUrl) ? (
+              <button
+                type="button"
+                onClick={clearImage}
+                disabled={submitting}
+                className="text-on-surface-variant hover:text-error font-label text-label-bold self-start text-xs uppercase tracking-wide"
+              >
+                {labels.imageClear}
+              </button>
+            ) : null}
           </div>
         </section>
 
