@@ -20,6 +20,9 @@ export type ProductFormValues = {
   isActive: boolean;
 };
 
+export type ProductImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type ProductFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
@@ -38,8 +41,11 @@ export type ProductFormLabels = {
   image: string;
   imagePreview: string;
   imageAlt: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
+  imageEmptyHint: string;
+  imageFileInvalid: string;
   brand: string;
   brandPlaceholder: string;
   category: string;
@@ -80,7 +86,10 @@ export type ProductFormProps = {
   initial?: ProductFormDTO;
   categories: CategoryListItem[];
   labels: ProductFormLabels;
-  onSubmit: (values: ProductFormValues) => Promise<void>;
+  onSubmit: (
+    values: ProductFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

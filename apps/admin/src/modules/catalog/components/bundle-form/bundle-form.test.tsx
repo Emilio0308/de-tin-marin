@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BundleForm } from "./bundle-form";
+import {
+  isAllowedCatalogImageFile,
+  resolveBundleImageUrlForPersist,
+} from "./bundle-form.helpers";
 import type { BundleFormLabels } from "./bundle-form.types";
 
 const products = [
@@ -24,11 +28,13 @@ const labels: BundleFormLabels = {
   namePlaceholder: "Nombre",
   description: "Descripción",
   descriptionPlaceholder: "Descripción",
-  imageUrl: "URL de la imagen",
-  imageUrlPlaceholder: "https://…",
+  imageUpload: "Subir imagen",
+  imageUploading: "Subiendo…",
+  imageClear: "Quitar imagen",
   imageAlt: "Vista previa",
-  imageEmptyTitle: "Agrega una foto",
-  imageEmptyHint: "Pega una URL",
+  imageEmptyTitle: "Sin foto aún",
+  imageEmptyHint: "JPEG, PNG o WebP",
+  imageFileInvalid: "Archivo inválido",
   productSelectPlaceholder: "Selecciona un producto",
   addProduct: "Agregar",
   emptyItems: "Agrega al menos un producto.",
@@ -51,6 +57,19 @@ const labels: BundleFormLabels = {
 };
 
 describe("BundleForm", () => {
+  beforeEach(() => {
+    Object.defineProperty(URL, "createObjectURL", {
+      writable: true,
+      configurable: true,
+      value: vi.fn(() => "blob:http://localhost/mock-preview"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      writable: true,
+      configurable: true,
+      value: vi.fn(),
+    });
+  });
+
   it("actualiza el total al agregar y quitar productos", () => {
     render(
       <BundleForm
@@ -88,5 +107,120 @@ describe("BundleForm", () => {
     fireEvent.click(removeButtons[0]!);
 
     expect(screen.getAllByText("S/ 70.00").length).toBeGreaterThan(0);
+  });
+
+  it("muestra preview cuando hay imageUrl inicial y permite quitarla", () => {
+    render(
+      <BundleForm
+        initial={{
+          id: "b1",
+          name: "Sorpresa",
+          description: null,
+          imageUrl: "https://cdn.example.com/bundles/a.webp",
+          containerId: "c1",
+          containerName: "Caja mediana",
+          containerNetPrice: 1.5,
+          quantity: 1,
+          isActive: true,
+          items: [
+            {
+              productId: "p1",
+              productName: "Galleta",
+              unitNetPrice: 1,
+              unitsPerPerson: 1,
+            },
+          ],
+          itemsSubtotal: 1,
+          containerSubtotal: 1.5,
+          total: 2.5,
+        }}
+        products={products}
+        containers={containers}
+        labels={labels}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        submitting={false}
+        error={null}
+      />,
+    );
+
+    expect(screen.getByAltText(labels.imageAlt)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: labels.imageClear }));
+    expect(screen.getByText(labels.imageEmptyTitle)).toBeInTheDocument();
+  });
+
+  it("al elegir archivo válido llama onSubmit con pendingImage al guardar", () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <BundleForm
+        products={products}
+        containers={containers}
+        labels={labels}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        submitting={false}
+        error={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(labels.name), {
+      target: { value: "Sorpresa dulce" },
+    });
+    fireEvent.change(screen.getByLabelText(labels.container), {
+      target: { value: "c1" },
+    });
+    const productSelect = screen.getByRole("combobox", {
+      name: labels.productSelectPlaceholder,
+    });
+    fireEvent.change(productSelect, { target: { value: "p1" } });
+    fireEvent.click(screen.getByRole("button", { name: labels.addProduct }));
+
+    const file = new File(["x"], "bundle.webp", { type: "image/webp" });
+    fireEvent.change(screen.getByLabelText(labels.imageUpload), {
+      target: { files: [file] },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: labels.save }));
+
+    expect(onSubmit).toHaveBeenCalled();
+    const [, pending] = onSubmit.mock.calls[0] as [unknown, File | null];
+    expect(pending).toBeInstanceOf(File);
+    expect(pending?.name).toBe("bundle.webp");
+  });
+});
+
+describe("bundle-form.helpers media", () => {
+  it("acepta jpeg/png/webp dentro del límite", () => {
+    expect(
+      isAllowedCatalogImageFile(
+        new File(["a"], "a.jpg", { type: "image/jpeg" }),
+      ),
+    ).toBe(true);
+    expect(
+      isAllowedCatalogImageFile(
+        new File(["a"], "a.gif", { type: "image/gif" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("resuelve URL persistida: pending gana; blob no se guarda", () => {
+    const file = new File(["a"], "a.webp", { type: "image/webp" });
+    expect(
+      resolveBundleImageUrlForPersist(
+        "blob:http://local/1",
+        file,
+        "https://cdn.example.com/bundles/x.webp",
+      ),
+    ).toBe("https://cdn.example.com/bundles/x.webp");
+    expect(
+      resolveBundleImageUrlForPersist("blob:http://local/1", null, null),
+    ).toBeNull();
+    expect(
+      resolveBundleImageUrlForPersist(
+        "https://cdn.example.com/bundles/old.webp",
+        null,
+        null,
+      ),
+    ).toBe("https://cdn.example.com/bundles/old.webp");
   });
 });

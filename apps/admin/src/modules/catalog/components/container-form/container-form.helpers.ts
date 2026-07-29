@@ -1,3 +1,7 @@
+import {
+  CATALOG_IMAGE_CONTENT_TYPES,
+  CATALOG_IMAGE_MAX_BYTES,
+} from "@/modules/media/schemas/presign-catalog-image.schema";
 import type { SurpriseContainerFormDTO } from "@/modules/catalog/types/surprise-container.dto";
 import type { ContainerFormValues } from "./container-form.types";
 
@@ -37,10 +41,35 @@ export function isValidImageUrl(value: string): boolean {
   if (!value.trim()) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return (
+      url.protocol === "http:" ||
+      url.protocol === "https:" ||
+      url.protocol === "blob:"
+    );
   } catch {
     return false;
   }
+}
+
+export function isAllowedCatalogImageFile(file: File): boolean {
+  return (
+    (CATALOG_IMAGE_CONTENT_TYPES as readonly string[]).includes(file.type) &&
+    file.size > 0 &&
+    file.size <= CATALOG_IMAGE_MAX_BYTES
+  );
+}
+
+export function resolveContainerImageUrlForPersist(
+  imageUrl: string,
+  pendingImage: File | null,
+  uploadedPublicUrl: string | null,
+): string | null {
+  if (pendingImage) {
+    return uploadedPublicUrl;
+  }
+  const trimmed = imageUrl.trim();
+  if (!trimmed || trimmed.startsWith("blob:")) return null;
+  return trimmed;
 }
 
 export function isLowStock(quantity: number): boolean {

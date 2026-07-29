@@ -62,7 +62,7 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 - **NO personalización ni snapshot de orden** — eso va en `shopping_cart` (S2B) → _invariante 11_
 - **NO `units_per_person` editable en UI v1** — se fija en `1`; el campo existe en tabla para v2 → _scope creep_
 - **NO ecommerce UI** → S3A
-- **NO Supabase Storage** — `image_url` es solo URL texto (como productos en S1A) → _scope creep_
+- **NO Supabase Storage** — `image_url` es URL texto; upload admin vía S3/CDN (S0-03), no Storage de Supabase → _scope creep_
 - **NO `index.ts` barrels**
 
 ## Tablas y RLS

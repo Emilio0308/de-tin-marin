@@ -19,6 +19,8 @@ de-tin-marin/
   supabase/
     migrations/
     seed/
+  infra/
+    cdk/                # AWS CDK — media (S3 + CloudFront); ver docs/infra.md
   docs/
 ```
 

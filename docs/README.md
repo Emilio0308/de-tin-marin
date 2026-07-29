@@ -8,6 +8,7 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 | --- | ------------------------------------------------------------ | ------------------------------------------- |
 | 1   | [vision.md](vision.md)                                       | Por qué existe el proyecto                  |
 | 2   | [architecture.md](architecture.md)                           | Cómo está organizado el monorepo            |
+| 2b  | [infra.md](infra.md)                                         | Media CDN: S3 + CloudFront, reglas y deploy |
 | 3   | [database.md](database.md)                                   | Tablas, relaciones, RLS (catálogo canónico) |
 | 4   | [business-rules.md](business-rules.md)                       | Reglas de negocio numeradas                 |
 | 5   | Dominio específico                                           | pricing · campaigns · orders · inventory    |
@@ -19,8 +20,11 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 ## Decisiones y planificación
 
 - [DECISIONS.md](DECISIONS.md) — ledger de decisiones firmadas (**gana sobre otros docs**)
+- [infra.md](infra.md) — media CDN (S3 + CloudFront), entornos staging/prod, guía de deploy
 - [roadmap.md](roadmap.md) — etapas S0→S4
 - [stages/S0/01-monorepo-foundation.md](stages/S0/01-monorepo-foundation.md) — brief S0 (monorepo + spine) ✅
+- [stages/S0/02-infra-media-cdn.md](stages/S0/02-infra-media-cdn.md) — brief S0 media CDN
+- [stages/S0/03-admin-pack-image-upload.md](stages/S0/03-admin-pack-image-upload.md) — brief upload imágenes catálogo (presign)
 - [stages/STAGE-BRIEF-TEMPLATE.md](stages/STAGE-BRIEF-TEMPLATE.md) — plantilla de briefs
 - [adr/0001-stack-and-foundation.md](adr/0001-stack-and-foundation.md) — stack base
 

@@ -17,3 +17,4 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 8. **Fetching / caché:** listados con `catalog_version` + Broadcast; carrito sync al montar; checkout validate al submit — [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md) · DECISIONS #32.
 9. **UI / i18n:** responsive, paleta, sin mocks — [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md).
 10. **Repo:** `de-tin-marin` · scope `@de-tin-marin/*`.
+11. **Media CDN:** S3 + CloudFront vía CDK — [`docs/infra.md`](docs/infra.md) · DECISIONS #34/#35.

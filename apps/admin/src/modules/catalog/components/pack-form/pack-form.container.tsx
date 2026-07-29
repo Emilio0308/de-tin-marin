@@ -8,13 +8,17 @@ import { createPackAction } from "@/modules/catalog/actions/create-pack";
 import { listActiveCampaignsAction } from "@/modules/catalog/actions/list-active-campaigns";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { updatePackAction } from "@/modules/catalog/actions/update-pack";
+import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { PackForm } from "./pack-form";
+import { resolvePackImageUrlForPersist } from "./pack-form.helpers";
 import type {
   PackFormContainerProps,
   PackFormLabels,
   PackFormValues,
+  PackImageUploadResult,
   ProductOption,
 } from "./pack-form.types";
 
@@ -50,13 +54,17 @@ function packErrorMessage(
   }
 }
 
-function toPayload(values: PackFormValues, id?: string) {
+function toPayload(
+  values: PackFormValues,
+  imageUrl: string | null,
+  id?: string,
+) {
   const base = {
     sku: values.sku.trim(),
     name: values.name.trim(),
     description: values.description.trim() || null,
     slug: values.slug.trim() || undefined,
-    imageUrl: values.imageUrl.trim() || null,
+    imageUrl,
     normalNetPrice: values.normalNetPrice,
     campaignId: values.campaignId || null,
     purchaseMinQuantity: values.purchaseMinQuantity,
@@ -117,11 +125,13 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       slugPlaceholder: t("slugPlaceholder"),
       description: t("description"),
       descriptionPlaceholder: t("descriptionPlaceholder"),
-      imageUrl: t("imageUrl"),
-      imageUrlPlaceholder: t("imageUrlPlaceholder"),
+      imageUpload: t("imageUpload"),
+      imageUploading: t("imageUploading"),
+      imageClear: t("imageClear"),
       imageAlt: t("imageAlt"),
       imageEmptyTitle: t("imageEmptyTitle"),
       imageEmptyHint: t("imageEmptyHint"),
+      imageFileInvalid: t("imageFileInvalid"),
       productSelectPlaceholder: t("productSelectPlaceholder"),
       addProduct: t("addProduct"),
       emptyItems: t("emptyItems"),
@@ -146,13 +156,76 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
     [t, mode],
   );
 
-  async function handleSubmit(values: PackFormValues) {
+  async function uploadPackImage(file: File): Promise<PackImageUploadResult> {
+    const presign = await createCatalogImageUploadUrlAction({
+      folder: "packs",
+      contentType: file.type as CatalogImageContentType,
+      contentLength: file.size,
+      fileName: file.name,
+    });
+
+    if (!presign.ok) {
+      if (presign.error === "UNAUTHORIZED") {
+        return { ok: false, error: tErrors("unauthorized") };
+      }
+      if (presign.error === "FORBIDDEN") {
+        return { ok: false, error: tErrors("forbidden") };
+      }
+      if (presign.error === "VALIDATION") {
+        return { ok: false, error: t("imageFileInvalid") };
+      }
+      return {
+        ok: false,
+        error:
+          "message" in presign && presign.message
+            ? t("imageUploadFailedWithMessage", { message: presign.message })
+            : t("imageUploadFailed"),
+      };
+    }
+
+    const putResponse = await fetch(presign.data.uploadUrl, {
+      method: "PUT",
+      body: file,
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
+
+    if (!putResponse.ok) {
+      return { ok: false, error: t("imageUploadFailed") };
+    }
+
+    return { ok: true, publicUrl: presign.data.publicUrl };
+  }
+
+  async function handleSubmit(
+    values: PackFormValues,
+    pendingImage: File | null,
+  ) {
     setSubmitting(true);
     setError(null);
 
     try {
+      let uploadedPublicUrl: string | null = null;
+
+      if (pendingImage) {
+        const upload = await uploadPackImage(pendingImage);
+        if (!upload.ok) {
+          setError(upload.error);
+          return;
+        }
+        uploadedPublicUrl = upload.publicUrl;
+      }
+
+      const imageUrl = resolvePackImageUrlForPersist(
+        values.imageUrl,
+        pendingImage,
+        uploadedPublicUrl,
+      );
+
       const payload = toPayload(
         values,
+        imageUrl,
         mode === "edit" ? initial?.id : undefined,
       );
 

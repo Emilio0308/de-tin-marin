@@ -28,6 +28,9 @@ export type BundleFormValues = {
   items: BundleFormItemValues[];
 };
 
+export type BundleImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type BundleFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
@@ -40,11 +43,13 @@ export type BundleFormLabels = {
   namePlaceholder: string;
   description: string;
   descriptionPlaceholder: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
   imageAlt: string;
   imageEmptyTitle: string;
   imageEmptyHint: string;
+  imageFileInvalid: string;
   productSelectPlaceholder: string;
   addProduct: string;
   emptyItems: string;
@@ -71,7 +76,10 @@ export type BundleFormProps = {
   products: ProductOption[];
   containers: ContainerOption[];
   labels: BundleFormLabels;
-  onSubmit: (values: BundleFormValues) => Promise<void>;
+  onSubmit: (
+    values: BundleFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

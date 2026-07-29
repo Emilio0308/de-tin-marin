@@ -3,13 +3,17 @@ import {
   computeFinalPrice,
   toCampaignForPricing,
 } from "@de-tin-marin/shared/final-price";
+import {
+  CATALOG_IMAGE_CONTENT_TYPES,
+  CATALOG_IMAGE_MAX_BYTES,
+} from "@/modules/media/schemas/presign-catalog-image.schema";
+import type { PackFormDTO } from "@/modules/catalog/types/pack.dto";
 import type {
   CampaignOption,
   PackFormItemValues,
   PackFormValues,
   ProductOption,
 } from "./pack-form.types";
-import type { PackFormDTO } from "@/modules/catalog/types/pack.dto";
 
 export function buildDefaultPackValues(initial?: PackFormDTO): PackFormValues {
   return {
@@ -99,11 +103,26 @@ export function isValidImageUrl(value: string): boolean {
   if (!value.trim()) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return (
+      url.protocol === "http:" ||
+      url.protocol === "https:" ||
+      url.protocol === "blob:"
+    );
   } catch {
     return false;
   }
 }
+
+export function isAllowedCatalogImageFile(file: File): boolean {
+  return (
+    (CATALOG_IMAGE_CONTENT_TYPES as readonly string[]).includes(file.type) &&
+    file.size > 0 &&
+    file.size <= CATALOG_IMAGE_MAX_BYTES
+  );
+}
+
+/** @deprecated Use isAllowedCatalogImageFile */
+export const isAllowedPackImageFile = isAllowedCatalogImageFile;
 
 export function canSubmitPackForm(values: PackFormValues): boolean {
   return (
@@ -113,4 +132,17 @@ export function canSubmitPackForm(values: PackFormValues): boolean {
     values.normalNetPrice >= 0 &&
     values.purchaseMaxQuantity >= values.purchaseMinQuantity
   );
+}
+
+export function resolvePackImageUrlForPersist(
+  imageUrl: string,
+  pendingImage: File | null,
+  uploadedPublicUrl: string | null,
+): string | null {
+  if (pendingImage) {
+    return uploadedPublicUrl;
+  }
+  const trimmed = imageUrl.trim();
+  if (!trimmed || trimmed.startsWith("blob:")) return null;
+  return trimmed;
 }

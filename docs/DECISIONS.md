@@ -40,6 +40,8 @@
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
 | 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable. **CSR + RQ fresco** en carrito (sync al montar) y checkout (validate al submit). **Caché cliente catálogo:** `staleTime` Infinity; invalidación vía `catalog.catalog_cache_meta.version_at` + **Realtime Broadcast** (`catalog-version`) al bump en admin/deduct. Sin poll. Sin Next.js Data Cache por defecto. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
 | 33 | Packs / combos | ✅ | **`catalog.packs` + `pack_items`**. Combo ≠ sorpresa: sin personas, sin envase, BOM fija. Precio JSONB `reference` (suma `product.prices.normal × package_quantity`) + `normal` (admin); **`normal >= reference`**. Descuentos solo vía campaña 1:1 (`campaign_id`). Sin stock propio; disponibilidad y deduct al `paid` descuentan **presentaciones** de componentes. Min/max compra como productos. UI admin: Combos. Futuro (no v1): UOM unidad base / fracciones. Brief: `docs/stages/S1F/01-catalog-packs.md` |
+| 34 | Media CDN (imágenes) | ✅ | **AWS S3 privado + CloudFront (OAC)** vía **CDK TypeScript** en `infra/cdk/`. Stacks **`MediaStaging`** y **`MediaProduction`** (entornos aislados; nombres AWS genéricos). URL CDN en `image_url`. Doc canónica: [`docs/infra.md`](infra.md). Brief: `docs/stages/S0/02-infra-media-cdn.md` |
+| 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · [`infra.md`](infra.md) |
 
 ## Docs sincronizados (2026-07-28 — catalog_version + Broadcast + funnel)
 
@@ -137,6 +139,34 @@
 - `CLAUDE.md` — dominio Packs
 - READMEs admin catalog/orders + ecommerce cart/catalog
 - Código: migración `00016`, `pack-price`, order-cart `type: pack`, admin/ecommerce combos
+
+## Docs sincronizados (2026-07-28 — infra media CDN)
+
+- DECISIONS #34 — S3 + CloudFront vía CDK en `infra/cdk/`
+- `docs/stages/S0/02-infra-media-cdn.md`
+- `infra/cdk/README.md`
+
+## Docs sincronizados (2026-07-28 — pack image upload)
+
+- DECISIONS #35 — presign (inicialmente packs; ampliado 2026-07-29 a todo catálogo)
+- `docs/stages/S0/03-admin-pack-image-upload.md`
+- Admin: `modules/media/`, pack-form upload UI, env AWS/media
+
+## Docs sincronizados (2026-07-29 — infra staging + production)
+
+- `docs/infra.md` — doc canónica media CDN (reglas, stacks, deploy)
+- `MediaProduction` en `infra/cdk/bin/app.ts`
+- Scripts `infra:deploy:staging` / `infra:deploy:production`
+- `docs/README.md`, `architecture.md`, DECISIONS #34
+
+## Docs sincronizados (2026-07-29 — upload catálogo completo)
+
+- DECISIONS #35 — presign en packs · products · bundles · containers
+- `docs/stages/S0/03-admin-pack-image-upload.md` — scope ampliado; estado done
+- `docs/infra.md` — fuera de scope sin “otro brief” para forms
+- `docs/database.md` — `image_url` = URL CDN (texto)
+- `docs/roadmap.md` § S0 media
+- READMEs admin catalog
 
 ## Cómo añadir una decisión
 
