@@ -65,6 +65,36 @@ export function buildSinglePriceFromNetPrice(netPrice: number): PriceNormal {
   return buildPriceBlock(netPrice);
 }
 
+export type PackPrices = {
+  normal: PriceNormal;
+  reference: PriceNormal;
+};
+
+export function buildPackPrices(
+  normalNetPrice: number,
+  referenceNetPrice: number,
+): PackPrices {
+  return {
+    normal: buildPriceBlock(normalNetPrice),
+    reference: buildPriceBlock(referenceNetPrice),
+  };
+}
+
+export function parsePackPricesJson(prices: unknown): {
+  normalNetPrice: number;
+  referenceNetPrice: number;
+} {
+  if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
+    return { normalNetPrice: 0, referenceNetPrice: 0 };
+  }
+
+  const record = prices as Record<string, unknown>;
+  return {
+    normalNetPrice: readNetPrice(record.normal) ?? 0,
+    referenceNetPrice: readNetPrice(record.reference) ?? 0,
+  };
+}
+
 function readNetPrice(value: unknown): number | null {
   if (
     typeof value === "object" &&

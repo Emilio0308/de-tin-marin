@@ -36,6 +36,8 @@ const defaultLabels: CartPageLabels = {
   stockProduct: "Dulce",
   stockContainer: "Envase",
   bundleBadge: "Sorpresa",
+  packBadge: "Combo",
+  packComponents: "productos",
 };
 
 const productLine: StoredCartLine = {

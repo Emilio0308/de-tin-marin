@@ -6,7 +6,7 @@
 
 El detalle del pedido vive en **`commerce.orders.shopping_cart`** (JSONB). No hay tablas `order_items` ni `order_bundle_items` en v1.
 
-Al confirmar checkout se **congela** el carrito completo: productos sueltos y sorpresas (bundles) personalizadas, con precios y composición independientes de la plantilla.
+Al confirmar checkout se **congela** el carrito completo: productos sueltos, sorpresas (bundles) personalizadas y **packs/combos**, con precios y composición independientes de la plantilla.
 
 ### Estructura (`shopping_cart`)
 
@@ -42,10 +42,27 @@ type ShoppingCartLine =
         totalQuantity: number;
         unitPrice: number;
       }>;
+    }
+  | {
+      type: "pack";
+      packId: string;
+      sku: string;
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      lineTotal: number;
+      components: Array<{
+        productId: string;
+        productName: string;
+        sku: string;
+        packageQuantity: number;
+        /** Presentaciones a descontar = packageQuantity × line.quantity. */
+        totalPackages: number;
+      }>;
     };
 ```
 
-Al descontar stock (Regla 15 / DECISIONS #29): líneas producto aportan `presentationQuantity`; componentes de bundle aportan `baseUnits`. `need = presentationQuantity × items_per_package + baseUnits`, con deduct distinto por `product_type`.
+Al descontar stock (Regla 15 / DECISIONS #29 / #33): líneas producto y componentes de pack aportan `presentationQuantity`; componentes de bundle aportan `baseUnits`. `need = presentationQuantity × items_per_package + baseUnits`, con deduct distinto por `product_type`.
 
 ### Ejemplo sorpresa personalizada
 

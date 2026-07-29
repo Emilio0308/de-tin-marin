@@ -3,6 +3,7 @@ import type { PublicProductListItem } from "@de-tin-marin/validations/public-cat
 import {
   applyServerCartPricing,
   createProductCartLine,
+  mergePackCartLine,
   mergeProductCartLine,
   sanitizeStoredCartLine,
   shouldSyncCartPricing,
@@ -102,6 +103,50 @@ describe("cart-lines purchase limits", () => {
     const decreased = updateStoredProductQuantity(lines, "line-1", 5, bounds);
     if (decreased[0]?.line.type === "product") {
       expect(decreased[0].line.quantity).toBe(10);
+    }
+  });
+
+  it("mergePackCartLine fusiona por packId y respeta max", () => {
+    const packBounds = {
+      minQuantity: 1,
+      maxQuantity: 5,
+      purchasable: true,
+    };
+    const existing: StoredCartLine[] = [
+      {
+        cartLineId: "pack-line-1",
+        line: {
+          type: "pack",
+          packId: "pack-1",
+          sku: "PACK-1",
+          name: "Combo",
+          quantity: 3,
+          unitPrice: 20,
+          lineTotal: 60,
+          components: [],
+        },
+      },
+    ];
+
+    const next = mergePackCartLine(
+      existing,
+      {
+        type: "pack",
+        packId: "pack-1",
+        sku: "PACK-1",
+        name: "Combo",
+        quantity: 3,
+        unitPrice: 20,
+        lineTotal: 60,
+        components: [],
+      },
+      packBounds,
+    );
+
+    expect(next).toHaveLength(1);
+    if (next[0]?.line.type === "pack") {
+      expect(next[0].line.quantity).toBe(5);
+      expect(next[0].line.lineTotal).toBe(100);
     }
   });
 });

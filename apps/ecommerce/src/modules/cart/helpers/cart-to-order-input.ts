@@ -7,14 +7,22 @@ export function cartLinesToOrderInput(
   return lines.map((entry) => {
     if (entry.line.type === "product") {
       return {
-        type: "product",
+        type: "product" as const,
         productId: entry.line.productId,
         quantity: entry.line.quantity,
       };
     }
 
+    if (entry.line.type === "pack") {
+      return {
+        type: "pack" as const,
+        packId: entry.line.packId,
+        quantity: entry.line.quantity,
+      };
+    }
+
     return {
-      type: "bundle",
+      type: "bundle" as const,
       bundleId: entry.line.bundleId,
       quantity: entry.line.quantity,
       components: entry.line.components.map((component) => ({

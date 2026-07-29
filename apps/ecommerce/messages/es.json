@@ -14,6 +14,7 @@
   "nav": {
     "sweets": "Dulces",
     "surprises": "Sorpresas",
+    "combos": "Combos",
     "myOrders": "Mis pedidos",
     "about": "Nosotros"
   },
@@ -25,6 +26,7 @@
       "search": "Buscar",
       "searchProducts": "Buscar por nombre o SKU…",
       "searchBundles": "Buscar sorpresas…",
+      "searchPacks": "Buscar combos…",
       "sort": "Ordenar por"
     },
     "sort": {
@@ -41,6 +43,7 @@
     "actions": {
       "addToCart": "Añadir",
       "personalize": "Personalizar",
+      "viewCombo": "Ver combo",
       "price": "Precio"
     },
     "products": {
@@ -66,6 +69,20 @@
       "description": "Descripción",
       "backToList": "Volver a sorpresas",
       "backToDetail": "Volver al combo"
+    },
+    "packs": {
+      "title": "Combos",
+      "subtitle": "Combinaciones fijas listas para llevar.",
+      "empty": "No encontramos combos con esos filtros.",
+      "sku": "SKU",
+      "includes": "Qué incluye este combo",
+      "componentPackages": "{packages, plural, one {# paquete} other {# paquetes}} de {units} unidades",
+      "componentUnits": "{count, plural, one {# unidad} other {# unidades}}",
+      "description": "Descripción",
+      "backToList": "Volver a combos",
+      "unavailable": "Este combo no está disponible por stock.",
+      "decreaseQuantity": "Disminuir cantidad",
+      "increaseQuantity": "Aumentar cantidad"
     },
     "wizard": {
       "title": "Personaliza tu sorpresa",
@@ -125,7 +142,9 @@
     "quantity": "Cant.",
     "bundlePersons": "Para {count} personas",
     "bundleBadge": "Sorpresa",
+    "packBadge": "Combo",
     "components": "dulces",
+    "packComponents": "productos",
     "stockTitle": "Stock limitado",
     "stockChecking": "Verificando stock…",
     "stockProduct": "Dulce",
@@ -175,6 +194,7 @@
       "validation": "Revisa los datos del formulario.",
       "productNotFound": "Uno o más productos del carrito ya no están disponibles.",
       "bundleNotFound": "Una o más sorpresas del carrito ya no están disponibles.",
+      "packNotFound": "Uno o más combos del carrito ya no están disponibles.",
       "duplicateProductInBundle": "Hay productos duplicados en una sorpresa. Vuelve a personalizarla.",
       "unexpected": "No pudimos crear el pedido. Intenta de nuevo en unos minutos."
     }
@@ -196,7 +216,9 @@
       "deliveryTitle": "Entrega",
       "pickupTitle": "Recojo en tienda",
       "bundleBadge": "Sorpresa",
+      "packBadge": "Combo",
       "bundleComponents": "dulces",
+      "packComponents": "productos",
       "bundlePersons": "Para {count} personas"
     },
     "status": {

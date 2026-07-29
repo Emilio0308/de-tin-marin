@@ -1,8 +1,10 @@
 import {
   publicBundleListQuerySchema,
+  publicPackListQuerySchema,
   publicProductListQuerySchema,
   type PublicBundleListQuery,
   type PublicCatalogSort,
+  type PublicPackListQuery,
   type PublicProductListQuery,
 } from "@de-tin-marin/validations/public-catalog";
 import { DEFAULT_PAGE_SIZE } from "../constants";
@@ -36,6 +38,21 @@ export function readBundleListQuery(
   if (parsed.success) return parsed.data;
 
   return publicBundleListQuerySchema.parse({});
+}
+
+export function readPackListQuery(
+  searchParams: URLSearchParams,
+): PublicPackListQuery {
+  const parsed = publicPackListQuerySchema.safeParse({
+    page: searchParams.get("page") ?? undefined,
+    pageSize: searchParams.get("pageSize") ?? DEFAULT_PAGE_SIZE,
+    search: searchParams.get("search") ?? undefined,
+    sort: searchParams.get("sort") ?? undefined,
+  });
+
+  if (parsed.success) return parsed.data;
+
+  return publicPackListQuerySchema.parse({});
 }
 
 export function buildCatalogSearchParams(

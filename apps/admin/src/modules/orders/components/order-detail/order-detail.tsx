@@ -329,6 +329,44 @@ export function OrderDetailView({
                       S/ {line.lineTotal.toFixed(2)}
                     </p>
                   </div>
+                ) : line.type === "pack" ? (
+                  <div
+                    key={`pack-${line.packId}-${index}`}
+                    className="border-outline-variant/50 bg-surface flex items-center justify-between gap-4 rounded-lg border p-4"
+                  >
+                    <div className="flex min-w-0 items-center gap-4">
+                      <div className="bg-secondary-container/40 flex h-16 w-16 shrink-0 items-center justify-center rounded-md">
+                        <Candy className="text-secondary h-7 w-7" aria-hidden />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-label text-label-bold text-on-surface truncate">
+                          {line.name}
+                        </p>
+                        <p className="text-on-surface-variant text-sm">
+                          {labels.formatQuantityLabel(line.quantity)} ·{" "}
+                          {labels.formatComponentsLabel(line.components.length)}
+                        </p>
+                        <details className="mt-2">
+                          <summary className="text-secondary cursor-pointer text-sm font-semibold">
+                            {labels.formatComponentsLabel(
+                              line.components.length,
+                            )}
+                          </summary>
+                          <ul className="text-on-surface-variant mt-2 space-y-1 text-sm">
+                            {line.components.map((component) => (
+                              <li key={component.productId}>
+                                {component.productName} ×{" "}
+                                {component.totalPackages}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      </div>
+                    </div>
+                    <p className="font-display text-primary shrink-0 text-lg font-extrabold">
+                      S/ {line.lineTotal.toFixed(2)}
+                    </p>
+                  </div>
                 ) : (
                   <div
                     key={`bundle-${line.bundleId}-${index}`}

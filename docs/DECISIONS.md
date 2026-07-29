@@ -39,6 +39,7 @@
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
 | 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable (home listados, detalle producto/sorpresa, template wizard). **CSR + React Query fresco** (`staleTime: 0`) en carrito, checkout y preview de precio/stock para evitar discrepancias al pagar. **Caché cliente catálogo:** `staleTime` y `gcTime` = **15 min** en `QueryClient`. **Sin Next.js Data Cache** por defecto en catálogo. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
+| 33 | Packs / combos | ✅ | **`catalog.packs` + `pack_items`**. Combo ≠ sorpresa: sin personas, sin envase, BOM fija. Precio JSONB `reference` (suma `product.prices.normal × package_quantity`) + `normal` (admin); **`normal >= reference`**. Descuentos solo vía campaña 1:1 (`campaign_id`). Sin stock propio; disponibilidad y deduct al `paid` descuentan **presentaciones** de componentes. Min/max compra como productos. UI admin: Combos. Futuro (no v1): UOM unidad base / fracciones. Brief: `docs/stages/S1F/01-catalog-packs.md` |
 
 ## Docs sincronizados (2026-07-02)
 
@@ -116,6 +117,16 @@
 - `docs/stages/S2A/01-stock-deduct-on-payment.md` — algoritmo + helpers
 - `docs/stages/S1D/01-products-packages-stock.md` — nota supersede OUT `unit`
 - Código: `product-stock` (`deductProductStock`, …), `checkOrderStock`, migración `00014`
+
+## Docs sincronizados (2026-07-28 — packs / combos S1F + S3A-05)
+
+- DECISIONS #33 — packs BOM fija, reference/normal, deduct presentaciones
+- `docs/stages/S1F/01-catalog-packs.md`, `docs/stages/S3A/05-catalog-packs-ecommerce.md`
+- `business-rules.md` — Reglas 15 (pack), 22–25
+- `database.md`, `orders.md`, `pricing.md`, `inventory.md`, `campaigns.md`, `architecture.md`, `roadmap.md`
+- `CLAUDE.md` — dominio Packs
+- READMEs admin catalog/orders + ecommerce cart/catalog
+- Código: migración `00016`, `pack-price`, order-cart `type: pack`, admin/ecommerce combos
 
 ## Cómo añadir una decisión
 

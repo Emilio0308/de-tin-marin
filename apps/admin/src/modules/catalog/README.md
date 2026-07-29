@@ -1,8 +1,8 @@
 # Catálogo — módulo admin
 
-CRUD de categorías, productos y paquetes (bundles) en `apps/admin`.
+CRUD de categorías, productos, sorpresas (bundles) y **combos (packs)** en `apps/admin`.
 
-Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) _(presentaciones + stock)_
+Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
 
 ## Capas
 
@@ -12,35 +12,43 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 
 ## Server Actions (`actions/`)
 
-| Action                     | Service                     | Descripción               |
-| -------------------------- | --------------------------- | ------------------------- |
-| `listCategoriesAction`     | `listCategoriesService`     | Listado categorías        |
-| `getCategoryAction`        | `getCategoryService`        | Detalle por id            |
-| `createCategoryAction`     | `createCategoryService`     | Crear                     |
-| `updateCategoryAction`     | `updateCategoryService`     | Editar                    |
-| `softDeleteCategoryAction` | `softDeleteCategoryService` | Soft-delete               |
-| `listProductsAction`       | `listProductsService`       | Listado + `finalPrice`    |
-| `getProductAction`         | `getProductService`         | Detalle por id            |
-| `createProductAction`      | `createProductService`      | Crear                     |
-| `updateProductAction`      | `updateProductService`      | Editar                    |
-| `softDeleteProductAction`  | `softDeleteProductService`  | Soft-delete               |
-| `listBundlesAction`        | `listBundlesService`        | Listado + total calculado |
-| `getBundleAction`          | `getBundleService`          | Detalle + items           |
-| `createBundleAction`       | `createBundleService`       | Crear                     |
-| `updateBundleAction`       | `updateBundleService`       | Editar                    |
-| `softDeleteBundleAction`   | `softDeleteBundleService`   | Soft-delete               |
+| Action                      | Service                     | Descripción                          |
+| --------------------------- | --------------------------- | ------------------------------------ |
+| `listCategoriesAction`      | `listCategoriesService`     | Listado categorías                   |
+| `getCategoryAction`         | `getCategoryService`        | Detalle por id                       |
+| `createCategoryAction`      | `createCategoryService`     | Crear                                |
+| `updateCategoryAction`      | `updateCategoryService`     | Editar                               |
+| `softDeleteCategoryAction`  | `softDeleteCategoryService` | Soft-delete                          |
+| `listProductsAction`        | `listProductsService`       | Listado + `finalPrice`               |
+| `getProductAction`          | `getProductService`         | Detalle por id                       |
+| `createProductAction`       | `createProductService`      | Crear                                |
+| `updateProductAction`       | `updateProductService`      | Editar                               |
+| `softDeleteProductAction`   | `softDeleteProductService`  | Soft-delete                          |
+| `listBundlesAction`         | `listBundlesService`        | Listado + total calculado            |
+| `getBundleAction`           | `getBundleService`          | Detalle + items                      |
+| `createBundleAction`        | `createBundleService`       | Crear                                |
+| `updateBundleAction`        | `updateBundleService`       | Editar                               |
+| `softDeleteBundleAction`    | `softDeleteBundleService`   | Soft-delete                          |
+| `listPacksAction`           | `listPacksService`          | Listado combos + `finalPrice`        |
+| `getPackAction`             | `getPackService`            | Detalle + items + reference/normal   |
+| `createPackAction`          | `createPackService`         | Crear (`normal >= reference`)        |
+| `updatePackAction`          | `updatePackService`         | Editar                               |
+| `softDeletePackAction`      | `softDeletePackService`     | Soft-delete                          |
+| `listActiveCampaignsAction` | —                           | Campañas activas para select de pack |
 
 ## Services (`services/`)
 
 - `category.service.ts`
 - `product.service.ts` — usa `computeFinalPrice` para listado
 - `bundle.service.ts` — usa `computeBundleTotal`
+- `pack.service.ts` — `computePackReference` + `computeFinalPrice`
 
 ## Repositories (`repositories/`)
 
 - `category.repository.ts`
 - `product.repository.ts`
 - `bundle.repository.ts`
+- `pack.repository.ts`
 
 ## Rutas admin
 
@@ -52,10 +60,12 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 | `/products/new`, `/products/[id]/edit`     | `product-form.container`  |
 | `/bundles`                                 | `bundle-list.container`   |
 | `/bundles/new`, `/bundles/[id]/edit`       | `bundle-form.container`   |
+| `/packs`                                   | `pack-list.container`     |
+| `/packs/new`, `/packs/[id]/edit`           | `pack-form.container`     |
 
 ## Validaciones (Zod)
 
-`@de-tin-marin/validations/category` · `product` · `bundle` · `prices`
+`@de-tin-marin/validations/category` · `product` · `bundle` · `pack` · `prices`
 
 ## Auth
 

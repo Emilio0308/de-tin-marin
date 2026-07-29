@@ -76,6 +76,20 @@ export function aggregateStockDemands(cart: OrderShoppingCart): {
       continue;
     }
 
+    if (line.type === "pack") {
+      for (const component of line.components) {
+        const existing = products.get(component.productId);
+        products.set(component.productId, {
+          presentationQuantity:
+            (existing?.presentationQuantity ?? 0) + component.totalPackages,
+          baseUnits: existing?.baseUnits ?? 0,
+          sku: component.sku,
+          name: component.productName,
+        });
+      }
+      continue;
+    }
+
     for (const component of line.components) {
       const existing = products.get(component.productId);
       products.set(component.productId, {

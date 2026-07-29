@@ -2,8 +2,10 @@ import "server-only";
 
 import {
   buildOrderCartWithTotals,
+  collectPackIdsFromOrderLines,
   collectProductIdsFromOrderLines,
   type OrderBundleSource,
+  type OrderPackSource,
 } from "@de-tin-marin/shared/build-order-cart";
 import {
   formatOrderNumber,
@@ -16,6 +18,7 @@ import {
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
+import { getPackByIdRepo } from "@/modules/catalog/repositories/pack.repository";
 import { listCampaignsByIdsRepo } from "@/modules/catalog/repositories/product.repository";
 import { resolveDeliveryFeeService } from "@/modules/delivery/services/delivery.service";
 import {
@@ -33,12 +36,6 @@ import {
   type OrderDetail,
   type OrderListItem,
 } from "../types/order.dto";
-
-function collectProductIds(
-  lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
-): string[] {
-  return collectProductIdsFromOrderLines(lines);
-}
 
 async function resolveBundlesById(
   config: SupabaseConfig,
@@ -74,6 +71,35 @@ async function resolveBundlesById(
   }
 
   return bundlesById;
+}
+
+async function resolvePacksById(
+  config: SupabaseConfig,
+  lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
+): Promise<Map<string, OrderPackSource>> {
+  const packsById = new Map<string, OrderPackSource>();
+
+  for (const packId of collectPackIdsFromOrderLines(lines)) {
+    const pack = await getPackByIdRepo(config, packId);
+    if (!pack) continue;
+
+    packsById.set(packId, {
+      id: pack.id,
+      sku: pack.sku,
+      name: pack.name,
+      prices: pack.prices,
+      campaign_id: pack.campaign_id,
+      image_url: pack.image_url,
+      is_active: pack.is_active,
+      deleted_at: pack.deleted_at,
+      items: (pack.pack_items ?? []).map((item) => ({
+        product_id: item.product_id,
+        package_quantity: item.package_quantity,
+      })),
+    });
+  }
+
+  return packsById;
 }
 
 function toListItem(row: OrderRow): OrderListItem {
@@ -127,21 +153,37 @@ export async function createOrderService(
         | "VALIDATION"
         | "PRODUCT_NOT_FOUND"
         | "BUNDLE_NOT_FOUND"
+        | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE";
     }
 > {
   const parsed = createOrderInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
-  const productIds = collectProductIds(parsed.data.lines);
+  const packsById = await resolvePacksById(config, parsed.data.lines);
+  for (const line of parsed.data.lines) {
+    if (line.type === "pack" && !packsById.has(line.packId)) {
+      return { ok: false, error: "PACK_NOT_FOUND" };
+    }
+  }
+
+  const productIds = collectProductIdsFromOrderLines(
+    parsed.data.lines,
+    packsById,
+  );
   const products = await getOrderProductsByIdsRepo(config, productIds);
   if (products.length !== productIds.length) {
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
 
-  const campaignIds = products
-    .map((product) => product.campaign_id)
-    .filter((id): id is string => Boolean(id));
+  const campaignIds = [
+    ...products
+      .map((product) => product.campaign_id)
+      .filter((id): id is string => Boolean(id)),
+    ...[...packsById.values()]
+      .map((pack) => pack.campaign_id)
+      .filter((id): id is string => Boolean(id)),
+  ];
   const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
   const bundlesById = await resolveBundlesById(config, parsed.data.lines);
 
@@ -157,6 +199,7 @@ export async function createOrderService(
     products,
     campaigns,
     bundlesById,
+    packsById,
     discountTotal: parsed.data.discountTotal,
     shippingTotal,
   });

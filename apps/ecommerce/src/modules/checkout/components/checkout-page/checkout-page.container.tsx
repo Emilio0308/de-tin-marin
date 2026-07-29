@@ -38,6 +38,7 @@ type GuestOrderErrorCode =
   | "VALIDATION"
   | "PRODUCT_NOT_FOUND"
   | "BUNDLE_NOT_FOUND"
+  | "PACK_NOT_FOUND"
   | "DUPLICATE_PRODUCT_IN_BUNDLE"
   | "UNEXPECTED";
 
@@ -246,6 +247,7 @@ export function CheckoutPageContainer() {
         VALIDATION: t("errors.validation"),
         PRODUCT_NOT_FOUND: t("errors.productNotFound"),
         BUNDLE_NOT_FOUND: t("errors.bundleNotFound"),
+        PACK_NOT_FOUND: t("errors.packNotFound"),
         DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.duplicateProductInBundle"),
         UNEXPECTED: t("errors.unexpected"),
       };

@@ -9,6 +9,7 @@
     "./category": "./src/category.ts",
     "./product": "./src/product.ts",
     "./bundle": "./src/bundle.ts",
+    "./pack": "./src/pack.ts",
     "./delivery": "./src/delivery.ts",
     "./order": "./src/order.ts",
     "./payment": "./src/payment.ts",

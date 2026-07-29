@@ -7,6 +7,7 @@ import {
   orderDetailSchema,
   orderShoppingCartProductLineSchema,
   orderShoppingCartBundleLineSchema,
+  orderShoppingCartPackLineSchema,
 } from "@de-tin-marin/validations/order";
 import {
   aggregateStockDemands,
@@ -85,6 +86,11 @@ function parseShoppingCart(raw: unknown): OrderShoppingCart | null {
     }
     if ((line as { type: string }).type === "bundle") {
       const parsed = orderShoppingCartBundleLineSchema.safeParse(line);
+      if (parsed.success) lines.push(parsed.data);
+      continue;
+    }
+    if ((line as { type: string }).type === "pack") {
+      const parsed = orderShoppingCartPackLineSchema.safeParse(line);
       if (parsed.success) lines.push(parsed.data);
     }
   }

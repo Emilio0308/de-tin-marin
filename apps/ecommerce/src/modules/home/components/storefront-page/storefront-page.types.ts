@@ -2,6 +2,7 @@ import type {
   PublicBundleListItem,
   PublicCategoryItem,
   PublicCatalogSort,
+  PublicPackListItem,
   PublicProductListItem,
 } from "@de-tin-marin/validations/public-catalog";
 import type { StorefrontTab } from "@/modules/home/helpers/storefront-url";
@@ -67,13 +68,36 @@ export type StorefrontBundlesTabProps = {
   onPageChange: (page: number) => void;
 };
 
+export type StorefrontPacksTabProps = {
+  packs: PublicPackListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  searchValue: string;
+  sortValue: PublicCatalogSort;
+  sortOptions: Array<{ value: PublicCatalogSort; label: string }>;
+  labels: StorefrontToolbarLabels & {
+    viewCombo: string;
+    price: string;
+  };
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  onSearchChange: (value: string) => void;
+  onSearchSubmit: () => void;
+  onSortChange: (sort: PublicCatalogSort) => void;
+  onPageChange: (page: number) => void;
+};
+
 export type StorefrontPageProps = {
   tab: StorefrontTab;
   tabLabels: {
     products: string;
     bundles: string;
+    packs: string;
   };
   products: StorefrontProductsTabProps;
   bundles: StorefrontBundlesTabProps;
+  packs: StorefrontPacksTabProps;
   onTabChange: (tab: StorefrontTab) => void;
 };

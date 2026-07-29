@@ -73,6 +73,10 @@ const labels: OrderFormLabels = {
   templatePersonCount: (count) => `Plantilla para ${count} personas`,
   priceCalculating: "Calculando precio…",
   surpriseQuantityHint: "Número de sorpresas a pedir.",
+  combo: "Combo",
+  selectCombo: "Seleccionar combo…",
+  addCombo: "Agregar combo",
+  comboLine: "Combo",
 };
 
 const baseProduct = {
@@ -95,6 +99,7 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       values={emptyOrderFormValues}
       products={[baseProduct]}
       bundles={[]}
+      packs={[]}
       deliveryDistricts={[]}
       bundleDraft={null}
       bundleDraftLoading={false}
@@ -108,6 +113,7 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       onChange={vi.fn()}
       onAddProductLine={vi.fn()}
       onUpdateProductLineQuantity={vi.fn()}
+      onAddPackLine={vi.fn()}
       onStartBundleDraft={vi.fn()}
       onBundleDraftComponentsChange={vi.fn()}
       onBundleDraftQuantityChange={vi.fn()}

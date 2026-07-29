@@ -6,7 +6,7 @@ App Next.js de la tienda pública (`apps/ecommerce`).
 
 ```
 src/modules/
-  catalog/    # Listados públicos (S3A-1)
+  catalog/    # Listados públicos productos, sorpresas, combos
   cart/       # Carrito cliente (S3A-3)
   checkout/   # Checkout + mapa (S3A-3)
   orders/     # Confirmación guest (S3A-4)

@@ -233,6 +233,38 @@ describe("checkOrderStock", () => {
     });
   });
 
+  it("deducts pack components as presentation quantities", () => {
+    const cart: OrderShoppingCart = {
+      lines: [
+        {
+          type: "pack",
+          packId: "55555555-5555-5555-5555-555555555555",
+          sku: "COMBO-1",
+          name: "Combo",
+          quantity: 2,
+          unitPrice: 20,
+          lineTotal: 40,
+          components: [
+            {
+              productId,
+              productName: "Lay's",
+              sku: "LAYS-10",
+              packageQuantity: 2,
+              totalPackages: 4,
+            },
+          ],
+        },
+      ],
+    };
+
+    const products = new Map<string, StockInventoryProduct>([
+      [productId, laysProduct],
+    ]);
+
+    const result = checkOrderStock(cart, products, new Map());
+    expect(result.ok).toBe(true);
+  });
+
   it("reports container shortage for bundle lines", () => {
     const cart: OrderShoppingCart = {
       lines: [

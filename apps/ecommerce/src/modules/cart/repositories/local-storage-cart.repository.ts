@@ -3,6 +3,7 @@ import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchas
 import type { CartRepository, StoredCartLine } from "./cart.repository";
 import {
   addBundleCartLine,
+  mergePackCartLine,
   mergeProductCartLine,
   removeStoredCartLine,
   sanitizeStoredCartLines,
@@ -59,7 +60,9 @@ export const localStorageCartRepository: CartRepository = {
     const next =
       line.type === "product"
         ? mergeProductCartLine(current, line, LEGACY_UNBOUNDED_BOUNDS)
-        : addBundleCartLine(current, line);
+        : line.type === "pack"
+          ? mergePackCartLine(current, line, LEGACY_UNBOUNDED_BOUNDS)
+          : addBundleCartLine(current, line);
     writeLines(next);
     notify();
   },

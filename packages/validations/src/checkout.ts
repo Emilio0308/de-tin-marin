@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   createOrderInputSchema,
   orderShoppingCartBundleLineSchema,
+  orderShoppingCartPackLineSchema,
   orderShoppingCartProductLineSchema,
   previewOrderCartInputSchema,
 } from "./order";
@@ -37,6 +38,7 @@ export const checkCartStockInputSchema = z.object({
     z.discriminatedUnion("type", [
       orderShoppingCartProductLineSchema,
       orderShoppingCartBundleLineSchema,
+      orderShoppingCartPackLineSchema,
     ]),
   ),
 });

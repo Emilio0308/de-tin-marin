@@ -51,6 +51,21 @@ export async function listCampaignsByIdsRepo(
   return data ?? [];
 }
 
+export async function listActiveCampaignsRepo(
+  config: SupabaseConfig,
+): Promise<CampaignPricingRow[]> {
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("pricing")
+    .from("campaigns")
+    .select("id, name, percentage, starts_at, ends_at, is_active")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function getProductByIdRepo(
   config: SupabaseConfig,
   id: string,

@@ -120,7 +120,9 @@ export function OrderConfirmationPageContainer() {
           deliveryTitle: t("summary.deliveryTitle"),
           pickupTitle: t("summary.pickupTitle"),
           bundleBadge: t("summary.bundleBadge"),
+          packBadge: t("summary.packBadge"),
           bundleComponents: t("summary.bundleComponents"),
+          packComponents: t("summary.packComponents"),
           formatBundlePersons: (count) => t("summary.bundlePersons", { count }),
           formatStatus: (status) =>
             resolveGuestOrderStatusLabel(status, statusLabels),
