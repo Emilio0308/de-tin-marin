@@ -69,6 +69,18 @@ repositories/→ queries Supabase
 - Zod en cada boundary — ver [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md)
 - `safeParse` en actions; devolver `Result` tipado
 
+## Variables de entorno
+
+Al **agregar una variable de entorno nueva**, completar **todos** estos pasos (si falta uno, Vercel/Turbo falla aunque la var exista en el dashboard):
+
+1. Schema + `runtimeEnv` en `apps/<app>/src/config/env.ts` (o el paquete `config` canónico).
+2. Entrada documentada en [`.env.example`](../.env.example) (sin valores secretos reales).
+3. **Obligatorio:** listarla en [`turbo.json`](../turbo.json) → `tasks.build.env`.
+   - Turbo **no** inyecta al build las vars de Vercel que no estén ahí — el deploy falla con Zod/`createEnv` o con el warning de Turborepo sobre platform env vars.
+4. Si es `NEXT_PUBLIC_*`, confirmar que no filtra secrets (nunca AWS keys ni service role).
+
+Detalle de boundaries: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md) · media: [`infra.md`](infra.md).
+
 ## Supabase
 
 - Cliente server en actions/services
@@ -115,6 +127,7 @@ repositories/→ queries Supabase
 
 - [ ] `pnpm check` verde
 - [ ] `pnpm build` verde
+- [ ] Variable de entorno nueva → schema `env.ts` + `.env.example` + `turbo.json` `tasks.build.env`
 - [ ] Componente nuevo: container + presentational + types + helpers (si aplica) + test de render
 - [ ] Sin `index.ts` / barrels en imports
 - [ ] Docs del dominio actualizados si cambió contrato
