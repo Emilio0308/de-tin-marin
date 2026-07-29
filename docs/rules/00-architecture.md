@@ -81,8 +81,9 @@ Default Server Components. Client solo donde hay estado, effects o event handler
 Decisión #32. Detalle completo en [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).
 
 ```text
-Navegación / catálogo     → SSR donde sea viable + React Query 15 min
-Funnel de compra          → CSR + React Query staleTime: 0
+Navegación / catálogo     → SSR donde sea viable + RQ Infinity + catalog_version (Broadcast)
+Funnel — carrito          → CSR + RQ fresco al montar (sin poll 30 s)
+Funnel — checkout         → validate precio/stock al submit; fee fresco
 Preview precio / stock    → CSR + React Query staleTime: 0
 ```
 
@@ -93,7 +94,8 @@ container (CSR)    → useQuery → action → service → repository
 
 - **No** Next.js Data Cache (`unstable_cache`, `revalidate`) en catálogo por defecto.
 - Query keys centralizadas en `apps/<app>/src/shared/query/query-keys.ts`.
-- Defaults en `QueryProvider`: `staleTime` / `gcTime` = 15 min; override `freshQueryOptions` en carrito/checkout/preview.
+- Ecommerce: listados con `catalogQueryOptions` + `useCatalogVersionGate`; funnel con `freshQueryOptions` / validate al submit.
+- Admin: default 15 min; invalidar listas + `bump_catalog_version` tras mutación.
 
 ## Enforcement
 

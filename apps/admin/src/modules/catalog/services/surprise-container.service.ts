@@ -16,6 +16,7 @@ import {
   softDeleteSurpriseContainerRepo,
   updateSurpriseContainerRepo,
 } from "../repositories/surprise-container.repository";
+import { bumpCatalogVersionSafe } from "../repositories/catalog-cache-meta.repository";
 import type {
   SurpriseContainerFormDTO,
   SurpriseContainerListItem,
@@ -102,6 +103,7 @@ export async function createSurpriseContainerService(
     is_active: data.isActive,
   });
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const, id: row.id };
 }
 
@@ -147,6 +149,7 @@ export async function updateSurpriseContainerService(
     await updateSurpriseContainerRepo(config, id, updatePayload);
   }
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }
 
@@ -165,5 +168,6 @@ export async function softDeleteSurpriseContainerService(
   }
 
   await softDeleteSurpriseContainerRepo(config, id);
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }

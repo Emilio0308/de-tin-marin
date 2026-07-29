@@ -42,6 +42,7 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 - `product.service.ts` — usa `computeFinalPrice` para listado
 - `bundle.service.ts` — usa `computeBundleTotal`
 - `pack.service.ts` — `computePackReference` + `computeFinalPrice`
+- Tras create/update/soft-delete: `bumpCatalogVersionSafe` → `catalog.bump_catalog_version()` (Broadcast a ecommerce)
 
 ## Repositories (`repositories/`)
 
@@ -49,6 +50,11 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 - `product.repository.ts`
 - `bundle.repository.ts`
 - `pack.repository.ts`
+- `catalog-cache-meta.repository.ts` — `bumpCatalogVersionSafe` (RPC; no lanza)
+
+## Caché tienda
+
+Mutaciones de catálogo (y confirmación de pago con deduct en orders) hacen bump de `catalog.catalog_cache_meta.version_at` para invalidar listados ecommerce vía Realtime. Ver [`50-data-fetching-cache-ssr.md`](../../../../docs/rules/50-data-fetching-cache-ssr.md) · DECISIONS #32.
 
 ## Rutas admin
 

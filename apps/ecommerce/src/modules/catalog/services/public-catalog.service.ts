@@ -1,5 +1,6 @@
 import "server-only";
 
+import { z } from "zod";
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
 import {
   computeFinalPrice,
@@ -47,6 +48,7 @@ import { listPublicCategoriesRepo } from "../repositories/category.repository";
 import {
   getPublicPackByIdRepo,
   getPublicPackBySlugRepo,
+  getPublicPacksByIdsRepo,
   listPublicPackItemsByPackIdsRepo,
   listPublicPacksRepo,
   type PublicPackItemRow,
@@ -55,6 +57,7 @@ import {
 import {
   getPublicProductByIdRepo,
   getPublicProductBySlugRepo,
+  getPublicProductsByIdsRepo,
   listPublicProductsRepo,
   type PublicProductRow,
 } from "../repositories/product.repository";
@@ -504,5 +507,59 @@ export async function getPublicPackService(
       items,
       row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
     ),
+  };
+}
+
+export async function getCartLineMetaService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        products: PublicProductListItem[];
+        packs: PublicPackListItem[];
+      };
+    }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = z
+    .object({
+      productIds: z.array(z.string().uuid()).default([]),
+      packIds: z.array(z.string().uuid()).default([]),
+    })
+    .safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const productIds = [...new Set(parsed.data.productIds)];
+  const packIds = [...new Set(parsed.data.packIds)];
+
+  const [productRows, packRows, packItems] = await Promise.all([
+    getPublicProductsByIdsRepo(config, productIds),
+    getPublicPacksByIdsRepo(config, packIds),
+    listPublicPackItemsByPackIdsRepo(config, packIds),
+  ]);
+
+  const itemsByPack = new Map<string, PublicPackItemRow[]>();
+  for (const item of packItems) {
+    const list = itemsByPack.get(item.pack_id) ?? [];
+    list.push(item);
+    itemsByPack.set(item.pack_id, list);
+  }
+
+  const campaignsById = await buildPackCampaignsById(config, packRows);
+
+  return {
+    ok: true,
+    data: {
+      products: productRows.map(toProductListItem),
+      packs: packRows.map((row) =>
+        toPackListItem(
+          row,
+          itemsByPack.get(row.id) ?? [],
+          row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
+        ),
+      ),
+    },
   };
 }

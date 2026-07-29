@@ -95,6 +95,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `catalog.bundle_items`        | Composición base de la plantilla         |
 | `catalog.packs`               | Combo vendible (sin stock propio)        |
 | `catalog.pack_items`          | BOM fija en presentaciones/paquetes      |
+| `catalog.catalog_cache_meta`  | Singleton `version_at` (caché ecommerce) |
 
 **`catalog.categories`** (columnas clave):
 
@@ -199,6 +200,15 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 > Sin columnas de stock. Futuro: cantidades en unidad base / fracciones (no v1).
 
 **`catalog.pack_items`**: `pack_id`, `product_id`, `package_quantity` (presentaciones/paquetes del producto por combo; `>= 1`). Unique `(pack_id, product_id)`. Solo productos (no packs anidados).
+
+**`catalog.catalog_cache_meta`** (singleton — invalidación ecommerce, migraciones `00017`/`00018`):
+
+| Columna         | Tipo        | Notas                                     |
+| --------------- | ----------- | ----------------------------------------- |
+| `singleton_key` | text unique | Siempre `'default'`                       |
+| `version_at`    | timestamptz | Bump vía `catalog.bump_catalog_version()` |
+
+> SELECT público. UPDATE/bump solo staff. El RPC hace `version_at = now()` + `realtime.send` (Broadcast público topic `catalog-version`, event `catalog_version_changed`). Fallo de broadcast no revierte el bump.
 
 ### Schema `pricing`
 
@@ -343,6 +353,7 @@ erDiagram
 | `pricing.campaigns`            | Staff                         | Staff                       |
 | `pricing.delivery_zones`       | Público activos               | Staff                       |
 | `pricing.delivery_settings`    | Público                       | Staff (update)              |
+| `catalog.catalog_cache_meta`   | Público                       | Staff (update / bump RPC)   |
 | `commerce.orders`              | Cliente propias / staff todas | Server + staff              |
 | `commerce.payments`            | Staff                         | Staff (confirmación manual) |
 | `commerce.shipments`           | Staff                         | Staff                       |
@@ -354,6 +365,7 @@ erDiagram
 | Query / RPC                                 | Uso                                                                                                 |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                             |
+| `catalog.bump_catalog_version()`            | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                 |
 | `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
 
 ---

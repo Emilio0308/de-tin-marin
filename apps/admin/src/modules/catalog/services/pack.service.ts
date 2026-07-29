@@ -37,6 +37,7 @@ import {
   type PackItemWithProduct,
   type PackRow,
 } from "../repositories/pack.repository";
+import { bumpCatalogVersionSafe } from "../repositories/catalog-cache-meta.repository";
 import type { PackFormDTO, PackFormItemDTO } from "../types/pack.dto";
 import type { PackListItem } from "@de-tin-marin/validations/pack";
 
@@ -341,6 +342,7 @@ export async function createPackService(config: SupabaseConfig, raw: unknown) {
     throw error;
   }
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const, id: row.id };
 }
 
@@ -443,6 +445,7 @@ export async function updatePackService(config: SupabaseConfig, raw: unknown) {
     );
   }
 
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }
 
@@ -456,5 +459,6 @@ export async function softDeletePackService(
   }
 
   await softDeletePackRepo(config, id);
+  await bumpCatalogVersionSafe(config);
   return { ok: true as const };
 }

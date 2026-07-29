@@ -148,7 +148,12 @@
     "stockTitle": "Stock limitado",
     "stockChecking": "Verificando stock…",
     "stockProduct": "Dulce",
-    "stockContainer": "Envase"
+    "stockContainer": "Envase",
+    "sync": {
+      "priceUpdated": "Actualizamos los precios de tu carrito.",
+      "stockRemoved": "Quitamos del carrito los productos sin stock suficiente.",
+      "priceAndStock": "Actualizamos precios y quitamos productos sin stock."
+    }
   },
   "checkout": {
     "title": "Checkout",

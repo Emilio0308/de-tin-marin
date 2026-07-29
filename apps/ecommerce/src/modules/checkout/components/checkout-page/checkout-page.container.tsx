@@ -7,14 +7,14 @@ import { useTranslations } from "next-intl";
 import { storeFeatures } from "@/config/store";
 import { cartLinesToOrderInput } from "@/modules/cart/helpers/cart-to-order-input";
 import { toShoppingCartLines } from "@/modules/cart/helpers/cart-lines";
+import { writeCartSyncPayload } from "@/modules/cart/helpers/cart-sync";
 import { useCart } from "@/modules/cart/hooks/use-cart";
 import { useCartPricingPreview } from "@/modules/cart/hooks/use-cart-pricing-preview";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
-import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
-import { formatStockShortageMessages } from "@/shared/components/stock-banner/stock-banner";
 import { createGuestOrderAction } from "@/modules/checkout/actions/create-guest-order";
 import { listCheckoutDeliveryZonesAction } from "@/modules/checkout/actions/list-checkout-delivery-zones";
 import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/resolve-checkout-delivery-fee";
+import { validateGuestCheckoutCartAction } from "@/modules/checkout/actions/validate-guest-checkout-cart";
 import { queryKeys } from "@/shared/query/query-keys";
 import { freshQueryOptions } from "@/shared/query/query-cache";
 import type { MapPin } from "@de-tin-marin/validations/checkout";
@@ -136,19 +136,6 @@ export function CheckoutPageContainer() {
     enabled: Boolean(form.district),
   });
 
-  const stockQuery = useQuery({
-    ...freshQueryOptions,
-    queryKey: queryKeys.checkout.stock(toShoppingCartLines(lines)),
-    queryFn: async () => {
-      const result = await checkCartStockAction({
-        lines: toShoppingCartLines(lines),
-      });
-      if (!result.ok) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: lines.length > 0,
-  });
-
   useEffect(() => {
     if (!isReady || orderPlacedRef.current || orderPlaced) return;
     if (lines.length === 0) {
@@ -163,20 +150,8 @@ export function CheckoutPageContainer() {
     Boolean(form.district) &&
     (deliveryQuery.isLoading || deliveryQuery.isFetching);
 
-  const stockMessages = useMemo(
-    () =>
-      formatStockShortageMessages(stockQuery.data, {
-        product: t("stockProduct"),
-        container: t("stockContainer"),
-      }),
-    [stockQuery.data, t],
-  );
-
-  const stockBlocked =
-    storeFeatures.strictStockValidationOnCheckout &&
-    Boolean(stockQuery.data && !stockQuery.data.ok);
   const pricingBlocked = isPricingPending || isPricingError;
-  const checkoutBlocked = stockBlocked || pricingBlocked;
+  const checkoutBlocked = pricingBlocked;
 
   if (!isReady) {
     return null;
@@ -198,18 +173,70 @@ export function CheckoutPageContainer() {
     setHasAttemptedSubmit(true);
     if (!validateForm(form)) return;
 
-    if (
-      !covered ||
-      lines.length === 0 ||
-      checkoutBlocked ||
-      stockQuery.isLoading ||
-      stockQuery.isFetching
-    ) {
+    if (!covered || lines.length === 0 || checkoutBlocked) {
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
+
+    const snapshotLines = toShoppingCartLines(lines);
+    const validation = await validateGuestCheckoutCartAction({
+      lines: snapshotLines,
+    });
+
+    if (!validation.ok) {
+      setIsSubmitting(false);
+      const redirectErrors = new Set([
+        "PRODUCT_NOT_FOUND",
+        "BUNDLE_NOT_FOUND",
+        "PACK_NOT_FOUND",
+        "INVALID_PURCHASE_QUANTITY",
+        "DUPLICATE_PRODUCT_IN_BUNDLE",
+      ]);
+      if (redirectErrors.has(validation.error)) {
+        writeCartSyncPayload({
+          priceChanged: true,
+          stockChanged: true,
+          lines: snapshotLines,
+          removedCount: 0,
+          stock: { ok: false, shortages: [] },
+        });
+        router.replace("/carrito?sync=1");
+        return;
+      }
+      setErrorMessage(t("errors.validation"));
+      return;
+    }
+
+    if (!validation.data.ok) {
+      setIsSubmitting(false);
+      writeCartSyncPayload({
+        priceChanged: validation.data.priceChanged,
+        stockChanged: !validation.data.stockOk,
+        lines: validation.data.lines,
+        removedCount: 0,
+        stock: validation.data.stock,
+      });
+      router.replace("/carrito?sync=1");
+      return;
+    }
+
+    if (
+      storeFeatures.strictStockValidationOnCheckout &&
+      !validation.data.stockOk
+    ) {
+      setIsSubmitting(false);
+      writeCartSyncPayload({
+        priceChanged: validation.data.priceChanged,
+        stockChanged: true,
+        lines: validation.data.lines,
+        removedCount: 0,
+        stock: validation.data.stock,
+      });
+      router.replace("/carrito?sync=1");
+      return;
+    }
 
     const result = await createGuestOrderAction({
       contact: {
@@ -240,6 +267,24 @@ export function CheckoutPageContainer() {
     setIsSubmitting(false);
 
     if (!result.ok) {
+      if (
+        result.error === "INSUFFICIENT_STOCK" ||
+        result.error === "INVALID_PURCHASE_QUANTITY" ||
+        result.error === "PRODUCT_NOT_FOUND" ||
+        result.error === "BUNDLE_NOT_FOUND" ||
+        result.error === "PACK_NOT_FOUND"
+      ) {
+        writeCartSyncPayload({
+          priceChanged: result.error !== "INSUFFICIENT_STOCK",
+          stockChanged: result.error === "INSUFFICIENT_STOCK",
+          lines: validation.data.lines,
+          removedCount: 0,
+          stock: { ok: false, shortages: [] },
+        });
+        router.replace("/carrito?sync=1");
+        return;
+      }
+
       const messageMap: Record<GuestOrderErrorCode, string> = {
         OUT_OF_COVERAGE: t("errors.outOfCoverage"),
         INSUFFICIENT_STOCK: t("errors.insufficientStock"),
@@ -279,9 +324,9 @@ export function CheckoutPageContainer() {
       isSubmitting={isSubmitting}
       errorMessage={errorMessage}
       stockBlocked={checkoutBlocked}
-      isStockPending={stockQuery.isLoading || stockQuery.isFetching}
-      stockWarning={Boolean(stockQuery.data && !stockQuery.data.ok)}
-      stockMessages={stockMessages}
+      isStockPending={false}
+      stockWarning={false}
+      stockMessages={[]}
       labels={{
         title: t("title"),
         backToCart: t("backToCart"),

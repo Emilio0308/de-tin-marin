@@ -6,11 +6,12 @@
 
 ## Principio
 
-**SSR en navegación/catálogo** (datos que no cambian segundo a segundo). **Datos frescos en el funnel de compra** (carrito, checkout, preview de precio/stock) para evitar discrepancias de precio al pagar.
+**SSR en navegación/catálogo** (datos que no cambian segundo a segundo). **Funnel de compra** valida precios/stock en el momento (carrito sync al montar; checkout estricto al submit).
 
 ```text
-Navegación / catálogo     → SSR donde sea viable + caché cliente 15 min
-Funnel de compra          → CSR + React Query con staleTime: 0
+Navegación / catálogo     → SSR donde sea viable + caché cliente larga + catalog_version
+Funnel — carrito          → CSR + RQ fresco al montar (sin polling 30 s)
+Funnel — checkout         → Validación estricta al submit; fee fresco
 Preview dinámico          → CSR + React Query con staleTime: 0 + debounce en UI
 ```
 
@@ -29,13 +30,13 @@ Las Server Actions invocadas desde el cliente **no** pasan por Next.js Data Cach
 
 | Tipo de pantalla                                 | Estrategia          | Motivo                                                            |
 | ------------------------------------------------ | ------------------- | ----------------------------------------------------------------- |
-| Home — categorías, productos, sorpresas          | **SSR** (objetivo)  | First paint, SEO; datos de catálogo estables en ventana de 15 min |
+| Home — categorías, productos, sorpresas          | **SSR** (objetivo)  | First paint, SEO; frescura vía `catalog_version`                  |
 | Detalle producto `/productos/[slug]`             | **SSR**             | Ya implementado: `page.tsx` → props al container                  |
 | Detalle sorpresa `/sorpresas/[id]`               | **SSR**             | Ya implementado                                                   |
 | Wizard — template `/sorpresas/[id]/personalizar` | **SSR**             | Plantilla en servidor; picker y preview en cliente                |
 | Wizard — picker / preview                        | **CSR + RQ**        | Interacción; preview con precio/stock al momento                  |
-| Carrito `/carrito`                               | **CSR + RQ fresco** | Precios, límites y stock actuales                                 |
-| Checkout `/checkout`                             | **CSR + RQ fresco** | Fee, stock y totales al confirmar                                 |
+| Carrito `/carrito`                               | **CSR + RQ fresco** | Sync precios/límites/stock al montar; rebuild tras checkout drift |
+| Checkout `/checkout`                             | **CSR + validate**  | Fee fresco; validación precio/stock al submit                     |
 | Admin — listados CRUD                            | **CSR + RQ**        | Caché 15 min; invalidar tras mutación                             |
 | Admin — order-form preview                       | **CSR + RQ fresco** | Mismo motor que `createOrderService`                              |
 
@@ -49,39 +50,59 @@ Las Server Actions invocadas desde el cliente **no** pasan por Next.js Data Cach
 
 **Regla:** si `page.tsx` ya resolvió el DTO en SSR, el container **no** vuelve a pedir el mismo recurso con `useQuery` en mount.
 
+## `catalog_version` (timestamp)
+
+Tabla singleton `catalog.catalog_cache_meta.version_at`.
+
+| Quién      | Qué                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Admin      | Tras mutación de catálogo (y deduct stock al `paid`) llama `catalog.bump_catalog_version()`                                                                                                      |
+| Ecommerce  | Seed `getCatalogVersionAction` + **Realtime Broadcast** público `catalog-version` / `catalog_version_changed` (sin poll). Safety: 1 check al `visibilitychange`. Si cambia → invalidate listados |
+| Admin / DB | `catalog.bump_catalog_version()` → `version_at = now()` + `realtime.send(...)`                                                                                                                   |
+
+La frescura del listado la gobierna la versión, no un TTL corto.
+
 ## React Query — configuración
 
 Constantes en `apps/<app>/src/shared/query/query-cache.ts`:
 
-| Constante                | Valor                       | Uso                                     |
-| ------------------------ | --------------------------- | --------------------------------------- |
-| `CATALOG_QUERY_CACHE_MS` | **15 min** (900_000 ms)     | Default en `QueryClient`                |
-| `freshQueryOptions`      | `staleTime: 0`, `gcTime: 0` | Carrito, checkout, preview precio/stock |
+| Constante                | Valor                                 | Uso                                        |
+| ------------------------ | ------------------------------------- | ------------------------------------------ |
+| `CATALOG_QUERY_CACHE_MS` | ecommerce **24 h** / admin **15 min** | Default `QueryProvider`; `gcTime` listados |
+| `catalogQueryOptions`    | `staleTime: Infinity`, `gcTime: 24 h` | Listados ecommerce (gate por versión)      |
+| `freshQueryOptions`      | `staleTime: 0`, `gcTime: 0`           | Carrito sync, fee checkout, preview        |
 
-### Defaults del `QueryProvider`
+### Defaults del `QueryProvider` (ecommerce)
 
 ```typescript
 new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: CATALOG_QUERY_CACHE_MS,
+      staleTime: CATALOG_QUERY_CACHE_MS, // 24 h
       gcTime: CATALOG_QUERY_CACHE_MS,
     },
   },
 });
+// + <CatalogVersionGate /> monta useCatalogVersionGate
 ```
+
+Listados de catálogo usan `...catalogQueryOptions`. La query de versión (`queryKeys.catalog.version()`):
+
+- Seed: `staleTime: Infinity` (sin poll).
+- Realtime Broadcast en topic `catalog-version` / event `catalog_version_changed`.
+- Safety: al `visibilitychange` → `invalidateQueries(version)` una vez (si el WS falló).
 
 ### Overrides por tier
 
-| Tier                           | `staleTime`                          | Queries ejemplo                                   |
-| ------------------------------ | ------------------------------------ | ------------------------------------------------- |
-| Catálogo / navegación          | 15 min (default)                     | `queryKeys.catalog.*`, wizard product search      |
-| Funnel de compra               | **0** (`freshQueryOptions`)          | cart metadata, checkout stock, delivery fee       |
-| Preview precio                 | **0** + debounce 300 ms en UI        | wizard preview, admin bundle/cart preview         |
-| Carrito / checkout (ecommerce) | **0** + refetch cada 30 s y al focus | `previewGuestOrderCartAction` + sync localStorage |
+| Tier                  | `staleTime`                   | Queries ejemplo                                |
+| --------------------- | ----------------------------- | ---------------------------------------------- |
+| Catálogo / navegación | Infinity (+ gate versión)     | `queryKeys.catalog.*` (listados)               |
+| Funnel de compra      | **0** (`freshQueryOptions`)   | cart metadata, cart pricing sync, delivery fee |
+| Preview precio        | **0** + debounce 300 ms en UI | wizard preview, admin bundle/cart preview      |
+| Checkout validate     | al submit (action, no poll)   | `validateGuestCheckoutCart`                    |
 
-Admin: `invalidateAdminCatalogLists` solo invalida listas de catálogo indicadas (`products`, `categories`, `bundles`, `surpriseContainers`) — **nunca** órdenes ni otros dominios.
-| Zonas de delivery (checkout) | 15 min (default) | Cambian poco; fee y stock siguen frescos |
+Admin: `invalidateAdminCatalogLists` solo invalida listas de catálogo indicadas (`products`, `categories`, `bundles`, `surpriseContainers`, `packs`) — **nunca** órdenes ni otros dominios. Tras mutación también `bumpCatalogVersionSafe` → RPC `bump_catalog_version` (Broadcast a tienda).
+| Zonas de delivery (checkout) | 15 min / default | Cambian poco; fee sigue fresco |
 
 ## Query keys
 
@@ -91,16 +112,12 @@ La key debe incluir **todos** los parámetros que afecten el resultado (filtros 
 
 Convenciones ecommerce:
 
-| Dominio  | Prefijo              | Ejemplo                                         |
-| -------- | -------------------- | ----------------------------------------------- |
-| Catálogo | `queryKeys.catalog`  | `productsList(productQuery)`                    |
-| Wizard   | `queryKeys.wizard`   | `preview(bundleId, components)`                 |
-| Carrito  | `queryKeys.cart`     | `productMeta(cartLineIds)`                      |
-| Checkout | `queryKeys.checkout` | `stock(lines)`, `deliveryFee(district, mapPin)` |
-
-Admin order-form: migrar keys inline (`admin-order`, …) a `queryKeys` en iteración posterior.
-
-Tras **mutaciones** en formularios o listados admin, llamar `invalidateAdminCatalogLists(queryClient, …)` con `refetchType: 'all'` para que el listado se actualice aunque `staleTime` sea 15 min.
+| Dominio  | Prefijo              | Ejemplo                                      |
+| -------- | -------------------- | -------------------------------------------- |
+| Catálogo | `queryKeys.catalog`  | `version()`, `productsList(productQuery)`    |
+| Wizard   | `queryKeys.wizard`   | `preview(bundleId, components)`              |
+| Carrito  | `queryKeys.cart`     | `productMeta(cartLineIds)`, `pricing(lines)` |
+| Checkout | `queryKeys.checkout` | `deliveryFee(district, mapPin)`              |
 
 ## SSR en `page.tsx`
 
@@ -123,34 +140,35 @@ Tras **mutaciones** en formularios o listados admin, llamar `invalidateAdminCata
 
 Ver [`85-react-components.md`](85-react-components.md):
 
-- **Container:** `useQuery` / `useInfiniteQuery`, `enabled`, spread de `freshQueryOptions` cuando aplique.
+- **Container:** `useQuery` / `useInfiniteQuery`, `enabled`, spread de `freshQueryOptions` / `catalogQueryOptions` cuando aplique.
 - **Presentational:** recibe `isLoading`, `isError`, `onRetry`; sin TanStack Query.
 
 ## Anti-patrones (prohibidos)
 
 - `useQuery` en container para el mismo DTO que ya vino por SSR en la misma ruta
-- `staleTime: Infinity` en precios, stock o preview de orden
+- `staleTime: Infinity` en precios/stock del funnel sin gate de versión o validate
 - Query keys inline permanentes fuera de `query-keys.ts`
 - Importar repositories o módulos `server-only` desde `'use client'`
 - `unstable_cache` sin plan de invalidación al editar en admin
 - Recalcular `finalPrice` en el cliente (viola #18)
+- Polling continuo de stock/pricing en checkout (validar al submit)
 
 ## Módulos de referencia
 
-| Módulo             | README                                         | Patrón                                   |
-| ------------------ | ---------------------------------------------- | ---------------------------------------- |
-| Catálogo ecommerce | `apps/ecommerce/src/modules/catalog/README.md` | SSR detalle; listado home → SSR objetivo |
-| Carrito            | `apps/ecommerce/src/modules/cart/README.md`    | RQ fresco                                |
-| Checkout           | `apps/ecommerce/src/modules/checkout/`         | RQ fresco en stock/fee                   |
-| Órdenes admin      | `apps/admin/src/modules/orders/README.md`      | RQ + preview fresco                      |
+| Módulo             | README                                         | Patrón                             |
+| ------------------ | ---------------------------------------------- | ---------------------------------- |
+| Catálogo ecommerce | `apps/ecommerce/src/modules/catalog/README.md` | Versión + RQ largo; detalle SSR    |
+| Carrito            | `apps/ecommerce/src/modules/cart/README.md`    | Sync al montar; rebuild tras drift |
+| Checkout           | `apps/ecommerce/src/modules/checkout/`         | Validate al submit                 |
+| Órdenes admin      | `apps/admin/src/modules/orders/README.md`      | RQ + preview fresco                |
 
 ## Enforcement
 
-| Regla                  | Cómo                                                       |
-| ---------------------- | ---------------------------------------------------------- |
-| Defaults 15 min        | `query-provider.tsx` + `query-cache.ts`                    |
-| Fresco en checkout     | `freshQueryOptions` en containers de cart/checkout/preview |
-| Keys centralizadas     | Review + convención                                        |
-| No Data Cache catálogo | Review                                                     |
+| Regla                  | Cómo                                           |
+| ---------------------- | ---------------------------------------------- |
+| Versión + caché larga  | `catalog_cache_meta` + `useCatalogVersionGate` |
+| Fresco en funnel       | `freshQueryOptions` / validate al submit       |
+| Keys centralizadas     | Review + convención                            |
+| No Data Cache catálogo | Review                                         |
 
 Ver también [`00-architecture.md`](00-architecture.md) · [`85-react-components.md`](85-react-components.md).
