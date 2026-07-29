@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeTotalBaseUnits,
   deductBaseUnits,
+  deductProductStock,
+  deductUnitProductLoose,
   normalizeProductStock,
 } from "./product-stock";
 
@@ -23,6 +25,46 @@ describe("deductBaseUnits", () => {
 
   it("returns INSUFFICIENT_STOCK when need exceeds available", () => {
     expect(deductBaseUnits(1, 0, 10, 15)).toBe("INSUFFICIENT_STOCK");
+  });
+});
+
+describe("deductUnitProductLoose", () => {
+  it("descuenta solo unidades sueltas", () => {
+    expect(deductUnitProductLoose(20, 10)).toBe(10);
+  });
+
+  it("falla si no hay suficientes sueltas aunque existan paquetes sellados", () => {
+    expect(deductUnitProductLoose(5, 10)).toBe("INSUFFICIENT_STOCK");
+  });
+});
+
+describe("deductProductStock", () => {
+  it("usa sealed/loose para productos package", () => {
+    expect(
+      deductProductStock(
+        {
+          productType: "package",
+          stockSealedPackages: 5,
+          stockLooseBaseUnits: 0,
+          itemsPerPackage: 10,
+        },
+        25,
+      ),
+    ).toEqual({ sealedPackages: 2, looseBaseUnits: 5 });
+  });
+
+  it("usa solo loose para productos unit", () => {
+    expect(
+      deductProductStock(
+        {
+          productType: "unit",
+          stockSealedPackages: 100,
+          stockLooseBaseUnits: 15,
+          itemsPerPackage: 1,
+        },
+        10,
+      ),
+    ).toEqual({ sealedPackages: 0, looseBaseUnits: 5 });
   });
 });
 

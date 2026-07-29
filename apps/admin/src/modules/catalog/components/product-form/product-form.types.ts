@@ -13,6 +13,8 @@ export type ProductFormValues = {
   packageNetPrice: number;
   stockSealedPackages: number;
   stockLooseBaseUnits: number;
+  purchaseMinQuantity: number;
+  purchaseMaxQuantity: number;
   categoryId: string;
   imageUrl: string;
   isActive: boolean;
@@ -59,6 +61,10 @@ export type ProductFormLabels = {
   stockUnitsOnly: string;
   stockDecrease: string;
   stockIncrease: string;
+  purchaseLimits: string;
+  purchaseMinQuantity: string;
+  purchaseMaxQuantity: string;
+  purchaseLimitsHint: string;
   description: string;
   descriptionPlaceholder: string;
   tipTitle: string;

@@ -3,6 +3,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@de-tin-marin/db/server";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import type { Database, Json } from "@de-tin-marin/types/database";
+import { parseProductPricesJson } from "@de-tin-marin/shared/prices";
 
 type ProductRow = Database["catalog"]["Tables"]["products"]["Row"];
 type ProductInsert = Database["catalog"]["Tables"]["products"]["Insert"];
@@ -160,30 +161,5 @@ export function parsePricesJson(prices: Json): {
   packageNetPrice: number;
   unitNetPrice: number;
 } {
-  if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
-    return { packageNetPrice: 0, unitNetPrice: 0 };
-  }
-
-  const normal = prices.normal;
-  const unit = prices.unit;
-
-  const packageNetPrice =
-    typeof normal === "object" &&
-    normal !== null &&
-    !Array.isArray(normal) &&
-    "netPrice" in normal &&
-    typeof normal.netPrice === "number"
-      ? normal.netPrice
-      : 0;
-
-  const unitNetPrice =
-    typeof unit === "object" &&
-    unit !== null &&
-    !Array.isArray(unit) &&
-    "netPrice" in unit &&
-    typeof unit.netPrice === "number"
-      ? unit.netPrice
-      : packageNetPrice;
-
-  return { packageNetPrice, unitNetPrice };
+  return parseProductPricesJson(prices);
 }

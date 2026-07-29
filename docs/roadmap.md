@@ -15,7 +15,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 | **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado            |
 | **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela       |
 | **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)   |
-| **S3A** | Ecommerce app              | Tienda pública                                     |
+| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…4)                |
 | **S3B** | Admin app                  | Backoffice                                         |
 | **S4**  | Resto                      | Customers, Users, Notifications, Reports, Settings |
 
@@ -156,11 +156,11 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ## S2A — Stock deduct al pagar ✅
 
-**Goal:** Descuento atómico en **unidades base** (algoritmo sealed/loose) + envases cuando la orden pasa a `paid` (confirmación manual del operador en S2C).
+**Goal:** Descuento atómico al `paid`: líneas product en **presentaciones**; bundles en **unidad base**; `package` abre sealed/loose; `unit` solo loose; + envases.
 
-- [x] Migración `00010_deduct_stock_for_order.sql` + pgTAP
+- [x] Migración `00010_deduct_stock_for_order.sql` + fix `00014_fix_deduct_stock_product_types.sql` + pgTAP
 - [x] RPC `commerce.confirm_payment_with_stock_deduct` (atómico con deduct)
-- [x] `checkOrderStock` en `@de-tin-marin/shared`
+- [x] `checkOrderStock` / `deductProductStock` en `@de-tin-marin/shared`
 - [x] Admin: warning stock + error `INSUFFICIENT_STOCK` al confirmar
 - Brief: [`docs/stages/S2A/01-stock-deduct-on-payment.md`](stages/S2A/01-stock-deduct-on-payment.md)
 
@@ -168,15 +168,55 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ---
 
-## S3A — Ecommerce
+## S3A — Ecommerce (tienda pública)
 
-**Goal:** Tienda funcional end-to-end.
-
-- Catálogo, carrito, checkout, mis pedidos
-- TanStack Query
-- Playwright: happy path compra
+**Goal:** Tienda funcional end-to-end para guest: catálogo, personalizar sorpresa, carrito, checkout Piura, confirmación y consulta de pedido.
 
 **Depends on:** S2A
+
+### S3A-0 — Fundación ecommerce
+
+- Módulos `catalog`, `cart`, `checkout`, `orders`
+- TanStack Query, `guardAction`, i18n base
+- Extraer lógica `createOrder` a `@de-tin-marin/shared`
+- Feature flags: `enableUnitsPerPerson`, `pickupEnabled`, `strictStockValidationOnCheckout`
+- Home sin mocks; CTAs a catálogo
+- Brief: [`docs/stages/S3A/00-ecommerce-foundation.md`](stages/S3A/00-ecommerce-foundation.md)
+
+### S3A-1 — Catálogo productos + sorpresas
+
+- `/productos`, `/sorpresas` — paginación, categoría, búsqueda nombre/SKU, orden nombre/precio
+- Stock visible; inactivos ocultos; `finalPrice` backend; sin campañas v1
+- Brief: [`docs/stages/S3A/01-catalog-products-bundles.md`](stages/S3A/01-catalog-products-bundles.md)
+
+**Depends on:** S3A-0
+
+### S3A-2 — Wizard personalizar sorpresa
+
+- Mín. 5 / máx. 20 dulces; plantilla editable; personas fijas de plantilla
+- `enableUnitsPerPerson=false`; stock warning only
+- Brief: [`docs/stages/S3A/02-bundle-customization-wizard.md`](stages/S3A/02-bundle-customization-wizard.md)
+
+**Depends on:** S3A-1
+
+### S3A-3 — Carrito + checkout
+
+- Carrito localStorage (`CartRepository` intercambiable)
+- Checkout delivery Piura + mapa OSM; fuera de cobertura = bloqueo
+- RLS guest insert órdenes; `createGuestOrder`
+- Brief: [`docs/stages/S3A/03-cart-checkout.md`](stages/S3A/03-cart-checkout.md)
+
+**Depends on:** S3A-2
+
+### S3A-4 — Confirmación + mis pedidos guest ✅
+
+- Pantalla confirmación + instrucciones pago manual
+- Lookup email + orderNumber vía RPC
+- Brief: [`docs/stages/S3A/04-order-confirmation-guest-lookup.md`](stages/S3A/04-order-confirmation-guest-lookup.md)
+
+**Depends on:** S3A-3
+
+**E2E:** Playwright happy path por sub-etapa (S3A-1…4)
 
 ---
 

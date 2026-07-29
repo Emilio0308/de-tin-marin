@@ -21,6 +21,7 @@ type ShoppingCartLine =
       productId: string;
       sku: string;
       name: string;
+      /** Cantidad en presentaciones vendidas (no unidades base). */
       quantity: number;
       unitPrice: number;
       lineTotal: number;
@@ -37,11 +38,14 @@ type ShoppingCartLine =
         productName: string;
         sku: string;
         quantityPerUnit: number;
+        /** Unidades base consumidas (Regla 15). */
         totalQuantity: number;
         unitPrice: number;
       }>;
     };
 ```
+
+Al descontar stock (Regla 15 / DECISIONS #29): líneas producto aportan `presentationQuantity`; componentes de bundle aportan `baseUnits`. `need = presentationQuantity × items_per_package + baseUnits`, con deduct distinto por `product_type`.
 
 ### Ejemplo sorpresa personalizada
 

@@ -1,0 +1,1 @@
+export const WIZARD_PRODUCT_PICKER_PAGE_SIZE = 10;

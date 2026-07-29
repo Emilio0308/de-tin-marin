@@ -11,10 +11,10 @@
 
 ## Contexto (leer esto, no todo docs/)
 
-- S1D ✅ — productos con `stock_sealed_packages` + `stock_loose_base_units`; algoritmo sealed/loose en `@de-tin-marin/shared/product-stock` (`deductBaseUnits`, `normalizeProductStock`).
+- S1D ✅ — productos con `stock_sealed_packages` + `stock_loose_base_units`; helpers en `@de-tin-marin/shared/product-stock` (`deductProductStock`, `deductBaseUnits`, `deductUnitProductLoose`, `normalizeProductStock`).
 - S1E ✅ — envases en `catalog.surprise_containers` (`stock_quantity` entero); líneas bundle congeladas llevan `container` (1 envase × sorpresa). Órdenes legacy con `serviceFee` sin `container` — **no migrar** (Regla 16).
-- S2C ✅ — `confirmPaymentService` inserta `payments` y marca orden `paid`; **hoy no descuenta stock** (DECISIONS #25).
-- **Regla 15** — deduct atómico al pasar a `paid`: productos (sealed/loose) + envases; rollback total si falta stock.
+- S2C ✅ — `confirmPaymentService` inserta `payments` y marca orden `paid` vía RPC con deduct (DECISIONS #25 / #29).
+- **Regla 15** — deduct atómico al pasar a `paid`: productos por `product_type` + envases; rollback total si falta stock.
 - **Regla 18** — reembolso v1: reversión manual de productos **y** envases en admin.
 - Snapshot `shopping_cart` es la única fuente de cantidades a descontar — no re-leer plantillas bundle.
 
@@ -24,20 +24,22 @@ Al confirmar pago manual (S2C), la orden pasa a `paid` **solo si** hay stock suf
 
 ## Scope IN
 
-- Migración `00010_deduct_stock_for_order.sql` + pgTAP
+- Migración `00010_deduct_stock_for_order.sql` + fix `00014_fix_deduct_stock_product_types.sql` + pgTAP
 - RPC **`commerce.deduct_stock_for_order(p_order_id uuid)`** — `SECURITY DEFINER`, retorna `void` o lanza excepción `INSUFFICIENT_STOCK`
-- Lógica deduct en Postgres (fuente de verdad), alineada con `deductBaseUnits` de shared:
-  1. Líneas `type: product` → `quantity` unidades base del producto
+- Lógica deduct en Postgres (fuente de verdad), alineada con `deductProductStock` de shared:
+  1. Líneas `type: product` → `quantity` = **presentaciones**; `need += quantity × items_per_package`
   2. Líneas `type: bundle` → por cada `component`, `totalQuantity` unidades base
-  3. Líneas bundle con `container` → `line.quantity` de `surprise_containers.stock_quantity`
-  4. Líneas legacy solo con `serviceFee` → omitir paso envase
+  3. `product_type = unit` → solo `stock_loose_base_units` (`_deduct_unit_product_loose`)
+  4. `product_type = package` → sealed/loose (`_deduct_product_base_units`)
+  5. Líneas bundle con `container` → `line.quantity` de `surprise_containers.stock_quantity`
+  6. Líneas legacy solo con `serviceFee` → omitir paso envase
 - Enganchar RPC en **`confirmPaymentService`** antes de marcar `paid` (misma transacción vía RPC que también actualiza orden, **o** RPC llamada desde service con rollback si falla — preferir **una función Postgres** `commerce.confirm_payment_and_deduct` si simplifica atomicidad; ver § Transacción)
 - Helper **`checkOrderStock(order)`** en `@de-tin-marin/shared` (opcional v1 pero recomendado): simula deduct sin mutar; usado en UI pre-confirmación
 - Admin detalle orden: banner/warning si `checkOrderStock` falla antes de confirmar pago
 - Códigos de error service: `INSUFFICIENT_STOCK` (producto o envase), mensaje i18n
 - Docs: [`inventory.md`](../../inventory.md), [`business-rules.md`](../../business-rules.md) Regla 15, [`orders.md`](../../orders.md) flujo pago paso 3
-- Vitest — `checkOrderStock` + casos edge (legacy `serviceFee`, bundle multi-componente)
-- pgTAP — RPC deduct: happy path, stock insuficiente producto, stock insuficiente envase, idempotencia (no re-deduct si ya `paid`)
+- Vitest — `checkOrderStock` + casos edge (legacy `serviceFee`, bundle multi-componente, `unit` vs `package`)
+- pgTAP — RPC deduct: happy path, stock insuficiente producto, stock insuficiente envase, idempotencia (no re-deduct si ya `paid`), unit solo loose
 
 ## Scope OUT (traps)
 
@@ -57,14 +59,23 @@ Al confirmar pago manual (S2C), la orden pasa a `paid` **solo si** hay stock suf
 Por cada demanda agregada por `product_id` (sumar líneas product + componentes bundle):
 
 ```text
-need = unidades base totales requeridas
+presentationQuantity  ← Σ quantity de líneas type:product
+baseUnits             ← Σ totalQuantity de componentes bundle
+need = presentationQuantity × items_per_package + baseUnits
+
 locked row: products FOR UPDATE
-result = deductBaseUnits(sealed, loose, items_per_package, need)
-si result = INSUFFICIENT_STOCK → RAISE
-UPDATE products SET sealed, loose
+
+si product_type = 'unit':
+  result = deductUnitProductLoose(loose, need)   # no toca sealed
+  si INSUFFICIENT_STOCK → RAISE
+  UPDATE loose
+else:  # package
+  result = deductBaseUnits(sealed, loose, items_per_package, need)
+  si INSUFFICIENT_STOCK → RAISE
+  UPDATE sealed, loose
 ```
 
-Reutilizar la misma semántica que `packages/shared/src/product-stock.ts` (tests shared como referencia dorada).
+Reutilizar la misma semántica que `packages/shared/src/product-stock.ts` (`deductProductStock` — tests shared como referencia dorada).
 
 ### Envases
 
@@ -171,27 +182,29 @@ Sin tablas nuevas. Mutaciones solo vía RPC staff (no UPDATE directo stock desde
 
 ## Criterios de aceptación
 
-- [ ] `supabase db push` aplica `00010` sin error
-- [ ] pgTAP — producto simple: loose primero, luego abrir sealed (Lay’s 50 → pedido 25 → 2 tiras + 5 bolsas)
+- [ ] `supabase db push` aplica `00010` (+ `00014` fix tipos) sin error
+- [ ] pgTAP — producto `package`: presentaciones × ipp; loose primero, luego abrir sealed (Lay’s 5 tiras, qty=3 → sealed=2, loose=0)
+- [ ] pgTAP — producto `unit`: solo loose; sealed intacto
 - [ ] pgTAP — bundle 3 sorpresas con 2 componentes: deduct correcto por producto
 - [ ] pgTAP — bundle con `container`: `-3` en `stock_quantity` del envase
 - [ ] pgTAP — legacy `serviceFee` sin `container`: deduct productos OK, envase omitido
 - [ ] pgTAP — stock insuficiente producto **o** envase → excepción; orden sigue `pending_payment`
 - [ ] pgTAP — confirmación pago + deduct atómico: no `paid` parcial
-- [ ] Vitest — `checkOrderStock` coincide con escenarios pgTAP (mismos números)
+- [ ] Vitest — `checkOrderStock` coincide con escenarios pgTAP (mismos números; incluye `unit`)
 - [ ] Admin: confirmar pago con stock OK → `paid` + stock actualizado en listados producto/envase
 - [ ] Admin: confirmar con stock bajo → error claro, orden no `paid`
 - [ ] `pnpm check` + `pnpm build` verdes
 
 ## Casos de prueba (referencia)
 
-| Escenario          | Antes                                    | Cart                           | Después                           |
-| ------------------ | ---------------------------------------- | ------------------------------ | --------------------------------- |
-| Producto loose     | sealed=0, loose=30, ipp=10               | product qty=25                 | sealed=0, loose=5                 |
-| Lay’s tiras        | sealed=5, loose=0, ipp=10                | product qty=25                 | sealed=2, loose=5                 |
-| Bundle 2 sorpresas | Lay’s sealed=5, loose=0; envase stock=10 | bundle qty=2, 1 Lay’s/sorpresa | Lay’s sealed=4, loose=8; envase=8 |
-| Sin envase legacy  | product OK                               | bundle qty=1, serviceFee only  | product deduct OK; envase N/A     |
-| Fallo envase       | envase stock=0                           | bundle qty=1 con container     | ROLLBACK; orden pending           |
+| Escenario              | Antes                                    | Cart                                  | Después                           |
+| ---------------------- | ---------------------------------------- | ------------------------------------- | --------------------------------- |
+| Package presentaciones | sealed=5, loose=0, ipp=10, type=package  | product qty=3                         | sealed=2, loose=0                 |
+| Unit solo loose        | sealed=50, loose=20, ipp=1, type=unit    | product qty=10                        | sealed=50, loose=10               |
+| Bundle 2 sorpresas     | Lay’s sealed=5, loose=0; envase stock=10 | bundle qty=2, 1 Lay’s/sorpresa (base) | Lay’s sealed=4, loose=8; envase=8 |
+| Sin envase legacy      | product OK                               | bundle qty=1, serviceFee only         | product deduct OK; envase N/A     |
+| Fallo unit (sealed)    | sealed=50, loose=5, type=unit            | product qty=10                        | ROLLBACK; sealed/loose intactos   |
+| Fallo envase           | envase stock=0                           | bundle qty=1 con container            | ROLLBACK; orden pending           |
 
 ## Preguntas abiertas
 

@@ -40,6 +40,13 @@ components/<nombre>/
 
 **Tests:** cada presentational lleva test de render (`*.test.tsx`) — happy path + estados clave (loading, empty).
 
+**Props e i18n (evitar DI en UI):**
+
+- No saturar componentes con props: solo datos de dominio + handlers.
+- **Nunca** pasar bags de `labels` ni formatters i18n como props — cada componente usa `useTranslations`.
+- Reutilizar types exportados; no tipar dos veces la misma firma en distintos `*.types.ts`.
+- Detalle: [`rules/85-react-components.md`](rules/85-react-components.md) · [`rules/88-ui-design-i18n.md`](rules/88-ui-design-i18n.md).
+
 ## Capas
 
 ```text

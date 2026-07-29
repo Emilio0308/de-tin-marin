@@ -106,31 +106,34 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 **`catalog.products`** (columnas clave):
 
-| Columna                  | Tipo          | Notas                                                    |
-| ------------------------ | ------------- | -------------------------------------------------------- |
-| `sku`                    | text unique   | Obligatorio                                              |
-| `name`, `description`    | text          |                                                          |
-| `slug`                   | text unique   | URL amigable                                             |
-| `brand`                  | text          | Marca (texto libre)                                      |
-| `image_url`              | text          | URL imagen principal (S1A)                               |
-| `product_type`           | text          | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)    |
-| `items_per_package`      | int           | Unidades base por presentación (`>= 1`; default 1) (S1D) |
-| `package_label`          | text nullable | Solo UX: `"tira"`, `"paquete"` (S1D)                     |
-| `prices`                 | jsonb         | Ver estructura arriba (`normal` + `unit`)                |
-| `stock_sealed_packages`  | int           | Paquetes/tiras **cerrados** (`>= 0`) (S1D)               |
-| `stock_loose_base_units` | int           | Unidades base sueltas de paquetes abiertos (S1D)         |
-| `category_id`            | uuid          | → `categories`                                           |
-| `campaign_id`            | uuid nullable | → `pricing.campaigns` (**1:1**, S1C)                     |
-| `is_active`              | boolean       |                                                          |
-| `deleted_at`             | timestamptz   | Soft-delete                                              |
+| Columna                  | Tipo          | Notas                                                               |
+| ------------------------ | ------------- | ------------------------------------------------------------------- |
+| `sku`                    | text unique   | Obligatorio                                                         |
+| `name`, `description`    | text          |                                                                     |
+| `slug`                   | text unique   | URL amigable                                                        |
+| `brand`                  | text          | Marca (texto libre)                                                 |
+| `image_url`              | text          | URL imagen principal (S1A)                                          |
+| `product_type`           | text          | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)               |
+| `items_per_package`      | int           | Unidades base por presentación (`>= 1`; default 1) (S1D)            |
+| `package_label`          | text nullable | Solo UX: `"tira"`, `"paquete"` (S1D)                                |
+| `prices`                 | jsonb         | Ver estructura arriba (`normal` + `unit`)                           |
+| `stock_sealed_packages`  | int           | Paquetes/tiras **cerrados** (`>= 0`) (S1D)                          |
+| `stock_loose_base_units` | int           | Unidades base sueltas de paquetes abiertos (S1D)                    |
+| `category_id`            | uuid          | → `categories`                                                      |
+| `campaign_id`            | uuid nullable | → `pricing.campaigns` (**1:1**, S1C)                                |
+| `is_active`              | boolean       |                                                                     |
+| `purchase_min_quantity`  | int           | Mín. presentaciones por pedido (default **10**) (DECISIONS #31)     |
+| `purchase_max_quantity`  | int           | Máx. presentaciones por pedido (default **100**); acotado por stock |
+| `deleted_at`             | timestamptz   | Soft-delete                                                         |
 
-> **Stock total disponible:**
+> **Stock vendible (Regla 4 / DECISIONS #29):**
 >
 > ```text
-> totalBaseUnits = stock_sealed_packages × items_per_package + stock_loose_base_units
+> package → totalBaseUnits = sealed × items_per_package + loose
+> unit    → available = stock_loose_base_units   # sealed no se abre ni vende
 > ```
 >
-> Normalizar tras cada movimiento: si `loose >= items_per_package`, convertir excedente a paquetes cerrados. Ver [inventory.md](inventory.md) y Regla 4.
+> Líneas `type: product` descuentan `quantity` en **presentaciones** (`need = quantity × items_per_package` + demanda bundle en base). Normalizar sealed/loose tras deduct solo en `package`. Ver [inventory.md](inventory.md).
 
 > **`stock_quantity` (S1A):** deprecada — eliminada en migración S1D (`00008`). Backfill: `stock_loose_base_units = stock_quantity`, `stock_sealed_packages = 0`.
 
@@ -283,7 +286,7 @@ Dirección de entrega: snapshot en `orders.fulfillment` — no duplicar en shipm
 
 Reservado para ledger `inventory_movements` y fuente de verdad desacoplada. v1 descuenta:
 
-- Productos: `stock_sealed_packages` + `stock_loose_base_units` (Regla 15, S2A)
+- Productos: según `product_type` — `unit` solo loose; `package` sealed+loose (Regla 15, S2A; fix `00014`)
 - Envases: `surprise_containers.stock_quantity` (Regla 20, S2A)
 
 ---
@@ -321,10 +324,10 @@ erDiagram
 
 ## Queries planificadas
 
-| Query / RPC                                 | Uso                                                                        |
-| ------------------------------------------- | -------------------------------------------------------------------------- |
-| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                    |
-| `commerce.deduct_stock_for_order(order_id)` | S2A — descuenta dulces (sealed/loose) + envases al confirmar pago (`paid`) |
+| Query / RPC                                 | Uso                                                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                           |
+| `commerce.deduct_stock_for_order(order_id)` | S2A — descuenta dulces por `product_type` (unit=loose / package=sealed+loose) + envases al `paid` |
 
 ---
 

@@ -68,6 +68,12 @@ export const createOrderInputSchema = z.object({
   discountTotal: z.number().nonnegative().default(0),
 });
 
+export const previewOrderCartInputSchema = createOrderInputSchema.pick({
+  lines: true,
+  shippingTotal: true,
+  discountTotal: true,
+});
+
 export const transitionOrderStatusInputSchema = z.object({
   id: z.string().uuid(),
   status: z.enum([
@@ -100,6 +106,7 @@ export const orderShoppingCartProductLineSchema = z.object({
   quantity: z.number(),
   unitPrice: z.number(),
   lineTotal: z.number(),
+  imageUrl: z.string().nullable().optional(),
 });
 
 export const orderShoppingCartBundleContainerSchema = z.object({
@@ -127,6 +134,7 @@ export const orderShoppingCartBundleLineSchema = z.object({
       unitPrice: z.number(),
     }),
   ),
+  imageUrl: z.string().nullable().optional(),
 });
 
 export const orderStockShortageSchema = z.object({
@@ -175,6 +183,7 @@ export const orderDetailSchema = z.object({
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderInputSchema>;
+export type PreviewOrderCartInput = z.infer<typeof previewOrderCartInputSchema>;
 export type TransitionOrderStatusInput = z.infer<
   typeof transitionOrderStatusInputSchema
 >;

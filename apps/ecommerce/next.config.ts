@@ -12,8 +12,10 @@ const nextConfig: NextConfig = {
     "@de-tin-marin/validations",
   ],
   images: {
+    // Catálogo: image_url puede apuntar a cualquier proveedor externo.
     remotePatterns: [
-      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" },
     ],
   },
 };

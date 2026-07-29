@@ -10,6 +10,8 @@ import type { ProductListItem } from "@de-tin-marin/validations/product";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { softDeleteProductAction } from "@/modules/catalog/actions/soft-delete-product";
 import { updateProductAction } from "@/modules/catalog/actions/update-product";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import { ProductList } from "./product-list";
 import type { ProductListLabels } from "./product-list.types";
 
@@ -54,7 +56,7 @@ export function ProductListContainer() {
   const [status, setStatus] = useState<StatusFilter>("all");
 
   const productsQuery = useQuery({
-    queryKey: ["products"],
+    queryKey: queryKeys.catalog.products(),
     queryFn: async () => {
       const result = await listProductsAction();
       if (!result.ok) {
@@ -72,7 +74,7 @@ export function ProductListContainer() {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      await invalidateAdminCatalogLists(queryClient, "products");
     },
   });
 
@@ -87,7 +89,7 @@ export function ProductListContainer() {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      await invalidateAdminCatalogLists(queryClient, "products");
     },
   });
 

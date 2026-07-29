@@ -213,7 +213,6 @@ export function ProductForm({
                 src={values.imageUrl}
                 alt={labels.imageAlt}
                 fill
-                unoptimized
                 sizes="(max-width: 1024px) 100vw, 400px"
                 className="object-cover"
               />
@@ -529,6 +528,60 @@ export function ProductForm({
           <p className="font-body text-body-md text-on-surface-variant">
             {labels.formatStockTotal(stockTotalPreview)}
           </p>
+        </section>
+
+        <section className={cardClass}>
+          <h3 className="font-label text-label-bold text-on-surface mb-4">
+            {labels.purchaseLimits}
+          </h3>
+          <p className="font-body text-body-sm text-on-surface-variant mb-4">
+            {labels.purchaseLimitsHint}
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass} htmlFor="purchaseMinQuantity">
+                {labels.purchaseMinQuantity}
+              </label>
+              <input
+                id="purchaseMinQuantity"
+                name="purchaseMinQuantity"
+                type="number"
+                min={1}
+                required
+                value={values.purchaseMinQuantity}
+                onChange={(event) =>
+                  setField(
+                    "purchaseMinQuantity",
+                    Math.max(1, Math.floor(Number(event.target.value) || 1)),
+                  )
+                }
+                className={fieldClass}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass} htmlFor="purchaseMaxQuantity">
+                {labels.purchaseMaxQuantity}
+              </label>
+              <input
+                id="purchaseMaxQuantity"
+                name="purchaseMaxQuantity"
+                type="number"
+                min={values.purchaseMinQuantity}
+                required
+                value={values.purchaseMaxQuantity}
+                onChange={(event) =>
+                  setField(
+                    "purchaseMaxQuantity",
+                    Math.max(
+                      values.purchaseMinQuantity,
+                      Math.floor(Number(event.target.value) || 1),
+                    ),
+                  )
+                }
+                className={fieldClass}
+              />
+            </div>
+          </div>
         </section>
 
         {/* Descripción */}

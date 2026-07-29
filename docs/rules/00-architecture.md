@@ -76,6 +76,25 @@ import type { ProductListProps } from "@/modules/products/components/product-lis
 
 Default Server Components. Client solo donde hay estado, effects o event handlers. Server UI como `children`.
 
+### Fetching y caché
+
+Decisión #32. Detalle completo en [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).
+
+```text
+Navegación / catálogo     → SSR donde sea viable + React Query 15 min
+Funnel de compra          → CSR + React Query staleTime: 0
+Preview precio / stock    → CSR + React Query staleTime: 0
+```
+
+```text
+page.tsx (SSR)     → action → service → repository
+container (CSR)    → useQuery → action → service → repository
+```
+
+- **No** Next.js Data Cache (`unstable_cache`, `revalidate`) en catálogo por defecto.
+- Query keys centralizadas en `apps/<app>/src/shared/query/query-keys.ts`.
+- Defaults en `QueryProvider`: `staleTime` / `gcTime` = 15 min; override `freshQueryOptions` en carrito/checkout/preview.
+
 ## Enforcement
 
 | Regla           | Cómo                                                     |
@@ -83,5 +102,6 @@ Default Server Components. Client solo donde hay estado, effects o event handler
 | DAL server-only | `import "server-only"` → falla build si llega al cliente |
 | UI → repo       | ESLint `no-restricted-paths` (S0)                        |
 | No barrels      | ESLint `no-restricted-imports` (S0)                      |
+| Query cache     | `query-provider.tsx` + `query-cache.ts` (DECISIONS #32)  |
 
-Ver [`95-guardrails-lint-ci.md`](95-guardrails-lint-ci.md).
+Ver [`95-guardrails-lint-ci.md`](95-guardrails-lint-ci.md) · [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).

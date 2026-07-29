@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Plus_Jakarta_Sans, Quicksand } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { QueryProvider } from "@/shared/providers/query-provider";
 import "./globals.css";
 
 const displayFont = Plus_Jakarta_Sans({
@@ -49,7 +50,7 @@ export default async function RootLayout({
     >
       <body className="bg-background font-body text-on-surface selection:bg-secondary-fixed selection:text-on-secondary-fixed min-h-screen antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
+          <QueryProvider>{children}</QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

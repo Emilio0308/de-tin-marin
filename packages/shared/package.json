@@ -8,11 +8,14 @@
     "./slugify": "./src/slugify.ts",
     "./prices": "./src/prices.ts",
     "./product-stock": "./src/product-stock.ts",
+    "./product-purchase-limits": "./src/product-purchase-limits.ts",
     "./bundle-price": "./src/bundle-price.ts",
     "./delivery-fee": "./src/delivery-fee.ts",
     "./final-price": "./src/final-price.ts",
     "./order-cart": "./src/order-cart.ts",
-    "./check-order-stock": "./src/check-order-stock.ts"
+    "./check-order-stock": "./src/check-order-stock.ts",
+    "./build-order-cart": "./src/build-order-cart.ts",
+    "./checkout-coverage": "./src/checkout-coverage.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -24,6 +24,7 @@ export type OrderShoppingCartProductLine = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  imageUrl?: string | null;
 };
 
 export type OrderShoppingCartBundleComponent = {
@@ -52,6 +53,7 @@ export type OrderShoppingCartBundleLine = {
   serviceFee?: number;
   lineTotal: number;
   components: OrderShoppingCartBundleComponent[];
+  imageUrl?: string | null;
 };
 
 export type OrderShoppingCartLine =
@@ -65,7 +67,10 @@ export type ProductForOrderLine = {
   id: string;
   sku: string;
   name: string;
+  /** Precio por unidad base (dulce) — componentes de bundle. */
   unitPrice: number;
+  /** Precio por presentación vendida — líneas `type: product` (paquete o unidad). */
+  presentationPrice: number;
 };
 
 export type BundleComponentInput = {
@@ -129,7 +134,7 @@ export function buildProductLine(
   product: ProductForOrderLine,
   quantity: number,
 ): OrderShoppingCartProductLine {
-  const unitPrice = roundMoney(product.unitPrice);
+  const unitPrice = roundMoney(product.presentationPrice);
   return {
     type: "product",
     productId: product.id,

@@ -1,5 +1,10 @@
-import { HomePage } from "@/modules/home/components/home-page/home-page";
+import { Suspense } from "react";
+import { StorefrontPageContainer } from "@/modules/home/components/storefront-page/storefront-page.container";
 
 export default function HomeRoute() {
-  return <HomePage />;
+  return (
+    <Suspense fallback={null}>
+      <StorefrontPageContainer />
+    </Suspense>
+  );
 }

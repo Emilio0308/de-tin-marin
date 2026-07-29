@@ -8,6 +8,8 @@ import { Plus, Search } from "lucide-react";
 import { Button } from "@de-tin-marin/ui/button";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { softDeleteSurpriseContainerAction } from "@/modules/catalog/actions/soft-delete-surprise-container";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import { isLowStock } from "../container-form/container-form.helpers";
 import { ContainerList } from "./container-list";
 import type { ContainerListLabels } from "./container-list.types";
@@ -52,7 +54,7 @@ export function ContainerListContainer() {
   const [status, setStatus] = useState<StatusFilter>("all");
 
   const query = useQuery({
-    queryKey: ["surprise-containers"],
+    queryKey: queryKeys.catalog.surpriseContainers(),
     queryFn: async () => {
       const result = await listSurpriseContainersAction();
       if (!result.ok) throw new Error(result.error);
@@ -67,9 +69,7 @@ export function ContainerListContainer() {
       return result;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["surprise-containers"],
-      });
+      await invalidateAdminCatalogLists(queryClient, "surpriseContainers");
     },
   });
 

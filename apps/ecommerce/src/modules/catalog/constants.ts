@@ -1,0 +1,4 @@
+export const CATALOG_PLACEHOLDER_IMAGE =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBO2NJsDRkxfFT4SmAm7ptKvm4B1_DrjOHKk_pqesNGVNeDh6YDoQ1oLCaeicCt5Jk-CSfem5QmDJFbzpFdtFo5Zi_8dLl1_NxYfXZIGUgVnReWvd73kGlbQn0i2doUv_44uttBcNFSfybrVDpwSJQ4VKtR7rTQe89Ufxe2y8Ort0fiJpL3AcId8zl-bMiC1tC8gASrC8ZbDNBk_j-wuWIJJ9SrxUE5T9rhMjLU6BMFXDaPo0bJg1q6BrZmrkH1miydTq01qY33pgE";
+
+export const DEFAULT_PAGE_SIZE = 12;

@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(14);
 
 -- Helpers (pure math — no auth)
 select is(
@@ -121,9 +121,9 @@ begin
           'productId', v_product_id,
           'sku', 'LAYS-TEST',
           'name', 'Lay''s Test',
-          'quantity', 25,
+          'quantity', 3,
           'unitPrice', 1,
-          'lineTotal', 25
+          'lineTotal', 3
         )
       )
     ),
@@ -156,8 +156,8 @@ select is(
     from catalog.products
     where id = 'aaaaaaaa-0001-0001-0001-000000000011'
   ),
-  5,
-  'order deduct updates product loose units'
+  0,
+  'order deduct updates product loose units (3 presentaciones × 10)'
 );
 
 -- Insufficient stock rolls back deduct attempt
@@ -312,6 +312,105 @@ select is(
   ),
   7,
   'bundle deduct subtracts container stock (10 - 3 = 7)'
+);
+
+-- Unit product deducts only loose base units
+do $$
+declare
+  v_category_id uuid := 'aaaaaaaa-0001-0001-0001-000000000001';
+  v_product_id uuid := 'aaaaaaaa-0001-0001-0001-000000000041';
+  v_order_id uuid := 'aaaaaaaa-0001-0001-0001-000000000024';
+begin
+  insert into catalog.products (
+    id,
+    sku,
+    name,
+    slug,
+    category_id,
+    prices,
+    stock_sealed_packages,
+    stock_loose_base_units,
+    items_per_package,
+    product_type
+  )
+  values (
+    v_product_id,
+    'MINI-TEST',
+    'Mini Test',
+    'mini-test-deduct',
+    v_category_id,
+    '{"normal":{"netPrice":1,"igv":0.15,"subtotal":0.85},"unit":{"netPrice":1,"igv":0.15,"subtotal":0.85}}'::jsonb,
+    50,
+    20,
+    1,
+    'unit'
+  )
+  on conflict (id) do update
+  set
+    stock_sealed_packages = 50,
+    stock_loose_base_units = 20,
+    items_per_package = 1,
+    product_type = 'unit';
+
+  insert into commerce.orders (
+    id,
+    order_number,
+    status,
+    payment_status,
+    shopping_cart,
+    subtotal,
+    total
+  )
+  values (
+    v_order_id,
+    'TM-DEDUCT-TEST-004',
+    'pending_payment',
+    'pending',
+    jsonb_build_object(
+      'lines',
+      jsonb_build_array(
+        jsonb_build_object(
+          'type', 'product',
+          'productId', v_product_id,
+          'sku', 'MINI-TEST',
+          'name', 'Mini Test',
+          'quantity', 10,
+          'unitPrice', 1,
+          'lineTotal', 10
+        )
+      )
+    ),
+    10,
+    10
+  )
+  on conflict (id) do update
+  set
+    status = 'pending_payment',
+    payment_status = 'pending',
+    shopping_cart = excluded.shopping_cart;
+
+  perform commerce.deduct_stock_for_order(v_order_id);
+end;
+$$;
+
+select is(
+  (
+    select stock_loose_base_units
+    from catalog.products
+    where id = 'aaaaaaaa-0001-0001-0001-000000000041'
+  ),
+  10,
+  'unit product deducts only loose base units'
+);
+
+select is(
+  (
+    select stock_sealed_packages
+    from catalog.products
+    where id = 'aaaaaaaa-0001-0001-0001-000000000041'
+  ),
+  50,
+  'unit product does not open sealed packages'
 );
 
 select * from finish();

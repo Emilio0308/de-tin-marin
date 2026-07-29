@@ -15,6 +15,8 @@ export type ProductFormDTO = {
   stockSealedPackages: number;
   stockLooseBaseUnits: number;
   stockTotalBaseUnits: number;
+  purchaseMinQuantity: number;
+  purchaseMaxQuantity: number;
   categoryId: string;
   imageUrl: string | null;
   isActive: boolean;

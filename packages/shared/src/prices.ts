@@ -13,8 +13,24 @@ export type Prices = {
   fantasy: Record<string, unknown>;
 };
 
-export function roundMoney(value: number): number {
+function roundUp(value: number, decimals = 2): number {
+  const factor = Math.pow(10, decimals);
+  return Math.ceil(value * factor) / factor;
+}
+
+export function roundMoney(value: number, withRoundUp = false): number {
+  if (withRoundUp) {
+    return roundUp(value);
+  }
   return Math.round(value * 100) / 100;
+}
+
+/** Convierte valores corruptos o ausentes en un monto finito redondeado. */
+export function coerceMoney(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return roundMoney(value);
+  }
+  return 0;
 }
 
 function buildPriceBlock(netPrice: number): PriceNormal {
@@ -35,9 +51,9 @@ export function buildPricesFromPackageNetPrice(
     return { normal: block, unit: block, suggested: {}, fantasy: {} };
   }
 
-  const unitNet = roundMoney(packageNetPrice / safeItems);
+  const unitNet = roundMoney(packageNetPrice / safeItems, true);
   const unit = buildPriceBlock(unitNet);
-  const normal = buildPriceBlock(roundMoney(unitNet * safeItems));
+  const normal = buildPriceBlock(roundMoney(packageNetPrice));
   return { normal, unit, suggested: {}, fantasy: {} };
 }
 
@@ -47,4 +63,49 @@ export function buildPricesFromNetPrice(netPrice: number): Prices {
 
 export function buildSinglePriceFromNetPrice(netPrice: number): PriceNormal {
   return buildPriceBlock(netPrice);
+}
+
+function readNetPrice(value: unknown): number | null {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "netPrice" in value &&
+    typeof value.netPrice === "number"
+  ) {
+    return value.netPrice;
+  }
+
+  return null;
+}
+
+export function parseProductPricesJson(prices: unknown): {
+  packageNetPrice: number;
+  unitNetPrice: number;
+} {
+  if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
+    return { packageNetPrice: 0, unitNetPrice: 0 };
+  }
+
+  const record = prices as Record<string, unknown>;
+  const packageNetPrice = readNetPrice(record.normal) ?? 0;
+  const unitNetPrice = readNetPrice(record.unit) ?? packageNetPrice;
+
+  return { packageNetPrice, unitNetPrice };
+}
+
+export function parseContainerPricesJson(prices: unknown): {
+  netPrice: number;
+} {
+  if (typeof prices !== "object" || prices === null || Array.isArray(prices)) {
+    return { netPrice: 0 };
+  }
+
+  const record = prices as Record<string, unknown>;
+  return {
+    netPrice:
+      typeof record.netPrice === "number"
+        ? record.netPrice
+        : Number(record.netPrice ?? 0),
+  };
 }

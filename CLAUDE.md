@@ -72,7 +72,7 @@ Cada línea indica el **bug class** que previene.
 7. **Módulos con secrets marcan `import "server-only"`**; `process.env` solo vía `@de-tin-marin/config/env`. → _secret en bundle del cliente_
 8. **DTOs con allowlist explícita** — nunca filas crudas de Supabase al cliente. → _sobre-exposición de PII/secrets_
 9. **Pricing calcula en backend; Orders NO recalcula** — listado productos con `finalPrice`; snapshot al confirmar orden. → _precios inconsistentes_
-10. **Stock v1 en `products` (sealed + loose, unidades base)** — bundles sin stock; deduct atómico al `paid` (S2A, post-S1D). → _overselling_
+10. **Stock v1 en `products` (sealed + loose; `unit` solo loose vendible)** — líneas product en presentaciones; bundles sin stock propio; deduct atómico al `paid` (S2A). → _overselling_
 11. **Bundles son plantillas** — composición personalizable; snapshot en `orders.shopping_cart`. → _órdenes inconsistentes con plantilla_
 12. **Campaña 1:1 por producto** — precio final en query de catálogo; front no recalcula. → _discrepancia front/back_
 13. **Mutaciones solo en Server Actions**; `revalidatePath`/`revalidateTag` **después** del write. → _UI stale / CSRF_
@@ -83,13 +83,13 @@ Cada línea indica el **bug class** que previene.
 
 ## Separación de responsabilidades crítica
 
-| Dominio            | Responsabilidad                                                      | NO hace              |
-| ------------------ | -------------------------------------------------------------------- | -------------------- |
-| **Pricing**        | `finalPrice` en listado + total línea sorpresa                       | Gestionar órdenes    |
-| **Orders**         | Ciclo de vida, snapshot, personalización bundle                      | Recalcular precios   |
-| **Inventory (v1)** | `stock_sealed_packages` + `stock_loose_base_units`, deduct al `paid` | Calcular precios     |
-| **Bundles**        | Plantillas sin stock, `service_fee` editable                         | Tener stock propio   |
-| **Campaigns**      | Definir % y asignar 1:1 a producto                                   | Calcular en frontend |
+| Dominio            | Responsabilidad                                                    | NO hace              |
+| ------------------ | ------------------------------------------------------------------ | -------------------- |
+| **Pricing**        | `finalPrice` en listado + total línea sorpresa                     | Gestionar órdenes    |
+| **Orders**         | Ciclo de vida, snapshot, personalización bundle                    | Recalcular precios   |
+| **Inventory (v1)** | `product_type` + sealed/loose; `unit` solo loose; deduct al `paid` | Calcular precios     |
+| **Bundles**        | Plantillas sin stock, `service_fee` editable                       | Tener stock propio   |
+| **Campaigns**      | Definir % y asignar 1:1 a producto                                 | Calcular en frontend |
 
 Pipeline de precios: ver [`docs/pricing.md`](docs/pricing.md).
 
@@ -105,6 +105,7 @@ Máquina de estados de órdenes: ver [`docs/orders.md`](docs/orders.md).
 | [`docs/rules/10-auth-and-authorization.md`](docs/rules/10-auth-and-authorization.md)       | Auth, ownership, roles admin vs customer                    |
 | [`docs/rules/30-rls-and-postgres.md`](docs/rules/30-rls-and-postgres.md)                   | RLS, policies, SECURITY DEFINER                             |
 | [`docs/rules/40-validation-and-boundaries.md`](docs/rules/40-validation-and-boundaries.md) | Zod, parse-don't-validate, env                              |
+| [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md)     | SSR vs CSR, React Query, staleTime, query keys              |
 | [`docs/rules/95-guardrails-lint-ci.md`](docs/rules/95-guardrails-lint-ci.md)               | ESLint, CI, pre-commit                                      |
 | [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md)                       | Responsive, i18n, paleta, no mocks en UI                    |
 | [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md)                   | Container/presentational, orden de archivo, tests de render |
