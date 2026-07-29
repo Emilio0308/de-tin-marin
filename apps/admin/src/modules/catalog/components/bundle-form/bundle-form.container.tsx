@@ -9,7 +9,9 @@ import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { BundleForm } from "./bundle-form";
@@ -41,6 +43,10 @@ function bundleErrorMessage(
       return t("unauthorized");
     case "FORBIDDEN":
       return t("forbidden");
+    case "UNEXPECTED":
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("unexpected");
     default:
       return result.message
         ? t("defaultWithMessage", { message: result.message })
@@ -154,16 +160,12 @@ export function BundleFormContainer({
       };
     }
 
-    const putResponse = await fetch(presign.data.uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (!putResponse.ok) {
-      return { ok: false, error: t("imageUploadFailed") };
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
     }
 
     return { ok: true, publicUrl: presign.data.publicUrl };
@@ -222,8 +224,11 @@ export function BundleFormContainer({
       startTransition(() => {
         router.push("/bundles");
       });
-    } catch {
-      setError(tErrors("unexpected"));
+    } catch (error) {
+      logClientError("BundleFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
     } finally {
       setSubmitting(false);
     }

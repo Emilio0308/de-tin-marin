@@ -106,11 +106,20 @@ curl -sI "https://${CDN}/smoke/test.txt"   # 200
 
 ### Production (cuando toque)
 
-1. En [`infra/cdk/bin/app.ts`](../infra/cdk/bin/app.ts), poner el origen real del admin prod en `corsAllowedOrigins` de `MediaProduction` (sin eso, el PUT desde el browser fallará por CORS).
-2. Deploy **solo** prod (no toca staging):
+1. En [`infra/cdk/bin/app.ts`](../infra/cdk/bin/app.ts), el origen HTTPS del admin debe estar
+   en CORS. Pasar al deploy:
 
 ```bash
-pnpm infra:deploy:production
+ADMIN_CORS_ORIGINS=https://TU-ADMIN.vercel.app pnpm infra:deploy:staging
+# o production:
+ADMIN_CORS_ORIGINS=https://TU-ADMIN.vercel.app pnpm infra:deploy:production
+```
+
+Sin eso, el PUT desde el browser falla por CORS (`Failed to fetch`) y **no** aparece en logs de Vercel
+(el fallo es client → S3). Solo localhost:3001 está hardcodeado en staging. 2. Deploy **solo** prod (no toca staging):
+
+```bash
+ADMIN_CORS_ORIGINS=https://TU-ADMIN.vercel.app pnpm infra:deploy:production
 ```
 
 3. Crear Access Key de `media-uploader-production` (distinta de staging).
@@ -148,7 +157,7 @@ Igual que cambiar Supabase URL entre preview/production: **mismo código, distin
 
 ## Checklist antes de prod
 
-- [ ] CORS de `MediaProduction` con origen HTTPS del admin real
+- [ ] CORS del bucket con origen HTTPS del admin real (`ADMIN_CORS_ORIGINS=…` al deploy CDK)
 - [ ] `pnpm infra:deploy:production` OK y outputs anotados
 - [ ] Access key del uploader **production** (no reutilizar staging)
 - [ ] Env Production del admin rellenado

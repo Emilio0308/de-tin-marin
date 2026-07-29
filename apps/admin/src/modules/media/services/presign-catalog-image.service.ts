@@ -8,6 +8,7 @@ import {
   createCatalogImageUploadUrlInputSchema,
   type CatalogImageContentType,
 } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { logServerError } from "@/shared/errors/server-error";
 
 const PRESIGN_EXPIRES_IN_SECONDS = 300;
 
@@ -52,6 +53,10 @@ export async function createCatalogImageUploadUrlService(
 ): Promise<PresignCatalogImageSuccess | PresignCatalogImageFailure> {
   const parsed = createCatalogImageUploadUrlInputSchema.safeParse(raw);
   if (!parsed.success) {
+    logServerError(
+      "createCatalogImageUploadUrlService.validation",
+      parsed.error.flatten(),
+    );
     return { ok: false, error: "VALIDATION" };
   }
 
@@ -67,6 +72,10 @@ export async function createCatalogImageUploadUrlService(
   const uploadUrl = await getSignedUrl(createS3Client(), command, {
     expiresIn: PRESIGN_EXPIRES_IN_SECONDS,
   });
+
+  console.info(
+    `[createCatalogImageUploadUrlService] presigned folder=${folder} key=${key} bucket=${mediaConfig.bucket}`,
+  );
 
   return {
     ok: true,

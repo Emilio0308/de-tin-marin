@@ -7,7 +7,9 @@ import { useTranslations } from "next-intl";
 import { createSurpriseContainerAction } from "@/modules/catalog/actions/create-surprise-container";
 import { updateSurpriseContainerAction } from "@/modules/catalog/actions/update-surprise-container";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { ContainerForm } from "./container-form";
 import { resolveContainerImageUrlForPersist } from "./container-form.helpers";
@@ -33,6 +35,10 @@ function containerErrorMessage(
       return t("forbidden");
     case "NOT_FOUND":
       return t("notFound");
+    case "UNEXPECTED":
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("default");
     default:
       return result.message
         ? t("defaultWithMessage", { message: result.message })
@@ -127,16 +133,12 @@ export function ContainerFormContainer({
       };
     }
 
-    const putResponse = await fetch(presign.data.uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
-
-    if (!putResponse.ok) {
-      return { ok: false, error: t("imageUploadFailed") };
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
     }
 
     return { ok: true, publicUrl: presign.data.publicUrl };
@@ -190,8 +192,11 @@ export function ContainerFormContainer({
 
       router.push("/containers");
       router.refresh();
-    } catch {
-      setError(tErrors("default"));
+    } catch (error) {
+      logClientError("ContainerFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
     } finally {
       setSubmitting(false);
     }

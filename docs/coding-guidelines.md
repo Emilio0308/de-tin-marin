@@ -81,6 +81,24 @@ Al **agregar una variable de entorno nueva**, completar **todos** estos pasos (s
 
 Detalle de boundaries: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md) · media: [`infra.md`](infra.md).
 
+## Errores y logging (obligatorio)
+
+**Nunca tragar un error en silencio.** Un `catch {}` vacío o un `Result` fallido sin log deja la UI con mensaje genérico y Vercel/terminal sin causa.
+
+| Dónde                             | Qué usar                                                                     | Dónde se ve                                |
+| --------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------ |
+| Server Action / service           | `guardAction` + `logServerError` (`shared/errors/server-error.ts`)           | **Vercel → Runtime Logs** / terminal local |
+| Container client (`'use client'`) | `logClientError` (`shared/errors/client-error.ts`) + mostrar `message` en UI | **Consola del browser** (DevTools)         |
+
+Reglas:
+
+1. Toda Server Action envuelve el cuerpo en `guardAction("scope", …)`.
+2. Todo `catch` en containers debe `logClientError(scope, error)` y preferir `defaultWithMessage` con el mensaje real (backoffice).
+3. Fallos de PUT a S3 (CORS/red) ocurren en el **browser** — no aparecen en Vercel. Usar `putPresignedCatalogImage` (loguea) y revisar Network/CORS.
+4. Tras un deploy, si Vercel no muestra logs al fallar: o el fallo es client-side, o el action no llegó a ejecutarse.
+
+Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md) § Manejo de errores.
+
 ## Supabase
 
 - Cliente server en actions/services
@@ -128,6 +146,7 @@ Detalle de boundaries: [`rules/40-validation-and-boundaries.md`](rules/40-valida
 - [ ] `pnpm check` verde
 - [ ] `pnpm build` verde
 - [ ] Variable de entorno nueva → schema `env.ts` + `.env.example` + `turbo.json` `tasks.build.env`
+- [ ] Errores: `guardAction` / `logServerError` (server) o `logClientError` (client) — sin `catch` vacío
 - [ ] Componente nuevo: container + presentational + types + helpers (si aplica) + test de render
 - [ ] Sin `index.ts` / barrels en imports
 - [ ] Docs del dominio actualizados si cambió contrato
