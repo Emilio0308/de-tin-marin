@@ -8,6 +8,7 @@ import { storeFeatures } from "@/config/store";
 import { cartLinesToOrderInput } from "@/modules/cart/helpers/cart-to-order-input";
 import { toShoppingCartLines } from "@/modules/cart/helpers/cart-lines";
 import { useCart } from "@/modules/cart/hooks/use-cart";
+import { useCartPricingPreview } from "@/modules/cart/hooks/use-cart-pricing-preview";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
 import { formatStockShortageMessages } from "@/shared/components/stock-banner/stock-banner";
@@ -15,6 +16,7 @@ import { createGuestOrderAction } from "@/modules/checkout/actions/create-guest-
 import { listCheckoutDeliveryZonesAction } from "@/modules/checkout/actions/list-checkout-delivery-zones";
 import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/resolve-checkout-delivery-fee";
 import { queryKeys } from "@/shared/query/query-keys";
+import { freshQueryOptions } from "@/shared/query/query-cache";
 import type { MapPin } from "@de-tin-marin/validations/checkout";
 import { defaultMapPin } from "../delivery-map/delivery-map.constants";
 import {
@@ -36,7 +38,8 @@ type GuestOrderErrorCode =
   | "VALIDATION"
   | "PRODUCT_NOT_FOUND"
   | "BUNDLE_NOT_FOUND"
-  | "DUPLICATE_PRODUCT_IN_BUNDLE";
+  | "DUPLICATE_PRODUCT_IN_BUNDLE"
+  | "UNEXPECTED";
 
 const initialForm: CheckoutFormValues = {
   name: "",
@@ -54,6 +57,12 @@ export function CheckoutPageContainer() {
   const t = useTranslations("checkout");
   const router = useRouter();
   const { lines, totals, clear, isReady } = useCart();
+  const {
+    subtotal: previewSubtotal,
+    isPricingPending,
+    isPricingError,
+  } = useCartPricingPreview(lines);
+  const subtotal = previewSubtotal ?? totals.subtotal ?? 0;
   const [form, setForm] = useState(initialForm);
   const [mapPin, setMapPin] = useState<MapPin>(defaultMapPin);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,6 +122,7 @@ export function CheckoutPageContainer() {
   });
 
   const deliveryQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.checkout.deliveryFee(form.district, mapPin),
     queryFn: async () => {
       const result = await resolveCheckoutDeliveryFeeAction({
@@ -126,6 +136,7 @@ export function CheckoutPageContainer() {
   });
 
   const stockQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.checkout.stock(toShoppingCartLines(lines)),
     queryFn: async () => {
       const result = await checkCartStockAction({
@@ -146,7 +157,7 @@ export function CheckoutPageContainer() {
 
   const shippingTotal = deliveryQuery.data?.fee ?? 0;
   const covered = deliveryQuery.data?.covered ?? false;
-  const total = totals.subtotal + shippingTotal - totals.discountTotal;
+  const total = subtotal + shippingTotal - totals.discountTotal;
   const isDeliveryPending =
     Boolean(form.district) &&
     (deliveryQuery.isLoading || deliveryQuery.isFetching);
@@ -163,6 +174,8 @@ export function CheckoutPageContainer() {
   const stockBlocked =
     storeFeatures.strictStockValidationOnCheckout &&
     Boolean(stockQuery.data && !stockQuery.data.ok);
+  const pricingBlocked = isPricingPending || isPricingError;
+  const checkoutBlocked = stockBlocked || pricingBlocked;
 
   if (!isReady) {
     return null;
@@ -184,7 +197,15 @@ export function CheckoutPageContainer() {
     setHasAttemptedSubmit(true);
     if (!validateForm(form)) return;
 
-    if (!covered || lines.length === 0) return;
+    if (
+      !covered ||
+      lines.length === 0 ||
+      checkoutBlocked ||
+      stockQuery.isLoading ||
+      stockQuery.isFetching
+    ) {
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -223,12 +244,13 @@ export function CheckoutPageContainer() {
         INSUFFICIENT_STOCK: t("errors.insufficientStock"),
         INVALID_PURCHASE_QUANTITY: t("errors.invalidPurchaseQuantity"),
         VALIDATION: t("errors.validation"),
-        PRODUCT_NOT_FOUND: t("errors.validation"),
-        BUNDLE_NOT_FOUND: t("errors.validation"),
-        DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.validation"),
+        PRODUCT_NOT_FOUND: t("errors.productNotFound"),
+        BUNDLE_NOT_FOUND: t("errors.bundleNotFound"),
+        DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.duplicateProductInBundle"),
+        UNEXPECTED: t("errors.unexpected"),
       };
-      const errorCode = result.error as GuestOrderErrorCode;
-      setErrorMessage(messageMap[errorCode] ?? t("errors.validation"));
+      const errorCode = result.error;
+      setErrorMessage(messageMap[errorCode] ?? t("errors.unexpected"));
       return;
     }
 
@@ -247,14 +269,14 @@ export function CheckoutPageContainer() {
       showValidationSummary={showValidationSummary}
       districts={zonesQuery.data ?? []}
       mapPin={mapPin}
-      subtotal={totals.subtotal}
+      subtotal={subtotal}
       shippingTotal={shippingTotal}
       total={total}
       covered={covered}
       isDeliveryPending={isDeliveryPending}
       isSubmitting={isSubmitting}
       errorMessage={errorMessage}
-      stockBlocked={stockBlocked}
+      stockBlocked={checkoutBlocked}
       isStockPending={stockQuery.isLoading || stockQuery.isFetching}
       stockWarning={Boolean(stockQuery.data && !stockQuery.data.ok)}
       stockMessages={stockMessages}

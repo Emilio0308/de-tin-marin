@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   BUNDLE_CUSTOMIZATION_MAX,
   BUNDLE_CUSTOMIZATION_MIN,
@@ -47,36 +50,43 @@ export function WizardComponentList({
   personCount,
   labelsByProductId,
   imagesByProductId,
-  labels,
+  unitPricesByProductId,
   canRemove,
   onRemove,
 }: WizardComponentListProps) {
+  const t = useTranslations("catalog.wizard.componentList");
+  const count = t("count", {
+    current: components.length,
+    max: BUNDLE_CUSTOMIZATION_MAX,
+  });
+  const progressLabel = t("progressLabel", {
+    current: components.length,
+    max: BUNDLE_CUSTOMIZATION_MAX,
+  });
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="font-label text-label-bold text-on-surface">
-          {labels.title}
+          {t("title")}
         </h2>
         <p
           aria-live="polite"
           aria-atomic="true"
           className="font-body text-body-sm text-on-surface-variant shrink-0"
         >
-          {labels.count}
+          {count}
         </p>
       </div>
 
-      <WizardProgressBar
-        current={components.length}
-        label={labels.progressLabel}
-      />
+      <WizardProgressBar current={components.length} label={progressLabel} />
 
       {!canRemove ? (
         <p
           role="status"
           className="font-body text-body-sm text-on-surface-variant bg-surface-container border-outline-variant/30 rounded-2xl border px-4 py-3"
         >
-          {labels.minReached}
+          {t("minReached", { min: BUNDLE_CUSTOMIZATION_MIN })}
         </p>
       ) : null}
 
@@ -87,6 +97,9 @@ export function WizardComponentList({
             imagesByProductId[component.productId] ?? CATALOG_PLACEHOLDER_IMAGE;
           const perPerson = component.quantityPerUnit;
           const total = resolveComponentTotalQuantity(perPerson, personCount);
+          const unitPrice = unitPricesByProductId[component.productId] ?? 0;
+          const linePrice = unitPrice * total;
+          const removeLabel = t("remove");
 
           return (
             <li
@@ -106,11 +119,12 @@ export function WizardComponentList({
                 <p className="font-label text-label-bold text-on-surface truncate">
                   {name}
                 </p>
-                <p className="font-body text-body-sm text-on-surface-variant">
-                  {labels.formatQuantityBreakdown({
+                <p className="font-body text-body-xs text-on-surface-variant">
+                  {t("quantityBreakdown", {
                     perPerson,
                     surprises: personCount,
                     total,
+                    price: linePrice.toFixed(2),
                   })}
                 </p>
               </div>
@@ -118,10 +132,10 @@ export function WizardComponentList({
                 type="button"
                 disabled={!canRemove}
                 onClick={() => onRemove(component.productId)}
-                aria-label={`${labels.remove} ${name}`}
+                aria-label={`${removeLabel} ${name}`}
                 className="font-label text-label-bold text-primary hover:text-secondary disabled:text-on-surface-variant/50 shrink-0 transition-colors disabled:cursor-not-allowed"
               >
-                {labels.remove}
+                {removeLabel}
               </button>
             </li>
           );

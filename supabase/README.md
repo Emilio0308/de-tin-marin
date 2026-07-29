@@ -35,6 +35,11 @@ on conflict (id) do nothing;
 | `00008_catalog_products_packages_stock.sql` | S1D — presentaciones, `prices.unit`, stock sealed/loose |
 | `00009_surprise_containers_delivery.sql`    | S1E — envases + delivery                                |
 | `00010_deduct_stock_for_order.sql`          | S2A — deduct stock al confirmar pago                    |
+| `00011_guest_orders_rls.sql`                | S3A — INSERT guest pending_payment                      |
+| `00012_get_guest_order.sql`                 | S3A — RPC lookup guest order                            |
+| `00013_product_purchase_limits.sql`         | Límites min/max de compra                               |
+| `00014_fix_deduct_stock_product_types.sql`  | Deduct unit vs package + presentaciones                 |
+| `00015_insert_guest_order.sql`              | RPC insert guest (sin SELECT anon)                      |
 
 > **Importante:** exponer un schema en la API (Settings → API → Exposed schemas)
 > no basta. Los roles `anon`/`authenticated` también necesitan `GRANT USAGE` sobre

@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   buildPricesFromNetPrice,
   buildPricesFromPackageNetPrice,
+  coerceMoney,
 } from "./prices";
+
+describe("coerceMoney", () => {
+  it("redondea números finitos y devuelve 0 para valores inválidos", () => {
+    expect(coerceMoney(5.555)).toBe(5.56);
+    expect(coerceMoney(null)).toBe(0);
+    expect(coerceMoney(undefined)).toBe(0);
+    expect(coerceMoney(Number.NaN)).toBe(0);
+  });
+});
 
 describe("buildPricesFromPackageNetPrice", () => {
   it("builds coherent normal and unit prices for a package of 10", () => {

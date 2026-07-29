@@ -5,18 +5,7 @@ export type WizardComponentListProps = {
   personCount: number;
   labelsByProductId: Record<string, string>;
   imagesByProductId: Record<string, string>;
-  labels: {
-    title: string;
-    remove: string;
-    minReached: string;
-    count: string;
-    progressLabel: string;
-    formatQuantityBreakdown: (values: {
-      perPerson: number;
-      surprises: number;
-      total: number;
-    }) => string;
-  };
+  unitPricesByProductId: Record<string, number>;
   canRemove: boolean;
   onRemove: (productId: string) => void;
 };

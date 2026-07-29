@@ -27,6 +27,9 @@ components/
 - El **presentational** no importa repositories, actions ni clientes Supabase.
 - El **container** no contiene markup complejo — delega al presentational.
 - Si el componente es trivial (solo UI estática), puede ser un solo archivo sin container.
+- **Props mínimas:** solo datos de dominio + handlers de interacción. No saturar con bags de labels, formatters ni callbacks “por si acaso”.
+- **Evitar inyección de dependencias en UI:** no pasar funciones de formateo/i18n como props; el componente que renderiza el copy usa `useTranslations` (ver [`88-ui-design-i18n.md`](88-ui-design-i18n.md)).
+- **Tipos compartidos:** un solo `type`/`interface` exportado y reutilizado entre archivos; no redeclarar la misma firma en varios `*.types.ts`.
 
 ## Archivos colaterales (obligatorios cuando aplique)
 
@@ -192,13 +195,31 @@ Si el componente es Server Component (sin `'use client'`):
 - Orden simplificado: **Imports → lógica async/await → JSX**.
 - El patrón container/presentational sigue siendo válido: container async en server, presentational como hijo recibiendo props serializables.
 
+### SSR vs React Query en containers
+
+Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).
+
+| Caso                                                  | Dónde fetch                          | Container                                                  |
+| ----------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)             | Recibe DTO por props; **sin** `useQuery` del mismo recurso |
+| Listados con filtros URL (home)                       | Objetivo: SSR + hidratación; hoy CSR | `useQuery` con keys de `query-keys.ts`; default 15 min     |
+| Carrito / checkout / preview                          | Container cliente                    | `useQuery` + `...freshQueryOptions` (`staleTime: 0`)       |
+| Admin order-form preview                              | Container cliente                    | `freshQueryOptions` en bundle/cart preview                 |
+
+**Reglas:**
+
+- Presentational recibe `isLoading`, `isError`, `onRetry` — no importa `@tanstack/react-query`.
+- Container no duplica fetch SSR en mount.
+- Debounce de inputs frecuentes (búsqueda, componentes de bundle) en estado local antes de actualizar la query key.
+
 ## Enforcement
 
 | Regla                             | Tipo                     |
 | --------------------------------- | ------------------------ |
 | No barrels                        | Mecánico — ESLint (S0)   |
 | `*.types.ts` / `*.helpers.ts`     | Convención + review      |
+| Props mínimas / sin labels bag    | Convención + review      |
 | Test de render por presentational | Convención + review + CI |
 | Orden interno del archivo         | Convención + review      |
 
-Ver también [`00-architecture.md`](00-architecture.md) · [`coding-guidelines.md`](../coding-guidelines.md).
+Ver también [`00-architecture.md`](00-architecture.md) · [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md) · [`coding-guidelines.md`](../coding-guidelines.md).

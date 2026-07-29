@@ -12,18 +12,6 @@ export type BundleWizardPageLabels = {
   validationMin: string;
   validationMax: string;
   validationDuplicate: string;
-  componentList: {
-    title: string;
-    remove: string;
-    minReached: string;
-    count: string;
-    progressLabel: string;
-    formatQuantityBreakdown: (values: {
-      perPerson: number;
-      surprises: number;
-      total: number;
-    }) => string;
-  };
   picker: {
     title: string;
     searchPlaceholder: string;
@@ -62,6 +50,7 @@ export type BundleWizardPageProps = {
   selectedProductIds: Set<string>;
   labelsByProductId: Record<string, string>;
   imagesByProductId: Record<string, string>;
+  unitPricesByProductId: Record<string, number>;
   lineTotal: number | null;
   stockCheck: OrderStockCheckResult | null;
   isValid: boolean;

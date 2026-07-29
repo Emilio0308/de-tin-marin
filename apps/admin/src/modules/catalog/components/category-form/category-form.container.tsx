@@ -1,10 +1,12 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createCategoryAction } from "@/modules/catalog/actions/create-category";
 import { updateCategoryAction } from "@/modules/catalog/actions/update-category";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { CategoryForm } from "./category-form";
 import type {
   CategoryFormContainerProps,
@@ -39,6 +41,7 @@ export function CategoryFormContainer({
   const t = useTranslations("categoryForm");
   const tErrors = useTranslations("categoryForm.errors");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,6 +111,8 @@ export function CategoryFormContainer({
       setError(categoryErrorMessage(result, tErrors));
       return;
     }
+
+    await invalidateAdminCatalogLists(queryClient, "categories", "products");
 
     router.push("/categories");
     router.refresh();

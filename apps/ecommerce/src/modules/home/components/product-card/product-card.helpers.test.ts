@@ -7,4 +7,9 @@ describe("product-card.helpers", () => {
     expect(formatPrice(12)).toBe("S/12.00");
     expect(formatPrice(8.9)).toBe("S/8.90");
   });
+
+  it("formatPrice tolera null y undefined", () => {
+    expect(formatPrice(null)).toBe("S/0.00");
+    expect(formatPrice(undefined)).toBe("S/0.00");
+  });
 });

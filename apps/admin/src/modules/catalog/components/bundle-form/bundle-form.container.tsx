@@ -8,6 +8,8 @@ import { createBundleAction } from "@/modules/catalog/actions/create-bundle";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import { BundleForm } from "./bundle-form";
 import type {
   BundleFormContainerProps,
@@ -54,7 +56,7 @@ export function BundleFormContainer({
   const [error, setError] = useState<string | null>(null);
 
   const productsQuery = useQuery({
-    queryKey: ["products"],
+    queryKey: queryKeys.catalog.products(),
     queryFn: async () => {
       const result = await listProductsAction();
       if (!result.ok) {
@@ -65,7 +67,7 @@ export function BundleFormContainer({
   });
 
   const containersQuery = useQuery({
-    queryKey: ["surprise-containers"],
+    queryKey: queryKeys.catalog.surpriseContainers(),
     queryFn: async () => {
       const result = await listSurpriseContainersAction();
       if (!result.ok) {
@@ -140,7 +142,7 @@ export function BundleFormContainer({
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["bundles"] });
+      await invalidateAdminCatalogLists(queryClient, "bundles");
 
       startTransition(() => {
         router.push("/bundles");

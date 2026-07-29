@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { BundleWizardTemplate } from "@de-tin-marin/validations/customize-bundle";
+import {
+  BUNDLE_CUSTOMIZATION_MIN,
+  type BundleWizardTemplate,
+} from "@de-tin-marin/validations/customize-bundle";
 import { BundleWizardPage } from "./bundle-wizard-page";
 import type { BundleWizardPageLabels } from "./bundle-wizard-page.types";
 
@@ -18,6 +21,28 @@ vi.mock("next/image", () => ({
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} src={src} />
   ),
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations:
+    () => (key: string, values?: Record<string, string | number>) => {
+      const templates: Record<string, string> = {
+        title: "Tus dulces",
+        remove: "Quitar",
+        minReached: "Necesitas al menos {min} dulces en tu sorpresa.",
+        count: "{current} de {max} dulces",
+        progressLabel: "{current} de {max} dulces seleccionados",
+        quantityBreakdown:
+          "{perPerson} × {surprises} = {total} unidades - S/ {price}",
+      };
+      let result = templates[key] ?? key;
+      if (values) {
+        for (const [name, value] of Object.entries(values)) {
+          result = result.replace(`{${name}}`, String(value));
+        }
+      }
+      return result;
+    },
 }));
 
 const baseTemplate: BundleWizardTemplate = {
@@ -47,6 +72,7 @@ const baseTemplate: BundleWizardTemplate = {
     { productId: "88888888-8888-8888-8888-888888888888", quantityPerUnit: 1 },
     { productId: "99999999-9999-9999-9999-999999999999", quantityPerUnit: 1 },
     { productId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", quantityPerUnit: 1 },
+    { productId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", quantityPerUnit: 1 },
   ],
 };
 
@@ -56,18 +82,9 @@ const defaultLabels: BundleWizardPageLabels = {
   personCount: "Para 10 personas",
   addToCart: "Agregar al carrito",
   addToCartLoading: "Agregando…",
-  validationMin: "Agrega al menos 5 dulces para continuar.",
+  validationMin: `Agrega al menos ${BUNDLE_CUSTOMIZATION_MIN} dulces para continuar.`,
   validationMax: "Puedes incluir como máximo 20 dulces.",
   validationDuplicate: "No puedes repetir el mismo dulce.",
-  componentList: {
-    title: "Tus dulces",
-    remove: "Quitar",
-    minReached: "Necesitas al menos 5 dulces en tu sorpresa.",
-    count: "7 de 20 dulces",
-    progressLabel: "7 de 20 dulces seleccionados",
-    formatQuantityBreakdown: ({ perPerson, surprises, total }) =>
-      `${perPerson} × ${surprises} = ${total}`,
-  },
   picker: {
     title: "Agregar dulce",
     searchPlaceholder: "Buscar por nombre o SKU…",
@@ -114,6 +131,7 @@ const defaultProps = {
     "88888888-8888-8888-8888-888888888888": "Caramelo",
     "99999999-9999-9999-9999-999999999999": "Mentita",
     "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa": "Trufas",
+    "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": "Galletas",
   },
   imagesByProductId: {
     "44444444-4444-4444-4444-444444444444": "https://example.com/gomitas.png",
@@ -123,6 +141,17 @@ const defaultProps = {
     "88888888-8888-8888-8888-888888888888": "https://example.com/caramelo.png",
     "99999999-9999-9999-9999-999999999999": "https://example.com/mentita.png",
     "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa": "https://example.com/trufas.png",
+    "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": "https://example.com/galletas.png",
+  },
+  unitPricesByProductId: {
+    "44444444-4444-4444-4444-444444444444": 1.5,
+    "55555555-5555-5555-5555-555555555555": 2,
+    "66666666-6666-6666-6666-666666666666": 1,
+    "77777777-7777-7777-7777-777777777777": 0.5,
+    "88888888-8888-8888-8888-888888888888": 1.2,
+    "99999999-9999-9999-9999-999999999999": 0.8,
+    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa": 3,
+    "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": 1.1,
   },
   lineTotal: 89.9,
   stockCheck: null,
@@ -157,7 +186,7 @@ describe("BundleWizardPage", () => {
     expect(screen.getByText("Combo Cumpleaños Arcoíris")).toBeInTheDocument();
     expect(screen.getAllByText("Caja mediana").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Para 10 personas").length).toBeGreaterThan(0);
-    expect(screen.getByText("7 de 20 dulces")).toBeInTheDocument();
+    expect(screen.getByText("8 de 20 dulces")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /volver al combo/i }),
     ).toHaveAttribute(
@@ -183,25 +212,21 @@ describe("BundleWizardPage", () => {
         isValid={false}
         canRemove={false}
         lineTotal={null}
-        labels={{
-          ...defaultLabels,
-          componentList: {
-            ...defaultLabels.componentList,
-            count: "4 de 20 dulces",
-            progressLabel: "4 de 20 dulces seleccionados",
-          },
-        }}
       />,
     );
 
     expect(
-      screen.getAllByText("Agrega al menos 5 dulces para continuar.").length,
+      screen.getAllByText(
+        `Agrega al menos ${BUNDLE_CUSTOMIZATION_MIN} dulces para continuar.`,
+      ).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getByRole("button", { name: /agregar al carrito/i }),
     ).toBeDisabled();
     expect(
-      screen.getByText("Necesitas al menos 5 dulces en tu sorpresa."),
+      screen.getByText(
+        `Necesitas al menos ${BUNDLE_CUSTOMIZATION_MIN} dulces en tu sorpresa.`,
+      ),
     ).toBeInTheDocument();
   });
 

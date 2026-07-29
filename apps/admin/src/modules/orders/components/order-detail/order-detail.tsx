@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   AlertTriangle,
   Candy,
+  ChevronDown,
   Gift,
   MapPin,
   Receipt,
@@ -331,7 +332,7 @@ export function OrderDetailView({
                 ) : (
                   <div
                     key={`bundle-${line.bundleId}-${index}`}
-                    className="border-primary-fixed-dim from-primary-fixed/30 to-secondary-fixed/30 relative flex items-center justify-between gap-4 overflow-hidden rounded-lg border bg-gradient-to-r p-4"
+                    className="border-primary-fixed-dim from-primary-fixed/30 to-secondary-fixed/30 relative flex flex-col gap-3 overflow-hidden rounded-lg border bg-gradient-to-r p-4"
                   >
                     <div
                       className="pointer-events-none absolute right-0 top-0 h-32 w-32 opacity-20"
@@ -343,29 +344,91 @@ export function OrderDetailView({
                       }}
                       aria-hidden
                     />
-                    <div className="relative z-10 flex min-w-0 items-center gap-4">
-                      <div className="border-primary bg-surface-container-lowest flex h-16 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed p-1">
-                        <div className="bg-tertiary-fixed flex h-full w-full items-center justify-center rounded">
-                          <Gift className="text-tertiary h-7 w-7" aria-hidden />
+                    <div className="relative z-10 flex items-center justify-between gap-4">
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="border-primary bg-surface-container-lowest flex h-16 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed p-1">
+                          <div className="bg-tertiary-fixed flex h-full w-full items-center justify-center rounded">
+                            <Gift
+                              className="text-tertiary h-7 w-7"
+                              aria-hidden
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-label text-label-bold text-on-surface truncate">
-                            {line.name}
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-label text-label-bold text-on-surface truncate">
+                              {line.name}
+                            </p>
+                            <span className="bg-primary text-on-primary rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase">
+                              {labels.surpriseLine}
+                            </span>
+                          </div>
+                          <p className="text-on-surface-variant text-sm">
+                            {labels.formatQuantityLabel(line.quantity)}
                           </p>
-                          <span className="bg-primary text-on-primary rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase">
-                            {labels.surpriseLine}
-                          </span>
                         </div>
-                        <p className="text-on-surface-variant text-sm">
-                          {labels.formatQuantityLabel(line.quantity)}
-                        </p>
                       </div>
+                      <p className="font-display text-primary shrink-0 text-lg font-extrabold">
+                        S/ {line.lineTotal.toFixed(2)}
+                      </p>
                     </div>
-                    <p className="font-display text-primary relative z-10 shrink-0 text-lg font-extrabold">
-                      S/ {line.lineTotal.toFixed(2)}
-                    </p>
+                    {line.components.length > 0 ? (
+                      <details className="border-outline-variant/40 bg-surface-container-lowest/80 group relative z-10 rounded-lg border">
+                        <summary className="font-label text-label-bold text-on-surface flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm marker:content-none [&::-webkit-details-marker]:hidden">
+                          <span>
+                            {labels.formatComponentsLabel(
+                              line.components.length,
+                            )}
+                          </span>
+                          <ChevronDown
+                            className="text-on-surface-variant h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                            aria-hidden
+                          />
+                        </summary>
+                        <div className="border-outline-variant/40 border-t px-3 pb-3 pt-2">
+                          <div className="text-on-surface-variant mb-2 hidden grid-cols-[7rem_minmax(0,1fr)_5.5rem_4.5rem] gap-3 text-[10px] font-bold uppercase tracking-wide sm:grid">
+                            <span>{labels.componentSku}</span>
+                            <span>{labels.componentName}</span>
+                            <span className="text-right">
+                              {labels.componentPrice}
+                            </span>
+                            <span className="text-right">
+                              {labels.componentQuantity}
+                            </span>
+                          </div>
+                          <ul className="flex flex-col gap-2">
+                            {line.components.map((component) => (
+                              <li
+                                key={component.productId}
+                                className="text-on-surface grid grid-cols-1 gap-1 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_5.5rem_4.5rem] sm:items-center sm:gap-3"
+                              >
+                                <span className="font-mono text-xs">
+                                  <span className="text-on-surface-variant mr-1 sm:hidden">
+                                    {labels.componentSku}:
+                                  </span>
+                                  {component.sku}
+                                </span>
+                                <span className="min-w-0 truncate">
+                                  {component.productName}
+                                </span>
+                                <span className="font-label text-label-bold tabular-nums sm:text-right">
+                                  <span className="text-on-surface-variant mr-1 font-normal sm:hidden">
+                                    {labels.componentPrice}:
+                                  </span>
+                                  S/ {component.unitPrice.toFixed(2)}
+                                </span>
+                                <span className="tabular-nums sm:text-right">
+                                  <span className="text-on-surface-variant mr-1 sm:hidden">
+                                    {labels.componentQuantity}:
+                                  </span>
+                                  {component.totalQuantity}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
                 ),
               )}

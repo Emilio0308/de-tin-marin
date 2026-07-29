@@ -11,8 +11,10 @@ import { resolveProductPurchaseLimits } from "@/modules/catalog/helpers/product-
 import { checkCartStockAction } from "@/modules/checkout/actions/check-cart-stock";
 import { formatStockShortageMessages } from "@/shared/components/stock-banner/stock-banner";
 import { queryKeys } from "@/shared/query/query-keys";
+import { freshQueryOptions } from "@/shared/query/query-cache";
 import { toShoppingCartLines } from "../../helpers/cart-lines";
 import { useCart } from "../../hooks/use-cart";
+import { useCartPricingPreview } from "../../hooks/use-cart-pricing-preview";
 import type { StoredCartLine } from "../../repositories/cart.repository";
 import { CartPage } from "./cart-page";
 
@@ -98,6 +100,8 @@ async function fetchMissingCartLineImages(
 export function CartPageContainer() {
   const t = useTranslations("cart");
   const { lines, totals, updateProductQuantity, removeLine } = useCart();
+  const { subtotal: previewSubtotal } = useCartPricingPreview(lines);
+  const subtotal = previewSubtotal ?? totals.subtotal ?? 0;
 
   const productLineIds = useMemo(
     () =>
@@ -108,6 +112,7 @@ export function CartPageContainer() {
   );
 
   const productMetaQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.cart.productMeta(productLineIds),
     queryFn: () => fetchCartProductMetadata(lines),
     enabled: productLineIds.length > 0,
@@ -122,6 +127,7 @@ export function CartPageContainer() {
   );
 
   const imagesQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.cart.lineImages(missingImageLineIds),
     queryFn: () => fetchMissingCartLineImages(lines),
     enabled: missingImageLineIds.length > 0,
@@ -161,6 +167,7 @@ export function CartPageContainer() {
   }, [lines, productMetaQuery.data]);
 
   const stockQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.checkout.stock(toShoppingCartLines(lines)),
     queryFn: async () => {
       const result = await checkCartStockAction({
@@ -180,7 +187,7 @@ export function CartPageContainer() {
   return (
     <CartPage
       lines={lines}
-      subtotal={totals.subtotal}
+      subtotal={subtotal}
       lineImageUrlByCartLineId={lineImageUrlByCartLineId}
       productBoundsByCartLineId={productBoundsByCartLineId}
       isStockPending={stockQuery.isLoading || stockQuery.isFetching}

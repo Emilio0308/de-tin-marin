@@ -8,6 +8,8 @@ import { Plus, Search } from "lucide-react";
 import { Button } from "@de-tin-marin/ui/button";
 import { listBundlesAction } from "@/modules/catalog/actions/list-bundles";
 import { softDeleteBundleAction } from "@/modules/catalog/actions/soft-delete-bundle";
+import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import { BundleList } from "./bundle-list";
 import type { BundleListLabels } from "./bundle-list.types";
 
@@ -51,7 +53,7 @@ export function BundleListContainer() {
   const [status, setStatus] = useState<StatusFilter>("all");
 
   const bundlesQuery = useQuery({
-    queryKey: ["bundles"],
+    queryKey: queryKeys.catalog.bundles(),
     queryFn: async () => {
       const result = await listBundlesAction();
       if (!result.ok) {
@@ -69,7 +71,7 @@ export function BundleListContainer() {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["bundles"] });
+      await invalidateAdminCatalogLists(queryClient, "bundles");
     },
   });
 

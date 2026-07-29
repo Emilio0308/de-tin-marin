@@ -72,6 +72,11 @@ export function OrderDetailContainer() {
       surpriseLine: t("detail.surpriseLine"),
       formatQuantityLabel: (quantity) =>
         t("detail.quantityLabel", { quantity }),
+      formatComponentsLabel: (count) => t("detail.componentsLabel", { count }),
+      componentSku: t("detail.componentSku"),
+      componentName: t("detail.componentName"),
+      componentPrice: t("detail.componentPrice"),
+      componentQuantity: t("detail.componentQuantity"),
       taxesIncluded: t("detail.taxesIncluded"),
       stockWarningBanner: t("detail.stockWarningBanner"),
       cart: t("detail.cart"),

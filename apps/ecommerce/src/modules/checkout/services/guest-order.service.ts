@@ -11,13 +11,14 @@ import {
   checkOrderStock,
 } from "@de-tin-marin/shared/check-order-stock";
 import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
-import { formatOrderNumber } from "@de-tin-marin/shared/order-cart";
+import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import { resolveProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   createGuestOrderInputSchema,
   checkCartStockInputSchema,
+  previewGuestCartInputSchema,
 } from "@de-tin-marin/validations/checkout";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import {
@@ -31,11 +32,8 @@ import {
 } from "@/modules/bundle-wizard/repositories/wizard-stock.repository";
 import { listWizardCampaignsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
 import { getWizardProductsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
-import {
-  asJson,
-  countGuestOrdersByDatePrefixRepo,
-  insertGuestOrderRepo,
-} from "../repositories/order.repository";
+import { logServerError, logServerInfo } from "@/shared/errors/server-error";
+import { asJson, insertGuestOrderRepo } from "../repositories/order.repository";
 import {
   getDeliverySettingsRepo,
   listActiveDeliveryZonesRepo,
@@ -143,6 +141,7 @@ export async function checkCartStockService(
         id: product.id,
         sku: product.sku,
         name: product.name,
+        productType: product.product_type ?? "unit",
         stockSealedPackages: product.stock_sealed_packages,
         stockLooseBaseUnits: product.stock_loose_base_units,
         itemsPerPackage: product.items_per_package,
@@ -167,6 +166,111 @@ export async function checkCartStockService(
   };
 }
 
+export async function previewGuestOrderCartService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        subtotal: number;
+        discountTotal: number;
+        shippingTotal: number;
+        total: number;
+        lineTotals: number[];
+        lines: OrderShoppingCartLine[];
+      };
+    }
+  | {
+      ok: false;
+      error:
+        | "VALIDATION"
+        | "PRODUCT_NOT_FOUND"
+        | "BUNDLE_NOT_FOUND"
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_PURCHASE_QUANTITY";
+    }
+> {
+  const parsed = previewGuestCartInputSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  if (parsed.data.lines.length === 0) {
+    return {
+      ok: true,
+      data: {
+        subtotal: 0,
+        discountTotal: parsed.data.discountTotal,
+        shippingTotal: parsed.data.shippingTotal,
+        total: parsed.data.shippingTotal - parsed.data.discountTotal,
+        lineTotals: [],
+        lines: [],
+      },
+    };
+  }
+
+  const productIds = collectProductIdsFromOrderLines(parsed.data.lines);
+  const [products, catalogProducts] = await Promise.all([
+    getWizardProductsByIdsRepo(config, productIds),
+    getPublicProductsByIdsRepo(config, productIds),
+  ]);
+
+  if (products.length !== productIds.length) {
+    return { ok: false, error: "PRODUCT_NOT_FOUND" };
+  }
+
+  if (products.some((product) => !product.is_active)) {
+    return { ok: false, error: "PRODUCT_NOT_FOUND" };
+  }
+
+  if (
+    catalogProducts.length !== productIds.length ||
+    !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts)
+  ) {
+    return { ok: false, error: "INVALID_PURCHASE_QUANTITY" };
+  }
+
+  const campaignIds = [
+    ...new Set(
+      products
+        .map((product) => product.campaign_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
+  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+
+  const cartResult = buildOrderCartWithTotals({
+    lines: parsed.data.lines,
+    products,
+    campaigns,
+    bundlesById,
+    discountTotal: parsed.data.discountTotal,
+    shippingTotal: parsed.data.shippingTotal,
+  });
+
+  if (!cartResult.ok) {
+    if (cartResult.error === "DUPLICATE_PRODUCT_IN_BUNDLE") {
+      return { ok: false, error: "DUPLICATE_PRODUCT_IN_BUNDLE" };
+    }
+    if (cartResult.error === "PRODUCT_NOT_FOUND") {
+      return { ok: false, error: "PRODUCT_NOT_FOUND" };
+    }
+    return { ok: false, error: "BUNDLE_NOT_FOUND" };
+  }
+
+  return {
+    ok: true,
+    data: {
+      subtotal: cartResult.totals.subtotal,
+      discountTotal: cartResult.totals.discountTotal,
+      shippingTotal: cartResult.totals.shippingTotal,
+      total: cartResult.totals.total,
+      lineTotals: cartResult.shoppingCart.lines.map((line) => line.lineTotal),
+      lines: cartResult.shoppingCart.lines,
+    },
+  };
+}
+
 export async function createGuestOrderService(
   config: SupabaseConfig,
   raw: unknown,
@@ -184,8 +288,21 @@ export async function createGuestOrderService(
         | "INVALID_PURCHASE_QUANTITY";
     }
 > {
+  const scope = "createGuestOrderService";
   const parsed = createGuestOrderInputSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+  if (!parsed.success) {
+    logServerError(scope, {
+      message: "VALIDATION",
+      issues: parsed.error.flatten(),
+    });
+    return { ok: false, error: "VALIDATION" };
+  }
+
+  logServerInfo(scope, "start", {
+    lineCount: parsed.data.lines.length,
+    district: parsed.data.fulfillment.deliveryAddress?.district ?? null,
+    mapPin: parsed.data.mapPin,
+  });
 
   const productIds = collectProductIdsFromOrderLines(parsed.data.lines);
   const [products, catalogProducts] = await Promise.all([
@@ -193,10 +310,23 @@ export async function createGuestOrderService(
     getPublicProductsByIdsRepo(config, productIds),
   ]);
   if (products.length !== productIds.length) {
+    logServerError(scope, {
+      message: "PRODUCT_NOT_FOUND",
+      requested: productIds.length,
+      found: products.length,
+      productIds,
+    });
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
 
   if (products.some((product) => !product.is_active)) {
+    logServerError(scope, {
+      message: "PRODUCT_NOT_FOUND",
+      reason: "inactive_product",
+      inactiveIds: products
+        .filter((product) => !product.is_active)
+        .map((product) => product.id),
+    });
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
 
@@ -204,6 +334,11 @@ export async function createGuestOrderService(
     catalogProducts.length !== productIds.length ||
     !validateProductPurchaseQuantities(parsed.data.lines, catalogProducts)
   ) {
+    logServerError(scope, {
+      message: "INVALID_PURCHASE_QUANTITY",
+      catalogFound: catalogProducts.length,
+      requested: productIds.length,
+    });
     return { ok: false, error: "INVALID_PURCHASE_QUANTITY" };
   }
 
@@ -239,6 +374,11 @@ export async function createGuestOrderService(
   );
 
   if (!deliveryResult.covered) {
+    logServerError(scope, {
+      message: "OUT_OF_COVERAGE",
+      district: parsed.data.fulfillment.deliveryAddress?.district ?? null,
+      mapPin: parsed.data.mapPin,
+    });
     return { ok: false, error: "OUT_OF_COVERAGE" };
   }
 
@@ -252,6 +392,10 @@ export async function createGuestOrderService(
   });
 
   if (!cartResult.ok) {
+    logServerError(scope, {
+      message: cartResult.error,
+      lineTypes: parsed.data.lines.map((line) => line.type),
+    });
     if (cartResult.error === "DUPLICATE_PRODUCT_IN_BUNDLE") {
       return { ok: false, error: "DUPLICATE_PRODUCT_IN_BUNDLE" };
     }
@@ -261,37 +405,42 @@ export async function createGuestOrderService(
   const stockCheck = await checkCartStockService(config, {
     lines: cartResult.shoppingCart.lines,
   });
-  if (
-    stockCheck.ok &&
-    !stockCheck.data.ok &&
-    storeFeatures.strictStockValidationOnCheckout
-  ) {
+  if (!stockCheck.ok) {
+    logServerError(scope, {
+      message: "STOCK_CHECK_VALIDATION",
+      error: stockCheck.error,
+    });
+    return { ok: false, error: "VALIDATION" };
+  }
+  if (!stockCheck.data.ok) {
+    logServerError(scope, {
+      message: "INSUFFICIENT_STOCK",
+      shortages: stockCheck.data.shortages,
+    });
     return { ok: false, error: "INSUFFICIENT_STOCK" };
   }
 
   const { shoppingCart, totals } = cartResult;
-  const datePrefix = formatOrderNumber(0).slice(0, 12);
-  const sequence =
-    (await countGuestOrdersByDatePrefixRepo(config, datePrefix)) + 1;
-  const orderNumber = formatOrderNumber(sequence);
-
-  const row = await insertGuestOrderRepo(config, {
-    order_number: orderNumber,
-    status: "pending_payment",
-    payment_status: "pending",
-    customer_id: null,
+  const inserted = await insertGuestOrderRepo(config, {
     contact: asJson(parsed.data.contact),
     fulfillment: asJson(parsed.data.fulfillment),
-    shopping_cart: asJson(shoppingCart),
-    payment_methods: asJson([]),
+    shoppingCart: asJson(shoppingCart),
     subtotal: totals.subtotal,
-    discount_total: totals.discountTotal,
-    shipping_total: totals.shippingTotal,
+    discountTotal: totals.discountTotal,
+    shippingTotal: totals.shippingTotal,
     total: totals.total,
-    pricing_snapshot: asJson(totals),
-    currency_code: "PEN",
+    pricingSnapshot: asJson(totals),
     metadata: asJson({ mapPin: parsed.data.mapPin }),
   });
 
-  return { ok: true, data: { id: row.id, orderNumber: row.order_number } };
+  logServerInfo(scope, "created", {
+    orderId: inserted.id,
+    orderNumber: inserted.orderNumber,
+    total: totals.total,
+  });
+
+  return {
+    ok: true,
+    data: { id: inserted.id, orderNumber: inserted.orderNumber },
+  };
 }

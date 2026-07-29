@@ -35,7 +35,8 @@ function buildProductsByIdForLine(
         id: product.id,
         sku: product.sku,
         name: product.name,
-        unitPrice: product.finalPrice,
+        unitPrice: product.finalUnitPrice,
+        presentationPrice: product.finalPrice,
       });
     }
     return map;
@@ -51,6 +52,7 @@ function buildProductsByIdForLine(
       sku: product.sku,
       name: product.name,
       unitPrice: product.finalUnitPrice,
+      presentationPrice: product.finalPrice,
     });
   }
 

@@ -6,6 +6,7 @@ import { ChevronDown, Search } from "lucide-react";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { formatPrice } from "@/modules/home/components/product-card/product-card.helpers";
 import type { WizardProductPickerProps } from "./wizard-product-picker.types";
+import { SHOWN_PRICES } from "./wizard-product-picker.helpers";
 
 export function WizardProductPicker({
   searchValue,
@@ -171,9 +172,11 @@ export function WizardProductPicker({
                       <p className="font-body text-body-sm text-on-surface-variant truncate">
                         {product.categoryName}
                       </p>
-                      <p className="font-label text-label-bold text-primary">
-                        {formatPrice(product.finalPrice)}
-                      </p>
+                      {SHOWN_PRICES && (
+                        <p className="font-label text-label-bold text-primary">
+                          {formatPrice(product.finalPrice)}
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"

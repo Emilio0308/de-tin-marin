@@ -9,5 +9,5 @@ export const HOME_NAV_ROUTES: HomeNavRoute[] = [
   { href: "/?tab=productos", labelKey: "sweets" },
   { href: "/?tab=sorpresas", labelKey: "surprises" },
   { href: "/mis-pedidos", labelKey: "myOrders" },
-  { href: "#about", labelKey: "about" },
+  { href: "/nosotros", labelKey: "about" },
 ];

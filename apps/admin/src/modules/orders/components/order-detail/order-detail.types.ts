@@ -15,6 +15,11 @@ export type OrderDetailLabels = {
   summaryTitle: string;
   surpriseLine: string;
   formatQuantityLabel: (quantity: number) => string;
+  formatComponentsLabel: (count: number) => string;
+  componentSku: string;
+  componentName: string;
+  componentPrice: string;
+  componentQuantity: string;
   taxesIncluded: string;
   stockWarningBanner: string;
   cart: string;

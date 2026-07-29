@@ -31,6 +31,7 @@ import { clearPendingCartLines } from "@/modules/bundle-wizard/helpers/pending-c
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { useCart } from "@/modules/cart/hooks/use-cart";
 import { queryKeys } from "@/shared/query/query-keys";
+import { freshQueryOptions } from "@/shared/query/query-cache";
 import { WIZARD_PRODUCT_PICKER_PAGE_SIZE } from "../wizard-product-picker/wizard-product-picker.constants";
 import {
   flattenProductPickerPages,
@@ -126,6 +127,7 @@ export function BundleWizardPageContainer({
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const previewQuery = useQuery({
+    ...freshQueryOptions,
     queryKey: queryKeys.wizard.preview(template.bundleId, debouncedComponents),
     queryFn: async () => {
       const result = await previewBundleLineAction({
@@ -137,6 +139,16 @@ export function BundleWizardPageContainer({
     },
     enabled: validateBundleCustomization(debouncedComponents).ok,
   });
+
+  const unitPricesByProductId = useMemo(() => {
+    const componentsFromPreview = previewQuery.data?.line.components ?? [];
+    return Object.fromEntries(
+      componentsFromPreview.map((component) => [
+        component.productId,
+        component.unitPrice,
+      ]),
+    );
+  }, [previewQuery.data?.line.components]);
 
   const handleRemove = (productId: string) => {
     setComponents((current) => removeComponent(current, productId));
@@ -172,6 +184,7 @@ export function BundleWizardPageContainer({
       selectedProductIds={selectedProductIds}
       labelsByProductId={labelsByProductId}
       imagesByProductId={imagesByProductId}
+      unitPricesByProductId={unitPricesByProductId}
       lineTotal={previewQuery.data?.lineTotal ?? null}
       stockCheck={previewQuery.data?.stockCheck ?? null}
       isValid={isValid}
@@ -193,27 +206,6 @@ export function BundleWizardPageContainer({
         validationMin: t("validation.min", { min: BUNDLE_CUSTOMIZATION_MIN }),
         validationMax: t("validation.max", { max: BUNDLE_CUSTOMIZATION_MAX }),
         validationDuplicate: t("validation.duplicate"),
-        componentList: {
-          title: t("componentList.title"),
-          remove: t("componentList.remove"),
-          minReached: t("componentList.minReached", {
-            min: BUNDLE_CUSTOMIZATION_MIN,
-          }),
-          count: t("componentList.count", {
-            current: components.length,
-            max: BUNDLE_CUSTOMIZATION_MAX,
-          }),
-          progressLabel: t("componentList.progressLabel", {
-            current: components.length,
-            max: BUNDLE_CUSTOMIZATION_MAX,
-          }),
-          formatQuantityBreakdown: ({ perPerson, surprises, total }) =>
-            t("componentList.quantityBreakdown", {
-              perPerson,
-              surprises,
-              total,
-            }),
-        },
         picker: {
           title: t("picker.title"),
           searchPlaceholder: t("picker.searchPlaceholder"),
