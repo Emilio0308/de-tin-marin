@@ -1,13 +1,13 @@
 # S3A-1-R · Remediación — paginación y orden en catálogo público
 
-|                    |                                                                     |
-| ------------------ | ------------------------------------------------------------------- |
-| **Tipo**           | Defecto de implementación (no deuda técnica opcional)               |
-| **Severidad**      | Alta                                                                |
-| **Introducido en** | S3A-1 · Catálogo público (`01-catalog-products-bundles.md`)         |
-| **Estado**         | Abierto — documentado; corrección diferida para no bloquear roadmap |
-| **App(s)**         | `apps/ecommerce`                                                    |
-| **Bloquea**        | Calidad/escala del catálogo; no bloquea S3A-2…4 funcionalmente      |
+|                    |                                                                           |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Tipo**           | Defecto de implementación (no deuda técnica opcional)                     |
+| **Severidad**      | Alta                                                                      |
+| **Introducido en** | S3A-1 · Catálogo público (`01-catalog-products-bundles.md`)               |
+| **Estado**         | Cerrado — paginación SQL (productos PostgREST; bundles/packs RPC `00021`) |
+| **App(s)**         | `apps/ecommerce`                                                          |
+| **Bloquea**        | Calidad/escala del catálogo; no bloquea S3A-2…4 funcionalmente            |
 
 ## Resumen ejecutivo
 
@@ -249,6 +249,7 @@ Orden sugerido para no bloquear S3A-2…4 del roadmap, pero **antes de producci�
 
 ## Historial
 
-| Fecha      | Nota                                                                                      |
-| ---------- | ----------------------------------------------------------------------------------------- |
-| 2026-07-07 | Documento creado tras revisión post S3A-1; corrección diferida para continuar roadmap S3A |
+| Fecha      | Nota                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-07 | Documento creado tras revisión post S3A-1; corrección diferida para continuar roadmap S3A                                                 |
+| 2026-07-31 | Remediación implementada: productos count+range+order; RPCs `list_public_bundles` / `list_public_packs`; policy `campaigns_select_public` |

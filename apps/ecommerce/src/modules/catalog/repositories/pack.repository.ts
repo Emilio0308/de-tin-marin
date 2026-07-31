@@ -3,6 +3,11 @@ import "server-only";
 import { createSupabaseServerClient } from "@de-tin-marin/db/server";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import type { Database, Json } from "@de-tin-marin/types/database";
+import type { PublicCatalogSort } from "@de-tin-marin/validations/public-catalog";
+import {
+  orderRowsByIds,
+  parseCatalogListRpcPayload,
+} from "../helpers/catalog-list-pagination.helpers";
 
 type PackRow = Database["catalog"]["Tables"]["packs"]["Row"];
 
@@ -27,34 +32,53 @@ export type PublicPackItemRow = {
 
 export type PublicPackRow = PackRow;
 
-export type PublicPackFilters = {
+export type PublicPackListPagination = {
+  page: number;
+  pageSize: number;
+  sort: PublicCatalogSort;
   search?: string;
 };
 
-function escapeIlike(term: string): string {
-  return term.replace(/[%_\\]/g, "\\$&");
-}
+export type PublicPackListResult = {
+  rows: PublicPackRow[];
+  total: number;
+};
 
 export async function listPublicPacksRepo(
   config: SupabaseConfig,
-  filters: PublicPackFilters,
-): Promise<PublicPackRow[]> {
+  pagination: PublicPackListPagination,
+): Promise<PublicPackListResult> {
   const supabase = await createSupabaseServerClient(config);
-  let query = supabase
+  const { page, pageSize, sort, search } = pagination;
+
+  const rpcResult = await supabase.schema("catalog").rpc("list_public_packs", {
+    p_page: page,
+    p_page_size: pageSize,
+    p_search: search ?? null,
+    p_sort: sort,
+  });
+
+  if (rpcResult.error) throw new Error(rpcResult.error.message);
+
+  const { ids, total } = parseCatalogListRpcPayload(rpcResult.data);
+  if (ids.length === 0) {
+    return { rows: [], total };
+  }
+
+  const { data, error } = await supabase
     .schema("catalog")
     .from("packs")
     .select("*")
+    .in("id", ids)
     .eq("is_active", true)
     .is("deleted_at", null);
 
-  if (filters.search) {
-    const term = `%${escapeIlike(filters.search)}%`;
-    query = query.or(`name.ilike.${term},sku.ilike.${term}`);
-  }
-
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []) as PublicPackRow[];
+
+  return {
+    rows: orderRowsByIds((data ?? []) as PublicPackRow[], ids),
+    total,
+  };
 }
 
 export async function getPublicPackBySlugRepo(

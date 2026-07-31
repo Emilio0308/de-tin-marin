@@ -7,7 +7,7 @@ Reglas de fetching: [`docs/rules/50-data-fetching-cache-ssr.md`](../../../../doc
 ## Estructura
 
 - `repositories/` — lectura Supabase (anon + RLS público)
-- `services/public-catalog.service.ts` — DTOs, precios, paginación en memoria; packs usan `@de-tin-marin/shared/pack-availability` (Regla 22)
+- `services/public-catalog.service.ts` — DTOs, precios; packs usan `@de-tin-marin/shared/pack-availability` (Regla 22)
 - `services/catalog-version.service.ts` — `catalog_cache_meta.version_at`
 - `actions/` — Server Actions sin `requireStaff`
 - `components/` — páginas de detalle
@@ -47,7 +47,11 @@ Filtros del home (categoría, búsqueda, sort, página) viven en `searchParams`;
 
 ## Paginación
 
-Productos, sorpresas y combos: el repo trae todos los registros que matchean el filtro; el service ordena en memoria y corta con `paginateItems`. Aceptado en v1; migrar a SQL si el catálogo crece.
+- **Productos:** PostgREST `count: 'exact'` + `ORDER BY` + `.range()` en `listPublicProductsRepo`. Sort `name_*` por columna; `price_*` por `prices->normal->netPrice` (sin campañas en listado, alineado al DTO actual).
+- **Sorpresas:** RPC `catalog.list_public_bundles` (COUNT + orden por nombre/`list_total` + LIMIT/OFFSET). El service solo carga items/containers de la página.
+- **Combos:** RPC `catalog.list_public_packs` (orden por nombre/`finalPrice` con campaña activa). Items/campañas solo de la página.
+
+`total` viene del count SQL / RPC, no de `array.length` en memoria. Remediación S3A-1-R.
 
 ## Query keys (ecommerce)
 

@@ -24,13 +24,9 @@ import {
   getPublicBundleInputSchema,
   getPublicPackInputSchema,
   getPublicProductInputSchema,
-  paginateItems,
   publicBundleListQuerySchema,
   publicPackListQuerySchema,
   publicProductListQuerySchema,
-  sortPublicBundles,
-  sortPublicPacks,
-  sortPublicProducts,
   type PublicBundleDetail,
   type PublicBundleListItem,
   type PublicCategoryItem,
@@ -212,11 +208,21 @@ export async function listPublicProductsService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, categoryId, search, sort } = parsed.data;
-  const rows = await listPublicProductsRepo(config, { categoryId, search });
-  const mapped = rows.map(toProductListItem);
-  const sorted = sortPublicProducts(mapped, sort) as PublicProductListItem[];
+  const { rows, total } = await listPublicProductsRepo(
+    config,
+    { categoryId, search },
+    { page, pageSize, sort },
+  );
 
-  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+  return {
+    ok: true,
+    data: {
+      items: rows.map(toProductListItem),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function listPublicBundlesService(
@@ -238,11 +244,16 @@ export async function listPublicBundlesService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, search, sort } = parsed.data;
-  const rows = await listPublicBundlesRepo(config, { search });
+  const { rows, total } = await listPublicBundlesRepo(config, {
+    page,
+    pageSize,
+    search,
+    sort,
+  });
   if (rows.length === 0) {
     return {
       ok: true,
-      data: { items: [], page, pageSize, total: 0 },
+      data: { items: [], page, pageSize, total },
     };
   }
 
@@ -261,12 +272,17 @@ export async function listPublicBundlesService(
     itemsByBundle.set(item.bundle_id, list);
   }
 
-  const mapped = rows.map((row) =>
-    toBundleListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
-  );
-  const sorted = sortPublicBundles(mapped, sort) as PublicBundleListItem[];
-
-  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+  return {
+    ok: true,
+    data: {
+      items: rows.map((row) =>
+        toBundleListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
+      ),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function listPublicCategoriesService(
@@ -457,11 +473,16 @@ export async function listPublicPacksService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, search, sort } = parsed.data;
-  const rows = await listPublicPacksRepo(config, { search });
+  const { rows, total } = await listPublicPacksRepo(config, {
+    page,
+    pageSize,
+    search,
+    sort,
+  });
   if (rows.length === 0) {
     return {
       ok: true,
-      data: { items: [], page, pageSize, total: 0 },
+      data: { items: [], page, pageSize, total },
     };
   }
 
@@ -475,16 +496,22 @@ export async function listPublicPacksService(
   }
 
   const campaignsById = await buildPackCampaignsById(config, rows);
-  const mapped = rows.map((row) =>
-    toPackListItem(
-      row,
-      itemsByPack.get(row.id) ?? [],
-      row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
-    ),
-  );
-  const sorted = sortPublicPacks(mapped, sort) as PublicPackListItem[];
 
-  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+  return {
+    ok: true,
+    data: {
+      items: rows.map((row) =>
+        toPackListItem(
+          row,
+          itemsByPack.get(row.id) ?? [],
+          row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
+        ),
+      ),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function getPublicPackService(

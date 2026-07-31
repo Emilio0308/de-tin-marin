@@ -391,6 +391,8 @@ erDiagram
 | Query / RPC                                 | Uso                                                                                                 |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                             |
+| `catalog.list_public_bundles(...)`          | S3A-1-R — page/sort/count público de sorpresas (`list_total` alineado a `computeBundleTotal`)       |
+| `catalog.list_public_packs(...)`            | S3A-1-R — page/sort/count público de packs (`finalPrice` con campaña activa)                        |
 | `catalog.bump_catalog_version()`            | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                 |
 | `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
 

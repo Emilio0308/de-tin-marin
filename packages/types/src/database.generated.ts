@@ -408,6 +408,24 @@ export type Database = {
         }[]
       }
       bump_catalog_version: { Args: never; Returns: string }
+      list_public_bundles: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_search?: string | null
+          p_sort?: string
+        }
+        Returns: Json
+      }
+      list_public_packs: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_search?: string | null
+          p_sort?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

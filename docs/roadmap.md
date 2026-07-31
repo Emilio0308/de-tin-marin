@@ -206,6 +206,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 - `/productos`, `/sorpresas` — paginación, categoría, búsqueda nombre/SKU, orden nombre/precio
 - Stock visible; inactivos ocultos; `finalPrice` backend; sin campañas v1
+- Remediación paginación SQL: [`docs/stages/S3A/01-remediation-catalog-pagination-sql.md`](stages/S3A/01-remediation-catalog-pagination-sql.md) (S3A-1-R)
 - Brief: [`docs/stages/S3A/01-catalog-products-bundles.md`](stages/S3A/01-catalog-products-bundles.md)
 
 **Depends on:** S3A-0
