@@ -168,6 +168,15 @@
 - `docs/roadmap.md` § S0 media
 - READMEs admin catalog
 
+## Docs sincronizados (2026-07-30 — S4-01 export Excel catálogo)
+
+- `docs/stages/S4/01-catalog-status-excel.md` — brief done
+- `docs/roadmap.md` § S4-01
+- `business-rules.md` Regla 22 — helper `pack-availability`
+- `inventory.md`, `architecture.md` (Reports)
+- `apps/admin/src/modules/reports/README.md`
+- Código: ExcelJS workbook, `exportCatalogStatusAction`, shared `pack-availability`
+
 ## Cómo añadir una decisión
 
 1. Agregar fila con estado `⏳ Abierto` o `✅` resuelta.

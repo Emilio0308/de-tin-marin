@@ -59,6 +59,7 @@ const baseProps: DashboardPageProps = {
       timeAgo: "",
     },
   ],
+  catalogExport: null,
 };
 
 describe("DashboardPage", () => {

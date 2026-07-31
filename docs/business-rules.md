@@ -225,7 +225,8 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 ### Regla 22 — Pack sin stock propio
 
 - **Trigger:** Cualquier operación sobre pack/combo.
-- **Pasos:** `catalog.packs` **no** tiene columnas de stock. Disponibilidad = mínimo de `floor(stock_presentaciones_producto / package_quantity)` sobre componentes.
+- **Pasos:** `catalog.packs` **no** tiene columnas de stock. Disponibilidad = mínimo de `floor(stock_presentaciones_producto / package_quantity)` sobre componentes **activos** (`is_active` y sin `deleted_at`). Presentaciones por producto según Regla 4 (`unit` = solo loose; `package` = sealed×ipp+loose).
+- **Implementación:** `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`) — usada en ecommerce, checkout y export admin (S4-01).
 - **Fallo:** N/A.
 
 ### Regla 23 — Precio pack reference + normal

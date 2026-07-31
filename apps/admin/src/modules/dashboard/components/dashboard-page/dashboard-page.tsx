@@ -98,6 +98,7 @@ export function DashboardPage({
   stats,
   recentOrders,
   alerts,
+  catalogExport,
 }: DashboardPageProps) {
   return (
     <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md relative flex flex-1 flex-col pb-28 lg:p-8 lg:pb-8">
@@ -124,6 +125,8 @@ export function DashboardPage({
           <DashboardStatCardView key={stat.id} stat={stat} />
         ))}
       </section>
+
+      {catalogExport}
 
       <section className="gap-stack-md grid xl:grid-cols-[1.6fr_1fr]">
         <article className="soft-glow-pink bg-surface-container-lowest border-surface-container-high rounded-[20px] border p-4 sm:p-6 lg:rounded-[24px]">

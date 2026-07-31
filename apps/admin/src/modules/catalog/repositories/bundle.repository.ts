@@ -13,10 +13,16 @@ type BundleItemInsert = Database["catalog"]["Tables"]["bundle_items"]["Insert"];
 
 export type BundleItemWithProduct = BundleItemRow & {
   products: {
+    sku: string;
     name: string;
     prices: Json;
     is_active: boolean;
     deleted_at: string | null;
+    product_type: string;
+    items_per_package: number;
+    package_label: string | null;
+    stock_sealed_packages: number;
+    stock_loose_base_units: number;
   } | null;
 };
 
@@ -56,7 +62,7 @@ export async function getBundleByIdRepo(
     .schema("catalog")
     .from("bundles")
     .select(
-      "*, surprise_containers(id, sku, name, prices), bundle_items(*, products(name, prices, is_active, deleted_at))",
+      "*, surprise_containers(id, sku, name, prices), bundle_items(*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units))",
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -76,7 +82,9 @@ export async function listBundleItemsByBundleIdsRepo(
   const { data, error } = await supabase
     .schema("catalog")
     .from("bundle_items")
-    .select("*, products(name, prices, is_active, deleted_at)")
+    .select(
+      "*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units)",
+    )
     .in("bundle_id", bundleIds);
 
   if (error) throw new Error(error.message);

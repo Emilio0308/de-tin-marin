@@ -9,6 +9,7 @@
     "./prices": "./src/prices.ts",
     "./product-stock": "./src/product-stock.ts",
     "./product-purchase-limits": "./src/product-purchase-limits.ts",
+    "./pack-availability": "./src/pack-availability.ts",
     "./bundle-price": "./src/bundle-price.ts",
     "./pack-price": "./src/pack-price.ts",
     "./delivery-fee": "./src/delivery-fee.ts",

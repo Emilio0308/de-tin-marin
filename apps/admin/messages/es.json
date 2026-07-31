@@ -95,7 +95,22 @@
       "priority": "Prioridad alta",
       "tag": "Campaña"
     },
-    "quickAdd": "Añadir producto rápido"
+    "quickAdd": "Añadir producto rápido",
+    "catalogExport": {
+      "title": "Exportar estado de catálogo",
+      "description": "Genera un Excel con stock, precios, composición, estado de catálogo y detalle de órdenes según las secciones que elijas.",
+      "download": "Descargar Excel",
+      "downloading": "Generando Excel…",
+      "emptySelection": "Selecciona al menos una sección.",
+      "error": "No se pudo generar el Excel. Intenta de nuevo.",
+      "sections": {
+        "products": "Productos",
+        "bundles": "Sorpresas",
+        "packs": "Packs",
+        "containers": "Envases",
+        "orders": "Órdenes"
+      }
+    }
   },
   "orders": {
     "list": {

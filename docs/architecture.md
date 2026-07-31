@@ -47,7 +47,7 @@ de-tin-marin/
 | Payments      | Registro manual; operador confirma                                                    |
 | Shipping      | Envíos, tracking                                                                      |
 | Notifications | Email (futuro)                                                                        |
-| Reports       | Métricas y exportaciones                                                              |
+| Reports       | Exportaciones operativas (S4-01: Excel estado catálogo); métricas futuras             |
 | Users         | Staff del admin, roles                                                                |
 | Settings      | Configuración global                                                                  |
 

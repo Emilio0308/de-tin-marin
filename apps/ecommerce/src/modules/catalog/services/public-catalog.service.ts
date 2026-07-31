@@ -10,7 +10,11 @@ import {
   parsePackPricesJson,
   parseProductPricesJson,
 } from "@de-tin-marin/shared/prices";
-import { resolveStockInPresentations } from "@de-tin-marin/shared/product-purchase-limits";
+import {
+  computePackAvailableQuantity as computePackAvailableQuantityShared,
+  isActivePackAvailabilityComponent,
+  type PackAvailabilityComponent,
+} from "@de-tin-marin/shared/pack-availability";
 import {
   computeTotalBaseUnits,
   formatStockDisplay,
@@ -313,46 +317,48 @@ export async function getPublicBundleService(
   };
 }
 
-function isActivePackItem(item: PublicPackItemRow): boolean {
-  const product = item.products;
-  return Boolean(product?.is_active && product.deleted_at === null);
+function toPackAvailabilityComponents(
+  items: PublicPackItemRow[],
+): PackAvailabilityComponent[] {
+  return items.map((item) => {
+    const product = item.products;
+    return {
+      packageQuantity: item.package_quantity,
+      product: product
+        ? {
+            isActive: product.is_active,
+            deletedAt: product.deleted_at,
+            productType: (product.product_type as "unit" | "package") ?? "unit",
+            itemsPerPackage: product.items_per_package ?? 1,
+            stockSealedPackages: product.stock_sealed_packages,
+            stockLooseBaseUnits: product.stock_loose_base_units,
+          }
+        : null,
+    };
+  });
 }
 
-function packComponentPresentations(
-  product: NonNullable<PublicPackItemRow["products"]>,
-): number {
-  const itemsPerPackage = Math.max(1, product.items_per_package ?? 1);
-  const productType = (product.product_type as "unit" | "package") ?? "unit";
-  const stockTotalBaseUnits =
-    productType === "unit"
-      ? product.stock_loose_base_units
-      : computeTotalBaseUnits(
-          product.stock_sealed_packages,
-          product.stock_loose_base_units,
-          itemsPerPackage,
-        );
-
-  return resolveStockInPresentations({
-    productType,
-    itemsPerPackage,
-    stockTotalBaseUnits,
+function isActivePackItem(item: PublicPackItemRow): boolean {
+  return isActivePackAvailabilityComponent({
+    packageQuantity: item.package_quantity,
+    product: item.products
+      ? {
+          isActive: item.products.is_active,
+          deletedAt: item.products.deleted_at,
+          productType:
+            (item.products.product_type as "unit" | "package") ?? "unit",
+          itemsPerPackage: item.products.items_per_package ?? 1,
+          stockSealedPackages: item.products.stock_sealed_packages,
+          stockLooseBaseUnits: item.products.stock_loose_base_units,
+        }
+      : null,
   });
 }
 
 function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
-  const active = items.filter(isActivePackItem);
-  if (active.length === 0) return 0;
-
-  let min = Number.POSITIVE_INFINITY;
-  for (const item of active) {
-    const product = item.products;
-    if (!product) return 0;
-    const presentations = packComponentPresentations(product);
-    const packageQuantity = Math.max(1, item.package_quantity);
-    min = Math.min(min, Math.floor(presentations / packageQuantity));
-  }
-
-  return Number.isFinite(min) ? Math.max(0, min) : 0;
+  return computePackAvailableQuantityShared(
+    toPackAvailabilityComponents(items),
+  );
 }
 
 function buildPackItemsPreview(items: PublicPackItemRow[]) {

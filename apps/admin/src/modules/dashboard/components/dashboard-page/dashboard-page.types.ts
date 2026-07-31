@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type DashboardPeriod = "daily" | "weekly" | "monthly";
 
 export type DashboardStatIcon = "products" | "campaigns" | "orders";
@@ -60,4 +62,5 @@ export type DashboardPageProps = {
   stats: DashboardStatCard[];
   recentOrders: DashboardRecentOrder[];
   alerts: DashboardAlertItem[];
+  catalogExport: ReactNode;
 };
