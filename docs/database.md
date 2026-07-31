@@ -77,12 +77,35 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 ### Schema `core`
 
-| Tabla             | Descripción                         |
-| ----------------- | ----------------------------------- |
-| `core.profiles`   | Perfil extendido de auth.users      |
-| `core.user_roles` | Rol staff: `admin` \| `super_admin` |
-| `core.settings`   | Configuración global key-value      |
-| `core.audit_log`  | Auditoría de acciones sensibles     |
+| Tabla                | Descripción                                       |
+| -------------------- | ------------------------------------------------- |
+| `core.profiles`      | Perfil extendido de auth.users                    |
+| `core.user_roles`    | Rol staff: `admin` \| `super_admin`               |
+| `core.settings`      | Configuración global key-value                    |
+| `core.audit_log`     | Auditoría de acciones sensibles                   |
+| `core.hero_settings` | Singleton modo hero home (`static` \| `carousel`) |
+| `core.hero_images`   | Slides del hero (URL, orden, vigencia)            |
+
+**`core.hero_settings`** (singleton, `singleton_key = 'default'`):
+
+| Columna         | Tipo        | Notas                                     |
+| --------------- | ----------- | ----------------------------------------- |
+| `singleton_key` | text unique | Solo `'default'`                          |
+| `display_mode`  | text        | `static` \| `carousel` (default `static`) |
+| `updated_at`    | timestamptz |                                           |
+
+**`core.hero_images`** (columnas clave):
+
+| Columna      | Tipo        | Notas                                       |
+| ------------ | ----------- | ------------------------------------------- |
+| `image_url`  | text        | URL CloudFront                              |
+| `alt_text`   | text        | Nullable; ecommerce usa i18n si vacío       |
+| `sort_order` | int         | Orden visualización                         |
+| `starts_at`  | timestamptz | Inicio vigencia                             |
+| `ends_at`    | timestamptz | Fin vigencia; `CHECK (ends_at > starts_at)` |
+| `deleted_at` | timestamptz | Soft-delete                                 |
+
+Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**, no solo en RLS. Imágenes hero: **aspecto cuadrado 1:1** (±2 %), lado ≥ 600 px (validación admin). Folder S3: `hero/`.
 
 ### Schema `catalog`
 
@@ -354,6 +377,8 @@ erDiagram
 | `pricing.campaigns`            | Staff                         | Staff                       |
 | `pricing.delivery_zones`       | Público activos               | Staff                       |
 | `pricing.delivery_settings`    | Público                       | Staff (update)              |
+| `core.hero_settings`           | Público                       | Staff (update)              |
+| `core.hero_images`             | Público (no deleted)          | Staff                       |
 | `catalog.catalog_cache_meta`   | Público                       | Staff (update / bump RPC)   |
 | `commerce.orders`              | Cliente propias / staff todas | Server + staff              |
 | `commerce.payments`            | Staff                         | Staff (confirmación manual) |

@@ -1,11 +1,15 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { cn } from "@de-tin-marin/shared/cn";
 import type { HeroSectionProps } from "./hero-section.types";
+import { shouldUseCarousel } from "./hero-section.helpers";
 import { storefrontTabHref } from "@/modules/home/helpers/storefront-url";
 
-const HERO_IMAGE_URL =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDc5FMBIxWj0PpOIyY67f8C27ZZ-i2I6SgndhcTSAJr-8b8gaRw4PssOD6J-X2x58UnXFF9b-TIBChWEnLfaaLTpH_Xd6Jp1eu0tREtPJKbIuDZoIy3ZmQ6NG0EcwbR_jlz5AqydaCCtyUxuTCceTHl_SxfnSE2iTm6txCVV7PUKbcO3H2lcqeaKRQW-lpa3d5mMjQ20h0cyxd6kEac3yvY4BNbC_58r2Bxrb5b_4HdWQ_ZalJj9TsT91gklkrpjo79Ft9Xusxf-kc";
+const AUTOPLAY_MS = 5000;
 
 export function HeroSection({
   titlePrefix,
@@ -15,7 +19,30 @@ export function HeroSection({
   ctaProducts,
   imageAlt,
   favoriteKit,
+  displayMode,
+  slides,
+  prevLabel,
+  nextLabel,
 }: HeroSectionProps) {
+  const carousel = shouldUseCarousel(displayMode, slides.length);
+  const [index, setIndex] = useState(0);
+  const safeIndex = slides.length === 0 ? 0 : index % slides.length;
+  const current = slides[safeIndex] ?? slides[0];
+
+  useEffect(() => {
+    if (!carousel) return;
+    const id = window.setInterval(() => {
+      setIndex((prev) => (prev + 1) % slides.length);
+    }, AUTOPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [carousel, slides.length]);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [slides.length, displayMode]);
+
+  const alt = current?.altText?.trim() || imageAlt;
+
   return (
     <section className="bg-surface-container-low relative flex min-h-[600px] items-center overflow-hidden">
       <div className="container-max gap-stack-lg px-gutter relative z-10 grid w-full grid-cols-1 items-center lg:grid-cols-2">
@@ -48,14 +75,61 @@ export function HeroSection({
             <div className="bg-secondary-container absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-30 blur-3xl" />
             <div className="bg-primary-container absolute -bottom-10 -left-10 h-40 w-40 rounded-full opacity-30 blur-3xl" />
             <div className="relative z-10 h-full w-full rotate-2 transform overflow-hidden rounded-[40px] shadow-2xl">
-              <Image
-                src={HERO_IMAGE_URL}
-                alt={imageAlt}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 28rem"
-                className="object-cover"
-              />
+              {current ? (
+                <Image
+                  key={current.imageUrl}
+                  src={current.imageUrl}
+                  alt={alt}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 28rem"
+                  className="object-cover transition-opacity duration-500"
+                />
+              ) : null}
+
+              {carousel ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label={prevLabel}
+                    className="bg-surface/80 text-on-surface absolute left-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full"
+                    onClick={() =>
+                      setIndex(
+                        (prev) => (prev - 1 + slides.length) % slides.length,
+                      )
+                    }
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={nextLabel}
+                    className="bg-surface/80 text-on-surface absolute right-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full"
+                    onClick={() =>
+                      setIndex((prev) => (prev + 1) % slides.length)
+                    }
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center gap-2">
+                    {slides.map((slide, i) => (
+                      <button
+                        key={`${slide.imageUrl}-${i}`}
+                        type="button"
+                        aria-label={`${i + 1}`}
+                        aria-current={i === safeIndex}
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full transition-colors",
+                          i === safeIndex
+                            ? "bg-primary"
+                            : "bg-surface/70 hover:bg-surface",
+                        )}
+                        onClick={() => setIndex(i)}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </div>
             <div className="border-secondary/10 bg-surface-container-lowest absolute -bottom-6 -right-6 z-20 -rotate-3 transform rounded-3xl border-2 p-4 shadow-xl">
               <div className="flex items-center gap-2">

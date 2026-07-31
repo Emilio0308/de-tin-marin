@@ -18,6 +18,7 @@ export const CATALOG_IMAGE_FOLDERS = [
   "products",
   "bundles",
   "containers",
+  "hero",
 ] as const;
 
 export type CatalogImageFolder = (typeof CATALOG_IMAGE_FOLDERS)[number];

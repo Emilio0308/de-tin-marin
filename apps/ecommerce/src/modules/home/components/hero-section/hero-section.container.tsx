@@ -1,10 +1,32 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { getPublicHeroConfigAction } from "@/modules/home/actions/get-public-hero-config";
 import { HeroSection } from "./hero-section";
+import { resolveHeroSlides, type HeroSlideView } from "./hero-section.helpers";
 
 export function HeroSectionContainer() {
   const t = useTranslations("home.hero");
+
+  const heroQuery = useQuery({
+    queryKey: ["public-hero-config"],
+    queryFn: async () => {
+      const result = await getPublicHeroConfigAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const slides: HeroSlideView[] = resolveHeroSlides({
+    slides: heroQuery.data?.slides,
+    error: heroQuery.isError,
+  });
+
+  const displayMode =
+    heroQuery.data?.displayMode === "carousel" ? "carousel" : "static";
 
   return (
     <HeroSection
@@ -15,6 +37,10 @@ export function HeroSectionContainer() {
       ctaProducts={t("ctaProducts")}
       imageAlt={t("imageAlt")}
       favoriteKit={t("favoriteKit")}
+      displayMode={displayMode}
+      slides={slides}
+      prevLabel={t("carouselPrev")}
+      nextLabel={t("carouselNext")}
     />
   );
 }

@@ -14,6 +14,7 @@ const links = [
   { href: "/bundles", labelKey: "bundles" },
   { href: "/packs", labelKey: "packs" },
   { href: "/delivery", labelKey: "delivery" },
+  { href: "/web-customization", labelKey: "webCustomization" },
   { href: "/orders", labelKey: "orders" },
 ] as const;
 

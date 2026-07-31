@@ -26,6 +26,8 @@ function resolveMobileTitle(
   if (pathname.startsWith("/bundles")) return pageTitles.bundles ?? "";
   if (pathname.startsWith("/packs")) return pageTitles.packs ?? "";
   if (pathname.startsWith("/delivery")) return pageTitles.delivery ?? "";
+  if (pathname.startsWith("/web-customization"))
+    return pageTitles.webCustomization ?? "";
   if (pathname.startsWith("/orders")) return pageTitles.orders ?? "";
   return pageTitles.dashboard ?? "Admin";
 }

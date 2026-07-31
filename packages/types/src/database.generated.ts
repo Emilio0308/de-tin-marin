@@ -654,6 +654,63 @@ export type Database = {
         }
         Relationships: []
       }
+      hero_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          deleted_at: string | null
+          ends_at: string
+          id: string
+          image_url: string
+          sort_order: number
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          ends_at: string
+          id?: string
+          image_url: string
+          sort_order?: number
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          ends_at?: string
+          id?: string
+          image_url?: string
+          sort_order?: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hero_settings: {
+        Row: {
+          display_mode: string
+          id: string
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          display_mode?: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          display_mode?: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

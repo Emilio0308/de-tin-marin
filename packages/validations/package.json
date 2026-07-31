@@ -18,7 +18,8 @@
     "./public-catalog": "./src/public-catalog.ts",
     "./customize-bundle": "./src/customize-bundle.ts",
     "./checkout": "./src/checkout.ts",
-    "./guest-order": "./src/guest-order.ts"
+    "./guest-order": "./src/guest-order.ts",
+    "./hero": "./src/hero.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

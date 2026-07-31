@@ -283,13 +283,24 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 **Depends on:** S1A, S1D, S4-01
 
+### S4-03 — Hero dinámico + Personalización web
+
+**Goal:** Staff configura imágenes del hero (home ecommerce) con modo estático/carrusel, orden y vigencia; ecommerce las muestra con fallback a la imagen hardcodeada actual.
+
+- [x] Tablas `core.hero_settings` + `core.hero_images` (migración `00020`)
+- [x] Admin `/web-customization` + folder S3 `hero` + validación aspecto cuadrado
+- [x] Ecommerce `getPublicHeroConfig` + hero static/carousel + fallback
+- Brief: [`docs/stages/S4/03-hero-web-customization.md`](stages/S4/03-hero-web-customization.md)
+
+**Depends on:** S0-03 media ✅, S3A home ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)
 - Users / roles
 - Notifications
 - Más reports (ventas, PDF, métricas)
-- Settings
+- Settings (otros)
 - Inventory v2 (ledger movimientos)
 - Cupones, VIP, pasarela de pagos (epoch posterior)
 

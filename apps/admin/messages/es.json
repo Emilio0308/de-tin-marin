@@ -38,6 +38,7 @@
     "bundles": "Sorpresas",
     "packs": "Combos",
     "delivery": "Delivery",
+    "webCustomization": "Personalización web",
     "orders": "Órdenes",
     "brand": "De Tin Marín",
     "subtitle": "Admin"
@@ -844,6 +845,58 @@
       "validation": "Revisa los campos del formulario",
       "duplicateDistrict": "Ese distrito ya existe",
       "default": "No se pudo guardar el distrito"
+    }
+  },
+  "webCustomization": {
+    "title": "Personalización web",
+    "subtitle": "Imágenes y modo de la sección hero de la tienda",
+    "loading": "Cargando personalización…",
+    "loadError": "No pudimos cargar la configuración del hero.",
+    "sectionMode": "Modo de visualización",
+    "modeStatic": "Imagen estática",
+    "modeCarousel": "Carrusel",
+    "modeHint": "En modo estático se muestra la primera imagen vigente por orden. En carrusel, todas las vigentes.",
+    "saveSettings": "Guardar modo",
+    "savingSettings": "Guardando…",
+    "settingsSaved": "Modo guardado",
+    "sectionPreview": "Vista previa en tienda",
+    "previewEmpty": "Sin imágenes vigentes — la tienda usará la imagen por defecto.",
+    "previewPrev": "Imagen anterior",
+    "previewNext": "Imagen siguiente",
+    "sectionImages": "Imágenes del hero",
+    "addImage": "Agregar imagen",
+    "imageRequirements": "Formato jpeg/png/webp, máximo 10 MiB, imagen cuadrada (1:1), mínimo 600×600 px.",
+    "altText": "Texto alternativo",
+    "altPlaceholder": "Opcional",
+    "startsAt": "Vigente desde",
+    "endsAt": "Vigente hasta",
+    "saveImage": "Guardar imagen",
+    "savingImage": "Guardando…",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "emptyImages": "No hay imágenes configuradas. La tienda usará la imagen por defecto.",
+    "columns": {
+      "preview": "Preview",
+      "order": "Orden",
+      "dates": "Vigencia",
+      "actions": "Acciones"
+    },
+    "deleteConfirm": "¿Eliminar esta imagen del hero?",
+    "infoTip": "Sin imágenes vigentes o si falla la carga, el ecommerce muestra la imagen estática por defecto.",
+    "pickImage": "Elegir imagen",
+    "changeImage": "Cambiar imagen",
+    "pickImageHint": "Elige una imagen cuadrada para continuar",
+    "errors": {
+      "validation": "Revisa los campos del formulario",
+      "invalidType": "Solo se permiten jpeg, png o webp",
+      "invalidSize": "La imagen supera el tamaño máximo (10 MiB)",
+      "invalidDimensions": "La imagen debe ser cuadrada (proporción 1:1)",
+      "tooSmall": "La imagen es demasiado pequeña (mínimo 600×600 px)",
+      "missingImage": "Elige una imagen antes de guardar",
+      "uploadFailed": "No se pudo subir la imagen a S3",
+      "default": "No se pudo guardar la imagen"
     }
   }
 }

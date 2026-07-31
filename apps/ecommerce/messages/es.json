@@ -285,7 +285,9 @@
       "ctaSurprises": "Ver sorpresas",
       "ctaProducts": "Ver dulces",
       "imageAlt": "Caja de regalo de cumpleaños repleta de dulces artesanales y chocolates de colores",
-      "favoriteKit": "Kit Favorito"
+      "favoriteKit": "Kit Favorito",
+      "carouselPrev": "Imagen anterior",
+      "carouselNext": "Imagen siguiente"
     },
     "help": {
       "label": "¿Necesitas ayuda?",

@@ -33,6 +33,7 @@ export default async function DashboardLayout({
           bundles: t("bundles"),
           packs: t("packs"),
           delivery: t("delivery"),
+          webCustomization: t("webCustomization"),
           orders: t("orders"),
         }}
       >
