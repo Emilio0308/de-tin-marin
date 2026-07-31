@@ -135,6 +135,24 @@ export async function softDeleteSurpriseContainerRepo(
   if (error) throw new Error(error.message);
 }
 
+export async function getContainersByIdsRepo(
+  config: SupabaseConfig,
+  ids: string[],
+): Promise<SurpriseContainerRow[]> {
+  if (ids.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("catalog")
+    .from("surprise_containers")
+    .select("*")
+    .in("id", ids)
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SurpriseContainerRow[];
+}
+
 export async function getActiveContainersByIdsRepo(
   config: SupabaseConfig,
   ids: string[],

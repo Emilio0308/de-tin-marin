@@ -13,10 +13,16 @@ type PackItemInsert = Database["catalog"]["Tables"]["pack_items"]["Insert"];
 
 export type PackItemWithProduct = PackItemRow & {
   products: {
+    sku: string;
     name: string;
     prices: Json;
     is_active: boolean;
     deleted_at: string | null;
+    product_type: string;
+    items_per_package: number;
+    package_label: string | null;
+    stock_sealed_packages: number;
+    stock_loose_base_units: number;
   } | null;
 };
 
@@ -47,7 +53,9 @@ export async function getPackByIdRepo(
   const result = await supabase
     .schema("catalog")
     .from("packs")
-    .select("*, pack_items(*, products(name, prices, is_active, deleted_at))")
+    .select(
+      "*, pack_items(*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units))",
+    )
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -66,7 +74,9 @@ export async function listPackItemsByPackIdsRepo(
   const { data, error } = await supabase
     .schema("catalog")
     .from("pack_items")
-    .select("*, products(name, prices, is_active, deleted_at)")
+    .select(
+      "*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units)",
+    )
     .in("pack_id", packIds);
 
   if (error) throw new Error(error.message);

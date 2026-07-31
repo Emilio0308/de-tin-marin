@@ -7,7 +7,7 @@ Reglas de fetching: [`docs/rules/50-data-fetching-cache-ssr.md`](../../../../doc
 ## Estructura
 
 - `repositories/` — lectura Supabase (anon + RLS público)
-- `services/public-catalog.service.ts` — DTOs, precios, paginación en memoria
+- `services/public-catalog.service.ts` — DTOs, precios, paginación en memoria; packs usan `@de-tin-marin/shared/pack-availability` (Regla 22)
 - `services/catalog-version.service.ts` — `catalog_cache_meta.version_at`
 - `actions/` — Server Actions sin `requireStaff`
 - `components/` — páginas de detalle

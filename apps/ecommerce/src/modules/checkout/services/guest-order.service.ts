@@ -15,9 +15,10 @@ import {
 import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import {
-  resolveProductPurchaseBounds,
-  resolveStockInPresentations,
-} from "@de-tin-marin/shared/product-purchase-limits";
+  computePackAvailableQuantity as computePackAvailableQuantityShared,
+  type PackAvailabilityComponent,
+} from "@de-tin-marin/shared/pack-availability";
+import { resolveProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
@@ -89,35 +90,23 @@ async function resolveBundlesById(
 }
 
 function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
-  const active = items.filter(
-    (item) => item.products?.is_active && item.products.deleted_at === null,
-  );
-  if (active.length === 0) return 0;
-
-  let min = Number.POSITIVE_INFINITY;
-  for (const item of active) {
+  const components: PackAvailabilityComponent[] = items.map((item) => {
     const product = item.products;
-    if (!product) return 0;
-    const itemsPerPackage = Math.max(1, product.items_per_package ?? 1);
-    const productType = (product.product_type as "unit" | "package") ?? "unit";
-    const stockTotalBaseUnits =
-      productType === "unit"
-        ? product.stock_loose_base_units
-        : computeTotalBaseUnits(
-            product.stock_sealed_packages,
-            product.stock_loose_base_units,
-            itemsPerPackage,
-          );
-    const presentations = resolveStockInPresentations({
-      productType,
-      itemsPerPackage,
-      stockTotalBaseUnits,
-    });
-    const packageQuantity = Math.max(1, item.package_quantity);
-    min = Math.min(min, Math.floor(presentations / packageQuantity));
-  }
-
-  return Number.isFinite(min) ? Math.max(0, min) : 0;
+    return {
+      packageQuantity: item.package_quantity,
+      product: product
+        ? {
+            isActive: product.is_active,
+            deletedAt: product.deleted_at,
+            productType: (product.product_type as "unit" | "package") ?? "unit",
+            itemsPerPackage: product.items_per_package ?? 1,
+            stockSealedPackages: product.stock_sealed_packages,
+            stockLooseBaseUnits: product.stock_loose_base_units,
+          }
+        : null,
+    };
+  });
+  return computePackAvailableQuantityShared(components);
 }
 
 async function resolvePacksById(

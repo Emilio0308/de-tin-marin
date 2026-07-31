@@ -4,21 +4,21 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ## Resumen
 
-| Etapa   | Nombre                     | Entregable                                         |
-| ------- | -------------------------- | -------------------------------------------------- |
-| **S0**  | Fundación                  | Monorepo, packages, CI, Supabase spine, media CDN  |
-| **S1A** | Catálogo                   | Products + Categories                              |
-| **S1B** | Bundles                    | Composición de sorpresas                           |
-| **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
-| **S1D** | Presentaciones + stock     | `prices.unit`, paquetes, stock sealed/loose        |
-| **S1E** | Envases + delivery         | Insumos sorpresa + tarifas por distrito (Piura)    |
-| **S1F** | Packs / Combos             | Combos BOM fija + precio reference/normal (admin)  |
-| **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado            |
-| **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela       |
-| **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)   |
-| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…5, incl. combos)  |
-| **S3B** | Admin app                  | Backoffice                                         |
-| **S4**  | Resto                      | Customers, Users, Notifications, Reports, Settings |
+| Etapa   | Nombre                     | Entregable                                        |
+| ------- | -------------------------- | ------------------------------------------------- |
+| **S0**  | Fundación                  | Monorepo, packages, CI, Supabase spine, media CDN |
+| **S1A** | Catálogo                   | Products + Categories                             |
+| **S1B** | Bundles                    | Composición de sorpresas                          |
+| **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1            |
+| **S1D** | Presentaciones + stock     | `prices.unit`, paquetes, stock sealed/loose       |
+| **S1E** | Envases + delivery         | Insumos sorpresa + tarifas por distrito (Piura)   |
+| **S1F** | Packs / Combos             | Combos BOM fija + precio reference/normal (admin) |
+| **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado           |
+| **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela      |
+| **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)  |
+| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…5, incl. combos) |
+| **S3B** | Admin app                  | Backoffice                                        |
+| **S4**  | Completitud                | Reports (Excel catálogo) + Customers, Users, …    |
 
 ---
 
@@ -261,10 +261,23 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ## S4 — Completitud
 
+### S4-01 — Export Excel estado de catálogo (admin) ✅
+
+**Goal:** Staff descarga `.xlsx` multi-hoja desde el dashboard (productos, sorpresas, packs, envases, órdenes + carrito congelado).
+
+- [x] Módulo `apps/admin/src/modules/reports/`
+- [x] Shared `pack-availability` (Regla 22) — admin + ecommerce
+- [x] Panel en home dashboard + `exportCatalogStatusAction`
+- Brief: [`docs/stages/S4/01-catalog-status-excel.md`](stages/S4/01-catalog-status-excel.md)
+
+**Depends on:** S1A, S1B, S1C, S1E, S1F, S2B
+
+### Pendiente S4
+
 - Customers (sin VIP v1)
 - Users / roles
 - Notifications
-- Reports
+- Más reports (ventas, PDF, métricas)
 - Settings
 - Inventory v2 (ledger movimientos)
 - Cupones, VIP, pasarela de pagos (epoch posterior)

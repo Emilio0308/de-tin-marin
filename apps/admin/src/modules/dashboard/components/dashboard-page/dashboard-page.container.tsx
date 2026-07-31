@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listOrdersAction } from "@/modules/orders/actions/list-orders";
+import { CatalogExportPanelContainer } from "@/modules/reports/components/catalog-export-panel/catalog-export-panel.container";
 import { DashboardPage } from "./dashboard-page";
 import {
   buildDashboardStats,
@@ -88,6 +89,7 @@ export async function DashboardPageContainer() {
       stats={stats}
       recentOrders={recentOrders}
       alerts={alerts}
+      catalogExport={<CatalogExportPanelContainer />}
     />
   );
 }

@@ -25,6 +25,7 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 - [stages/S0/01-monorepo-foundation.md](stages/S0/01-monorepo-foundation.md) — brief S0 (monorepo + spine) ✅
 - [stages/S0/02-infra-media-cdn.md](stages/S0/02-infra-media-cdn.md) — brief S0 media CDN
 - [stages/S0/03-admin-pack-image-upload.md](stages/S0/03-admin-pack-image-upload.md) — brief upload imágenes catálogo (presign)
+- [stages/S4/01-catalog-status-excel.md](stages/S4/01-catalog-status-excel.md) — brief export Excel estado catálogo ✅
 - [stages/STAGE-BRIEF-TEMPLATE.md](stages/STAGE-BRIEF-TEMPLATE.md) — plantilla de briefs
 - [adr/0001-stack-and-foundation.md](adr/0001-stack-and-foundation.md) — stack base
 
@@ -39,6 +40,7 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Catálogo (categories, products, bundles) | [`apps/admin/src/modules/catalog/README.md`](../apps/admin/src/modules/catalog/README.md) |
 | Orders                                   | [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md)   |
+| Reports                                  | [`apps/admin/src/modules/reports/README.md`](../apps/admin/src/modules/reports/README.md) |
 
 Código fuente:
 

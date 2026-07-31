@@ -129,8 +129,9 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 
 ## Packs / combos
 
-- **Sin stock propio** en `packs` (DECISIONS #33).
-- Disponibilidad = mínimo de `floor(stock_presentaciones / package_quantity)`.
+- **Sin stock propio** en `packs` (DECISIONS #33 / Regla 22).
+- Disponibilidad = mínimo de `floor(stock_presentaciones / package_quantity)` sobre componentes activos.
+- Helper canónico: `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`, `packComponentPresentations`).
 - Al `paid`: componentes aportan `totalPackages` a `presentationQuantity` (igual que líneas product).
 
 ## Admin (v1)
@@ -189,3 +190,4 @@ Reglas 4, 15, 18, 21, 22–24 en [`business-rules.md`](business-rules.md).
 - [S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
 - [S2A/01-stock-deduct-on-payment.md](stages/S2A/01-stock-deduct-on-payment.md)
 - [S1F/01-catalog-packs.md](stages/S1F/01-catalog-packs.md)
+- [S4/01-catalog-status-excel.md](stages/S4/01-catalog-status-excel.md) _(export + `pack-availability`)_
