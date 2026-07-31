@@ -2,7 +2,7 @@
 
 CRUD de categorías, productos, sorpresas (bundles) y **combos (packs)** en `apps/admin`.
 
-Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
+Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [S4/02](../../../docs/stages/S4/02-product-cost-margin.md) _(costo/margen)_
 
 ## Capas
 
@@ -12,29 +12,29 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 
 ## Server Actions (`actions/`)
 
-| Action                      | Service                     | Descripción                          |
-| --------------------------- | --------------------------- | ------------------------------------ |
-| `listCategoriesAction`      | `listCategoriesService`     | Listado categorías                   |
-| `getCategoryAction`         | `getCategoryService`        | Detalle por id                       |
-| `createCategoryAction`      | `createCategoryService`     | Crear                                |
-| `updateCategoryAction`      | `updateCategoryService`     | Editar                               |
-| `softDeleteCategoryAction`  | `softDeleteCategoryService` | Soft-delete                          |
-| `listProductsAction`        | `listProductsService`       | Listado + `finalPrice`               |
-| `getProductAction`          | `getProductService`         | Detalle por id                       |
-| `createProductAction`       | `createProductService`      | Crear                                |
-| `updateProductAction`       | `updateProductService`      | Editar                               |
-| `softDeleteProductAction`   | `softDeleteProductService`  | Soft-delete                          |
-| `listBundlesAction`         | `listBundlesService`        | Listado + total calculado            |
-| `getBundleAction`           | `getBundleService`          | Detalle + items                      |
-| `createBundleAction`        | `createBundleService`       | Crear                                |
-| `updateBundleAction`        | `updateBundleService`       | Editar                               |
-| `softDeleteBundleAction`    | `softDeleteBundleService`   | Soft-delete                          |
-| `listPacksAction`           | `listPacksService`          | Listado combos + `finalPrice`        |
-| `getPackAction`             | `getPackService`            | Detalle + items + reference/normal   |
-| `createPackAction`          | `createPackService`         | Crear (`normal >= reference`)        |
-| `updatePackAction`          | `updatePackService`         | Editar                               |
-| `softDeletePackAction`      | `softDeletePackService`     | Soft-delete                          |
-| `listActiveCampaignsAction` | —                           | Campañas activas para select de pack |
+| Action                      | Service                     | Descripción                           |
+| --------------------------- | --------------------------- | ------------------------------------- |
+| `listCategoriesAction`      | `listCategoriesService`     | Listado categorías                    |
+| `getCategoryAction`         | `getCategoryService`        | Detalle por id                        |
+| `createCategoryAction`      | `createCategoryService`     | Crear                                 |
+| `updateCategoryAction`      | `updateCategoryService`     | Editar                                |
+| `softDeleteCategoryAction`  | `softDeleteCategoryService` | Soft-delete                           |
+| `listProductsAction`        | `listProductsService`       | Listado + `finalPrice` + costo/margen |
+| `getProductAction`          | `getProductService`         | Detalle por id                        |
+| `createProductAction`       | `createProductService`      | Crear (+ `costNetPrice` opcional)     |
+| `updateProductAction`       | `updateProductService`      | Editar                                |
+| `softDeleteProductAction`   | `softDeleteProductService`  | Soft-delete                           |
+| `listBundlesAction`         | `listBundlesService`        | Listado + total calculado             |
+| `getBundleAction`           | `getBundleService`          | Detalle + items                       |
+| `createBundleAction`        | `createBundleService`       | Crear                                 |
+| `updateBundleAction`        | `updateBundleService`       | Editar                                |
+| `softDeleteBundleAction`    | `softDeleteBundleService`   | Soft-delete                           |
+| `listPacksAction`           | `listPacksService`          | Listado combos + `finalPrice`         |
+| `getPackAction`             | `getPackService`            | Detalle + items + reference/normal    |
+| `createPackAction`          | `createPackService`         | Crear (`normal >= reference`)         |
+| `updatePackAction`          | `updatePackService`         | Editar                                |
+| `softDeletePackAction`      | `softDeletePackService`     | Soft-delete                           |
+| `listActiveCampaignsAction` | —                           | Campañas activas para select de pack  |
 
 Imágenes de catálogo: `createCatalogImageUploadUrlAction` — preview local; PUT S3 al Guardar (DECISIONS #35).
 
@@ -50,7 +50,7 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 ## Services (`services/`)
 
 - `category.service.ts`
-- `product.service.ts` — usa `computeFinalPrice` para listado
+- `product.service.ts` — usa `computeFinalPrice` + `computeProductMargin` (costo admin)
 - `bundle.service.ts` — usa `computeBundleTotal`
 - `pack.service.ts` — `computePackReference` + `computeFinalPrice`
 - Tras create/update/soft-delete: `bumpCatalogVersionSafe` → `catalog.bump_catalog_version()` (Broadcast a ecommerce)

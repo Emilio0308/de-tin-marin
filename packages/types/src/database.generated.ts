@@ -263,6 +263,7 @@ export type Database = {
           brand: string | null
           campaign_id: string | null
           category_id: string
+          cost_net_price: number | null
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -286,6 +287,7 @@ export type Database = {
           brand?: string | null
           campaign_id?: string | null
           category_id: string
+          cost_net_price?: number | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -309,6 +311,7 @@ export type Database = {
           brand?: string | null
           campaign_id?: string | null
           category_id?: string
+          cost_net_price?: number | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null

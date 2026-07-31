@@ -17,6 +17,7 @@ import {
   roundMoney,
 } from "@de-tin-marin/shared/prices";
 import { resolveStockInPresentations } from "@de-tin-marin/shared/product-purchase-limits";
+import { computeProductMargin } from "@de-tin-marin/shared/product-margin";
 import {
   computeTotalBaseUnits,
   formatStockDisplay,
@@ -132,6 +133,14 @@ async function loadProducts(
       campaign && campaignForPricing && isCampaignActive(campaignForPricing)
         ? campaign
         : null;
+    const costNetPrice =
+      row.cost_net_price === null || row.cost_net_price === undefined
+        ? null
+        : Number(row.cost_net_price);
+    const { margin, marginPct } = computeProductMargin({
+      saleNetPrice: packageNetPrice,
+      costNetPrice,
+    });
 
     return {
       sku: row.sku,
@@ -151,6 +160,9 @@ async function loadProducts(
       campaignPercentage: activeCampaign
         ? Number(activeCampaign.percentage)
         : null,
+      costNetPrice,
+      margin,
+      marginPct,
       stockSealedPackages: row.stock_sealed_packages,
       stockLooseBaseUnits: row.stock_loose_base_units,
       stockTotalBaseUnits,

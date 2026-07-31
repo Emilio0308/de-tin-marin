@@ -42,6 +42,13 @@ const labels: ProductFormLabels = {
   packagePrice: "Precio paquete",
   unitPrice: "Precio unidad",
   unitPricePreview: "Preview",
+  costNetPrice: "Costo de venta",
+  costNetPriceHint: "Costo opcional",
+  margin: "Margen",
+  marginPct: "Margen %",
+  marginEmpty: "—",
+  formatMargin: (amount) => `S/ ${amount}`,
+  formatMarginPct: (pct) => `${pct}%`,
   stock: "Stock",
   stockSealed: "Sellados",
   stockLoose: "Sueltos",
@@ -118,6 +125,7 @@ describe("ProductForm", () => {
           packageLabel: null,
           packageNetPrice: 10,
           unitNetPrice: 10,
+          costNetPrice: null,
           stockSealedPackages: 0,
           stockLooseBaseUnits: 5,
           stockTotalBaseUnits: 5,
@@ -157,6 +165,7 @@ describe("ProductForm", () => {
           packageLabel: null,
           packageNetPrice: 10,
           unitNetPrice: 10,
+          costNetPrice: 4,
           stockSealedPackages: 0,
           stockLooseBaseUnits: 5,
           stockTotalBaseUnits: 5,
@@ -175,6 +184,10 @@ describe("ProductForm", () => {
       />,
     );
 
+    expect(screen.getByLabelText(labels.costNetPrice)).toHaveValue(4);
+    expect(screen.getByText("S/ 6.00")).toBeInTheDocument();
+    expect(screen.getByText("150.0%")).toBeInTheDocument();
+
     const file = new File(["x"], "gummy.webp", { type: "image/webp" });
     fireEvent.change(screen.getByLabelText(labels.imageUpload), {
       target: { files: [file] },
@@ -183,7 +196,11 @@ describe("ProductForm", () => {
     fireEvent.click(screen.getByRole("button", { name: labels.save }));
 
     expect(onSubmit).toHaveBeenCalled();
-    const [, pending] = onSubmit.mock.calls[0] as [unknown, File | null];
+    const [values, pending] = onSubmit.mock.calls[0] as [
+      { costNetPrice: number | null },
+      File | null,
+    ];
+    expect(values.costNetPrice).toBe(4);
     expect(pending).toBeInstanceOf(File);
     expect(pending?.name).toBe("gummy.webp");
   });

@@ -252,6 +252,17 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Pasos:** Igual espíritu Regla 21 usando `packs.purchase_min_quantity` / `purchase_max_quantity` y disponibilidad derivada de componentes (Regla 22).
 - **Fallo:** Rechazar si cantidad fuera de rango o stock insuficiente para el mínimo.
 
+### Regla 26 — Costo de adquisición y margen (productos, admin)
+
+- **Trigger:** Crear/editar/listar producto en admin; export Excel Productos (S4-01).
+- **Pasos:**
+  1. Persistir opcionalmente `catalog.products.cost_net_price` (nullable, `>= 0`) — costo proveedor de la **presentación**.
+  2. Margen derivado (no persistido): `margin = prices.normal.netPrice − cost_net_price`.
+  3. `% = margin / cost_net_price` solo si `cost_net_price > 0`; si costo es `null` o `0` → margen y % = `null` (UI/Excel "—").
+  4. Helper: `@de-tin-marin/shared/product-margin` (`computeProductMargin`).
+- **Alcance:** Solo admin + Excel. **No** exponer en DTOs públicos ecommerce ni en Orders/Pricing de venta.
+- **Fallo:** Rechazar save si `cost_net_price < 0`.
+
 ---
 
 ## Futuro (v2 — no implementar en v1)
@@ -278,3 +289,4 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 19–20 | Delivery / Envases | Tarifa por distrito; stock envase 1:1 sorpresa                     |
 | 21    | Products           | Min/max compra por presentación (default 10/100)                   |
 | 22–25 | Packs / combos     | Sin stock propio, reference/normal, deduct presentaciones, min/max |
+| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |

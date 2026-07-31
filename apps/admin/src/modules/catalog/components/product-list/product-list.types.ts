@@ -7,10 +7,14 @@ export type ProductListLabels = {
     name: string;
     category: string;
     price: string;
+    cost: string;
+    margin: string;
     stock: string;
     status: string;
     actions: string;
   };
+  marginEmpty: string;
+  formatMarginPct: (pct: string) => string;
   statusActive: string;
   statusInactive: string;
   stockOut: string;

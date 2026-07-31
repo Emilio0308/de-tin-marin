@@ -22,6 +22,9 @@ export type CatalogStatusProductRow = {
   finalUnitPrice: number;
   campaignName: string | null;
   campaignPercentage: number | null;
+  costNetPrice: number | null;
+  margin: number | null;
+  marginPct: number | null;
   stockSealedPackages: number;
   stockLooseBaseUnits: number;
   stockTotalBaseUnits: number;

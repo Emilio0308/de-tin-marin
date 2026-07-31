@@ -2,7 +2,7 @@
 
 Exportaciones operativas del backoffice.
 
-Brief: [S4/01-catalog-status-excel.md](../../../../docs/stages/S4/01-catalog-status-excel.md)
+Brief: [S4/01-catalog-status-excel.md](../../../../docs/stages/S4/01-catalog-status-excel.md) · [S4/02-product-cost-margin.md](../../../../docs/stages/S4/02-product-cost-margin.md)
 
 ## Capas
 
@@ -36,7 +36,8 @@ Soft-deleted fuera del export de catálogo; órdenes: todas las filas.
 
 ## Shared
 
-Disponibilidad pack: `@de-tin-marin/shared/pack-availability` (Regla 22) — mismo motor que ecommerce/checkout.
+- Disponibilidad pack: `@de-tin-marin/shared/pack-availability` (Regla 22) — mismo motor que ecommerce/checkout.
+- Margen producto: `@de-tin-marin/shared/product-margin` (Regla 26) — columnas Costo / Margen / Margen % en hoja Productos.
 
 ## UI
 

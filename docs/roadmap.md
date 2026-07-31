@@ -272,6 +272,17 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 **Depends on:** S1A, S1B, S1C, S1E, S1F, S2B
 
+### S4-02 — Costo de venta y margen (productos admin) ✅
+
+**Goal:** Staff carga `cost_net_price`; ve margen/% en form/listado; Excel Productos incluye Costo, Margen, Margen %.
+
+- [x] Migración `00019_product_cost_net_price.sql`
+- [x] Shared `product-margin` (`computeProductMargin`)
+- [x] Admin form/list + Excel S4-01
+- Brief: [`docs/stages/S4/02-product-cost-margin.md`](stages/S4/02-product-cost-margin.md)
+
+**Depends on:** S1A, S1D, S4-01
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

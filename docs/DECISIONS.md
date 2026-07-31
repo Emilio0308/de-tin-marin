@@ -42,6 +42,7 @@
 | 33 | Packs / combos | ✅ | **`catalog.packs` + `pack_items`**. Combo ≠ sorpresa: sin personas, sin envase, BOM fija. Precio JSONB `reference` (suma `product.prices.normal × package_quantity`) + `normal` (admin); **`normal >= reference`**. Descuentos solo vía campaña 1:1 (`campaign_id`). Sin stock propio; disponibilidad y deduct al `paid` descuentan **presentaciones** de componentes. Min/max compra como productos. UI admin: Combos. Futuro (no v1): UOM unidad base / fracciones. Brief: `docs/stages/S1F/01-catalog-packs.md` |
 | 34 | Media CDN (imágenes) | ✅ | **AWS S3 privado + CloudFront (OAC)** vía **CDK TypeScript** en `infra/cdk/`. Stacks **`MediaStaging`** y **`MediaProduction`** (entornos aislados; nombres AWS genéricos). URL CDN en `image_url`. Doc canónica: [`docs/infra.md`](infra.md). Brief: `docs/stages/S0/02-infra-media-cdn.md` |
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · [`infra.md`](infra.md) |
+| 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 
 ## Docs sincronizados (2026-07-28 — catalog_version + Broadcast + funnel)
 
@@ -176,6 +177,13 @@
 - `inventory.md`, `architecture.md` (Reports)
 - `apps/admin/src/modules/reports/README.md`
 - Código: ExcelJS workbook, `exportCatalogStatusAction`, shared `pack-availability`
+
+## Docs sincronizados (2026-07-30 — S4-02 costo / margen producto)
+
+- DECISIONS #36 — `cost_net_price` + margen derivado
+- `docs/stages/S4/02-product-cost-margin.md`
+- `business-rules.md` Regla 26 · `pricing.md` · `database.md` · `roadmap.md` § S4-02
+- Excel Productos + admin form/list; shared `product-margin`
 
 ## Cómo añadir una decisión
 

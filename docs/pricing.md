@@ -48,6 +48,8 @@ type ProductPriceDTO = {
 
 **Reglas:** 2, 9, 10, 11, 12.
 
+> **Costo / margen (admin, DECISIONS #36 / Regla 26):** `cost_net_price` es dato de adquisición; **no** forma parte del pipeline de `finalPrice` ni de DTOs públicos. Margen = `normal.netPrice − cost` (derivado en app vía `computeProductMargin`).
+
 ### B) Sorpresas (bundles) — al crear la orden
 
 Los bundles **no tienen precio fijo en catálogo** para venta. El total se calcula al armar el pedido:
@@ -83,6 +85,7 @@ Línea orden: `unitPrice = finalPrice` congelado; BOM congelada para deduct.
 - Pipeline multi-paso (campaña → cupón → VIP)
 - Tipos `suggested`, `fantasy` (estructura JSONB lista, sin lógica)
 - Envases de sorpresa como ítem inventariado (DECISIONS #30)
+- Margen/costo en packs, bundles o DTOs públicos ecommerce
 
 ## Estructura `prices` en BD
 
@@ -132,8 +135,9 @@ src/modules/pricing/
 
 ## Reglas relacionadas
 
-Reglas 2, 8–12 en [`business-rules.md`](business-rules.md).
+Reglas 2, 8–12, 26 en [`business-rules.md`](business-rules.md).
 
-## Brief refactor precios/stock
+## Briefs
 
-[S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
+- [S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
+- [S4/02-product-cost-margin.md](stages/S4/02-product-cost-margin.md)

@@ -20,6 +20,22 @@ function formatPrice(value: number): string {
   return `S/ ${value.toFixed(2)}`;
 }
 
+function formatMarginPct(
+  marginPct: number | null,
+  labels: ProductListLabels,
+): string {
+  if (marginPct === null) return labels.marginEmpty;
+  return labels.formatMarginPct((marginPct * 100).toFixed(1));
+}
+
+function formatNullableMoney(
+  value: number | null,
+  labels: ProductListLabels,
+): string {
+  if (value === null) return labels.marginEmpty;
+  return formatPrice(value);
+}
+
 function categoryBadgeClass(name: string): string {
   const sum = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return CATEGORY_BADGE_STYLES[sum % CATEGORY_BADGE_STYLES.length] ?? "";
@@ -253,6 +269,8 @@ export function ProductList({
                 labels.columns.name,
                 labels.columns.category,
                 labels.columns.price,
+                labels.columns.cost,
+                labels.columns.margin,
               ].map((label) => (
                 <th
                   key={label}
@@ -312,6 +330,19 @@ export function ProductList({
                   <span className="font-display text-primary text-lg font-extrabold">
                     {formatPrice(product.finalPrice)}
                   </span>
+                </td>
+                <td className="px-6 py-5">
+                  <span className="font-body text-body-md text-on-surface">
+                    {formatNullableMoney(product.costNetPrice, labels)}
+                  </span>
+                </td>
+                <td className="px-6 py-5">
+                  <p className="font-body text-body-md text-on-surface">
+                    {formatNullableMoney(product.margin, labels)}
+                  </p>
+                  <p className="font-body text-on-surface-variant text-xs">
+                    {formatMarginPct(product.marginPct, labels)}
+                  </p>
                 </td>
                 <td className="px-6 py-5">
                   <StockCell
@@ -379,9 +410,21 @@ export function ProductList({
                   </h3>
                 </div>
                 <div className="mt-2 flex items-end justify-between">
-                  <span className="font-display text-primary text-[20px] font-extrabold">
-                    {formatPrice(product.finalPrice)}
-                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-display text-primary text-[20px] font-extrabold">
+                      {formatPrice(product.finalPrice)}
+                    </span>
+                    <span className="font-body text-on-surface-variant text-xs">
+                      {labels.columns.cost}:{" "}
+                      {formatNullableMoney(product.costNetPrice, labels)}
+                      {" · "}
+                      {labels.columns.margin}:{" "}
+                      {formatNullableMoney(product.margin, labels)}
+                      {" ("}
+                      {formatMarginPct(product.marginPct, labels)}
+                      {")"}
+                    </span>
+                  </div>
                   <StockBadge
                     quantity={product.stockTotalBaseUnits}
                     display={product.stockDisplay}

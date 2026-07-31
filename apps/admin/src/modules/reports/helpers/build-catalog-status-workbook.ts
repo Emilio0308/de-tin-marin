@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { roundMoney } from "@de-tin-marin/shared/prices";
 import type {
   CatalogStatusBundleCompositionRow,
   CatalogStatusBundleRow,
@@ -25,6 +26,9 @@ const PRODUCT_HEADERS = [
   "Precio unitario final",
   "Campaña",
   "Campaña %",
+  "Costo",
+  "Margen",
+  "Margen %",
   "Stock sealed",
   "Stock loose",
   "Stock total base",
@@ -97,6 +101,15 @@ type CellValue = string | number | null;
 
 function boolLabel(value: boolean): string {
   return value ? "Sí" : "No";
+}
+
+function nullableCell(value: number | null): number | string {
+  return value === null ? "—" : value;
+}
+
+function marginPctCell(marginPct: number | null): number | string {
+  if (marginPct === null) return "—";
+  return roundMoney(marginPct * 100);
 }
 
 function setColumnWidths(sheet: ExcelJS.Worksheet, widths: number[]): void {
@@ -407,6 +420,9 @@ export async function buildCatalogStatusWorkbook(
         row.finalUnitPrice,
         row.campaignName,
         row.campaignPercentage,
+        nullableCell(row.costNetPrice),
+        nullableCell(row.margin),
+        marginPctCell(row.marginPct),
         row.stockSealedPackages,
         row.stockLooseBaseUnits,
         row.stockTotalBaseUnits,

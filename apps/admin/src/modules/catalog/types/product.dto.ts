@@ -12,6 +12,7 @@ export type ProductFormDTO = {
   packageLabel: string | null;
   packageNetPrice: number;
   unitNetPrice: number;
+  costNetPrice: number | null;
   stockSealedPackages: number;
   stockLooseBaseUnits: number;
   stockTotalBaseUnits: number;

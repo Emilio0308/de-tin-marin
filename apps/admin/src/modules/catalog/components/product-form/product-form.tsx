@@ -15,8 +15,10 @@ import type { ProductFormProps, ProductFormValues } from "./product-form.types";
 import {
   applyProductTypeChange,
   buildInitialProductValues,
+  computeMarginPreview,
   computeStockTotalPreview,
   computeUnitNetPricePreview,
+  formatMarginPctDisplay,
   isAllowedCatalogImageFile,
   isValidImageUrl,
   slugify,
@@ -122,6 +124,11 @@ export function ProductForm({
     values.packageNetPrice,
     values.itemsPerPackage,
   );
+  const marginPreview = computeMarginPreview(
+    values.packageNetPrice,
+    values.costNetPrice,
+  );
+  const marginPctDisplay = formatMarginPctDisplay(marginPreview.marginPct);
   const stockTotalPreview = computeStockTotalPreview(
     values.stockSealedPackages,
     values.stockLooseBaseUnits,
@@ -469,6 +476,52 @@ export function ProductForm({
                 </p>
               </div>
             ) : null}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass} htmlFor="costNetPrice">
+                {labels.costNetPrice}
+              </label>
+              <div className="relative">
+                <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
+                  S/
+                </span>
+                <input
+                  id="costNetPrice"
+                  name="costNetPrice"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={values.costNetPrice ?? ""}
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    setField(
+                      "costNetPrice",
+                      raw === "" ? null : Number(raw) || 0,
+                    );
+                  }}
+                  className={cn(fieldClass, "pl-10")}
+                />
+              </div>
+              <p className="font-body text-on-surface-variant text-xs">
+                {labels.costNetPriceHint}
+              </p>
+            </div>
+            <div className="flex flex-col justify-end gap-1.5">
+              <span className={labelClass}>{labels.margin}</span>
+              <p className="font-body text-body-md text-on-surface">
+                {marginPreview.margin === null
+                  ? labels.marginEmpty
+                  : labels.formatMargin(marginPreview.margin.toFixed(2))}
+              </p>
+              <span className={labelClass}>{labels.marginPct}</span>
+              <p className="font-body text-body-md text-on-surface-variant">
+                {marginPctDisplay === null
+                  ? labels.marginEmpty
+                  : labels.formatMarginPct(marginPctDisplay)}
+              </p>
+            </div>
           </div>
 
           <div className="bg-outline-variant/20 h-px w-full" />

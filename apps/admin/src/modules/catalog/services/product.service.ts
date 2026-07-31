@@ -9,6 +9,7 @@ import {
   buildPricesFromPackageNetPrice,
   roundMoney,
 } from "@de-tin-marin/shared/prices";
+import { computeProductMargin } from "@de-tin-marin/shared/product-margin";
 import {
   computeFinalPrice,
   isCampaignActive,
@@ -84,6 +85,14 @@ function toListItem(
     row.stock_loose_base_units,
     itemsPerPackage,
   );
+  const costNetPrice =
+    row.cost_net_price === null || row.cost_net_price === undefined
+      ? null
+      : Number(row.cost_net_price);
+  const { margin, marginPct } = computeProductMargin({
+    saleNetPrice: packageNetPrice,
+    costNetPrice,
+  });
 
   return {
     id: row.id,
@@ -100,6 +109,9 @@ function toListItem(
     unitNetPrice,
     finalPrice,
     finalUnitPrice,
+    costNetPrice,
+    margin,
+    marginPct,
     campaign:
       campaign && isCampaignActive(campaignForPricing)
         ? {
@@ -142,6 +154,10 @@ function toFormDTO(
     packageLabel: row.package_label,
     packageNetPrice,
     unitNetPrice,
+    costNetPrice:
+      row.cost_net_price === null || row.cost_net_price === undefined
+        ? null
+        : Number(row.cost_net_price),
     stockSealedPackages: row.stock_sealed_packages ?? 0,
     stockLooseBaseUnits: row.stock_loose_base_units ?? 0,
     stockTotalBaseUnits: computeTotalBaseUnits(
@@ -250,6 +266,7 @@ export async function createProductService(
         ? data.packageLabel?.trim() || null
         : null,
     prices: priceCheck.data as Json,
+    cost_net_price: data.costNetPrice ?? null,
     image_url: normalizeImageUrl(data.imageUrl),
     stock_sealed_packages: normalized.stock.sealedPackages,
     stock_loose_base_units: normalized.stock.looseBaseUnits,
@@ -328,6 +345,9 @@ export async function updateProductService(
   }
   if (fields.purchaseMaxQuantity !== undefined) {
     updatePayload.purchase_max_quantity = fields.purchaseMaxQuantity;
+  }
+  if (fields.costNetPrice !== undefined) {
+    updatePayload.cost_net_price = fields.costNetPrice ?? null;
   }
   updatePayload.items_per_package = normalized.itemsPerPackage;
   updatePayload.product_type = normalized.productType;

@@ -35,13 +35,13 @@ Reglas de fetching: [`docs/rules/50-data-fetching-cache-ssr.md`](../../../../doc
 
 ## Rutas y estrategia de datos
 
-| Ruta                                  | SSR                                          | Cliente                                    | Caché           |
-| ------------------------------------- | -------------------------------------------- | ------------------------------------------ | --------------- |
-| `/` — tabs productos/sorpresas/combos | Objetivo (#32)                               | `storefront-page.container` + RQ + versión | Infinity + gate |
-| `/productos/[slug]`                   | Sí — `getPublicProductAction` en `page.tsx`  | Props al container                         | Sin RQ en mount |
-| `/sorpresas/[id]`                     | Sí — `getPublicBundleAction`                 | Props al container                         | Sin RQ en mount |
-| `/combos/[slug]`                      | Sí — `getPublicPackAction`                   | Props al container                         | Sin RQ en mount |
-| `/sorpresas/[id]/personalizar`        | Sí — template vía `getBundleForWizardAction` | Picker + preview en wizard container       | Preview: fresco |
+| Ruta                                  | SSR                                                         | Cliente                                    | Caché           |
+| ------------------------------------- | ----------------------------------------------------------- | ------------------------------------------ | --------------- |
+| `/` — tabs productos/sorpresas/combos | Objetivo (#32)                                              | `storefront-page.container` + RQ + versión | Infinity + gate |
+| `/productos/[slug]`                   | Sí — `getPublicProductAction` + sugerencias misma categoría | Props al container (sin costo/margen)      | Sin RQ en mount |
+| `/sorpresas/[id]`                     | Sí — `getPublicBundleAction`                                | Props al container                         | Sin RQ en mount |
+| `/combos/[slug]`                      | Sí — `getPublicPackAction`                                  | Props al container                         | Sin RQ en mount |
+| `/sorpresas/[id]/personalizar`        | Sí — template vía `getBundleForWizardAction`                | Picker + preview en wizard container       | Preview: fresco |
 
 Filtros del home (categoría, búsqueda, sort, página) viven en `searchParams`; la query key incluye el query completo.
 

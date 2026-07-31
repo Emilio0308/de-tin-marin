@@ -1,4 +1,5 @@
 import { roundMoney } from "@de-tin-marin/shared/prices";
+import { computeProductMargin } from "@de-tin-marin/shared/product-margin";
 import {
   CATALOG_IMAGE_CONTENT_TYPES,
   CATALOG_IMAGE_MAX_BYTES,
@@ -19,6 +20,7 @@ export function buildDefaultProductValues(): ProductFormValues {
     itemsPerPackage: 1,
     packageLabel: "",
     packageNetPrice: 0,
+    costNetPrice: null,
     stockSealedPackages: 0,
     stockLooseBaseUnits: 0,
     purchaseMinQuantity: 10,
@@ -44,6 +46,7 @@ export function buildInitialProductValues(
     itemsPerPackage: initial.itemsPerPackage,
     packageLabel: initial.packageLabel ?? "",
     packageNetPrice: initial.packageNetPrice,
+    costNetPrice: initial.costNetPrice,
     stockSealedPackages: initial.stockSealedPackages,
     stockLooseBaseUnits: initial.stockLooseBaseUnits,
     purchaseMinQuantity: initial.purchaseMinQuantity,
@@ -104,6 +107,23 @@ export function computeUnitNetPricePreview(
 ): number {
   const safeItems = Math.max(1, Math.floor(itemsPerPackage));
   return roundMoney(packageNetPrice / safeItems);
+}
+
+export function computeMarginPreview(
+  packageNetPrice: number,
+  costNetPrice: number | null,
+) {
+  return computeProductMargin({
+    saleNetPrice: packageNetPrice,
+    costNetPrice,
+  });
+}
+
+export function formatMarginPctDisplay(
+  marginPct: number | null,
+): string | null {
+  if (marginPct === null) return null;
+  return roundMoney(marginPct * 100).toFixed(1);
 }
 
 export function computeStockTotalPreview(

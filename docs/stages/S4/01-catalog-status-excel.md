@@ -58,7 +58,7 @@ Staff en el dashboard admin (:3001) elige secciones (productos, sorpresas, packs
 ### Hojas / columnas
 
 - **Meta:** generatedAt (ISO), sections, timezone `UTC`
-- **Productos:** tabla plana (sku, name, description, slug, brand, categoryName, productType, itemsPerPackage, packageLabel, netPrice, unitNetPrice, finalPrice, finalUnitPrice, campaignName, campaignPercentage, stockSealedPackages, stockLooseBaseUnits, stockTotalBaseUnits, stockDisplay, stockInPresentations, purchaseMin/Max, isActive, imageUrl)
+- **Productos:** tabla plana (sku, name, description, slug, brand, categoryName, productType, itemsPerPackage, packageLabel, netPrice, unitNetPrice, finalPrice, finalUnitPrice, campaignName, campaignPercentage, **costNetPrice, margin, marginPct**, stockSealedPackages, stockLooseBaseUnits, stockTotalBaseUnits, stockDisplay, stockInPresentations, purchaseMin/Max, isActive, imageUrl)
 - **Sorpresas:** una hoja; **sección por sorpresa** = bloque datos generales (label/valor: name, description, isActive, quantity, containerSku/Name/NetPrice/Stock, itemCount, itemsSubtotal, containerSubtotal, total, imageUrl) + subtítulo `Componentes` + filas de composición (productSku/Name, unitsPerPerson, unitNetPrice, productIsActive, productStockDisplay). Sin hoja `Sorpresas_composicion`.
 - **Packs:** una hoja; **sección por pack** = bloque datos generales (sku, name, description, slug, reference/normal/final, campaña, itemCount, availableQuantity, purchaseMin/Max, isActive, imageUrl) + subtítulo `Componentes` + filas (productSku/Name, packageQuantity, packageNetPrice, productPresentations, productIsActive). Sin hoja `Packs_composicion`.
 - **Envases:** sku, name, description, netPrice, stockQuantity, isActive, imageUrl

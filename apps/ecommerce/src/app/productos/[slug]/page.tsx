@@ -1,22 +1,36 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import type { PublicProductDetail } from "@de-tin-marin/validations/public-catalog";
 import { getPublicProductAction } from "@/modules/catalog/actions/get-public-product";
+import { listPublicProductsAction } from "@/modules/catalog/actions/list-public-products";
 import { ProductDetailPageContainer } from "@/modules/catalog/components/product-detail-page/product-detail-page.container";
+import { resolveProductTypeLabel } from "@/modules/catalog/components/product-detail-page/product-detail-page.helpers";
+import type { ProductDetailSuggestedItem } from "@/modules/catalog/components/product-detail-page/product-detail-page.types";
 
 type ProductDetailRouteProps = {
   params: Promise<{ slug: string }>;
 };
 
-function resolvePackageBadge(
-  product: PublicProductDetail,
-  packageUnitsLabel: (values: { count: number }) => string,
-): string | null {
-  if (product.productType !== "package") return null;
-  return (
-    product.packageLabel ??
-    packageUnitsLabel({ count: product.itemsPerPackage })
-  );
+async function loadSuggestions(
+  productId: string,
+  categoryId: string,
+): Promise<ProductDetailSuggestedItem[]> {
+  const result = await listPublicProductsAction({
+    categoryId,
+    pageSize: 12,
+    page: 1,
+  });
+  if (!result.ok) return [];
+
+  return result.data.items
+    .filter((item) => item.id !== productId)
+    .slice(0, 6)
+    .map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      finalPrice: item.finalPrice,
+    }));
 }
 
 export default async function ProductDetailRoute({
@@ -31,21 +45,44 @@ export default async function ProductDetailRoute({
     throw new Error(result.error);
   }
 
+  const product = result.data;
+  const suggestions = await loadSuggestions(product.id, product.categoryId);
+
+  const productTypeLabel = resolveProductTypeLabel(product, {
+    productTypeUnit: t("products.productTypeUnit"),
+    packageUnits: (count) => t("products.packageUnits", { count }),
+  });
+
   return (
     <ProductDetailPageContainer
-      product={result.data}
+      product={product}
+      suggestions={suggestions}
       labels={{
         back: t("products.backToList"),
+        dulces: t("products.dulces"),
         sku: t("products.sku"),
         category: t("products.category"),
-        stock: t("products.stock"),
-        addToCart: t("actions.addToCart"),
+        quantity: t("products.quantity"),
+        availability: t("products.availability"),
+        inStock: t("products.inStock", { stock: product.stockDisplay }),
+        outOfStock: t("products.outOfStock"),
+        addToCart: t("products.addToCart"),
         description: t("products.description"),
-        packageBadge: resolvePackageBadge(result.data, (values) =>
-          t("products.packageUnits", values),
-        ),
+        productTypeLabel,
         decreaseQuantity: t("products.decreaseQuantity"),
         increaseQuantity: t("products.increaseQuantity"),
+        relatedTitle: t("products.relatedTitle"),
+        relatedSubtitle: t("products.relatedSubtitle"),
+        viewAll: t("products.viewAll"),
+        completeGiftTitle: t("products.completeGiftTitle"),
+        whyTitle: t("products.whyTitle"),
+        highlightArtisanal: t("products.highlightArtisanal"),
+        highlightFresh: t("products.highlightFresh"),
+        highlightShipping: t("products.highlightShipping"),
+        whyFruit: t("products.whyFruit"),
+        whyTexture: t("products.whyTexture"),
+        whyGift: t("products.whyGift"),
+        whyLove: t("products.whyLove"),
       }}
     />
   );

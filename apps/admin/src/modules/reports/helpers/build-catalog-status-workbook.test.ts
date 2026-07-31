@@ -32,6 +32,9 @@ function sampleData(
         finalUnitPrice: 2,
         campaignName: null,
         campaignPercentage: null,
+        costNetPrice: null,
+        margin: null,
+        marginPct: null,
         stockSealedPackages: 0,
         stockLooseBaseUnits: 0,
         stockTotalBaseUnits: 0,
@@ -142,9 +145,60 @@ describe("buildCatalogStatusWorkbook", () => {
     const products = workbook.getWorksheet("Productos");
     expect(products).toBeTruthy();
     expect(products!.getRow(1).getCell(1).value).toBe("SKU");
+    expect(products!.getRow(1).getCell(16).value).toBe("Costo");
+    expect(products!.getRow(1).getCell(17).value).toBe("Margen");
+    expect(products!.getRow(1).getCell(18).value).toBe("Margen %");
     expect(products!.getRow(2).getCell(1).value).toBe("SKU-1");
-    expect(products!.getRow(2).getCell(23).value).toBe("No");
-    expect(products!.getRow(2).getCell(18).value).toBe(0);
+    expect(products!.getRow(2).getCell(16).value).toBe("—");
+    expect(products!.getRow(2).getCell(17).value).toBe("—");
+    expect(products!.getRow(2).getCell(18).value).toBe("—");
+    expect(products!.getRow(2).getCell(26).value).toBe("No");
+    expect(products!.getRow(2).getCell(21).value).toBe(0);
+  });
+
+  it("incluye costo y margen cuando costNetPrice > 0", async () => {
+    const buffer = await buildCatalogStatusWorkbook(
+      sampleData({
+        products: [
+          {
+            sku: "SKU-2",
+            name: "Chocolate",
+            description: null,
+            slug: "chocolate",
+            brand: null,
+            categoryName: "Dulces",
+            productType: "unit",
+            itemsPerPackage: 1,
+            packageLabel: null,
+            netPrice: 15,
+            unitNetPrice: 15,
+            finalPrice: 15,
+            finalUnitPrice: 15,
+            campaignName: null,
+            campaignPercentage: null,
+            costNetPrice: 10,
+            margin: 5,
+            marginPct: 0.5,
+            stockSealedPackages: 0,
+            stockLooseBaseUnits: 3,
+            stockTotalBaseUnits: 3,
+            stockDisplay: "3 u.",
+            stockInPresentations: 3,
+            purchaseMinQuantity: 10,
+            purchaseMaxQuantity: 100,
+            isActive: true,
+            imageUrl: null,
+          },
+        ],
+      }),
+    );
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+
+    const products = workbook.getWorksheet("Productos");
+    expect(products!.getRow(2).getCell(16).value).toBe(10);
+    expect(products!.getRow(2).getCell(17).value).toBe(5);
+    expect(products!.getRow(2).getCell(18).value).toBe(50);
   });
 
   it("agrupa pack: datos generales y componentes debajo", async () => {
