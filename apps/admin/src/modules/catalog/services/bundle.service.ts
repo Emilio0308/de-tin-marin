@@ -4,6 +4,10 @@ import {
   createBundleInputSchema,
   updateBundleInputSchema,
 } from "@de-tin-marin/validations/bundle";
+import {
+  adminBundleListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { parsePricesJson } from "../repositories/product.repository";
@@ -18,6 +22,7 @@ import {
   hardDeleteBundleRepo,
   insertBundleRepo,
   listBundleItemsByBundleIdsRepo,
+  listBundlesPageRepo,
   listBundlesRepo,
   replaceBundleItemsRepo,
   softDeleteBundleRepo,
@@ -182,6 +187,47 @@ export async function listBundlesService(
   return rows.map((row) =>
     toListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
   );
+}
+
+export async function listBundlesPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<BundleListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminBundleListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, status } = parsed.data;
+  const { rows, total } = await listBundlesPageRepo(
+    config,
+    { search, status },
+    { page, pageSize },
+  );
+
+  if (rows.length === 0) {
+    return { ok: true, data: { items: [], page, pageSize, total } };
+  }
+
+  const containerIds = [...new Set(rows.map((row) => row.container_id))];
+  const containersById = await buildContainersMap(config, containerIds);
+
+  const bundleIds = rows.map((row) => row.id);
+  const allItems = await listBundleItemsByBundleIdsRepo(config, bundleIds);
+
+  const itemsByBundle = new Map<string, BundleItemWithProduct[]>();
+  for (const item of allItems) {
+    const list = itemsByBundle.get(item.bundle_id) ?? [];
+    list.push(item);
+    itemsByBundle.set(item.bundle_id, list);
+  }
+
+  const items = rows.map((row) =>
+    toListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
+  );
+
+  return { ok: true, data: { items, page, pageSize, total } };
 }
 
 export async function getBundleService(

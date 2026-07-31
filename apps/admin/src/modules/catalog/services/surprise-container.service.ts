@@ -4,6 +4,10 @@ import {
   createSurpriseContainerInputSchema,
   updateSurpriseContainerInputSchema,
 } from "@de-tin-marin/validations/surprise-container";
+import {
+  adminContainerListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { buildSinglePriceFromNetPrice } from "@de-tin-marin/shared/prices";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
@@ -11,6 +15,7 @@ import {
   getSurpriseContainerByIdRepo,
   insertSurpriseContainerRepo,
   isContainerSkuTakenRepo,
+  listSurpriseContainersPageRepo,
   listSurpriseContainersRepo,
   parseContainerPricesJson,
   softDeleteSurpriseContainerRepo,
@@ -63,6 +68,34 @@ export async function listSurpriseContainersService(
 ): Promise<SurpriseContainerListItem[]> {
   const rows = await listSurpriseContainersRepo(config);
   return rows.map(toListItem);
+}
+
+export async function listSurpriseContainersPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<SurpriseContainerListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminContainerListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, status } = parsed.data;
+  const { rows, total } = await listSurpriseContainersPageRepo(
+    config,
+    { search, status },
+    { page, pageSize },
+  );
+
+  return {
+    ok: true,
+    data: {
+      items: rows.map(toListItem),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function getSurpriseContainerService(

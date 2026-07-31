@@ -28,7 +28,12 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "signOut": "Cerrar sesión",
-    "viewAll": "Ver todo"
+    "viewAll": "Ver todo",
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {page} de {totalPages}"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -122,6 +127,7 @@
       "loading": "Cargando órdenes…",
       "loadError": "No se pudo cargar el listado de órdenes.",
       "empty": "No hay órdenes todavía.",
+      "pagination": "Mostrando {from}–{to} de {total} órdenes",
       "columns": {
         "orderNumber": "Nº orden",
         "customer": "Cliente",
@@ -325,7 +331,7 @@
     "stockAvailable": "{count} disp.",
     "stockLow": "Bajo stock ({count})",
     "stockOut": "Agotado",
-    "pagination": "Mostrando {shown} de {total} productos",
+    "pagination": "Mostrando {from}–{to} de {total} productos",
     "edit": "Editar",
     "ariaEdit": "Editar {name}",
     "ariaDelete": "Eliminar {name}",
@@ -446,7 +452,7 @@
     "containerShort": "Envase",
     "itemCount": "{count, plural, one {# producto} other {# productos}}",
     "personsValue": "{count, plural, one {# persona} other {# personas}}",
-    "pagination": "Mostrando {shown} de {total} sorpresas",
+    "pagination": "Mostrando {from}–{to} de {total} sorpresas",
     "edit": "Editar",
     "ariaEdit": "Editar {name}",
     "ariaDelete": "Eliminar {name}"
@@ -540,7 +546,7 @@
     "statusDraft": "Borrador",
     "campaignShort": "Campaña",
     "itemCount": "{count, plural, one {# producto} other {# productos}}",
-    "pagination": "Mostrando {shown} de {total} combos",
+    "pagination": "Mostrando {from}–{to} de {total} combos",
     "edit": "Editar",
     "ariaEdit": "Editar {name}",
     "ariaDelete": "Eliminar {name}"
@@ -643,7 +649,7 @@
     "slugPrefix": "/categorias/",
     "orderValue": "Orden #{order}",
     "slugValue": "slug: /{slug}",
-    "pagination": "Mostrando {shown} de {total} categorías",
+    "pagination": "Mostrando {from}–{to} de {total} categorías",
     "edit": "Editar",
     "delete": "Eliminar",
     "ariaEdit": "Editar {name}",
@@ -732,7 +738,7 @@
     "stockCritical": "Crítico",
     "stockOut": "Sin stock",
     "formatPrice": "S/ {amount}",
-    "pagination": "Mostrando {shown} de {total} envases",
+    "pagination": "Mostrando {from}–{to} de {total} envases",
     "edit": "Editar",
     "delete": "Eliminar",
     "ariaEdit": "Editar {name}",

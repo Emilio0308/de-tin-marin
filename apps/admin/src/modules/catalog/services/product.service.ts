@@ -6,6 +6,10 @@ import {
 } from "@de-tin-marin/validations/product";
 import { pricesSchemaWithCoherence } from "@de-tin-marin/validations/prices";
 import {
+  adminProductListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
+import {
   buildPricesFromPackageNetPrice,
   roundMoney,
 } from "@de-tin-marin/shared/prices";
@@ -28,6 +32,7 @@ import {
   isProductSlugTakenRepo,
   isSkuTakenRepo,
   listCampaignsByIdsRepo,
+  listProductsPageRepo,
   listProductsRepo,
   parsePricesJson,
   softDeleteProductRepo,
@@ -202,6 +207,49 @@ export async function listProductsService(
       row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
     ),
   );
+}
+
+export async function listProductsPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<ProductListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminProductListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, categoryId, status } = parsed.data;
+  const { rows, total } = await listProductsPageRepo(
+    config,
+    { search, categoryId, status },
+    { page, pageSize },
+  );
+
+  if (rows.length === 0) {
+    return { ok: true, data: { items: [], page, pageSize, total } };
+  }
+
+  const campaignIds = [
+    ...new Set(
+      rows
+        .map((row) => row.campaign_id)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
+  const campaignById = new Map(
+    campaigns.map((campaign) => [campaign.id, campaign]),
+  );
+
+  const items = rows.map((row) =>
+    toListItem(
+      row,
+      row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
+    ),
+  );
+
+  return { ok: true, data: { items, page, pageSize, total } };
 }
 
 export async function getProductService(

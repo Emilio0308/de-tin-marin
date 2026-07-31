@@ -12,29 +12,37 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 
 ## Server Actions (`actions/`)
 
-| Action                      | Service                     | Descripción                           |
-| --------------------------- | --------------------------- | ------------------------------------- |
-| `listCategoriesAction`      | `listCategoriesService`     | Listado categorías                    |
-| `getCategoryAction`         | `getCategoryService`        | Detalle por id                        |
-| `createCategoryAction`      | `createCategoryService`     | Crear                                 |
-| `updateCategoryAction`      | `updateCategoryService`     | Editar                                |
-| `softDeleteCategoryAction`  | `softDeleteCategoryService` | Soft-delete                           |
-| `listProductsAction`        | `listProductsService`       | Listado + `finalPrice` + costo/margen |
-| `getProductAction`          | `getProductService`         | Detalle por id                        |
-| `createProductAction`       | `createProductService`      | Crear (+ `costNetPrice` opcional)     |
-| `updateProductAction`       | `updateProductService`      | Editar                                |
-| `softDeleteProductAction`   | `softDeleteProductService`  | Soft-delete                           |
-| `listBundlesAction`         | `listBundlesService`        | Listado + total calculado             |
-| `getBundleAction`           | `getBundleService`          | Detalle + items                       |
-| `createBundleAction`        | `createBundleService`       | Crear                                 |
-| `updateBundleAction`        | `updateBundleService`       | Editar                                |
-| `softDeleteBundleAction`    | `softDeleteBundleService`   | Soft-delete                           |
-| `listPacksAction`           | `listPacksService`          | Listado combos + `finalPrice`         |
-| `getPackAction`             | `getPackService`            | Detalle + items + reference/normal    |
-| `createPackAction`          | `createPackService`         | Crear (`normal >= reference`)         |
-| `updatePackAction`          | `updatePackService`         | Editar                                |
-| `softDeletePackAction`      | `softDeletePackService`     | Soft-delete                           |
-| `listActiveCampaignsAction` | —                           | Campañas activas para select de pack  |
+| Action                             | Service                             | Descripción                                             |
+| ---------------------------------- | ----------------------------------- | ------------------------------------------------------- |
+| `listCategoriesAction`             | `listCategoriesService`             | Listado completo (selects/forms)                        |
+| `listCategoriesPageAction`         | `listCategoriesPageService`         | Listado paginado (SQL `count` + `range`)                |
+| `getCategoryAction`                | `getCategoryService`                | Detalle por id                                          |
+| `createCategoryAction`             | `createCategoryService`             | Crear                                                   |
+| `updateCategoryAction`             | `updateCategoryService`             | Editar                                                  |
+| `softDeleteCategoryAction`         | `softDeleteCategoryService`         | Soft-delete                                             |
+| `listProductsAction`               | `listProductsService`               | Listado completo + `finalPrice` + costo/margen          |
+| `listProductsPageAction`           | `listProductsPageService`           | Listado paginado (`search`/`categoryId`/`status`)       |
+| `getProductAction`                 | `getProductService`                 | Detalle por id                                          |
+| `createProductAction`              | `createProductService`              | Crear (+ `costNetPrice` opcional)                       |
+| `updateProductAction`              | `updateProductService`              | Editar                                                  |
+| `softDeleteProductAction`          | `softDeleteProductService`          | Soft-delete                                             |
+| `listBundlesAction`                | `listBundlesService`                | Listado completo + total calculado                      |
+| `listBundlesPageAction`            | `listBundlesPageService`            | Listado paginado (`search`/`status`)                    |
+| `getBundleAction`                  | `getBundleService`                  | Detalle + items                                         |
+| `createBundleAction`               | `createBundleService`               | Crear                                                   |
+| `updateBundleAction`               | `updateBundleService`               | Editar                                                  |
+| `softDeleteBundleAction`           | `softDeleteBundleService`           | Soft-delete                                             |
+| `listPacksAction`                  | `listPacksService`                  | Listado completo combos + `finalPrice`                  |
+| `listPacksPageAction`              | `listPacksPageService`              | Listado paginado (`search`/`status`)                    |
+| `getPackAction`                    | `getPackService`                    | Detalle + items + reference/normal                      |
+| `createPackAction`                 | `createPackService`                 | Crear (`normal >= reference`)                           |
+| `updatePackAction`                 | `updatePackService`                 | Editar                                                  |
+| `softDeletePackAction`             | `softDeletePackService`             | Soft-delete                                             |
+| `listSurpriseContainersAction`     | `listSurpriseContainersService`     | Listado completo envases (selects)                      |
+| `listSurpriseContainersPageAction` | `listSurpriseContainersPageService` | Listado paginado (`search`/`status` incl. `outOfStock`) |
+| `listActiveCampaignsAction`        | —                                   | Campañas activas para select de pack                    |
+
+Listados admin (`/categories`, `/products`, `/bundles`, `/packs`, `/containers`): paginación SQL real (`count: "exact"` + `.range()`) vía `*PageRepo` → `*PageService` → `*PageAction`, con `page`/`pageSize`/`search`/`status` (y `categoryId` en productos) parseados con `@de-tin-marin/validations/admin-list`. Los `list*Action()` sin sufijo `Page` se conservan para selects de formularios (dropdowns) que necesitan el catálogo completo.
 
 Imágenes de catálogo: `createCatalogImageUploadUrlAction` — preview local; PUT S3 al Guardar (DECISIONS #35).
 
@@ -57,10 +65,11 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 
 ## Repositories (`repositories/`)
 
-- `category.repository.ts`
-- `product.repository.ts`
-- `bundle.repository.ts`
-- `pack.repository.ts`
+- `category.repository.ts` — `listCategoriesPageRepo` (search name/slug, status, orden `sort_order`)
+- `product.repository.ts` — `listProductsPageRepo` (search name/sku, categoryId, status, orden `name`)
+- `bundle.repository.ts` — `listBundlesPageRepo` (search name, status, orden `created_at desc`)
+- `pack.repository.ts` — `listPacksPageRepo` (search name/sku, status, orden `created_at desc`)
+- `surprise-container.repository.ts` — `listSurpriseContainersPageRepo` (search name/sku, status incl. `outOfStock`, orden `name`)
 - `catalog-cache-meta.repository.ts` — `bumpCatalogVersionSafe` (RPC; no lanza)
 
 ## Caché tienda
@@ -82,8 +91,12 @@ Mutaciones de catálogo (y confirmación de pago con deduct en orders) hacen bum
 
 ## Validaciones (Zod)
 
-`@de-tin-marin/validations/category` · `product` · `bundle` · `pack` · `prices`
+`@de-tin-marin/validations/category` · `product` · `bundle` · `pack` · `prices` · **`admin-list`** (paginación/filtros de listados)
 
 ## Auth
 
 Todas las actions: `guardAction` + `requireStaff` → `core.user_roles`.
+
+## Paginación listados
+
+Ver brief [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-list-pagination.md). UI compartida: `AdminTablePagination`; URL: `shared/helpers/admin-list-url.ts`.

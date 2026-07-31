@@ -19,7 +19,8 @@
     "./customize-bundle": "./src/customize-bundle.ts",
     "./checkout": "./src/checkout.ts",
     "./guest-order": "./src/guest-order.ts",
-    "./hero": "./src/hero.ts"
+    "./hero": "./src/hero.ts",
+    "./admin-list": "./src/admin-list.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

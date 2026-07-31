@@ -4,11 +4,16 @@ import {
   createCategoryInputSchema,
   updateCategoryInputSchema,
 } from "@de-tin-marin/validations/category";
+import {
+  adminCategoryListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   getCategoryByIdRepo,
   insertCategoryRepo,
   isCategorySlugTakenRepo,
+  listCategoriesPageRepo,
   listCategoriesRepo,
   softDeleteCategoryRepo,
   updateCategoryRepo,
@@ -47,6 +52,34 @@ export async function listCategoriesService(
 ): Promise<CategoryListItem[]> {
   const rows = await listCategoriesRepo(config);
   return rows.map(toListItem);
+}
+
+export async function listCategoriesPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<CategoryListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminCategoryListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, status } = parsed.data;
+  const { rows, total } = await listCategoriesPageRepo(
+    config,
+    { search, status },
+    { page, pageSize },
+  );
+
+  return {
+    ok: true,
+    data: {
+      items: rows.map(toListItem),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function getCategoryService(

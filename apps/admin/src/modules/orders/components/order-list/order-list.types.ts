@@ -16,9 +16,19 @@ export type OrderListLabels = {
   statusLabels: Record<string, string>;
   paymentStatusLabels: Record<string, string>;
   formatLines: (count: number) => string;
+  pagination: {
+    summary: string;
+    previous: string;
+    next: string;
+    page: string;
+  };
 };
 
 export type OrderListProps = {
   orders: OrderListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
   labels: OrderListLabels;
+  onPageChange: (page: number) => void;
 };

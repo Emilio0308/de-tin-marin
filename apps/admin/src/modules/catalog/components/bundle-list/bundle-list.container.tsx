@@ -1,19 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
+import { adminListPageBounds } from "@de-tin-marin/validations/admin-list";
 import { Button } from "@de-tin-marin/ui/button";
-import { listBundlesAction } from "@/modules/catalog/actions/list-bundles";
+import { listBundlesPageAction } from "@/modules/catalog/actions/list-bundles";
 import { softDeleteBundleAction } from "@/modules/catalog/actions/soft-delete-bundle";
+import {
+  buildAdminListSearchParams,
+  readAdminBundleListQuery,
+} from "@/shared/helpers/admin-list-url";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { BundleList } from "./bundle-list";
 import type { BundleListLabels } from "./bundle-list.types";
 
 type StatusFilter = "all" | "active" | "draft";
+
+function statusToQuery(value: StatusFilter): "all" | "active" | "inactive" {
+  return value === "draft" ? "inactive" : value;
+}
+
+function statusFromQuery(value: "all" | "active" | "inactive"): StatusFilter {
+  return value === "inactive" ? "draft" : value;
+}
 
 function FilterChip({
   label,
@@ -48,14 +62,25 @@ function FilterChip({
 
 export function BundleListContainer() {
   const t = useTranslations("bundles");
+  const tCommon = useTranslations("common.pagination");
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const listQuery = useMemo(
+    () => readAdminBundleListQuery(searchParams),
+    [searchParams],
+  );
+
+  const [searchDraft, setSearchDraft] = useState(
+    () => searchParams.get("search") ?? "",
+  );
 
   const bundlesQuery = useQuery({
-    queryKey: queryKeys.catalog.bundles(),
+    queryKey: queryKeys.catalog.bundlesPage(listQuery),
     queryFn: async () => {
-      const result = await listBundlesAction();
+      const result = await listBundlesPageAction(listQuery);
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -75,24 +100,26 @@ export function BundleListContainer() {
     },
   });
 
+  function pushParams(updates: Record<string, string | undefined>) {
+    const params = buildAdminListSearchParams(searchParams, updates);
+    startTransition(() => {
+      router.push(`/bundles?${params.toString()}`, { scroll: false });
+    });
+  }
+
   function handleDelete(id: string) {
     if (!window.confirm(t("deleteConfirm"))) return;
     deleteMutation.mutate(id);
   }
 
-  const bundles = useMemo(() => bundlesQuery.data ?? [], [bundlesQuery.data]);
-
-  const filteredBundles = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return bundles.filter((bundle) => {
-      const matchesSearch =
-        term === "" || bundle.name.toLowerCase().includes(term);
-      const matchesStatus =
-        status === "all" ||
-        (status === "active" ? bundle.isActive : !bundle.isActive);
-      return matchesSearch && matchesStatus;
-    });
-  }, [bundles, search, status]);
+  const page = bundlesQuery.data?.page ?? listQuery.page;
+  const pageSize = bundlesQuery.data?.pageSize ?? listQuery.pageSize;
+  const total = bundlesQuery.data?.total ?? 0;
+  const items = bundlesQuery.data?.items ?? [];
+  const bounds = adminListPageBounds(page, pageSize, total, items.length);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasActiveFilters =
+    Boolean(listQuery.search) || listQuery.status !== "all";
 
   const labels: BundleListLabels = useMemo(
     () => ({
@@ -111,11 +138,20 @@ export function BundleListContainer() {
       emptyFiltered: t("emptyFiltered"),
       formatItemCount: (count) => t("itemCount", { count }),
       formatPersons: (count) => t("personsValue", { count }),
-      formatPagination: (shown, total) => t("pagination", { shown, total }),
+      pagination: {
+        summary: t("pagination", {
+          from: bounds.from,
+          to: bounds.to,
+          total,
+        }),
+        previous: tCommon("previous"),
+        next: tCommon("next"),
+        page: tCommon("page", { page, totalPages }),
+      },
       formatAriaEdit: (name) => t("ariaEdit", { name }),
       formatAriaDelete: (name) => t("ariaDelete", { name }),
     }),
-    [t],
+    [t, tCommon, bounds.from, bounds.to, total, page, totalPages],
   );
 
   return (
@@ -141,24 +177,41 @@ export function BundleListContainer() {
       </header>
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
+        <form
+          className="relative w-full sm:max-w-xs"
+          onSubmit={(event) => {
+            event.preventDefault();
+            pushParams({
+              search: searchDraft.trim() || undefined,
+              page: "1",
+            });
+          }}
+        >
           <Search
             className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
             aria-hidden
           />
           <input
             type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             placeholder={t("search.placeholder")}
             aria-label={t("search.label")}
             className="border-outline-variant/30 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus:border-secondary font-body h-12 w-full rounded-xl border-2 pl-12 pr-4 text-sm outline-none transition-colors"
           />
-        </div>
+        </form>
         <FilterChip
           label={t("filters.status")}
-          value={status}
-          onChange={(value) => setStatus(value as StatusFilter)}
+          value={statusFromQuery(listQuery.status)}
+          onChange={(value) =>
+            pushParams({
+              status:
+                value === "all"
+                  ? undefined
+                  : statusToQuery(value as StatusFilter),
+              page: "1",
+            })
+          }
           options={[
             { value: "all", label: t("filters.statusAll") },
             { value: "active", label: t("filters.statusActive") },
@@ -181,10 +234,14 @@ export function BundleListContainer() {
         </div>
       ) : (
         <BundleList
-          bundles={filteredBundles}
-          totalCount={bundles.length}
+          bundles={items}
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          hasActiveFilters={hasActiveFilters}
           labels={labels}
           onDelete={handleDelete}
+          onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
           deletingId={
             deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
           }

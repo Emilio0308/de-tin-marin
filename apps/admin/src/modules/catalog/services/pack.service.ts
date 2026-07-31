@@ -4,6 +4,10 @@ import {
   createPackInputSchema,
   updatePackInputSchema,
 } from "@de-tin-marin/validations/pack";
+import {
+  adminPackListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { computePackReference } from "@de-tin-marin/shared/pack-price";
 import {
   buildPackPrices,
@@ -30,6 +34,7 @@ import {
   isPackSkuTakenRepo,
   isPackSlugTakenRepo,
   listPackItemsByPackIdsRepo,
+  listPacksPageRepo,
   listPacksRepo,
   replacePackItemsRepo,
   softDeletePackRepo,
@@ -245,6 +250,60 @@ export async function listPacksService(
       row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
     ),
   );
+}
+
+export async function listPacksPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<PackListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminPackListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, status } = parsed.data;
+  const { rows, total } = await listPacksPageRepo(
+    config,
+    { search, status },
+    { page, pageSize },
+  );
+
+  if (rows.length === 0) {
+    return { ok: true, data: { items: [], page, pageSize, total } };
+  }
+
+  const campaignIds = [
+    ...new Set(
+      rows
+        .map((row) => row.campaign_id)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
+  const campaignById = new Map(
+    campaigns.map((campaign) => [campaign.id, campaign]),
+  );
+
+  const packIds = rows.map((row) => row.id);
+  const allItems = await listPackItemsByPackIdsRepo(config, packIds);
+
+  const itemsByPack = new Map<string, PackItemWithProduct[]>();
+  for (const item of allItems) {
+    const list = itemsByPack.get(item.pack_id) ?? [];
+    list.push(item);
+    itemsByPack.set(item.pack_id, list);
+  }
+
+  const items = rows.map((row) =>
+    toListItem(
+      row,
+      itemsByPack.get(row.id) ?? [],
+      row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
+    ),
+  );
+
+  return { ok: true, data: { items, page, pageSize, total } };
 }
 
 export async function getPackService(

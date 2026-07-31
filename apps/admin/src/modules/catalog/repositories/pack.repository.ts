@@ -45,6 +45,56 @@ export async function listPacksRepo(
   return (data ?? []) as PackRow[];
 }
 
+export type PackListFilters = {
+  search?: string;
+  status?: "all" | "active" | "inactive";
+};
+
+export type PackListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+function escapeIlike(term: string): string {
+  return term.replace(/[%_\\]/g, "\\$&");
+}
+
+export async function listPacksPageRepo(
+  config: SupabaseConfig,
+  filters: PackListFilters,
+  pagination: PackListPagination,
+): Promise<{ rows: PackRow[]; total: number }> {
+  const supabase = await createSupabaseServerClient(config);
+  const { page, pageSize } = pagination;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .schema("catalog")
+    .from("packs")
+    .select("*", { count: "exact" })
+    .is("deleted_at", null);
+
+  if (filters.status === "active") {
+    query = query.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  if (filters.search) {
+    const term = `%${escapeIlike(filters.search)}%`;
+    query = query.or(`name.ilike.${term},sku.ilike.${term}`);
+  }
+
+  const { data, error, count } = await query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) throw new Error(error.message);
+  return { rows: (data ?? []) as PackRow[], total: count ?? 0 };
+}
+
 export async function getPackByIdRepo(
   config: SupabaseConfig,
   id: string,

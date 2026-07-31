@@ -1,19 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
+import { adminListPageBounds } from "@de-tin-marin/validations/admin-list";
 import { Button } from "@de-tin-marin/ui/button";
-import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
+import { listCategoriesPageAction } from "@/modules/catalog/actions/list-categories";
 import { softDeleteCategoryAction } from "@/modules/catalog/actions/soft-delete-category";
+import {
+  buildAdminListSearchParams,
+  readAdminCategoryListQuery,
+} from "@/shared/helpers/admin-list-url";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { CategoryList } from "./category-list";
 import type { CategoryListLabels } from "./category-list.types";
-
-type StatusFilter = "all" | "active" | "inactive";
 
 function FilterChip({
   label,
@@ -48,14 +52,25 @@ function FilterChip({
 
 export function CategoryListContainer() {
   const t = useTranslations("categories");
+  const tCommon = useTranslations("common.pagination");
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const listQuery = useMemo(
+    () => readAdminCategoryListQuery(searchParams),
+    [searchParams],
+  );
+
+  const [searchDraft, setSearchDraft] = useState(
+    () => searchParams.get("search") ?? "",
+  );
 
   const categoriesQuery = useQuery({
-    queryKey: queryKeys.catalog.categories(),
+    queryKey: queryKeys.catalog.categoriesPage(listQuery),
     queryFn: async () => {
-      const result = await listCategoriesAction();
+      const result = await listCategoriesPageAction(listQuery);
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -75,29 +90,26 @@ export function CategoryListContainer() {
     },
   });
 
+  function pushParams(updates: Record<string, string | undefined>) {
+    const params = buildAdminListSearchParams(searchParams, updates);
+    startTransition(() => {
+      router.push(`/categories?${params.toString()}`, { scroll: false });
+    });
+  }
+
   function handleDelete(id: string) {
     if (!window.confirm(t("deleteConfirm"))) return;
     deleteMutation.mutate(id);
   }
 
-  const categories = useMemo(
-    () => categoriesQuery.data ?? [],
-    [categoriesQuery.data],
-  );
-
-  const filteredCategories = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return categories.filter((category) => {
-      const matchesSearch =
-        term === "" ||
-        category.name.toLowerCase().includes(term) ||
-        category.slug.toLowerCase().includes(term);
-      const matchesStatus =
-        status === "all" ||
-        (status === "active" ? category.isActive : !category.isActive);
-      return matchesSearch && matchesStatus;
-    });
-  }, [categories, search, status]);
+  const page = categoriesQuery.data?.page ?? listQuery.page;
+  const pageSize = categoriesQuery.data?.pageSize ?? listQuery.pageSize;
+  const total = categoriesQuery.data?.total ?? 0;
+  const items = categoriesQuery.data?.items ?? [];
+  const bounds = adminListPageBounds(page, pageSize, total, items.length);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasActiveFilters =
+    Boolean(listQuery.search) || listQuery.status !== "all";
 
   const labels: CategoryListLabels = useMemo(
     () => ({
@@ -118,11 +130,20 @@ export function CategoryListContainer() {
       emptyFiltered: t("emptyFiltered"),
       formatOrder: (order) => t("orderValue", { order }),
       formatSlug: (slug) => t("slugValue", { slug }),
-      formatPagination: (shown, total) => t("pagination", { shown, total }),
+      pagination: {
+        summary: t("pagination", {
+          from: bounds.from,
+          to: bounds.to,
+          total,
+        }),
+        previous: tCommon("previous"),
+        next: tCommon("next"),
+        page: tCommon("page", { page, totalPages }),
+      },
       formatAriaEdit: (name) => t("ariaEdit", { name }),
       formatAriaDelete: (name) => t("ariaDelete", { name }),
     }),
-    [t],
+    [t, tCommon, bounds.from, bounds.to, total, page, totalPages],
   );
 
   return (
@@ -145,24 +166,38 @@ export function CategoryListContainer() {
       </header>
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
+        <form
+          className="relative w-full sm:max-w-xs"
+          onSubmit={(event) => {
+            event.preventDefault();
+            pushParams({
+              search: searchDraft.trim() || undefined,
+              page: "1",
+            });
+          }}
+        >
           <Search
             className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
             aria-hidden
           />
           <input
             type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             placeholder={t("search.placeholder")}
             aria-label={t("search.label")}
             className="border-outline-variant/30 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus:border-secondary font-body h-12 w-full rounded-xl border-2 pl-12 pr-4 text-sm outline-none transition-colors"
           />
-        </div>
+        </form>
         <FilterChip
           label={t("filters.status")}
-          value={status}
-          onChange={(value) => setStatus(value as StatusFilter)}
+          value={listQuery.status}
+          onChange={(value) =>
+            pushParams({
+              status: value === "all" ? undefined : value,
+              page: "1",
+            })
+          }
           options={[
             { value: "all", label: t("filters.statusAll") },
             { value: "active", label: t("filters.statusActive") },
@@ -185,10 +220,14 @@ export function CategoryListContainer() {
         </div>
       ) : (
         <CategoryList
-          categories={filteredCategories}
-          totalCount={categories.length}
+          categories={items}
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          hasActiveFilters={hasActiveFilters}
           labels={labels}
           onDelete={handleDelete}
+          onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
           deletingId={
             deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
           }

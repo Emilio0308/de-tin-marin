@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { SurpriseContainerListItem } from "@/modules/catalog/types/surprise-container.dto";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import { isLowStock } from "../container-form/container-form.helpers";
 import type {
   ContainerListLabels,
@@ -227,15 +228,19 @@ function StatsBar({
 
 export function ContainerList({
   containers,
-  totalCount,
+  page,
+  pageSize,
+  total,
+  hasActiveFilters,
   totalStockUnits,
   lowStockCount,
   labels,
   onDelete,
+  onPageChange,
   deletingId,
 }: ContainerListProps) {
   if (containers.length === 0) {
-    return <EmptyState hasContainers={totalCount > 0} labels={labels} />;
+    return <EmptyState hasContainers={hasActiveFilters} labels={labels} />;
   }
 
   return (
@@ -319,11 +324,16 @@ export function ContainerList({
             ))}
           </tbody>
         </table>
-        <div className="bg-surface-container-low border-outline-variant/10 border-t px-6 py-4">
-          <p className="font-label text-label-bold text-on-surface-variant text-xs">
-            {labels.formatPagination(containers.length, totalCount)}
-          </p>
-        </div>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       <div className="flex flex-col gap-4 lg:hidden">
@@ -363,6 +373,16 @@ export function ContainerList({
             />
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       <StatsBar

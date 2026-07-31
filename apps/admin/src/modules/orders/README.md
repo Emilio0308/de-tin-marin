@@ -14,7 +14,8 @@ actions/ → services/ → repositories/ → Supabase schema commerce
 
 | Action                         | Service                         | Descripción                                     |
 | ------------------------------ | ------------------------------- | ----------------------------------------------- |
-| `listOrdersAction`             | `listOrdersService`             | Listado                                         |
+| `listOrdersAction`             | `listOrdersService`             | Listado completo (dashboard)                    |
+| `listOrdersPageAction`         | `listOrdersPageService`         | Listado paginado (SQL `count` + `range`)        |
 | `getOrderAction`               | `getOrderService`               | Detalle + pagos + envío                         |
 | `createOrderAction`            | `createOrderService`            | Crear → `pending_payment`                       |
 | `cancelOrderAction`            | `cancelOrderService`            | Cancelar desde `pending_payment`                |
@@ -37,7 +38,7 @@ Container: `order-form.container.tsx`
 
 ## Services
 
-- `order.service.ts` — carrito congelado, transiciones
+- `order.service.ts` — carrito congelado, transiciones. `listOrdersPageService` valida `page`/`pageSize` con `@de-tin-marin/validations/admin-list` (orden `created_at desc`, sin filtros)
 - `order-preview.service.ts` — preview bundle/cart (`buildOrderCartWithTotals`)
 - `payment.service.ts` — confirmar / reembolsar pago (deduct atómico S2A)
 - `shipment.service.ts` — upsert envío
@@ -62,4 +63,6 @@ Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock c
 
 ## Validaciones
 
-`@de-tin-marin/validations/order` · `payment` · `shipment`
+`@de-tin-marin/validations/order` · `payment` · `shipment` · **`admin-list`** (`listOrdersPageAction`)
+
+Paginación `/orders`: mismos patrones que catálogo — [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-list-pagination.md).

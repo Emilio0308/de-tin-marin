@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, Candy, Package, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { ProductListItem } from "@de-tin-marin/validations/product";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import type { ProductListLabels, ProductListProps } from "./product-list.types";
 
 const LOW_STOCK_THRESHOLD = 10;
@@ -245,15 +246,19 @@ function EmptyState({
 
 export function ProductList({
   products,
-  totalCount,
+  page,
+  pageSize,
+  total,
+  hasActiveFilters,
   labels,
   onDelete,
+  onPageChange,
   deletingId,
   onToggleActive,
   togglingId,
 }: ProductListProps) {
   if (products.length === 0) {
-    return <EmptyState hasProducts={totalCount > 0} labels={labels} />;
+    return <EmptyState hasProducts={hasActiveFilters} labels={labels} />;
   }
 
   return (
@@ -370,11 +375,16 @@ export function ProductList({
             ))}
           </tbody>
         </table>
-        <div className="bg-surface-container-low border-outline-variant/10 border-t px-6 py-4">
-          <p className="font-label text-label-bold text-on-surface-variant text-xs">
-            {labels.formatPagination(products.length, totalCount)}
-          </p>
-        </div>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       {/* Móvil: tarjetas de producto */}
@@ -463,6 +473,16 @@ export function ProductList({
             </div>
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
     </>
   );

@@ -194,6 +194,19 @@
 - Migración `00020_hero_web_customization.sql`
 - Admin `/web-customization` · ecommerce `getPublicHeroConfig` + hero carousel/static + fallback
 
+## Docs sincronizados (2026-07-31 — S3A-1-R paginación catálogo público)
+
+- Migración `00021_list_public_catalog_rpcs.sql` — `list_public_bundles` / `list_public_packs` + `campaigns_select_public`
+- `docs/stages/S3A/01-remediation-catalog-pagination-sql.md` — cerrado
+- `docs/database.md` · `docs/campaigns.md` · README ecommerce catalog
+- Productos: PostgREST count + range (sin RPC)
+
+## Docs sincronizados (2026-07-31 — S3B paginación listados admin)
+
+- `docs/stages/S3B/01-admin-list-pagination.md`
+- `docs/roadmap.md` § S3B · `docs/rules/50-data-fetching-cache-ssr.md`
+- READMEs admin catalog/orders · `@de-tin-marin/validations/admin-list`
+
 ## Cómo añadir una decisión
 
 1. Agregar fila con estado `⏳ Abierto` o `✅` resuelta.

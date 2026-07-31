@@ -1,21 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
+import { adminListPageBounds } from "@de-tin-marin/validations/admin-list";
 import { Button } from "@de-tin-marin/ui/button";
 import type { ProductListItem } from "@de-tin-marin/validations/product";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
+import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
+import { listProductsPageAction } from "@/modules/catalog/actions/list-products";
 import { softDeleteProductAction } from "@/modules/catalog/actions/soft-delete-product";
 import { updateProductAction } from "@/modules/catalog/actions/update-product";
+import {
+  buildAdminListSearchParams,
+  readAdminProductListQuery,
+} from "@/shared/helpers/admin-list-url";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { ProductList } from "./product-list";
 import type { ProductListLabels } from "./product-list.types";
-
-type StatusFilter = "all" | "active" | "inactive";
 
 function FilterChip({
   label,
@@ -50,15 +55,36 @@ function FilterChip({
 
 export function ProductListContainer() {
   const t = useTranslations("products");
+  const tCommon = useTranslations("common.pagination");
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const listQuery = useMemo(
+    () => readAdminProductListQuery(searchParams),
+    [searchParams],
+  );
+
+  const [searchDraft, setSearchDraft] = useState(
+    () => searchParams.get("search") ?? "",
+  );
+
+  const categoriesQuery = useQuery({
+    queryKey: queryKeys.catalog.categories(),
+    queryFn: async () => {
+      const result = await listCategoriesAction();
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
+      return result.data;
+    },
+  });
 
   const productsQuery = useQuery({
-    queryKey: queryKeys.catalog.products(),
+    queryKey: queryKeys.catalog.productsPage(listQuery),
     queryFn: async () => {
-      const result = await listProductsAction();
+      const result = await listProductsPageAction(listQuery);
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -93,6 +119,13 @@ export function ProductListContainer() {
     },
   });
 
+  function pushParams(updates: Record<string, string | undefined>) {
+    const params = buildAdminListSearchParams(searchParams, updates);
+    startTransition(() => {
+      router.push(`/products?${params.toString()}`, { scroll: false });
+    });
+  }
+
   function handleDelete(id: string) {
     if (!window.confirm(t("deleteConfirm"))) return;
     deleteMutation.mutate(id);
@@ -102,34 +135,21 @@ export function ProductListContainer() {
     toggleMutation.mutate(product);
   }
 
-  const products = useMemo(
-    () => productsQuery.data ?? [],
-    [productsQuery.data],
-  );
-
   const categories = useMemo(
-    () =>
-      Array.from(new Set(products.map((product) => product.categoryName))).sort(
-        (a, b) => a.localeCompare(b),
-      ),
-    [products],
+    () => categoriesQuery.data ?? [],
+    [categoriesQuery.data],
   );
 
-  const filteredProducts = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return products.filter((product) => {
-      const matchesSearch =
-        term === "" ||
-        product.name.toLowerCase().includes(term) ||
-        product.sku.toLowerCase().includes(term);
-      const matchesCategory =
-        category === "all" || product.categoryName === category;
-      const matchesStatus =
-        status === "all" ||
-        (status === "active" ? product.isActive : !product.isActive);
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-  }, [products, search, category, status]);
+  const page = productsQuery.data?.page ?? listQuery.page;
+  const pageSize = productsQuery.data?.pageSize ?? listQuery.pageSize;
+  const total = productsQuery.data?.total ?? 0;
+  const items = productsQuery.data?.items ?? [];
+  const bounds = adminListPageBounds(page, pageSize, total, items.length);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasActiveFilters =
+    Boolean(listQuery.search) ||
+    Boolean(listQuery.categoryId) ||
+    listQuery.status !== "all";
 
   const labels: ProductListLabels = useMemo(
     () => ({
@@ -157,11 +177,20 @@ export function ProductListContainer() {
       formatMarginPct: (pct) => t("formatMarginPct", { pct }),
       formatStockAvailable: (count) => t("stockAvailable", { count }),
       formatStockLow: (count) => t("stockLow", { count }),
-      formatPagination: (shown, total) => t("pagination", { shown, total }),
+      pagination: {
+        summary: t("pagination", {
+          from: bounds.from,
+          to: bounds.to,
+          total,
+        }),
+        previous: tCommon("previous"),
+        next: tCommon("next"),
+        page: tCommon("page", { page, totalPages }),
+      },
       formatAriaEdit: (name) => t("ariaEdit", { name }),
       formatAriaDelete: (name) => t("ariaDelete", { name }),
     }),
-    [t],
+    [t, tCommon, bounds.from, bounds.to, total, page, totalPages],
   );
 
   return (
@@ -184,34 +213,56 @@ export function ProductListContainer() {
       </header>
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
+        <form
+          className="relative w-full sm:max-w-xs"
+          onSubmit={(event) => {
+            event.preventDefault();
+            pushParams({
+              search: searchDraft.trim() || undefined,
+              page: "1",
+            });
+          }}
+        >
           <Search
             className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
             aria-hidden
           />
           <input
             type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             placeholder={t("search.placeholder")}
             aria-label={t("search.label")}
             className="border-outline-variant/30 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus:border-secondary font-body h-12 w-full rounded-xl border-2 pl-12 pr-4 text-sm outline-none transition-colors"
           />
-        </div>
+        </form>
         <div className="flex flex-wrap items-center gap-3">
           <FilterChip
             label={t("filters.category")}
-            value={category}
-            onChange={setCategory}
+            value={listQuery.categoryId ?? "all"}
+            onChange={(value) =>
+              pushParams({
+                categoryId: value === "all" ? undefined : value,
+                page: "1",
+              })
+            }
             options={[
               { value: "all", label: t("filters.categoryAll") },
-              ...categories.map((name) => ({ value: name, label: name })),
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.name,
+              })),
             ]}
           />
           <FilterChip
             label={t("filters.status")}
-            value={status}
-            onChange={(value) => setStatus(value as StatusFilter)}
+            value={listQuery.status}
+            onChange={(value) =>
+              pushParams({
+                status: value === "all" ? undefined : value,
+                page: "1",
+              })
+            }
             options={[
               { value: "all", label: t("filters.statusAll") },
               { value: "active", label: t("filters.statusActive") },
@@ -235,10 +286,14 @@ export function ProductListContainer() {
         </div>
       ) : (
         <ProductList
-          products={filteredProducts}
-          totalCount={products.length}
+          products={items}
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          hasActiveFilters={hasActiveFilters}
           labels={labels}
           onDelete={handleDelete}
+          onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
           deletingId={
             deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
           }

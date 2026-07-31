@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, PackageOpen } from "lucide-react";
 import { Button } from "@de-tin-marin/ui/button";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import {
   orderStatusBadgeClass,
   paymentStatusBadgeClass,
@@ -47,7 +48,14 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-export function OrderList({ orders, labels }: OrderListProps) {
+export function OrderList({
+  orders,
+  page,
+  pageSize,
+  total,
+  labels,
+  onPageChange,
+}: OrderListProps) {
   if (orders.length === 0) {
     return <EmptyState message={labels.empty} />;
   }
@@ -133,6 +141,16 @@ export function OrderList({ orders, labels }: OrderListProps) {
             ))}
           </tbody>
         </table>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       {/* Móvil */}
@@ -180,6 +198,16 @@ export function OrderList({ orders, labels }: OrderListProps) {
             </Link>
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
     </>
   );

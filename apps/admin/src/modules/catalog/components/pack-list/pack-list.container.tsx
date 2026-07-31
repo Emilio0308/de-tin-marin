@@ -1,19 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
+import { adminListPageBounds } from "@de-tin-marin/validations/admin-list";
 import { Button } from "@de-tin-marin/ui/button";
-import { listPacksAction } from "@/modules/catalog/actions/list-packs";
+import { listPacksPageAction } from "@/modules/catalog/actions/list-packs";
 import { softDeletePackAction } from "@/modules/catalog/actions/soft-delete-pack";
+import {
+  buildAdminListSearchParams,
+  readAdminPackListQuery,
+} from "@/shared/helpers/admin-list-url";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { PackList } from "./pack-list";
 import type { PackListLabels } from "./pack-list.types";
 
 type StatusFilter = "all" | "active" | "draft";
+
+function statusToQuery(value: StatusFilter): "all" | "active" | "inactive" {
+  return value === "draft" ? "inactive" : value;
+}
+
+function statusFromQuery(value: "all" | "active" | "inactive"): StatusFilter {
+  return value === "inactive" ? "draft" : value;
+}
 
 function FilterChip({
   label,
@@ -48,14 +62,25 @@ function FilterChip({
 
 export function PackListContainer() {
   const t = useTranslations("packs");
+  const tCommon = useTranslations("common.pagination");
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const listQuery = useMemo(
+    () => readAdminPackListQuery(searchParams),
+    [searchParams],
+  );
+
+  const [searchDraft, setSearchDraft] = useState(
+    () => searchParams.get("search") ?? "",
+  );
 
   const packsQuery = useQuery({
-    queryKey: queryKeys.catalog.packs(),
+    queryKey: queryKeys.catalog.packsPage(listQuery),
     queryFn: async () => {
-      const result = await listPacksAction();
+      const result = await listPacksPageAction(listQuery);
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -75,26 +100,26 @@ export function PackListContainer() {
     },
   });
 
+  function pushParams(updates: Record<string, string | undefined>) {
+    const params = buildAdminListSearchParams(searchParams, updates);
+    startTransition(() => {
+      router.push(`/packs?${params.toString()}`, { scroll: false });
+    });
+  }
+
   function handleDelete(id: string) {
     if (!window.confirm(t("deleteConfirm"))) return;
     deleteMutation.mutate(id);
   }
 
-  const packs = useMemo(() => packsQuery.data ?? [], [packsQuery.data]);
-
-  const filteredPacks = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return packs.filter((pack) => {
-      const matchesSearch =
-        term === "" ||
-        pack.name.toLowerCase().includes(term) ||
-        pack.sku.toLowerCase().includes(term);
-      const matchesStatus =
-        status === "all" ||
-        (status === "active" ? pack.isActive : !pack.isActive);
-      return matchesSearch && matchesStatus;
-    });
-  }, [packs, search, status]);
+  const page = packsQuery.data?.page ?? listQuery.page;
+  const pageSize = packsQuery.data?.pageSize ?? listQuery.pageSize;
+  const total = packsQuery.data?.total ?? 0;
+  const items = packsQuery.data?.items ?? [];
+  const bounds = adminListPageBounds(page, pageSize, total, items.length);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasActiveFilters =
+    Boolean(listQuery.search) || listQuery.status !== "all";
 
   const labels: PackListLabels = useMemo(
     () => ({
@@ -112,11 +137,20 @@ export function PackListContainer() {
       empty: t("empty"),
       emptyFiltered: t("emptyFiltered"),
       formatItemCount: (count) => t("itemCount", { count }),
-      formatPagination: (shown, total) => t("pagination", { shown, total }),
+      pagination: {
+        summary: t("pagination", {
+          from: bounds.from,
+          to: bounds.to,
+          total,
+        }),
+        previous: tCommon("previous"),
+        next: tCommon("next"),
+        page: tCommon("page", { page, totalPages }),
+      },
       formatAriaEdit: (name) => t("ariaEdit", { name }),
       formatAriaDelete: (name) => t("ariaDelete", { name }),
     }),
-    [t],
+    [t, tCommon, bounds.from, bounds.to, total, page, totalPages],
   );
 
   return (
@@ -142,24 +176,41 @@ export function PackListContainer() {
       </header>
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
+        <form
+          className="relative w-full sm:max-w-xs"
+          onSubmit={(event) => {
+            event.preventDefault();
+            pushParams({
+              search: searchDraft.trim() || undefined,
+              page: "1",
+            });
+          }}
+        >
           <Search
             className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
             aria-hidden
           />
           <input
             type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             placeholder={t("search.placeholder")}
             aria-label={t("search.label")}
             className="border-outline-variant/30 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus:border-secondary font-body h-12 w-full rounded-xl border-2 pl-12 pr-4 text-sm outline-none transition-colors"
           />
-        </div>
+        </form>
         <FilterChip
           label={t("filters.status")}
-          value={status}
-          onChange={(value) => setStatus(value as StatusFilter)}
+          value={statusFromQuery(listQuery.status)}
+          onChange={(value) =>
+            pushParams({
+              status:
+                value === "all"
+                  ? undefined
+                  : statusToQuery(value as StatusFilter),
+              page: "1",
+            })
+          }
           options={[
             { value: "all", label: t("filters.statusAll") },
             { value: "active", label: t("filters.statusActive") },
@@ -182,10 +233,14 @@ export function PackListContainer() {
         </div>
       ) : (
         <PackList
-          packs={filteredPacks}
-          totalCount={packs.length}
+          packs={items}
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          hasActiveFilters={hasActiveFilters}
           labels={labels}
           onDelete={handleDelete}
+          onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
           deletingId={
             deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
           }

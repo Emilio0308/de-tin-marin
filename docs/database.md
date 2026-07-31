@@ -374,7 +374,7 @@ erDiagram
 | `catalog.products` activos     | Público                       | Staff                       |
 | `catalog.surprise_containers`  | Público activos               | Staff                       |
 | `catalog.packs` / `pack_items` | Público activos               | Staff                       |
-| `pricing.campaigns`            | Staff                         | Staff                       |
+| `pricing.campaigns`            | Público (SELECT)              | Staff                       |
 | `pricing.delivery_zones`       | Público activos               | Staff                       |
 | `pricing.delivery_settings`    | Público                       | Staff (update)              |
 | `core.hero_settings`           | Público                       | Staff (update)              |

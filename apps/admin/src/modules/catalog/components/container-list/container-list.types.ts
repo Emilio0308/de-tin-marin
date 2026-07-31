@@ -20,7 +20,12 @@ export type ContainerListLabels = {
   emptyFiltered: string;
   formatPrice: (amount: number) => string;
   formatStockUnits: (count: number) => string;
-  formatPagination: (shown: number, total: number) => string;
+  pagination: {
+    summary: string;
+    previous: string;
+    next: string;
+    page: string;
+  };
   formatAriaEdit: (name: string) => string;
   formatAriaDelete: (name: string) => string;
   stats: {
@@ -32,10 +37,14 @@ export type ContainerListLabels = {
 
 export type ContainerListProps = {
   containers: SurpriseContainerListItem[];
-  totalCount: number;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasActiveFilters: boolean;
   totalStockUnits: number;
   lowStockCount: number;
   labels: ContainerListLabels;
   onDelete: (id: string) => void;
+  onPageChange: (page: number) => void;
   deletingId: string | null;
 };

@@ -17,6 +17,10 @@ import {
   createOrderInputSchema,
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
+import {
+  adminOrderListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import { getPackByIdRepo } from "@/modules/catalog/repositories/pack.repository";
 import { listCampaignsByIdsRepo } from "@/modules/catalog/repositories/product.repository";
@@ -27,6 +31,7 @@ import {
   getOrderByIdRepo,
   getOrderProductsByIdsRepo,
   insertOrderRepo,
+  listOrdersPageRepo,
   listOrdersRepo,
   updateOrderStatusRepo,
   type OrderRow,
@@ -122,6 +127,30 @@ export async function listOrdersService(
 ): Promise<{ ok: true; data: OrderListItem[] }> {
   const rows = await listOrdersRepo(config);
   return { ok: true, data: rows.map(toListItem) };
+}
+
+export async function listOrdersPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<OrderListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminOrderListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize } = parsed.data;
+  const { rows, total } = await listOrdersPageRepo(config, { page, pageSize });
+
+  return {
+    ok: true,
+    data: {
+      items: rows.map(toListItem),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function getOrderService(

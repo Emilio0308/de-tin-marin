@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FolderTree, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { CategoryListItem } from "@de-tin-marin/validations/category";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import type {
   CategoryListLabels,
   CategoryListProps,
@@ -141,13 +142,17 @@ function EmptyState({
 
 export function CategoryList({
   categories,
-  totalCount,
+  page,
+  pageSize,
+  total,
+  hasActiveFilters,
   labels,
   onDelete,
+  onPageChange,
   deletingId,
 }: CategoryListProps) {
   if (categories.length === 0) {
-    return <EmptyState hasCategories={totalCount > 0} labels={labels} />;
+    return <EmptyState hasCategories={hasActiveFilters} labels={labels} />;
   }
 
   return (
@@ -226,11 +231,16 @@ export function CategoryList({
             ))}
           </tbody>
         </table>
-        <div className="bg-surface-container-low border-outline-variant/10 border-t px-6 py-4">
-          <p className="font-label text-label-bold text-on-surface-variant text-xs">
-            {labels.formatPagination(categories.length, totalCount)}
-          </p>
-        </div>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       {/* Móvil: tarjetas */}
@@ -270,6 +280,16 @@ export function CategoryList({
             </div>
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
     </>
   );

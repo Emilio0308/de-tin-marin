@@ -34,6 +34,61 @@ export async function listProductsRepo(
   return (data ?? []) as ProductWithCategory[];
 }
 
+export type ProductListFilters = {
+  search?: string;
+  categoryId?: string;
+  status?: "all" | "active" | "inactive";
+};
+
+export type ProductListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+function escapeIlike(term: string): string {
+  return term.replace(/[%_\\]/g, "\\$&");
+}
+
+export async function listProductsPageRepo(
+  config: SupabaseConfig,
+  filters: ProductListFilters,
+  pagination: ProductListPagination,
+): Promise<{ rows: ProductWithCategory[]; total: number }> {
+  const supabase = await createSupabaseServerClient(config);
+  const { page, pageSize } = pagination;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .schema("catalog")
+    .from("products")
+    .select("*, categories(name)", { count: "exact" })
+    .is("deleted_at", null);
+
+  if (filters.categoryId) {
+    query = query.eq("category_id", filters.categoryId);
+  }
+
+  if (filters.status === "active") {
+    query = query.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  if (filters.search) {
+    const term = `%${escapeIlike(filters.search)}%`;
+    query = query.or(`name.ilike.${term},sku.ilike.${term}`);
+  }
+
+  const { data, error, count } = await query
+    .order("name", { ascending: true })
+    .order("id", { ascending: true })
+    .range(from, to);
+
+  if (error) throw new Error(error.message);
+  return { rows: (data ?? []) as ProductWithCategory[], total: count ?? 0 };
+}
+
 export async function listCampaignsByIdsRepo(
   config: SupabaseConfig,
   ids: string[],

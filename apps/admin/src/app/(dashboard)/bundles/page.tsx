@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { BundleListContainer } from "@/modules/catalog/components/bundle-list/bundle-list.container";
 
 export default function BundlesPage() {
-  return <BundleListContainer />;
+  return (
+    <Suspense fallback={null}>
+      <BundleListContainer />
+    </Suspense>
+  );
 }

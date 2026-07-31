@@ -21,6 +21,32 @@ export async function listOrdersRepo(
   return (result.data ?? []) as OrderRow[];
 }
 
+export type OrderListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+export async function listOrdersPageRepo(
+  config: SupabaseConfig,
+  pagination: OrderListPagination,
+): Promise<{ rows: OrderRow[]; total: number }> {
+  const supabase = await createSupabaseServerClient(config);
+  const { page, pageSize } = pagination;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const result = await supabase
+    .schema("commerce")
+    .from("orders")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (result.error) throw new Error(result.error.message);
+  return { rows: (result.data ?? []) as OrderRow[], total: result.count ?? 0 };
+}
+
 export async function getOrderByIdRepo(
   config: SupabaseConfig,
   id: string,

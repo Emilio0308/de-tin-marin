@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Layers, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { PackListItem } from "@de-tin-marin/validations/pack";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import type { PackListLabels, PackListProps } from "./pack-list.types";
 
 function formatPrice(value: number): string {
@@ -121,13 +122,17 @@ function EmptyState({
 
 export function PackList({
   packs,
-  totalCount,
+  page,
+  pageSize,
+  total,
+  hasActiveFilters,
   labels,
   onDelete,
+  onPageChange,
   deletingId,
 }: PackListProps) {
   if (packs.length === 0) {
-    return <EmptyState hasPacks={totalCount > 0} labels={labels} />;
+    return <EmptyState hasPacks={hasActiveFilters} labels={labels} />;
   }
 
   return (
@@ -209,11 +214,16 @@ export function PackList({
             ))}
           </tbody>
         </table>
-        <div className="bg-surface-container-low border-outline-variant/10 border-t px-6 py-4">
-          <p className="font-label text-label-bold text-on-surface-variant text-xs">
-            {labels.formatPagination(packs.length, totalCount)}
-          </p>
-        </div>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       <div className="flex flex-col gap-4 lg:hidden">
@@ -270,6 +280,16 @@ export function PackList({
             </div>
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
     </>
   );

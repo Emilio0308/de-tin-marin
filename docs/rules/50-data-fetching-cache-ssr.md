@@ -28,17 +28,17 @@ Las Server Actions invocadas desde el cliente **no** pasan por Next.js Data Cach
 
 ## Cuándo SSR vs CSR
 
-| Tipo de pantalla                                 | Estrategia          | Motivo                                                            |
-| ------------------------------------------------ | ------------------- | ----------------------------------------------------------------- |
-| Home — categorías, productos, sorpresas          | **SSR** (objetivo)  | First paint, SEO; frescura vía `catalog_version`                  |
-| Detalle producto `/productos/[slug]`             | **SSR**             | Ya implementado: `page.tsx` → props al container                  |
-| Detalle sorpresa `/sorpresas/[id]`               | **SSR**             | Ya implementado                                                   |
-| Wizard — template `/sorpresas/[id]/personalizar` | **SSR**             | Plantilla en servidor; picker y preview en cliente                |
-| Wizard — picker / preview                        | **CSR + RQ**        | Interacción; preview con precio/stock al momento                  |
-| Carrito `/carrito`                               | **CSR + RQ fresco** | Sync precios/límites/stock al montar; rebuild tras checkout drift |
-| Checkout `/checkout`                             | **CSR + validate**  | Fee fresco; validación precio/stock al submit                     |
-| Admin — listados CRUD                            | **CSR + RQ**        | Caché 15 min; invalidar tras mutación                             |
-| Admin — order-form preview                       | **CSR + RQ fresco** | Mismo motor que `createOrderService`                              |
+| Tipo de pantalla                                 | Estrategia          | Motivo                                                                                    |
+| ------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------- |
+| Home — categorías, productos, sorpresas          | **SSR** (objetivo)  | First paint, SEO; frescura vía `catalog_version`                                          |
+| Detalle producto `/productos/[slug]`             | **SSR**             | Ya implementado: `page.tsx` → props al container                                          |
+| Detalle sorpresa `/sorpresas/[id]`               | **SSR**             | Ya implementado                                                                           |
+| Wizard — template `/sorpresas/[id]/personalizar` | **SSR**             | Plantilla en servidor; picker y preview en cliente                                        |
+| Wizard — picker / preview                        | **CSR + RQ**        | Interacción; preview con precio/stock al momento                                          |
+| Carrito `/carrito`                               | **CSR + RQ fresco** | Sync precios/límites/stock al montar; rebuild tras checkout drift                         |
+| Checkout `/checkout`                             | **CSR + validate**  | Fee fresco; validación precio/stock al submit                                             |
+| Admin — listados CRUD                            | **CSR + RQ**        | URL `page`/`pageSize`/filtros; SQL `count`+`range`; caché 15 min; invalidar tras mutación |
+| Admin — order-form preview                       | **CSR + RQ fresco** | Mismo motor que `createOrderService`                                                      |
 
 ### Estado actual vs objetivo
 
@@ -94,15 +94,17 @@ Listados de catálogo usan `...catalogQueryOptions`. La query de versión (`quer
 
 ### Overrides por tier
 
-| Tier                  | `staleTime`                   | Queries ejemplo                                |
-| --------------------- | ----------------------------- | ---------------------------------------------- |
-| Catálogo / navegación | Infinity (+ gate versión)     | `queryKeys.catalog.*` (listados)               |
-| Funnel de compra      | **0** (`freshQueryOptions`)   | cart metadata, cart pricing sync, delivery fee |
-| Preview precio        | **0** + debounce 300 ms en UI | wizard preview, admin bundle/cart preview      |
-| Checkout validate     | al submit (action, no poll)   | `validateGuestCheckoutCart`                    |
+| Tier                         | `staleTime`                   | Queries ejemplo                                |
+| ---------------------------- | ----------------------------- | ---------------------------------------------- |
+| Catálogo / navegación        | Infinity (+ gate versión)     | `queryKeys.catalog.*` (listados)               |
+| Funnel de compra             | **0** (`freshQueryOptions`)   | cart metadata, cart pricing sync, delivery fee |
+| Preview precio               | **0** + debounce 300 ms en UI | wizard preview, admin bundle/cart preview      |
+| Checkout validate            | al submit (action, no poll)   | `validateGuestCheckoutCart`                    |
+| Zonas de delivery (checkout) | 15 min / default              | Cambian poco; fee sigue fresco                 |
 
 Admin: `invalidateAdminCatalogLists` solo invalida listas de catálogo indicadas (`products`, `categories`, `bundles`, `surpriseContainers`, `packs`) — **nunca** órdenes ni otros dominios. Tras mutación también `bumpCatalogVersionSafe` → RPC `bump_catalog_version` (Broadcast a tienda).
-| Zonas de delivery (checkout) | 15 min / default | Cambian poco; fee sigue fresco |
+
+Listados admin paginados: `page` / `pageSize` / filtros en `searchParams` (`admin-list-url`); actions `list*PageAction` con `@de-tin-marin/validations/admin-list`. Brief: [`S3B/01-admin-list-pagination.md`](../stages/S3B/01-admin-list-pagination.md).
 
 ## Query keys
 

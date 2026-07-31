@@ -53,6 +53,56 @@ export async function listBundlesRepo(
   return (data ?? []) as BundleRow[];
 }
 
+export type BundleListFilters = {
+  search?: string;
+  status?: "all" | "active" | "inactive";
+};
+
+export type BundleListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+function escapeIlike(term: string): string {
+  return term.replace(/[%_\\]/g, "\\$&");
+}
+
+export async function listBundlesPageRepo(
+  config: SupabaseConfig,
+  filters: BundleListFilters,
+  pagination: BundleListPagination,
+): Promise<{ rows: BundleRow[]; total: number }> {
+  const supabase = await createSupabaseServerClient(config);
+  const { page, pageSize } = pagination;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .schema("catalog")
+    .from("bundles")
+    .select("*", { count: "exact" })
+    .is("deleted_at", null);
+
+  if (filters.status === "active") {
+    query = query.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  if (filters.search) {
+    const term = `%${escapeIlike(filters.search)}%`;
+    query = query.ilike("name", term);
+  }
+
+  const { data, error, count } = await query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) throw new Error(error.message);
+  return { rows: (data ?? []) as BundleRow[], total: count ?? 0 };
+}
+
 export async function getBundleByIdRepo(
   config: SupabaseConfig,
   id: string,
