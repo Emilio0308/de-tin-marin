@@ -44,6 +44,13 @@
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 
+## Docs sincronizados (2026-08-04 — listProducts status + wizard description)
+
+- `listProductsAction` / repo / service: filtro opcional `{ status: "all"|"active"|"inactive" }` (`adminStatusFilterSchema`)
+- Pack/bundle forms: picker con `status: "active"`; flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (off); merge de opciones al editar
+- Wizard ecommerce: `bundleWizardTemplateSchema.description` + UI
+- Docs: Regla 6 / 23, READMEs catalog + bundle-wizard, briefs S1A / S1D / S1B / S1F / S3A-2
+
 ## Docs sincronizados (2026-07-28 — catalog_version + Broadcast + funnel)
 
 - DECISIONS #32 — Infinity + Broadcast; carrito sync al montar; checkout validate al submit

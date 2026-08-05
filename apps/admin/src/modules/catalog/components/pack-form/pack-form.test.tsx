@@ -39,6 +39,8 @@ const labels: PackFormLabels = {
   imageEmptyHint: "JPEG, PNG o WebP",
   imageFileInvalid: "Archivo inválido",
   productSelectPlaceholder: "Producto",
+  includeInactiveProducts: "Incluir inactivos",
+  includeInactiveProductsHint: "Muestra productos desactivados",
   addProduct: "Agregar",
   emptyItems: "Agrega productos",
   decreasePackages: "Menos",
@@ -80,6 +82,8 @@ describe("PackForm", () => {
         products={products}
         campaigns={campaigns}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -144,6 +148,8 @@ describe("PackForm", () => {
         products={products}
         campaigns={campaigns}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -162,6 +168,8 @@ describe("PackForm", () => {
         products={products}
         campaigns={campaigns}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -180,6 +188,8 @@ describe("PackForm", () => {
         products={products}
         campaigns={campaigns}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
         submitting={false}

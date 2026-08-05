@@ -36,6 +36,8 @@ const labels: BundleFormLabels = {
   imageEmptyHint: "JPEG, PNG o WebP",
   imageFileInvalid: "Archivo inválido",
   productSelectPlaceholder: "Selecciona un producto",
+  includeInactiveProducts: "Incluir inactivos",
+  includeInactiveProductsHint: "Muestra productos desactivados",
   addProduct: "Agregar",
   emptyItems: "Agrega al menos un producto.",
   decreaseUnits: "Disminuir unidades",
@@ -76,6 +78,8 @@ describe("BundleForm", () => {
         products={products}
         containers={containers}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -137,6 +141,8 @@ describe("BundleForm", () => {
         products={products}
         containers={containers}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -156,6 +162,8 @@ describe("BundleForm", () => {
         products={products}
         containers={containers}
         labels={labels}
+        includeInactiveProducts={false}
+        onIncludeInactiveProductsChange={vi.fn()}
         onSubmit={onSubmit}
         onCancel={vi.fn()}
         submitting={false}

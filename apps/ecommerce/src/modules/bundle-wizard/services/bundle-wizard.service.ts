@@ -84,6 +84,7 @@ export async function getBundleForWizardService(
     data: {
       bundleId: row.id,
       name: row.name,
+      description: row.description,
       imageUrl: normalizeImageUrl(row.image_url),
       personCount: row.quantity,
       container: {

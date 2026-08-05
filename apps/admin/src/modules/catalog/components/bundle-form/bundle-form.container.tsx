@@ -8,6 +8,7 @@ import { createBundleAction } from "@/modules/catalog/actions/create-bundle";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
+import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
 import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
@@ -15,7 +16,10 @@ import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { BundleForm } from "./bundle-form";
-import { resolveBundleImageUrlForPersist } from "./bundle-form.helpers";
+import {
+  mergeBundleProductOptions,
+  resolveBundleImageUrlForPersist,
+} from "./bundle-form.helpers";
 import type {
   BundleFormContainerProps,
   BundleFormLabels,
@@ -64,11 +68,17 @@ export function BundleFormContainer({
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeInactiveProducts, setIncludeInactiveProducts] = useState(false);
+
+  const productStatus =
+    SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH && includeInactiveProducts
+      ? "all"
+      : "active";
 
   const productsQuery = useQuery({
-    queryKey: queryKeys.catalog.products(),
+    queryKey: queryKeys.catalog.products(productStatus),
     queryFn: async () => {
-      const result = await listProductsAction();
+      const result = await listProductsAction({ status: productStatus });
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -109,6 +119,8 @@ export function BundleFormContainer({
       imageEmptyHint: t("imageEmptyHint"),
       imageFileInvalid: t("imageFileInvalid"),
       productSelectPlaceholder: t("productSelectPlaceholder"),
+      includeInactiveProducts: t("includeInactiveProducts"),
+      includeInactiveProductsHint: t("includeInactiveProductsHint"),
       addProduct: t("addProduct"),
       emptyItems: t("emptyItems"),
       decreaseUnits: t("decreaseUnits"),
@@ -129,6 +141,19 @@ export function BundleFormContainer({
       formatUnitPrice: (price) => t("unitPrice", { price }),
     }),
     [t, mode],
+  );
+
+  const products = useMemo(
+    () =>
+      mergeBundleProductOptions(
+        (productsQuery.data ?? []).map((product): ProductOption => ({
+          id: product.id,
+          name: product.name,
+          unitNetPrice: product.unitNetPrice,
+        })),
+        initial,
+      ),
+    [productsQuery.data, initial],
   );
 
   async function uploadBundleImage(
@@ -238,31 +263,32 @@ export function BundleFormContainer({
     router.push("/bundles");
   }
 
+  const productsLoading = productsQuery.isLoading && !productsQuery.data;
+  const containersLoading = containersQuery.isLoading;
+
   return (
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-40 lg:p-8 lg:pb-8">
-      {productsQuery.isLoading || containersQuery.isLoading ? (
+      {productsLoading || containersLoading ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
             {t("loadingProducts")}
           </p>
         </div>
       ) : productsQuery.isError ||
-        !productsQuery.data?.length ||
+        (!productsQuery.isLoading && products.length === 0 && !initial) ||
         containersQuery.isError ||
         !containersQuery.data?.length ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
-            {!productsQuery.data?.length ? t("noProducts") : t("noContainers")}
+            {!productsQuery.data?.length && products.length === 0
+              ? t("noProducts")
+              : t("noContainers")}
           </p>
         </div>
       ) : (
         <BundleForm
           initial={initial}
-          products={productsQuery.data.map((product): ProductOption => ({
-            id: product.id,
-            name: product.name,
-            unitNetPrice: product.unitNetPrice,
-          }))}
+          products={products}
           containers={containersQuery.data.map((container) => ({
             id: container.id,
             name: container.name,
@@ -270,6 +296,8 @@ export function BundleFormContainer({
             netPrice: container.netPrice,
           }))}
           labels={labels}
+          includeInactiveProducts={includeInactiveProducts}
+          onIncludeInactiveProductsChange={setIncludeInactiveProducts}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           submitting={submitting}

@@ -48,6 +48,7 @@ vi.mock("next-intl", () => ({
 const baseTemplate: BundleWizardTemplate = {
   bundleId: "33333333-3333-3333-3333-333333333333",
   name: "Combo Cumpleaños Arcoíris",
+  description: "La combinación perfecta para celebrar.",
   imageUrl: "https://example.com/combo.png",
   personCount: 10,
   container: {
@@ -184,6 +185,9 @@ describe("BundleWizardPage", () => {
       screen.getByRole("heading", { name: "Personaliza tu sorpresa" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Combo Cumpleaños Arcoíris")).toBeInTheDocument();
+    expect(
+      screen.getByText("La combinación perfecta para celebrar."),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Caja mediana").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Para 10 personas").length).toBeGreaterThan(0);
     expect(screen.getByText("8 de 20 dulces")).toBeInTheDocument();

@@ -19,16 +19,26 @@ export type CampaignPricingRow = Pick<
   "id" | "name" | "percentage" | "starts_at" | "ends_at" | "is_active"
 >;
 
+export type ListProductsStatus = "all" | "active" | "inactive";
+
 export async function listProductsRepo(
   config: SupabaseConfig,
+  filters?: { status?: ListProductsStatus },
 ): Promise<ProductWithCategory[]> {
   const supabase = await createSupabaseServerClient(config);
-  const { data, error } = await supabase
+  let query = supabase
     .schema("catalog")
     .from("products")
     .select("*, categories(name)")
-    .is("deleted_at", null)
-    .order("name", { ascending: true });
+    .is("deleted_at", null);
+
+  if (filters?.status === "active") {
+    query = query.eq("is_active", true);
+  } else if (filters?.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  const { data, error } = await query.order("name", { ascending: true });
 
   if (error) throw new Error(error.message);
   return (data ?? []) as ProductWithCategory[];

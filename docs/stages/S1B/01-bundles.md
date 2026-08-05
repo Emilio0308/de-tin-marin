@@ -51,6 +51,7 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 - Helper `computeBundleTotal({ serviceFee, quantity, items })` → `{ itemsSubtotal, total }` en `@de-tin-marin/shared` + Vitest
 - Módulo `apps/admin/src/modules/catalog/` extendido: `bundle.repository`, `bundle.service`, actions, DTOs
 - UI admin: listado de bundles + formulario create/edit (imagen URL, `service_fee`, `quantity`, selector de productos con `units_per_person`, agregar/quitar filas) mostrando el total calculado en vivo + soft-delete
+- Selector de composición: `listProducts({ status: "active" })` por defecto; al editar, merge de ítems iniciales aunque el producto esté inactivo (Regla 6)
 - Navegación admin: entrada "Bundles"
 
 ## Scope OUT (traps)

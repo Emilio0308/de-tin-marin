@@ -10,8 +10,10 @@ Wizard de personalización de sorpresas (S3A-2), integrado con el carrito (S3A-3
 
 | Action / Service           | Descripción                                                     |
 | -------------------------- | --------------------------------------------------------------- |
-| `getBundleForWizardAction` | Plantilla + items + container + `personCount`                   |
+| `getBundleForWizardAction` | Plantilla + `description` + items + container + `personCount`   |
 | `previewBundleLineAction`  | Preview precio + stock vía `buildOrderCart` y `checkOrderStock` |
+
+UI: si `template.description` no es `null`, se muestra bajo el encabezado de la plantilla.
 
 ## Integración con carrito
 

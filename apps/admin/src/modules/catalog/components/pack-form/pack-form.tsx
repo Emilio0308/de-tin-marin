@@ -22,6 +22,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
 import {
   addPackItem,
   buildDefaultPackValues,
@@ -100,6 +101,8 @@ export function PackForm({
   products,
   campaigns,
   labels,
+  includeInactiveProducts,
+  onIncludeInactiveProductsChange,
   onSubmit,
   onCancel,
   submitting,
@@ -397,6 +400,43 @@ export function PackForm({
                 {labels.formatCompositionCount(values.items.length)}
               </span>
             </div>
+
+            {SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-label text-label-bold text-on-surface">
+                    {labels.includeInactiveProducts}
+                  </p>
+                  <p className="text-on-surface-variant/70 text-xs">
+                    {labels.includeInactiveProductsHint}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={includeInactiveProducts}
+                  aria-label={labels.includeInactiveProducts}
+                  onClick={() =>
+                    onIncludeInactiveProductsChange(!includeInactiveProducts)
+                  }
+                  className={cn(
+                    "inline-flex h-7 w-14 shrink-0 items-center rounded-full px-0.5 transition-colors duration-200",
+                    includeInactiveProducts
+                      ? "bg-primary"
+                      : "bg-surface-container-highest",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-6 w-6 rounded-full bg-white shadow transition-transform duration-200",
+                      includeInactiveProducts
+                        ? "translate-x-7"
+                        : "translate-x-0",
+                    )}
+                  />
+                </button>
+              </div>
+            ) : null}
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <select

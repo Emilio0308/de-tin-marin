@@ -11,6 +11,25 @@ import type {
   ProductOption,
 } from "./bundle-form.types";
 
+export function mergeBundleProductOptions(
+  fromQuery: ProductOption[],
+  initial?: BundleFormDTO,
+): ProductOption[] {
+  const byId = new Map(fromQuery.map((product) => [product.id, product]));
+
+  for (const item of initial?.items ?? []) {
+    if (!byId.has(item.productId)) {
+      byId.set(item.productId, {
+        id: item.productId,
+        name: item.productName,
+        unitNetPrice: item.unitNetPrice,
+      });
+    }
+  }
+
+  return [...byId.values()];
+}
+
 export function buildDefaultBundleValues(
   initial?: BundleFormDTO,
 ): BundleFormValues {

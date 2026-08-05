@@ -65,11 +65,13 @@ Sin migración. Lectura pública catálogo existente.
 
 ## Boundaries y DTOs
 
-| Boundary                      | Tipo          | Input                        | Output                                        |
-| ----------------------------- | ------------- | ---------------------------- | --------------------------------------------- |
-| `getBundleForWizard`          | Server Action | `{ bundleId }`               | Plantilla + items + container + `personCount` |
-| `previewBundleLine`           | Server Action | `customizeBundleInputSchema` | `{ lineTotal, components, stockCheck }`       |
-| `validateBundleCustomization` | shared/Zod    | components[]                 | ok / error codes                              |
+| Boundary                      | Tipo          | Input                        | Output                                                        |
+| ----------------------------- | ------------- | ---------------------------- | ------------------------------------------------------------- |
+| `getBundleForWizard`          | Server Action | `{ bundleId }`               | Plantilla + `description` + items + container + `personCount` |
+| `previewBundleLine`           | Server Action | `customizeBundleInputSchema` | `{ lineTotal, components, stockCheck }`                       |
+| `validateBundleCustomization` | shared/Zod    | components[]                 | ok / error codes                                              |
+
+DTO plantilla (`bundleWizardTemplateSchema`): incluye `description: string | null`. UI: si hay descripción, se muestra bajo el encabezado.
 
 `customizeBundleInputSchema`:
 
@@ -103,6 +105,7 @@ Sin migración. Lectura pública catálogo existente.
 - [ ] Quitar item default y agregar otro del catálogo respeta mínimo
 - [ ] Warning stock visible cuando `checkOrderStock` falla; wizard sigue permitiendo continuar
 - [ ] `enableUnitsPerPerson=false` → no input de cantidad por dulce en UI
+- [ ] Descripción de plantilla visible en wizard cuando `description` no es null
 - [ ] Vitest — `customize-bundle.test.ts`
 - [ ] Playwright — wizard smoke verde
 - [ ] `pnpm check` + `pnpm build` verdes

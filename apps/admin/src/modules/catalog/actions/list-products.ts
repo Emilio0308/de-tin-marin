@@ -1,5 +1,7 @@
 "use server";
 
+import { z } from "zod";
+import { adminStatusFilterSchema } from "@de-tin-marin/validations/admin-list";
 import { supabaseConfig } from "@/config/env";
 import { requireStaff } from "@/shared/auth/require-staff";
 import { guardAction } from "@/shared/errors/server-error";
@@ -8,12 +10,21 @@ import {
   listProductsService,
 } from "@/modules/catalog/services/product.service";
 
-export async function listProductsAction() {
+const listProductsQuerySchema = z.object({
+  status: adminStatusFilterSchema,
+});
+
+export async function listProductsAction(raw?: unknown) {
   return guardAction("listProductsAction", async () => {
     const auth = await requireStaff(supabaseConfig);
     if (!auth.ok) return { ok: false as const, error: auth.error };
 
-    const data = await listProductsService(supabaseConfig);
+    const parsed = listProductsQuerySchema.safeParse(raw ?? {});
+    if (!parsed.success) return { ok: false as const, error: "VALIDATION" };
+
+    const data = await listProductsService(supabaseConfig, {
+      status: parsed.data.status,
+    });
     return { ok: true as const, data };
   });
 }

@@ -51,6 +51,8 @@ export type BundleFormLabels = {
   imageEmptyHint: string;
   imageFileInvalid: string;
   productSelectPlaceholder: string;
+  includeInactiveProducts: string;
+  includeInactiveProductsHint: string;
   addProduct: string;
   emptyItems: string;
   decreaseUnits: string;
@@ -76,6 +78,8 @@ export type BundleFormProps = {
   products: ProductOption[];
   containers: ContainerOption[];
   labels: BundleFormLabels;
+  includeInactiveProducts: boolean;
+  onIncludeInactiveProductsChange: (value: boolean) => void;
   onSubmit: (
     values: BundleFormValues,
     pendingImage: File | null,

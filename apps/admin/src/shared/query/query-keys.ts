@@ -1,6 +1,9 @@
 export const queryKeys = {
   catalog: {
-    products: () => ["products"] as const,
+    products: (status?: "all" | "active" | "inactive") =>
+      status === undefined
+        ? (["products"] as const)
+        : (["products", status] as const),
     productsPage: (query: unknown) => ["products", "page", query] as const,
     categories: () => ["categories"] as const,
     categoriesPage: (query: unknown) => ["categories", "page", query] as const,

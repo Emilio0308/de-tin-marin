@@ -185,8 +185,9 @@ function normalizeImageUrl(imageUrl: string | null | undefined): string | null {
 
 export async function listProductsService(
   config: SupabaseConfig,
+  filters?: { status?: "all" | "active" | "inactive" },
 ): Promise<ProductListItem[]> {
-  const rows = await listProductsRepo(config);
+  const rows = await listProductsRepo(config, filters);
   if (rows.length === 0) return [];
 
   const campaignIds = [

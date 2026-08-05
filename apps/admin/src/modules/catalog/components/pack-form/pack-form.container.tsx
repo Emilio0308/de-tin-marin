@@ -8,6 +8,7 @@ import { createPackAction } from "@/modules/catalog/actions/create-pack";
 import { listActiveCampaignsAction } from "@/modules/catalog/actions/list-active-campaigns";
 import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { updatePackAction } from "@/modules/catalog/actions/update-pack";
+import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
 import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
@@ -15,7 +16,10 @@ import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { PackForm } from "./pack-form";
-import { resolvePackImageUrlForPersist } from "./pack-form.helpers";
+import {
+  mergePackProductOptions,
+  resolvePackImageUrlForPersist,
+} from "./pack-form.helpers";
 import type {
   PackFormContainerProps,
   PackFormLabels,
@@ -89,11 +93,17 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeInactiveProducts, setIncludeInactiveProducts] = useState(false);
+
+  const productStatus =
+    SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH && includeInactiveProducts
+      ? "all"
+      : "active";
 
   const productsQuery = useQuery({
-    queryKey: queryKeys.catalog.products(),
+    queryKey: queryKeys.catalog.products(productStatus),
     queryFn: async () => {
-      const result = await listProductsAction();
+      const result = await listProductsAction({ status: productStatus });
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -139,6 +149,8 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       imageEmptyHint: t("imageEmptyHint"),
       imageFileInvalid: t("imageFileInvalid"),
       productSelectPlaceholder: t("productSelectPlaceholder"),
+      includeInactiveProducts: t("includeInactiveProducts"),
+      includeInactiveProductsHint: t("includeInactiveProductsHint"),
       addProduct: t("addProduct"),
       emptyItems: t("emptyItems"),
       decreasePackages: t("decreasePackages"),
@@ -160,6 +172,19 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       formatPackagePrice: (price) => t("packagePrice", { price }),
     }),
     [t, mode],
+  );
+
+  const products = useMemo(
+    () =>
+      mergePackProductOptions(
+        (productsQuery.data ?? []).map((product): ProductOption => ({
+          id: product.id,
+          name: product.name,
+          packageNetPrice: product.netPrice,
+        })),
+        initial,
+      ),
+    [productsQuery.data, initial],
   );
 
   async function uploadPackImage(file: File): Promise<PackImageUploadResult> {
@@ -260,11 +285,13 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
     router.push("/packs");
   }
 
-  const loading = productsQuery.isLoading || campaignsQuery.isLoading;
+  const loading =
+    (productsQuery.isLoading && !productsQuery.data) ||
+    campaignsQuery.isLoading;
   const loadFailed =
     productsQuery.isError ||
     campaignsQuery.isError ||
-    !productsQuery.data?.length;
+    (!productsQuery.isLoading && products.length === 0 && !initial);
 
   return (
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-40 lg:p-8 lg:pb-8">
@@ -283,15 +310,11 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       ) : (
         <PackForm
           initial={initial}
-          products={(productsQuery.data ?? []).map(
-            (product): ProductOption => ({
-              id: product.id,
-              name: product.name,
-              packageNetPrice: product.netPrice,
-            }),
-          )}
+          products={products}
           campaigns={campaignsQuery.data ?? []}
           labels={labels}
+          includeInactiveProducts={includeInactiveProducts}
+          onIncludeInactiveProductsChange={setIncludeInactiveProducts}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           submitting={submitting}

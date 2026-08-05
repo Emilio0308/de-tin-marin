@@ -55,6 +55,8 @@
 
 - **Trigger:** Crear/editar bundle en admin.
 - **Pasos:** `bundle_items` referencia productos existentes y activos; al menos un item; **`container_id`** apunta a envase activo en `catalog.surprise_containers`.
+- **UI admin (picker):** por defecto solo productos activos (`listProducts` con `status: "active"`). Al editar, ítems ya guardados en la plantilla se muestran aunque el producto esté inactivo (`mergeBundleProductOptions`). Switch “incluir inactivos” detrás de flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (hoy `false`); habilitarlo sin relajar la validación de write falla con `PRODUCT_NOT_FOUND`.
+- **Persistencia:** create/update rechazan productos inactivos (`getActiveProductsByIdsRepo`).
 - **Fallo:** Rechazar bundle vacío, productos inválidos o envase inactivo.
 
 ### Regla 7 — Personalización en la orden
@@ -237,6 +239,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
   2. Admin define `normal.netPrice`; **obligatorio** `normal.netPrice >= reference.netPrice`.
   3. Descuentos solo vía campaña 1:1 (`campaign_id`) sobre `normal` → `finalPrice`.
   4. Congelar `unitPrice` (= finalPrice) y BOM en `shopping_cart` línea `type: pack`.
+- **UI admin (picker):** misma semántica que Regla 6 — productos activos por defecto; al editar, `mergePackProductOptions` conserva ítems ya en la BOM; create/update solo productos activos (`validatePackItems`).
 - **Fallo:** Rechazar save/checkout si `normal < reference` o items inválidos.
 
 ### Regla 24 — Deduct pack al pagar

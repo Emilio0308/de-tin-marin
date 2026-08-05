@@ -58,6 +58,8 @@ Staff en admin (:3001) puede CRUD combos (packs) con composición de dulces en p
 | `updatePack`     | Server Action | `updatePackInputSchema` | `{ ok }`                                                                                      |
 | `softDeletePack` | Server Action | `{ id }`                | `{ ok }`                                                                                      |
 
+Formulario Combos (`pack-form`): carga productos con `listProducts({ status: "active" })`; al editar, `mergePackProductOptions` conserva ítems ya en la BOM. Persistencia solo productos activos (Regla 23 / `validatePackItems`).
+
 ## Rules que aplican
 
 - [`00-architecture`](../../rules/00-architecture.md)

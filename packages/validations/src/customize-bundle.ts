@@ -62,6 +62,7 @@ export const getBundleForWizardInputSchema = z.object({
 export const bundleWizardTemplateSchema = z.object({
   bundleId: z.string().uuid(),
   name: z.string(),
+  description: z.string().nullable(),
   imageUrl: z.string().nullable(),
   personCount: z.number().int().min(1),
   container: orderShoppingCartBundleContainerSchema,

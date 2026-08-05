@@ -123,6 +123,11 @@ export function BundleWizardPage({
                     {labels.personCount}
                   </span>
                 </div>
+                {template.description ? (
+                  <p className="font-body text-body-md text-on-surface-variant leading-relaxed">
+                    {template.description}
+                  </p>
+                ) : null}
               </div>
             </div>
 

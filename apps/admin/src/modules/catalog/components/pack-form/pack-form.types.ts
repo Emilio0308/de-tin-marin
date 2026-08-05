@@ -62,6 +62,8 @@ export type PackFormLabels = {
   imageEmptyHint: string;
   imageFileInvalid: string;
   productSelectPlaceholder: string;
+  includeInactiveProducts: string;
+  includeInactiveProductsHint: string;
   addProduct: string;
   emptyItems: string;
   decreasePackages: string;
@@ -88,6 +90,8 @@ export type PackFormProps = {
   products: ProductOption[];
   campaigns: CampaignOption[];
   labels: PackFormLabels;
+  includeInactiveProducts: boolean;
+  onIncludeInactiveProductsChange: (value: boolean) => void;
   /** `pendingImage` is set only when the user picked a new file; upload happens in the container on save. */
   onSubmit: (
     values: PackFormValues,
