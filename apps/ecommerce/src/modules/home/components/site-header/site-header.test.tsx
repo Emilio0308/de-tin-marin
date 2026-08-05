@@ -30,9 +30,7 @@ describe("SiteHeader", () => {
         name: "Mis pedidos",
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /ver carrito/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /carrito/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Mis pedidos")).toBeInTheDocument();
   });
 
