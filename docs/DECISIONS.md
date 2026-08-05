@@ -34,7 +34,7 @@
 
 | 26 | Order shopping cart | ✅ | Detalle del pedido en **`commerce.orders.shopping_cart`** (JSONB). Sin tablas `order_items` / `order_bundle_items` en v1. Productos y sorpresas (bundles) congelados al pasar a `pending_payment` |
 | 27 | Presentaciones de producto | ✅ | **`product_type`** (`package` \| `unit`), **`items_per_package`** (>= 1), **`package_label`** (UX). Default histórico = `unit` + `items_per_package=1`. Líneas producto venden **presentaciones**; bundles consumen **unidad base**. `unit` y `package` tienen semántica de stock distinta (#29) |
-| 28 | Precios dual en JSONB | ✅ | **`prices.normal`** = precio presentación; **`prices.unit`** = precio unidad base. Ambos persistidos; **`unit` calculado al guardar** desde `normal` + `items_per_package`. Coherencia validada (Regla 2). Campaña aplica sobre `normal`; `finalUnitPrice` derivado |
+| 28 | Precios dual en JSONB | ✅ | **`prices.normal`** = precio presentación; **`prices.unit`** = precio unidad base. Ambos persistidos; **`unit` calculado al guardar** desde `normal` + `items_per_package` con **ceil a 2 decimales** (unidad no más barata que el paquete). Coherencia: `|unit×ipp − normal| ≤ 0.01` **o** `unit×ipp > normal` (Regla 2). Campaña aplica sobre `normal`; `finalUnitPrice` derivado |
 | 29 | Stock por paquetes + tipo | ✅ | **`stock_sealed_packages`** + **`stock_loose_base_units`**. **`package`:** vendible = sealed×ipp+loose; deduct abre paquetes (`deductBaseUnits`). **`unit`:** vendible/deduct = **solo loose** (`deductUnitProductLoose`); sealed no se abre. Líneas product: `need = presentationQty × ipp + baseUnits` bundle. Migración `00014` |
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
@@ -43,6 +43,13 @@
 | 34 | Media CDN (imágenes) | ✅ | **AWS S3 privado + CloudFront (OAC)** vía **CDK TypeScript** en `infra/cdk/`. Stacks **`MediaStaging`** y **`MediaProduction`** (entornos aislados; nombres AWS genéricos). URL CDN en `image_url`. Doc canónica: [`docs/infra.md`](infra.md). Brief: `docs/stages/S0/02-infra-media-cdn.md` |
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
+
+## Docs sincronizados (2026-08-05 — Vitest Node 25 + unit ceil + pre-commit test)
+
+- `pnpm test` / `test:watch`: `NODE_OPTIONS=--no-webstorage`; jsdom `url`; `vitest.setup.ts` memory `localStorage`
+- Husky pre-commit: `lint-staged` + `pnpm test`
+- Regla 2 / DECISIONS #28 / `database.md` / `pricing.md` / S1D — ceil de `unit` y coherencia `unit×ipp ≥ normal`
+- `docs/rules/95-guardrails-lint-ci.md`, `docs/coding-guidelines.md`
 
 ## Docs sincronizados (2026-08-05 — pack dual quantities package + unit)
 

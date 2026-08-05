@@ -121,6 +121,8 @@ Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-bound
 | Playwright    | `apps/*/e2e/`                       | Checkout, admin CRUD                        |
 | pgTAP         | `supabase/tests/`                   | RLS, deduct inventory                       |
 
+`pnpm test` usa `NODE_OPTIONS=--no-webstorage` (compat Node 25+) y `vitest.setup.ts` con fallback de `localStorage` — ver [`rules/95-guardrails-lint-ci.md`](rules/95-guardrails-lint-ci.md).
+
 ## Nombres
 
 | Elemento       | Convención                                      |

@@ -57,7 +57,10 @@ En cada bloque (`normal`, `unit`): `subtotal + igv = netPrice` (tolerancia centa
 
 ```text
 |unit.netPrice × items_per_package − normal.netPrice| ≤ 0.01
+  OR unit.netPrice × items_per_package > normal.netPrice   // ceil al derivar unit
 ```
+
+`buildPricesFromPackageNetPrice` redondea `unit` **hacia arriba** (2 decimales) para que vender por unidad no sea más barato que el paquete.
 
 Si `items_per_package = 1`, `normal` y `unit` deben ser idénticos.
 

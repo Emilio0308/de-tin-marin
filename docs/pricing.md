@@ -104,7 +104,7 @@ Línea orden: `unitPrice = finalPrice` congelado; BOM congelada (`packageQuantit
 | `unit`   | Precio **unidad base**; bundles; costeo por sorpresa |
 
 - `normal.netPrice` y `unit.netPrice` = precio final con IGV incluido.
-- Al guardar: operador ingresa precio presentación → backend calcula `unit`.
+- Al guardar: operador ingresa precio presentación → backend calcula `unit` con **ceil a 2 decimales** (`buildPricesFromPackageNetPrice`) — Regla 2.
 - Campañas operan sobre `normal.netPrice`; `finalUnitPrice` derivado.
 
 ## Integración con Orders

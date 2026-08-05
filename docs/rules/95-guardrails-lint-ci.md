@@ -18,10 +18,24 @@ pnpm build   # obligatorio antes de merge — detecta client/server leaks
 
 ## Pre-commit
 
-Husky + lint-staged:
+Husky + lint-staged + Vitest:
 
 - Prettier en archivos staged
 - ESLint en TS/TSX
+- `pnpm test` (Vitest) — el commit falla si hay tests en rojo
+
+## Vitest (runtime)
+
+Scripts raíz (`package.json`):
+
+```bash
+pnpm test        # NODE_OPTIONS=--no-webstorage vitest run
+pnpm test:watch  # NODE_OPTIONS=--no-webstorage vitest
+```
+
+- **`--no-webstorage`:** Node 25+ expone un stub experimental de Web Storage que puede sombrear el `localStorage` de jsdom; se desactiva en los scripts de test.
+- **`vitest.config.ts`:** projects admin/ecommerce usan `environment: "jsdom"` con `environmentOptions.jsdom.url = "http://localhost"`.
+- **`vitest.setup.ts`:** fallback in-memory de `window.localStorage` si falta o no es usable (tests de carrito / header).
 
 ## TypeScript
 
@@ -29,11 +43,11 @@ Husky + lint-staged:
 
 ## Tests en CI
 
-| Suite      | Cuándo                          |
-| ---------- | ------------------------------- |
-| Vitest     | Cada PR                         |
-| Playwright | PR + nightly en flujos críticos |
-| pgTAP      | Migraciones que tocan RLS       |
+| Suite      | Cuándo                             |
+| ---------- | ---------------------------------- |
+| Vitest     | Cada PR + pre-commit (`pnpm test`) |
+| Playwright | PR + nightly en flujos críticos    |
+| pgTAP      | Migraciones que tocan RLS          |
 
 ## Prohibido en CI
 
@@ -51,14 +65,15 @@ Husky + lint-staged:
 | DTO allowlist completo      | Convención + review |
 | Reglas de negocio correctas | Tests + review      |
 
-## Scripts raíz (planificados)
+## Scripts raíz
 
 ```json
 {
-  "dev": "turbo dev",
-  "dev:ecommerce": "turbo dev --filter=ecommerce",
-  "dev:admin": "turbo dev --filter=admin",
-  "check": "turbo typecheck lint test && prettier --check .",
-  "build": "turbo build"
+  "dev": "turbo run dev",
+  "dev:ecommerce": "pnpm --filter @de-tin-marin/ecommerce dev",
+  "dev:admin": "pnpm --filter @de-tin-marin/admin dev",
+  "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
+  "test": "NODE_OPTIONS=--no-webstorage vitest run",
+  "build": "turbo run build"
 }
 ```

@@ -17,9 +17,12 @@
 - **Trigger:** Guardar producto.
 - **Pasos:**
   1. `prices.normal` y `prices.unit` deben existir, cada uno con `netPrice >= 0`, `igv >= 0`, `subtotal >= 0`, y `subtotal + igv = netPrice` (tolerancia centavos).
-  2. Coherencia con presentación: `|prices.unit.netPrice × items_per_package − prices.normal.netPrice| ≤ 0.01`.
+  2. Coherencia con presentación (`pricesSchemaWithCoherence`):
+     - `|unit.netPrice × items_per_package − normal.netPrice| ≤ 0.01`, **o**
+     - `unit.netPrice × items_per_package > normal.netPrice` (permitido tras redondeo hacia arriba).
   3. Si `items_per_package = 1`, `normal` y `unit` deben ser idénticos.
-- **Fallo:** Rechazar validación.
+- **Cálculo de `unit`:** `buildPricesFromPackageNetPrice` hace `ceil` a 2 decimales de `normal / items_per_package` — la unidad suelta no puede salir más barata que el paquete (p. ej. S/ 1 ÷ 12 → `unit.netPrice = 0.09`).
+- **Fallo:** Rechazar validación si `unit × ipp` es **menor** que `normal` fuera de tolerancia (no si es mayor por el ceil).
 - **Nota:** `normal.netPrice` = precio de la presentación (tira/paquete); `unit.netPrice` = precio por unidad base (bolsa). El backend calcula `unit` al guardar — no editar ambos de forma independiente.
 
 ### Regla 3 — Producto inactivo no vendible
