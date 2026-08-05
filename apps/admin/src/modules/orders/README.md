@@ -43,7 +43,7 @@ Container: `order-form.container.tsx`
 - `payment.service.ts` — confirmar / reembolsar pago (deduct atómico S2A)
 - `shipment.service.ts` — upsert envío
 
-Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29). Líneas `type: pack` aportan `totalPackages` a presentaciones (Regla 24 / DECISIONS #33).
+Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29). Líneas `type: pack` aportan `totalPackages` → presentaciones y `totalUnits` → `baseUnits` (Regla 24 / DECISIONS #33 / S4-04).
 
 Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock cambió → invalidar listados tienda).
 

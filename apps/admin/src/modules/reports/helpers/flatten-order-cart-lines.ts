@@ -67,7 +67,10 @@ export function flattenOrderCartLines(
           quantity: component.totalPackages,
           unitPrice: null,
           lineTotal: null,
-          detail: `${component.packageQuantity} presentaciones × ${line.quantity} = ${component.totalPackages}`,
+          detail:
+            (component.unitQuantity ?? 0) > 0
+              ? `${component.packageQuantity} paq. + ${component.unitQuantity} u. × ${line.quantity} → ${component.totalPackages} paq. / ${component.totalUnits ?? 0} u.`
+              : `${component.packageQuantity} presentaciones × ${line.quantity} = ${component.totalPackages}`,
         });
       }
       continue;

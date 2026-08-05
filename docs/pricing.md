@@ -69,12 +69,12 @@ Preview en admin (sin campaña): `prices.unit.netPrice × units_per_person`.
 ### C) Packs / combos — precio persistido
 
 ```text
-reference = Σ (product.prices.normal.netPrice × package_quantity)   // al guardar
+reference = Σ (normal × package_quantity + unit × unit_quantity)   // al guardar
 normal    = precio admin  (≥ reference)
 finalPrice = computeFinalPrice(normal, campaign)                     // listado / orden
 ```
 
-Línea orden: `unitPrice = finalPrice` congelado; BOM congelada para deduct.
+Línea orden: `unitPrice = finalPrice` congelado; BOM congelada (`packageQuantity` + `unitQuantity`) para deduct.
 
 **Reglas:** 22–25. DECISIONS #33.
 

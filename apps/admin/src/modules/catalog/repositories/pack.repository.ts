@@ -195,7 +195,10 @@ export async function hardDeletePackRepo(
 export async function replacePackItemsRepo(
   config: SupabaseConfig,
   packId: string,
-  items: Pick<PackItemInsert, "product_id" | "package_quantity">[],
+  items: Pick<
+    PackItemInsert,
+    "product_id" | "package_quantity" | "unit_quantity"
+  >[],
 ): Promise<void> {
   const supabase = await createSupabaseServerClient(config);
 
@@ -213,6 +216,7 @@ export async function replacePackItemsRepo(
     pack_id: packId,
     product_id: item.product_id,
     package_quantity: item.package_quantity,
+    unit_quantity: item.unit_quantity ?? 0,
   }));
 
   const { error: insertError } = await supabase

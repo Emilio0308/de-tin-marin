@@ -296,6 +296,17 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 **Depends on:** S0-03 media ✅, S3A home ✅
 
+### S4-04 — Pack BOM dual (`package_quantity` + `unit_quantity`) ✅
+
+**Goal:** Un componente de combo puede mezclar presentaciones y unidades base en la misma fila; reference, disponibilidad, carrito y deduct al `paid` respetan ambas cantidades.
+
+- [x] Migración `00022_pack_items_unit_quantity.sql` + pgTAP
+- [x] Shared: `pack-price`, `pack-availability`, `order-cart`, `check-order-stock`
+- [x] Admin pack-form (dos steppers) + orders/reports; ecommerce detalle/checkout
+- Brief: [`docs/stages/S4/04-pack-dual-quantities.md`](stages/S4/04-pack-dual-quantities.md)
+
+**Depends on:** S1F ✅, S2A ✅, S3A-05 ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

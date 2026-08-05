@@ -79,10 +79,14 @@ export function aggregateStockDemands(cart: OrderShoppingCart): {
     if (line.type === "pack") {
       for (const component of line.components) {
         const existing = products.get(component.productId);
+        const totalPackages = component.totalPackages ?? 0;
+        const totalUnits =
+          component.totalUnits ??
+          (component.unitQuantity ?? 0) * (line.quantity ?? 0);
         products.set(component.productId, {
           presentationQuantity:
-            (existing?.presentationQuantity ?? 0) + component.totalPackages,
-          baseUnits: existing?.baseUnits ?? 0,
+            (existing?.presentationQuantity ?? 0) + totalPackages,
+          baseUnits: (existing?.baseUnits ?? 0) + totalUnits,
           sku: component.sku,
           name: component.productName,
         });

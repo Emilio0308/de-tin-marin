@@ -97,6 +97,7 @@
       "includes": "Qué incluye este combo",
       "componentPackages": "{packages, plural, one {# paquete} other {# paquetes}} de {units} unidades",
       "componentUnits": "{count, plural, one {# unidad} other {# unidades}}",
+      "componentPackagesAndLoose": "{packages, plural, one {# paquete} other {# paquetes}} de {units} unidades + {loose, plural, one {# suelta} other {# sueltas}}",
       "description": "Descripción",
       "backToList": "Volver a combos",
       "unavailable": "Este combo no está disponible por stock.",

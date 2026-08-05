@@ -56,13 +56,16 @@ type ShoppingCartLine =
         productName: string;
         sku: string;
         packageQuantity: number;
+        unitQuantity: number;
         /** Presentaciones a descontar = packageQuantity × line.quantity. */
         totalPackages: number;
+        /** Unidades base a descontar = unitQuantity × line.quantity. */
+        totalUnits: number;
       }>;
     };
 ```
 
-Al descontar stock (Regla 15 / DECISIONS #29 / #33): líneas producto y componentes de pack aportan `presentationQuantity`; componentes de bundle aportan `baseUnits`. `need = presentationQuantity × items_per_package + baseUnits`, con deduct distinto por `product_type`.
+Al descontar stock (Regla 15 / DECISIONS #29 / #33): líneas producto aportan `presentationQuantity`; componentes de pack aportan `presentationQuantity` (`totalPackages`) **y** `baseUnits` (`totalUnits`); componentes de bundle aportan `baseUnits`. `need = presentationQuantity × items_per_package + baseUnits`, con deduct distinto por `product_type`.
 
 ### Ejemplo sorpresa personalizada
 

@@ -39,10 +39,20 @@
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
 | 31 | Límites de compra por producto | ✅ | **`purchase_min_quantity`** / **`purchase_max_quantity`** en `catalog.products` (presentación vendida; default **10** / **100**). `max_efectivo = min(max, stock_en_presentaciones)`; si stock < min → no comprable. **No aplica** a sorpresas/bundles ni wizard |
 | 32 | SSR vs CSR y caché de datos | ✅ | **SSR** en navegación/catálogo donde sea viable. **CSR + RQ fresco** en carrito (sync al montar) y checkout (validate al submit). **Caché cliente catálogo:** `staleTime` Infinity; invalidación vía `catalog.catalog_cache_meta.version_at` + **Realtime Broadcast** (`catalog-version`) al bump en admin/deduct. Sin poll. Sin Next.js Data Cache por defecto. Detalle: `docs/rules/50-data-fetching-cache-ssr.md` |
-| 33 | Packs / combos | ✅ | **`catalog.packs` + `pack_items`**. Combo ≠ sorpresa: sin personas, sin envase, BOM fija. Precio JSONB `reference` (suma `product.prices.normal × package_quantity`) + `normal` (admin); **`normal >= reference`**. Descuentos solo vía campaña 1:1 (`campaign_id`). Sin stock propio; disponibilidad y deduct al `paid` descuentan **presentaciones** de componentes. Min/max compra como productos. UI admin: Combos. Futuro (no v1): UOM unidad base / fracciones. Brief: `docs/stages/S1F/01-catalog-packs.md` |
+| 33 | Packs / combos | ✅ | **`catalog.packs` + `pack_items`**. Combo ≠ sorpresa: sin personas, sin envase, BOM fija. Una fila por producto; cantidades duales **`package_quantity`** (presentaciones) + **`unit_quantity`** (unidades base); `package_quantity + unit_quantity >= 1`. Precio JSONB `reference` = Σ(`normal × package_quantity` + `unit × unit_quantity`) + `normal` (admin); **`normal >= reference`**. Descuentos solo vía campaña 1:1 (`campaign_id`). Sin stock propio; disponibilidad en unidades base; al `paid`, `totalPackages` → `presentationQuantity` y `totalUnits` → `baseUnits` (no tocar branch bundle). Min/max compra como productos. UI admin: Combos. Briefs: `docs/stages/S1F/01-catalog-packs.md`, `docs/stages/S4/04-pack-dual-quantities.md` |
 | 34 | Media CDN (imágenes) | ✅ | **AWS S3 privado + CloudFront (OAC)** vía **CDK TypeScript** en `infra/cdk/`. Stacks **`MediaStaging`** y **`MediaProduction`** (entornos aislados; nombres AWS genéricos). URL CDN en `image_url`. Doc canónica: [`docs/infra.md`](infra.md). Brief: `docs/stages/S0/02-infra-media-cdn.md` |
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
+
+## Docs sincronizados (2026-08-05 — pack dual quantities package + unit)
+
+- DECISIONS #33 — `package_quantity` + `unit_quantity` en `pack_items`; reference/deduct dual
+- `docs/stages/S4/04-pack-dual-quantities.md`
+- `business-rules.md` — Reglas 15, 22–24
+- `database.md`, `orders.md`, `pricing.md`, `inventory.md`, `architecture.md`, `roadmap.md`, `docs/README.md`
+- Briefs satélite: S1F (nota post-S4-04), S4-01 Excel columnas dual
+- READMEs: admin catalog, ecommerce catalog
+- Código: migración `00022`, `pack-price`, `pack-availability`, order-cart pack, deduct pack branch
 
 ## Docs sincronizados (2026-08-04 — listProducts status + wizard description)
 

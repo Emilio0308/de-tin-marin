@@ -15,6 +15,11 @@ export type PackDetailStaticLabels = {
 export type PackDetailPageLabels = PackDetailStaticLabels & {
   formatComponentPackages: (packages: number, units: number) => string;
   formatComponentUnits: (count: number) => string;
+  formatComponentPackagesAndLoose: (
+    packages: number,
+    unitsPerPackage: number,
+    loose: number,
+  ) => string;
 };
 
 export type PackDetailPageProps = {

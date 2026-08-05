@@ -4,6 +4,7 @@ export type ProductOption = {
   id: string;
   name: string;
   packageNetPrice: number;
+  unitNetPrice: number;
 };
 
 export type CampaignOption = {
@@ -18,6 +19,7 @@ export type CampaignOption = {
 export type PackFormItemValues = {
   productId: string;
   packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type PackFormValues = {
@@ -68,6 +70,10 @@ export type PackFormLabels = {
   emptyItems: string;
   decreasePackages: string;
   increasePackages: string;
+  decreaseUnits: string;
+  increaseUnits: string;
+  packagesLabel: string;
+  unitsLabel: string;
   removeProduct: string;
   referencePrice: string;
   normalPrice: string;
@@ -83,6 +89,7 @@ export type PackFormLabels = {
   saving: string;
   formatCompositionCount: (count: number) => string;
   formatPackagePrice: (price: string) => string;
+  formatUnitPrice: (price: string) => string;
 };
 
 export type PackFormProps = {

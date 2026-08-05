@@ -33,8 +33,9 @@ import {
   isValidImageUrl,
   removePackItem,
   setPackItemPackageQuantity,
+  setPackItemUnitQuantity,
 } from "./pack-form.helpers";
-import type { PackFormLabels, PackFormProps } from "./pack-form.types";
+import type { PackFormProps } from "./pack-form.types";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col gap-4 rounded-2xl border p-5 shadow-sm";
@@ -60,23 +61,25 @@ function SectionHeader({ icon, title }: { icon: ReactNode; title: string }) {
   );
 }
 
-function PackageStepper({
+function QuantityStepper({
   value,
   onDecrease,
   onIncrease,
-  labels,
+  decreaseLabel,
+  increaseLabel,
 }: {
   value: number;
   onDecrease: () => void;
   onIncrease: () => void;
-  labels: PackFormLabels;
+  decreaseLabel: string;
+  increaseLabel: string;
 }) {
   return (
     <div className="bg-surface-container-high flex items-center gap-3 rounded-full p-1">
       <button
         type="button"
         onClick={onDecrease}
-        aria-label={labels.decreasePackages}
+        aria-label={decreaseLabel}
         className="press-down text-secondary flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm"
       >
         <Minus className="h-[18px] w-[18px]" aria-hidden />
@@ -87,7 +90,7 @@ function PackageStepper({
       <button
         type="button"
         onClick={onIncrease}
-        aria-label={labels.increasePackages}
+        aria-label={increaseLabel}
         className="press-down bg-secondary flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm"
       >
         <Plus className="h-[18px] w-[18px]" aria-hidden />
@@ -207,6 +210,13 @@ export function PackForm({
     setValues((current) => ({
       ...current,
       items: setPackItemPackageQuantity(current.items, productId, quantity),
+    }));
+  }
+
+  function handleUnitQuantityChange(productId: string, quantity: number) {
+    setValues((current) => ({
+      ...current,
+      items: setPackItemUnitQuantity(current.items, productId, quantity),
     }));
   }
 
@@ -483,25 +493,59 @@ export function PackForm({
                         <p className="text-on-surface-variant/70 text-xs">
                           {labels.formatPackagePrice(
                             formatPrice(product?.packageNetPrice ?? 0),
+                          )}{" "}
+                          ·{" "}
+                          {labels.formatUnitPrice(
+                            formatPrice(product?.unitNetPrice ?? 0),
                           )}
                         </p>
                       </div>
-                      <PackageStepper
-                        value={item.packageQuantity}
-                        onDecrease={() =>
-                          handlePackageQuantityChange(
-                            item.productId,
-                            item.packageQuantity - 1,
-                          )
-                        }
-                        onIncrease={() =>
-                          handlePackageQuantityChange(
-                            item.productId,
-                            item.packageQuantity + 1,
-                          )
-                        }
-                        labels={labels}
-                      />
+                      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-on-surface-variant/70 text-[10px] uppercase tracking-wide">
+                            {labels.packagesLabel}
+                          </span>
+                          <QuantityStepper
+                            value={item.packageQuantity}
+                            onDecrease={() =>
+                              handlePackageQuantityChange(
+                                item.productId,
+                                item.packageQuantity - 1,
+                              )
+                            }
+                            onIncrease={() =>
+                              handlePackageQuantityChange(
+                                item.productId,
+                                item.packageQuantity + 1,
+                              )
+                            }
+                            decreaseLabel={labels.decreasePackages}
+                            increaseLabel={labels.increasePackages}
+                          />
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-on-surface-variant/70 text-[10px] uppercase tracking-wide">
+                            {labels.unitsLabel}
+                          </span>
+                          <QuantityStepper
+                            value={item.unitQuantity}
+                            onDecrease={() =>
+                              handleUnitQuantityChange(
+                                item.productId,
+                                item.unitQuantity - 1,
+                              )
+                            }
+                            onIncrease={() =>
+                              handleUnitQuantityChange(
+                                item.productId,
+                                item.unitQuantity + 1,
+                              )
+                            }
+                            decreaseLabel={labels.decreaseUnits}
+                            increaseLabel={labels.increaseUnits}
+                          />
+                        </div>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveProduct(item.productId)}

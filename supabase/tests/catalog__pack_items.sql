@@ -1,5 +1,5 @@
 begin;
-select plan(3);
+select plan(5);
 
 select ok(
   (select relrowsecurity from pg_class where oid = 'catalog.pack_items'::regclass),
@@ -7,8 +7,18 @@ select ok(
 );
 
 select ok(
-  (select conname from pg_constraint where conname = 'pack_items_package_quantity_positive') is not null,
-  'pack_items_package_quantity_positive constraint exists'
+  (select conname from pg_constraint where conname = 'pack_items_package_quantity_nonnegative') is not null,
+  'pack_items_package_quantity_nonnegative constraint exists'
+);
+
+select ok(
+  (select conname from pg_constraint where conname = 'pack_items_unit_quantity_nonnegative') is not null,
+  'pack_items_unit_quantity_nonnegative constraint exists'
+);
+
+select ok(
+  (select conname from pg_constraint where conname = 'pack_items_quantity_sum_positive') is not null,
+  'pack_items_quantity_sum_positive constraint exists'
 );
 
 select ok(

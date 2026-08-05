@@ -8,8 +8,8 @@ import {
 import type { PackFormLabels } from "./pack-form.types";
 
 const products = [
-  { id: "p1", name: "Galleta", packageNetPrice: 10 },
-  { id: "p2", name: "Chocolate", packageNetPrice: 5 },
+  { id: "p1", name: "Galleta", packageNetPrice: 10, unitNetPrice: 10 },
+  { id: "p2", name: "Chocolate", packageNetPrice: 5, unitNetPrice: 5 },
 ];
 
 const campaigns: never[] = [];
@@ -43,8 +43,12 @@ const labels: PackFormLabels = {
   includeInactiveProductsHint: "Muestra productos desactivados",
   addProduct: "Agregar",
   emptyItems: "Agrega productos",
-  decreasePackages: "Menos",
-  increasePackages: "Más",
+  decreasePackages: "Menos paquetes",
+  increasePackages: "Más paquetes",
+  decreaseUnits: "Menos unidades",
+  increaseUnits: "Más unidades",
+  packagesLabel: "Paquetes",
+  unitsLabel: "Unidades",
   removeProduct: "Quitar",
   referencePrice: "Referencia",
   normalPrice: "Normal",
@@ -60,6 +64,7 @@ const labels: PackFormLabels = {
   saving: "Guardando…",
   formatCompositionCount: (count) => `${count} ítems`,
   formatPackagePrice: (price) => `${price} / paq.`,
+  formatUnitPrice: (price) => `${price} / u.`,
 };
 
 describe("PackForm", () => {
@@ -141,7 +146,9 @@ describe("PackForm", () => {
               productId: "p1",
               productName: "Galleta",
               packageNetPrice: 10,
+              unitNetPrice: 10,
               packageQuantity: 1,
+              unitQuantity: 0,
             },
           ],
         }}

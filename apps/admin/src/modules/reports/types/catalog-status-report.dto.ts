@@ -86,7 +86,9 @@ export type CatalogStatusPackCompositionRow = {
   productSku: string;
   productName: string;
   packageQuantity: number;
+  unitQuantity: number;
   packageNetPrice: number;
+  unitNetPrice: number;
   productPresentations: number;
   productIsActive: boolean;
 };

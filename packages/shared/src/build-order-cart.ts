@@ -65,7 +65,11 @@ export type OrderPackSource = {
   image_url: string | null;
   is_active: boolean;
   deleted_at: string | null;
-  items: Array<{ product_id: string; package_quantity: number }>;
+  items: Array<{
+    product_id: string;
+    package_quantity: number;
+    unit_quantity: number;
+  }>;
 };
 
 export type BuildOrderCartError =
@@ -213,6 +217,7 @@ function buildEnrichedCartLines(
         components: pack.items.map((item) => ({
           productId: item.product_id,
           packageQuantity: item.package_quantity,
+          unitQuantity: item.unit_quantity ?? 0,
         })),
       });
       continue;

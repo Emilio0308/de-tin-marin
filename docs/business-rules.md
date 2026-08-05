@@ -146,7 +146,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Pasos (transacción atómica — `commerce.deduct_stock_for_order`):**
   1. Agregar demandas por `product_id`:
      - Líneas `type: product`: `presentationQuantity += quantity` (presentaciones vendidas).
-     - Componentes de líneas `type: pack`: `presentationQuantity += totalPackages` (`packageQuantity × line.quantity`) — Regla 24.
+     - Componentes de líneas `type: pack`: `presentationQuantity += totalPackages` (`packageQuantity × line.quantity`) y `baseUnits += totalUnits` (`unitQuantity × line.quantity`; legacy sin campo → 0) — Regla 24.
      - Componentes de líneas `type: bundle`: `baseUnits += totalQuantity` (unidad base).
   2. Por producto, `need` en unidades base:
      - `need = presentationQuantity × items_per_package + baseUnits` (con `items_per_package >= 1`).
@@ -227,7 +227,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 ### Regla 22 — Pack sin stock propio
 
 - **Trigger:** Cualquier operación sobre pack/combo.
-- **Pasos:** `catalog.packs` **no** tiene columnas de stock. Disponibilidad = mínimo de `floor(stock_presentaciones_producto / package_quantity)` sobre componentes **activos** (`is_active` y sin `deleted_at`). Presentaciones por producto según Regla 4 (`unit` = solo loose; `package` = sealed×ipp+loose).
+- **Pasos:** `catalog.packs` **no** tiene columnas de stock. Por componente activo (`is_active`, sin `deleted_at`): `needBase = package_quantity × items_per_package + unit_quantity`; `availableBase` según Regla 4 (`package` = sealed×ipp+loose; `unit` = solo loose). Disponibilidad del combo = mínimo de `floor(availableBase / needBase)`.
 - **Implementación:** `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`) — usada en ecommerce, checkout y export admin (S4-01).
 - **Fallo:** N/A.
 
@@ -235,17 +235,17 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 - **Trigger:** Crear/editar pack; listar; armar línea de orden.
 - **Pasos:**
-  1. `reference.netPrice = Σ (product.prices.normal.netPrice × package_quantity)` (recalculado en backend al guardar).
+  1. `reference.netPrice = Σ (product.prices.normal.netPrice × package_quantity + product.prices.unit.netPrice × unit_quantity)` (recalculado en backend al guardar). Invariante BOM: `package_quantity >= 0`, `unit_quantity >= 0`, `package_quantity + unit_quantity >= 1` (una fila por producto).
   2. Admin define `normal.netPrice`; **obligatorio** `normal.netPrice >= reference.netPrice`.
   3. Descuentos solo vía campaña 1:1 (`campaign_id`) sobre `normal` → `finalPrice`.
-  4. Congelar `unitPrice` (= finalPrice) y BOM en `shopping_cart` línea `type: pack`.
+  4. Congelar `unitPrice` (= finalPrice) y BOM (`packageQuantity`, `unitQuantity`, `totalPackages`, `totalUnits`) en `shopping_cart` línea `type: pack`.
 - **UI admin (picker):** misma semántica que Regla 6 — productos activos por defecto; al editar, `mergePackProductOptions` conserva ítems ya en la BOM; create/update solo productos activos (`validatePackItems`).
 - **Fallo:** Rechazar save/checkout si `normal < reference` o items inválidos.
 
 ### Regla 24 — Deduct pack al pagar
 
 - **Trigger:** Orden → `paid` (Regla 15).
-- **Pasos:** Por cada línea `type: pack`, por cada componente: sumar `totalPackages = packageQuantity × line.quantity` a `presentationQuantity` del producto; deduct como líneas product (Regla 15 / `product_type`).
+- **Pasos:** Por cada línea `type: pack`, por cada componente: `presentationQuantity += totalPackages` (`packageQuantity × line.quantity`); `baseUnits += totalUnits` (`unitQuantity × line.quantity`; legacy sin campo → 0). Deduct vía pipeline compartido (Regla 15 / `product_type`). **No** alterar el branch `type: bundle`.
 - **Fallo:** Stock insuficiente → rollback; orden no `paid`.
 
 ### Regla 25 — Límites min/max de compra (packs)
@@ -291,5 +291,5 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 17–18 | Payments           | Manual confirm / refund                                            |
 | 19–20 | Delivery / Envases | Tarifa por distrito; stock envase 1:1 sorpresa                     |
 | 21    | Products           | Min/max compra por presentación (default 10/100)                   |
-| 22–25 | Packs / combos     | Sin stock propio, reference/normal, deduct presentaciones, min/max |
+| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
 | 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |

@@ -61,7 +61,9 @@ export type OrderShoppingCartPackComponent = {
   productName: string;
   sku: string;
   packageQuantity: number;
+  unitQuantity: number;
   totalPackages: number;
+  totalUnits: number;
 };
 
 export type OrderShoppingCartPackLine = {
@@ -118,6 +120,7 @@ export type BuildBundleLineInput = {
 export type PackComponentInput = {
   productId: string;
   packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type PackForOrderLine = {
@@ -258,12 +261,19 @@ export function buildPackLine(
       if (!product) {
         throw new Error(`PRODUCT_NOT_FOUND:${component.productId}`);
       }
+      const packageQuantity = Math.max(
+        0,
+        Math.floor(component.packageQuantity),
+      );
+      const unitQuantity = Math.max(0, Math.floor(component.unitQuantity));
       return {
         productId: product.id,
         productName: product.name,
         sku: product.sku,
-        packageQuantity: component.packageQuantity,
-        totalPackages: component.packageQuantity * quantity,
+        packageQuantity,
+        unitQuantity,
+        totalPackages: packageQuantity * quantity,
+        totalUnits: unitQuantity * quantity,
       };
     },
   );

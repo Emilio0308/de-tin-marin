@@ -340,6 +340,7 @@ function toPackAvailabilityComponents(
     const product = item.products;
     return {
       packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
       product: product
         ? {
             isActive: product.is_active,
@@ -357,6 +358,7 @@ function toPackAvailabilityComponents(
 function isActivePackItem(item: PublicPackItemRow): boolean {
   return isActivePackAvailabilityComponent({
     packageQuantity: item.package_quantity,
+    unitQuantity: item.unit_quantity ?? 0,
     product: item.products
       ? {
           isActive: item.products.is_active,
@@ -378,10 +380,21 @@ function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
 }
 
 function buildPackItemsPreview(items: PublicPackItemRow[]) {
-  return items.filter(isActivePackItem).map((item) => ({
-    id: item.product_id,
-    label: `${item.products?.name ?? "—"} × ${item.package_quantity}`,
-  }));
+  return items.filter(isActivePackItem).map((item) => {
+    const name = item.products?.name ?? "—";
+    const pkg = item.package_quantity;
+    const units = item.unit_quantity ?? 0;
+    if (pkg > 0 && units > 0) {
+      return {
+        id: item.product_id,
+        label: `${name} × ${pkg} paq. + ${units} u.`,
+      };
+    }
+    if (units > 0 && pkg === 0) {
+      return { id: item.product_id, label: `${name} × ${units} u.` };
+    }
+    return { id: item.product_id, label: `${name} × ${pkg}` };
+  });
 }
 
 function toPackListItem(
@@ -427,6 +440,7 @@ function toPackDetail(
       description: item.products?.description ?? null,
       imageUrl: normalizeImageUrl(item.products?.image_url),
       packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
       itemsPerPackage: Math.max(1, item.products?.items_per_package ?? 1),
       productType:
         (item.products?.product_type as "unit" | "package") ?? "unit",

@@ -256,6 +256,7 @@ export function OrderFormContainer() {
             components: [] as Array<{
               productId: string;
               packageQuantity: number;
+              unitQuantity: number;
             }>,
           },
         ]),

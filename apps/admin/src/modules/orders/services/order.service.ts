@@ -100,6 +100,7 @@ async function resolvePacksById(
       items: (pack.pack_items ?? []).map((item) => ({
         product_id: item.product_id,
         package_quantity: item.package_quantity,
+        unit_quantity: item.unit_quantity ?? 0,
       })),
     });
   }

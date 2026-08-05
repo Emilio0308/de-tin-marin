@@ -4,7 +4,9 @@ export type PackFormItemDTO = {
   productId: string;
   productName: string;
   packageNetPrice: number;
+  unitNetPrice: number;
   packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type PackFormDTO = {

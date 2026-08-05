@@ -316,6 +316,7 @@ async function loadPacks(config: SupabaseConfig): Promise<{
     const availableQuantity = computePackAvailableQuantity(
       packItems.map((item) => ({
         packageQuantity: item.package_quantity,
+        unitQuantity: item.unit_quantity ?? 0,
         product: item.products ? toAvailabilityProduct(item.products) : null,
       })),
     );
@@ -351,8 +352,11 @@ async function loadPacks(config: SupabaseConfig): Promise<{
         productSku: product?.sku ?? "—",
         productName: product?.name ?? "—",
         packageQuantity: item.package_quantity,
+        unitQuantity: item.unit_quantity ?? 0,
         packageNetPrice: parseProductPricesJson(product?.prices ?? {})
           .packageNetPrice,
+        unitNetPrice: parseProductPricesJson(product?.prices ?? {})
+          .unitNetPrice,
         productPresentations: availabilityProduct
           ? packComponentPresentations(availabilityProduct)
           : 0,

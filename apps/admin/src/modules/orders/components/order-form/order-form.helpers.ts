@@ -29,7 +29,11 @@ type PackMeta = {
   sku: string;
   name: string;
   unitPrice: number;
-  components: Array<{ productId: string; packageQuantity: number }>;
+  components: Array<{
+    productId: string;
+    packageQuantity: number;
+    unitQuantity: number;
+  }>;
 };
 
 function buildProductsByIdForLine(

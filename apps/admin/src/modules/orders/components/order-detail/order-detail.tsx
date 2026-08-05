@@ -356,7 +356,9 @@ export function OrderDetailView({
                             {line.components.map((component) => (
                               <li key={component.productId}>
                                 {component.productName} ×{" "}
-                                {component.totalPackages}
+                                {(component.totalUnits ?? 0) > 0
+                                  ? `${component.totalPackages} paq. + ${component.totalUnits} u.`
+                                  : component.totalPackages}
                               </li>
                             ))}
                           </ul>

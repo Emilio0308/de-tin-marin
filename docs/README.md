@@ -27,6 +27,7 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 - [stages/S0/03-admin-pack-image-upload.md](stages/S0/03-admin-pack-image-upload.md) — brief upload imágenes catálogo (presign)
 - [stages/S4/01-catalog-status-excel.md](stages/S4/01-catalog-status-excel.md) — brief export Excel estado catálogo ✅
 - [stages/S4/02-product-cost-margin.md](stages/S4/02-product-cost-margin.md) — brief costo/margen productos ✅
+- [stages/S4/04-pack-dual-quantities.md](stages/S4/04-pack-dual-quantities.md) — brief BOM pack package+unit ✅
 - [stages/S3A/01-remediation-catalog-pagination-sql.md](stages/S3A/01-remediation-catalog-pagination-sql.md) — remediación paginación catálogo público ✅
 - [stages/S3B/01-admin-list-pagination.md](stages/S3B/01-admin-list-pagination.md) — paginación listados admin ✅
 - [stages/STAGE-BRIEF-TEMPLATE.md](stages/STAGE-BRIEF-TEMPLATE.md) — plantilla de briefs

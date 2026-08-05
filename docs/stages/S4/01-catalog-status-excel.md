@@ -13,7 +13,7 @@
 
 - Reports = exportaciones operativas; primer slice = estado de catálogo ([architecture.md](../../architecture.md)).
 - Productos tienen stock sealed/loose; packs/bundles **no** tienen stock propio (Reglas 5, 22).
-- Disponibilidad pack = `min(floor(presentaciones / package_quantity))` sobre componentes activos (Regla 22).
+- Disponibilidad pack = `min(floor(availableBase / needBase))` con `needBase = package_quantity × ipp + unit_quantity` (Regla 22 / S4-04).
 - Tablas: `catalog.products`, `catalog.bundles`, `catalog.bundle_items`, `catalog.packs`, `catalog.pack_items`, `catalog.surprise_containers`, `catalog.categories`, `pricing.campaigns`, `commerce.orders` — ver [database.md](../../database.md).
 - Soft-deleted (`deleted_at`) fuera del export de catálogo; activos e inactivos sí. Órdenes: todas las filas de `commerce.orders`.
 
@@ -60,7 +60,7 @@ Staff en el dashboard admin (:3001) elige secciones (productos, sorpresas, packs
 - **Meta:** generatedAt (ISO), sections, timezone `UTC`
 - **Productos:** tabla plana (sku, name, description, slug, brand, categoryName, productType, itemsPerPackage, packageLabel, netPrice, unitNetPrice, finalPrice, finalUnitPrice, campaignName, campaignPercentage, **costNetPrice, margin, marginPct**, stockSealedPackages, stockLooseBaseUnits, stockTotalBaseUnits, stockDisplay, stockInPresentations, purchaseMin/Max, isActive, imageUrl)
 - **Sorpresas:** una hoja; **sección por sorpresa** = bloque datos generales (label/valor: name, description, isActive, quantity, containerSku/Name/NetPrice/Stock, itemCount, itemsSubtotal, containerSubtotal, total, imageUrl) + subtítulo `Componentes` + filas de composición (productSku/Name, unitsPerPerson, unitNetPrice, productIsActive, productStockDisplay). Sin hoja `Sorpresas_composicion`.
-- **Packs:** una hoja; **sección por pack** = bloque datos generales (sku, name, description, slug, reference/normal/final, campaña, itemCount, availableQuantity, purchaseMin/Max, isActive, imageUrl) + subtítulo `Componentes` + filas (productSku/Name, packageQuantity, packageNetPrice, productPresentations, productIsActive). Sin hoja `Packs_composicion`.
+- **Packs:** una hoja; **sección por pack** = bloque datos generales (sku, name, description, slug, reference/normal/final, campaña, itemCount, availableQuantity, purchaseMin/Max, isActive, imageUrl) + subtítulo `Componentes` + filas (productSku/Name, **packageQuantity**, **unitQuantity**, packageNetPrice, unitNetPrice, productPresentations, productIsActive). Sin hoja `Packs_composicion`.
 - **Envases:** sku, name, description, netPrice, stockQuantity, isActive, imageUrl
 - **Ordenes:** tabla plana de `commerce.orders` (orderNumber, status, paymentStatus, customer, contact, fulfillment, subtotal/discount/shipping/total, lineCount, currency, createdAt) + columna **Ver productos** (hipervínculo a `Ordenes_carrito`)
 - **Ordenes_carrito:** sección por orden (ancla) + resumen + líneas del `shopping_cart` congelado (`product` / `pack` / `bundle`) con desglose de componentes y envase

@@ -53,7 +53,9 @@ const PACK_ITEM_HEADERS = [
   "Producto SKU",
   "Producto nombre",
   "Package quantity",
+  "Unit quantity",
   "Precio presentación",
+  "Precio unidad",
   "Presentaciones producto",
   "Producto activo",
 ] as const;
@@ -269,7 +271,9 @@ function addPacksSheet(
         item.productSku,
         item.productName,
         item.packageQuantity,
+        item.unitQuantity,
         item.packageNetPrice,
+        item.unitNetPrice,
         item.productPresentations,
         boolLabel(item.productIsActive),
       ]);

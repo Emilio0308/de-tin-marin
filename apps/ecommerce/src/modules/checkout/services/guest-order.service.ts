@@ -94,6 +94,7 @@ function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
     const product = item.products;
     return {
       packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
       product: product
         ? {
             isActive: product.is_active,
@@ -160,6 +161,7 @@ async function resolvePacksById(
         items: items.map((item) => ({
           product_id: item.product_id,
           package_quantity: item.package_quantity,
+          unit_quantity: item.unit_quantity ?? 0,
         })),
         purchase_min_quantity: pack.purchase_min_quantity ?? 1,
         purchase_max_quantity: pack.purchase_max_quantity ?? 100,

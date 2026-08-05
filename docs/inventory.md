@@ -65,11 +65,12 @@ Ejemplo Lay’s (`product_type = package`, `items_per_package = 10`, `package_la
 
 ### Agregación desde `shopping_cart`
 
-| Origen                       | Campo en demanda       | Unidad                                    |
-| ---------------------------- | ---------------------- | ----------------------------------------- |
-| Línea `type: product`        | `presentationQuantity` | Presentaciones vendidas                   |
-| Componente de línea `pack`   | `presentationQuantity` | `totalPackages` (= packageQty × line.qty) |
-| Componente de línea `bundle` | `baseUnits`            | Unidades base                             |
+| Origen                       | Campo en demanda       | Unidad                                                    |
+| ---------------------------- | ---------------------- | --------------------------------------------------------- |
+| Línea `type: product`        | `presentationQuantity` | Presentaciones vendidas                                   |
+| Componente de línea `pack`   | `presentationQuantity` | `totalPackages` (= packageQty × line.qty)                 |
+| Componente de línea `pack`   | `baseUnits`            | `totalUnits` (= unitQty × line.qty; legacy sin campo → 0) |
+| Componente de línea `bundle` | `baseUnits`            | Unidades base                                             |
 
 ```text
 need = presentationQuantity × items_per_package + baseUnits
@@ -130,9 +131,9 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 ## Packs / combos
 
 - **Sin stock propio** en `packs` (DECISIONS #33 / Regla 22).
-- Disponibilidad = mínimo de `floor(stock_presentaciones / package_quantity)` sobre componentes activos.
-- Helper canónico: `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`, `packComponentPresentations`).
-- Al `paid`: componentes aportan `totalPackages` a `presentationQuantity` (igual que líneas product).
+- BOM dual: `package_quantity` + `unit_quantity` (suma ≥ 1). Disponibilidad = mínimo de `floor(availableBase / needBase)` con `needBase = package_quantity × ipp + unit_quantity`.
+- Helper canónico: `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`).
+- Al `paid`: `totalPackages` → `presentationQuantity`; `totalUnits` → `baseUnits`. Branch bundle intacto.
 
 ## Admin (v1)
 

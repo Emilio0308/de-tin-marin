@@ -1,9 +1,20 @@
 import { z } from "zod";
 
-export const packItemInputSchema = z.object({
-  productId: z.string().uuid(),
-  packageQuantity: z.number().int().min(1),
-});
+export const packItemInputSchema = z
+  .object({
+    productId: z.string().uuid(),
+    packageQuantity: z.number().int().min(0).default(0),
+    unitQuantity: z.number().int().min(0).default(0),
+  })
+  .superRefine((item, ctx) => {
+    if (item.packageQuantity + item.unitQuantity < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "packageQuantity + unitQuantity must be >= 1",
+        path: ["unitQuantity"],
+      });
+    }
+  });
 
 const packFieldsSchema = z.object({
   sku: z.string().min(1).max(64),

@@ -50,16 +50,16 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 
 ## Boundaries y DTOs
 
-| Boundary             | Tipo          | Input (Zod)                 | Output DTO (allowlist)                      |
-| -------------------- | ------------- | --------------------------- | ------------------------------------------- |
-| `listCategories`     | Server Action | —                           | `{ id, name, slug, isActive, sortOrder }[]` |
-| `createCategory`     | Server Action | `createCategoryInputSchema` | `{ ok, id? }`                               |
-| `updateCategory`     | Server Action | `updateCategoryInputSchema` | `{ ok }`                                    |
-| `softDeleteCategory` | Server Action | `{ id: uuid }`              | `{ ok }`                                    |
-| `listProducts`       | Server Action | `{ status?: "all"           | "active"                                    | "inactive" }`(Zod`adminStatusFilterSchema`, default `"all"`) | `{ id, sku, name, slug, brand, categoryId, categoryName, netPrice, stockQuantity, isActive, imageUrl }[]` |
-| `createProduct`      | Server Action | `createProductInputSchema`  | `{ ok, id? }`                               |
-| `updateProduct`      | Server Action | `updateProductInputSchema`  | `{ ok }`                                    |
-| `softDeleteProduct`  | Server Action | `{ id: uuid }`              | `{ ok }`                                    |
+| Boundary             | Tipo          | Input (Zod)                                                                                     | Output DTO (allowlist)                                                                                    |
+| -------------------- | ------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `listCategories`     | Server Action | —                                                                                               | `{ id, name, slug, isActive, sortOrder }[]`                                                               |
+| `createCategory`     | Server Action | `createCategoryInputSchema`                                                                     | `{ ok, id? }`                                                                                             |
+| `updateCategory`     | Server Action | `updateCategoryInputSchema`                                                                     | `{ ok }`                                                                                                  |
+| `softDeleteCategory` | Server Action | `{ id: uuid }`                                                                                  | `{ ok }`                                                                                                  |
+| `listProducts`       | Server Action | `{ status?: "all" \| "active" \| "inactive" }` (Zod `adminStatusFilterSchema`, default `"all"`) | `{ id, sku, name, slug, brand, categoryId, categoryName, netPrice, stockQuantity, isActive, imageUrl }[]` |
+| `createProduct`      | Server Action | `createProductInputSchema`                                                                      | `{ ok, id? }`                                                                                             |
+| `updateProduct`      | Server Action | `updateProductInputSchema`                                                                      | `{ ok }`                                                                                                  |
+| `softDeleteProduct`  | Server Action | `{ id: uuid }`                                                                                  | `{ ok }`                                                                                                  |
 
 ## Rules que aplican
 

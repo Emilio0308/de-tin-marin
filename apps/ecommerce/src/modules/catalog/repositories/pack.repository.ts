@@ -15,6 +15,7 @@ export type PublicPackItemRow = {
   pack_id: string;
   product_id: string;
   package_quantity: number;
+  unit_quantity: number;
   products: {
     name: string;
     description: string | null;
@@ -147,7 +148,7 @@ export async function listPublicPackItemsByPackIdsRepo(
     .schema("catalog")
     .from("pack_items")
     .select(
-      "pack_id, product_id, package_quantity, products(name, description, image_url, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units)",
+      "pack_id, product_id, package_quantity, unit_quantity, products(name, description, image_url, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units)",
     )
     .in("pack_id", packIds);
 

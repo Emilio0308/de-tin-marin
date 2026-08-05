@@ -117,7 +117,7 @@ Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**
 | `catalog.bundles`             | Plantilla de sorpresa (sin stock propio) |
 | `catalog.bundle_items`        | Composición base de la plantilla         |
 | `catalog.packs`               | Combo vendible (sin stock propio)        |
-| `catalog.pack_items`          | BOM fija en presentaciones/paquetes      |
+| `catalog.pack_items`          | BOM fija: presentaciones + unidades base |
 | `catalog.catalog_cache_meta`  | Singleton `version_at` (caché ecommerce) |
 
 **`catalog.categories`** (columnas clave):
@@ -218,12 +218,12 @@ Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**
 | `is_active`             | boolean       |                                                                |
 | `deleted_at`            | timestamptz   | Soft-delete                                                    |
 
-> **`reference`** = suma de `product.prices.normal.netPrice × package_quantity` (recalculada al guardar).
+> **`reference`** = Σ (`product.prices.normal.netPrice × package_quantity` + `product.prices.unit.netPrice × unit_quantity`) (recalculada al guardar).
 > **`normal`** = precio de venta del combo (admin). Invariante: `normal.netPrice >= reference.netPrice`.
 > Campaña aplica sobre `normal` → `finalPrice` en listado/orden.
-> Sin columnas de stock. Futuro: cantidades en unidad base / fracciones (no v1).
+> Sin columnas de stock.
 
-**`catalog.pack_items`**: `pack_id`, `product_id`, `package_quantity` (presentaciones/paquetes del producto por combo; `>= 1`). Unique `(pack_id, product_id)`. Solo productos (no packs anidados).
+**`catalog.pack_items`**: `pack_id`, `product_id`, `package_quantity` (presentaciones; `>= 0`), `unit_quantity` (unidades base sueltas; `>= 0`). Invariante: `package_quantity + unit_quantity >= 1`. Unique `(pack_id, product_id)` — una fila por producto; ambas cantidades pueden ser > 0 a la vez. Solo productos (no packs anidados).
 
 **`catalog.catalog_cache_meta`** (singleton — invalidación ecommerce, migraciones `00017`/`00018`):
 

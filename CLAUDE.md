@@ -83,14 +83,14 @@ Cada línea indica el **bug class** que previene.
 
 ## Separación de responsabilidades crítica
 
-| Dominio            | Responsabilidad                                                    | NO hace                         |
-| ------------------ | ------------------------------------------------------------------ | ------------------------------- |
-| **Pricing**        | `finalPrice` en listado + total línea sorpresa                     | Gestionar órdenes               |
-| **Orders**         | Ciclo de vida, snapshot, personalización bundle                    | Recalcular precios              |
-| **Inventory (v1)** | `product_type` + sealed/loose; `unit` solo loose; deduct al `paid` | Calcular precios                |
-| **Bundles**        | Plantillas sin stock, `service_fee` editable                       | Tener stock propio              |
-| **Packs**          | Combos BOM fija; `prices.reference`+`normal`; sin stock propio     | Personalizar BOM / stock propio |
-| **Campaigns**      | Definir % y asignar 1:1 a producto (y pack)                        | Calcular en frontend            |
+| Dominio            | Responsabilidad                                                                  | NO hace                         |
+| ------------------ | -------------------------------------------------------------------------------- | ------------------------------- |
+| **Pricing**        | `finalPrice` en listado + total línea sorpresa                                   | Gestionar órdenes               |
+| **Orders**         | Ciclo de vida, snapshot, personalización bundle                                  | Recalcular precios              |
+| **Inventory (v1)** | `product_type` + sealed/loose; `unit` solo loose; deduct al `paid`               | Calcular precios                |
+| **Bundles**        | Plantillas sin stock, `service_fee` editable                                     | Tener stock propio              |
+| **Packs**          | Combos BOM fija (`package` + `unit` qty); `reference`+`normal`; sin stock propio | Personalizar BOM / stock propio |
+| **Campaigns**      | Definir % y asignar 1:1 a producto (y pack)                                      | Calcular en frontend            |
 
 Pipeline de precios: ver [`docs/pricing.md`](docs/pricing.md).
 

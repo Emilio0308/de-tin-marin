@@ -29,6 +29,16 @@ export function PackDetailPageContainer({
         t("packs.componentPackages", { packages, units }),
       formatComponentUnits: (count: number) =>
         t("packs.componentUnits", { count }),
+      formatComponentPackagesAndLoose: (
+        packages: number,
+        unitsPerPackage: number,
+        loose: number,
+      ) =>
+        t("packs.componentPackagesAndLoose", {
+          packages,
+          units: unitsPerPackage,
+          loose,
+        }),
     }),
     [labels, t],
   );
