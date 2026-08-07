@@ -21,9 +21,10 @@ Staff navega listados admin con **paginación SQL real** (`count: exact` + `.ran
 
 ## Scope IN
 
-- `@de-tin-marin/validations/admin-list` — schemas `page`/`pageSize` (default 20, max 50) + filtros por entidad
+- `@de-tin-marin/validations/admin-list` — schemas `page`/`pageSize` (**default 5**, max 50) + filtros por entidad
 - `*PageRepo` / `*PageService` / `*PageAction` para: categories, products, bundles, packs, containers, orders
-- Conservar `list*Action()` sin página para dropdowns/forms (catálogo completo)
+- Prefetch SSR + `HydrationBoundary` en `app/(dashboard)/…/page.tsx` (`createAdminQueryClient`)
+- Forms/composición: **no** listado completo — `ProductSearchPicker` + `listProductsPageAction` (S4+)
 - UI: `AdminTablePagination` + `admin-list-url` helpers; query keys incluyen filtros
 - i18n labels de paginación
 
@@ -32,7 +33,7 @@ Staff navega listados admin con **paginación SQL real** (`count: exact` + `.ran
 - **NO** RPCs nuevas (PostgREST basta en admin staff)
 - **NO** sort configurable por columna (orden fijo por entidad)
 - **NO** cambiar ecommerce (ya S3A-1-R)
-- **NO** infinite scroll
+- **NO** infinite scroll en tablas (el picker de productos sí: scroll infinito + sentinel; no botón “cargar más”)
 
 ## Boundaries
 
@@ -40,12 +41,15 @@ Staff navega listados admin con **paginación SQL real** (`count: exact` + `.ran
 | ----------------- | -------------------- | ------------------------------------------------ |
 | `list*PageAction` | Zod admin-list query | `{ items, page, pageSize, total }` DTO allowlist |
 
+> **Post-S4:** `listProductsAction` (catálogo completo) se eliminó del boundary de UI; usar `listProductsPageAction`. `listProductsService`/`listProductsRepo` pueden quedar para usos internos puntuales.
+
 ## Criterios
 
 - [x] Vitest `packages/validations/src/admin-list.test.ts`
 - [x] Vitest `admin-table-pagination.test.tsx`
 - [x] Listados `/products`, `/categories`, `/bundles`, `/packs`, `/containers`, `/orders` paginan en SQL
 - [x] README catalog/orders actualizados
+- [x] SSR + hidratación RQ en listados admin; home ecommerce vía `loadStorefrontCatalog`
 
 ## Referencias
 

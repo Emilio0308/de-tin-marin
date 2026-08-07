@@ -24,6 +24,7 @@ import {
 import { cn } from "@de-tin-marin/shared/cn";
 import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
+import { ProductSearchPickerContainer } from "@/modules/catalog/components/product-search-picker/product-search-picker.container";
 import {
   addPackItem,
   buildDefaultPackValues,
@@ -107,13 +108,14 @@ export function PackForm({
   labels,
   includeInactiveProducts,
   onIncludeInactiveProductsChange,
+  onEnsureProductOption,
+  productStatus,
   onSubmit,
   onCancel,
   submitting,
   error,
 }: PackFormProps) {
   const [values, setValues] = useState(() => buildDefaultPackValues(initial));
-  const [selectedProductId, setSelectedProductId] = useState("");
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -151,13 +153,9 @@ export function PackForm({
     setValues((current) => ({ ...current, imageUrl: "" }));
   }
 
-  const availableProducts = useMemo(
-    () =>
-      products.filter(
-        (product) =>
-          !values.items.some((item) => item.productId === product.id),
-      ),
-    [products, values.items],
+  const availableExcludeIds = useMemo(
+    () => values.items.map((item) => item.productId),
+    [values.items],
   );
 
   const referenceNetPrice = useMemo(
@@ -191,13 +189,22 @@ export function PackForm({
     }
   }
 
-  function handleAddProduct() {
-    if (!selectedProductId) return;
+  function handlePickProduct(item: {
+    id: string;
+    name: string;
+    netPrice: number;
+    unitNetPrice: number;
+  }) {
+    onEnsureProductOption({
+      id: item.id,
+      name: item.name,
+      packageNetPrice: item.netPrice,
+      unitNetPrice: item.unitNetPrice,
+    });
     setValues((current) => ({
       ...current,
-      items: addPackItem(current.items, selectedProductId),
+      items: addPackItem(current.items, item.id),
     }));
-    setSelectedProductId("");
   }
 
   function handleRemoveProduct(productId: string) {
@@ -449,30 +456,16 @@ export function PackForm({
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <select
-                aria-label={labels.productSelectPlaceholder}
-                value={selectedProductId}
-                onChange={(event) => setSelectedProductId(event.target.value)}
-                className={cn(fieldClass, "cursor-pointer appearance-none")}
-              >
-                <option value="">{labels.productSelectPlaceholder}</option>
-                {availableProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} · {formatPrice(product.packageNetPrice)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleAddProduct}
-                disabled={!selectedProductId}
-                className="border-secondary/40 text-secondary hover:bg-secondary/5 press-down font-label text-label-bold inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-5 py-3 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Plus className="h-5 w-5" aria-hidden />
-                {labels.addProduct}
-              </button>
-            </div>
+            <ProductSearchPickerContainer
+              status={productStatus}
+              excludeIds={availableExcludeIds}
+              onSelect={handlePickProduct}
+              formatPrice={formatPrice}
+              labels={{
+                searchPlaceholder: labels.productSelectPlaceholder,
+                searchAriaLabel: labels.productSelectPlaceholder,
+              }}
+            />
 
             {values.items.length === 0 ? (
               <p className="border-outline-variant/30 text-on-surface-variant font-body text-body-md rounded-xl border border-dashed px-4 py-6 text-center">

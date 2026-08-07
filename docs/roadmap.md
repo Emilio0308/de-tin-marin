@@ -255,7 +255,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - Todos los dominios operativos
 - Roles staff
 - Referencia UX: ADMIN_BACKOFFICE (pantallas)
-- [x] Paginación SQL listados: [`docs/stages/S3B/01-admin-list-pagination.md`](stages/S3B/01-admin-list-pagination.md)
+- [x] Paginación SQL listados: [`docs/stages/S3B/01-admin-list-pagination.md`](stages/S3B/01-admin-list-pagination.md) (default pageSize **5**; SSR + hidratación RQ)
+- [x] Home ecommerce SSR (`loadStorefrontCatalog`) + admin listados SSR; `ProductSearchPicker` en forms
 
 **Depends on:** S2A
 

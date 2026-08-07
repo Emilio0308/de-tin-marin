@@ -164,12 +164,12 @@ stock_loose_base_units >= 0
 
 ## Boundaries y DTOs
 
-| Boundary        | Tipo          | Input (Zod)                                                      | Output DTO (allowlist)                                                                                                                                     |
-| --------------- | ------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listProducts`  | Server Action | `{ status?: "all" \| "active" \| "inactive" }` (default `"all"`) | `{ ..., netPrice, unitNetPrice, itemsPerPackage, productType, packageLabel, stockSealedPackages, stockLooseBaseUnits, stockTotalBaseUnits, finalPrice }[]` |
-| `getProduct`    | Server Action | `{ id }`                                                         | Igual detalle + `prices` normal/unit                                                                                                                       |
-| `createProduct` | Server Action | `createProductInputSchema`                                       | `{ ok, id? }`                                                                                                                                              |
-| `updateProduct` | Server Action | `updateProductInputSchema`                                       | `{ ok }`                                                                                                                                                   |
+| Boundary           | Tipo          | Input (Zod)                                                                    | Output DTO (allowlist)                                              |
+| ------------------ | ------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `listProductsPage` | Server Action | `{ page?, pageSize?, search?, categoryId?, status? }` (default pageSize **5**) | `{ items, page, pageSize, total }` — items con precios dual + stock |
+| `getProduct`       | Server Action | `{ id }`                                                                       | Igual detalle + `prices` normal/unit                                |
+| `createProduct`    | Server Action | `createProductInputSchema`                                                     | `{ ok, id? }`                                                       |
+| `updateProduct`    | Server Action | `updateProductInputSchema`                                                     | `{ ok }`                                                            |
 
 **Input producto (nuevo):**
 

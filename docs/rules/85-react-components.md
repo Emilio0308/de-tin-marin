@@ -199,13 +199,15 @@ Si el componente es Server Component (sin `'use client'`):
 
 Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).
 
-| Caso                                                  | Dónde fetch                          | Container                                                               |
-| ----------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
-| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)             | Recibe DTO por props; **sin** `useQuery` del mismo recurso              |
-| Listados con filtros URL (home)                       | Objetivo: SSR + hidratación; hoy CSR | `useQuery` + `catalogQueryOptions` + gate `catalog_version` (Broadcast) |
-| Carrito                                               | Container cliente                    | Sync al montar con `freshQueryOptions`; rebuild vía `?sync=1`           |
-| Checkout                                              | Container cliente                    | Fee fresco; `validateGuestCheckoutCart` al submit (sin poll stock)      |
-| Admin order-form preview                              | Container cliente                    | `freshQueryOptions` en bundle/cart preview                              |
+| Caso                                                  | Dónde fetch                                                        | Container                                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)                                           | Recibe DTO por props; **sin** `useQuery` del mismo recurso                                                                      |
+| Listados con filtros URL (home)                       | `app/page.tsx` SSR + `HydrationBoundary` (`loadStorefrontCatalog`) | `useQuery` + `catalogQueryOptions` (sin refetch en mount) + gate `catalog_version`                                              |
+| Admin listados CRUD                                   | `app/(dashboard)/…/page.tsx` SSR + `HydrationBoundary`             | Containers con `useQuery` hidratado; mutaciones invalidan                                                                       |
+| Admin composición (pack/bundle/order)                 | —                                                                  | `ProductSearchPicker` → `listProductsPageAction`; order-form también tabs packs/bundles paginados + `getBundle` (ítems activos) |
+| Carrito                                               | Container cliente                                                  | Sync al montar con `freshQueryOptions`; rebuild vía `?sync=1`                                                                   |
+| Checkout                                              | Container cliente                                                  | Fee fresco; `validateGuestCheckoutCart` al submit (sin poll stock)                                                              |
+| Admin order-form preview                              | Container cliente                                                  | `freshQueryOptions` en bundle/cart preview                                                                                      |
 
 **Reglas:**
 

@@ -19,6 +19,10 @@ export const queryKeys = {
       [...queryKeys.catalog.packs(), "detail", slug] as const,
     categories: () => [...queryKeys.catalog.all, "categories"] as const,
   },
+  home: {
+    all: ["home"] as const,
+    hero: () => [...queryKeys.home.all, "hero"] as const,
+  },
   cart: {
     all: ["cart"] as const,
     current: () => [...queryKeys.cart.all, "current"] as const,

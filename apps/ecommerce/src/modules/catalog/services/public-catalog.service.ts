@@ -258,12 +258,11 @@ export async function listPublicBundlesService(
   }
 
   const containerIds = [...new Set(rows.map((row) => row.container_id))];
-  const containersById = await buildContainersMap(config, containerIds);
   const bundleIds = rows.map((row) => row.id);
-  const allItems = await listPublicBundleItemsByBundleIdsRepo(
-    config,
-    bundleIds,
-  );
+  const [containersById, allItems] = await Promise.all([
+    buildContainersMap(config, containerIds),
+    listPublicBundleItemsByBundleIdsRepo(config, bundleIds),
+  ]);
 
   const itemsByBundle = new Map<string, PublicBundleItemRow[]>();
   for (const item of allItems) {
@@ -324,8 +323,10 @@ export async function getPublicBundleService(
   const row = await getPublicBundleByIdRepo(config, parsed.data.id);
   if (!row) return { ok: false, error: "NOT_FOUND" };
 
-  const containersById = await buildContainersMap(config, [row.container_id]);
-  const items = await listPublicBundleItemsByBundleIdsRepo(config, [row.id]);
+  const [containersById, items] = await Promise.all([
+    buildContainersMap(config, [row.container_id]),
+    listPublicBundleItemsByBundleIdsRepo(config, [row.id]),
+  ]);
 
   return {
     ok: true,
@@ -501,15 +502,16 @@ export async function listPublicPacksService(
   }
 
   const packIds = rows.map((row) => row.id);
-  const allItems = await listPublicPackItemsByPackIdsRepo(config, packIds);
+  const [allItems, campaignsById] = await Promise.all([
+    listPublicPackItemsByPackIdsRepo(config, packIds),
+    buildPackCampaignsById(config, rows),
+  ]);
   const itemsByPack = new Map<string, PublicPackItemRow[]>();
   for (const item of allItems) {
     const list = itemsByPack.get(item.pack_id) ?? [];
     list.push(item);
     itemsByPack.set(item.pack_id, list);
   }
-
-  const campaignsById = await buildPackCampaignsById(config, rows);
 
   return {
     ok: true,
@@ -544,8 +546,10 @@ export async function getPublicPackService(
       : await getPublicPackByIdRepo(config, parsed.data.id);
   if (!row) return { ok: false, error: "NOT_FOUND" };
 
-  const items = await listPublicPackItemsByPackIdsRepo(config, [row.id]);
-  const campaignsById = await buildPackCampaignsById(config, [row]);
+  const [items, campaignsById] = await Promise.all([
+    listPublicPackItemsByPackIdsRepo(config, [row.id]),
+    buildPackCampaignsById(config, [row]),
+  ]);
 
   return {
     ok: true,

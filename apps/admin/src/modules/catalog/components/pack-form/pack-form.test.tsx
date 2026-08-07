@@ -7,6 +7,51 @@ import {
 } from "./pack-form.helpers";
 import type { PackFormLabels } from "./pack-form.types";
 
+vi.mock(
+  "@/modules/catalog/components/product-search-picker/product-search-picker.container",
+  () => ({
+    ProductSearchPickerContainer: ({
+      onSelect,
+    }: {
+      onSelect: (item: {
+        id: string;
+        name: string;
+        netPrice: number;
+        unitNetPrice: number;
+      }) => void;
+    }) => (
+      <div>
+        <button
+          type="button"
+          onClick={() =>
+            onSelect({
+              id: "p1",
+              name: "Galleta",
+              netPrice: 10,
+              unitNetPrice: 10,
+            })
+          }
+        >
+          pick-p1
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onSelect({
+              id: "p2",
+              name: "Chocolate",
+              netPrice: 5,
+              unitNetPrice: 5,
+            })
+          }
+        >
+          pick-p2
+        </button>
+      </div>
+    ),
+  }),
+);
+
 const products = [
   { id: "p1", name: "Galleta", packageNetPrice: 10, unitNetPrice: 10 },
   { id: "p2", name: "Chocolate", packageNetPrice: 5, unitNetPrice: 5 },
@@ -89,6 +134,8 @@ describe("PackForm", () => {
         labels={labels}
         includeInactiveProducts={false}
         onIncludeInactiveProductsChange={vi.fn()}
+        onEnsureProductOption={vi.fn()}
+        productStatus="active"
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -106,18 +153,13 @@ describe("PackForm", () => {
       target: { value: "20" },
     });
 
-    const productSelect = screen.getByRole("combobox", {
-      name: labels.productSelectPlaceholder,
-    });
-    fireEvent.change(productSelect, { target: { value: "p1" } });
-    fireEvent.click(screen.getByRole("button", { name: labels.addProduct }));
+    fireEvent.click(screen.getByRole("button", { name: "pick-p1" }));
 
     expect(screen.getByLabelText(labels.referencePrice)).toHaveValue(
       "S/ 10.00",
     );
 
-    fireEvent.change(productSelect, { target: { value: "p2" } });
-    fireEvent.click(screen.getByRole("button", { name: labels.addProduct }));
+    fireEvent.click(screen.getByRole("button", { name: "pick-p2" }));
 
     expect(screen.getByLabelText(labels.referencePrice)).toHaveValue(
       "S/ 15.00",
@@ -157,6 +199,8 @@ describe("PackForm", () => {
         labels={labels}
         includeInactiveProducts={false}
         onIncludeInactiveProductsChange={vi.fn()}
+        onEnsureProductOption={vi.fn()}
+        productStatus="active"
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -177,6 +221,8 @@ describe("PackForm", () => {
         labels={labels}
         includeInactiveProducts={false}
         onIncludeInactiveProductsChange={vi.fn()}
+        onEnsureProductOption={vi.fn()}
+        productStatus="active"
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
         submitting={false}
@@ -197,6 +243,8 @@ describe("PackForm", () => {
         labels={labels}
         includeInactiveProducts={false}
         onIncludeInactiveProductsChange={vi.fn()}
+        onEnsureProductOption={vi.fn()}
+        productStatus="active"
         onSubmit={onSubmit}
         onCancel={vi.fn()}
         submitting={false}
@@ -213,11 +261,7 @@ describe("PackForm", () => {
     fireEvent.change(screen.getByLabelText(labels.normalPrice), {
       target: { value: "20" },
     });
-    const productSelect = screen.getByRole("combobox", {
-      name: labels.productSelectPlaceholder,
-    });
-    fireEvent.change(productSelect, { target: { value: "p1" } });
-    fireEvent.click(screen.getByRole("button", { name: labels.addProduct }));
+    fireEvent.click(screen.getByRole("button", { name: "pick-p1" }));
 
     const file = new File(["x"], "combo.webp", { type: "image/webp" });
     fireEvent.change(screen.getByLabelText(labels.imageUpload), {

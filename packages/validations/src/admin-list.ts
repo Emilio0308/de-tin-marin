@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ADMIN_DEFAULT_PAGE_SIZE = 20;
+export const ADMIN_DEFAULT_PAGE_SIZE = 5;
 export const ADMIN_MAX_PAGE_SIZE = 50;
 
 export const adminListPaginationSchema = z.object({

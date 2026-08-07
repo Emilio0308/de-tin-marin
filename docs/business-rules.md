@@ -58,7 +58,7 @@
 
 - **Trigger:** Crear/editar bundle en admin.
 - **Pasos:** `bundle_items` referencia productos existentes y activos; al menos un item; **`container_id`** apunta a envase activo en `catalog.surprise_containers`.
-- **UI admin (picker):** por defecto solo productos activos (`listProducts` con `status: "active"`). Al editar, ítems ya guardados en la plantilla se muestran aunque el producto esté inactivo (`mergeBundleProductOptions`). Switch “incluir inactivos” detrás de flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (hoy `false`); habilitarlo sin relajar la validación de write falla con `PRODUCT_NOT_FOUND`.
+- **UI admin (picker):** `ProductSearchPicker` → `listProductsPageAction` con `status: "active"` (búsqueda paginada). Al editar, ítems ya guardados en la plantilla se muestran aunque el producto esté inactivo (`mergeBundleProductOptions`). Switch “incluir inactivos” detrás de flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (hoy `false`); habilitarlo sin relajar la validación de write falla con `PRODUCT_NOT_FOUND`.
 - **Persistencia:** create/update rechazan productos inactivos (`getActiveProductsByIdsRepo`).
 - **Fallo:** Rechazar bundle vacío, productos inválidos o envase inactivo.
 
@@ -210,7 +210,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ### Regla 21 — Límites min/max de compra (productos sueltos)
 
-- **Trigger:** Agregar al carrito, editar cantidad en carrito, checkout guest.
+- **Trigger:** Agregar al carrito, editar cantidad en carrito, checkout guest; **admin order-form** al agregar línea producto.
 - **Alcance:** Líneas `type: product`. **No** aplica a sorpresas/bundles ni wizard. Packs: ver Regla 25.
 - **Pasos:**
   1. Leer `purchase_min_quantity` y `purchase_max_quantity` del producto (cantidad en **presentación** vendida: unidad o paquete/tira).
@@ -221,7 +221,8 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
   4. Comprable solo si `stock_presentaciones >= purchase_min_quantity`.
   5. Cantidad de línea debe cumplir `purchase_min_quantity <= quantity <= max_efectivo`.
   6. “Añadir rápido” agrega `purchase_min_quantity` por defecto.
-- **Fallo:** Rechazar checkout si cantidad fuera de rango; UI deshabilita compra si no hay stock para el mínimo.
+- **UI admin:** `resolveProductAddBlockReason` → `OUT_OF_STOCK` (mín. vs disponible) si no es comprable.
+- **Fallo:** Rechazar checkout si cantidad fuera de rango; UI deshabilita compra / bloquea add en order-form si no hay stock para el mínimo.
 
 ---
 
@@ -242,7 +243,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
   2. Admin define `normal.netPrice`; **obligatorio** `normal.netPrice >= reference.netPrice`.
   3. Descuentos solo vía campaña 1:1 (`campaign_id`) sobre `normal` → `finalPrice`.
   4. Congelar `unitPrice` (= finalPrice) y BOM (`packageQuantity`, `unitQuantity`, `totalPackages`, `totalUnits`) en `shopping_cart` línea `type: pack`.
-- **UI admin (picker):** misma semántica que Regla 6 — productos activos por defecto; al editar, `mergePackProductOptions` conserva ítems ya en la BOM; create/update solo productos activos (`validatePackItems`).
+- **UI admin (picker):** misma semántica que Regla 6 — `ProductSearchPicker` + productos activos por defecto; al editar, `mergePackProductOptions` conserva ítems ya en la BOM; create/update solo productos activos (`validatePackItems`).
 - **Fallo:** Rechazar save/checkout si `normal < reference` o items inválidos.
 
 ### Regla 24 — Deduct pack al pagar

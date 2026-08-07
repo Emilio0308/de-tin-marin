@@ -7,9 +7,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { getBundleAction } from "@/modules/catalog/actions/get-bundle";
-import { listBundlesAction } from "@/modules/catalog/actions/list-bundles";
-import { listPacksAction } from "@/modules/catalog/actions/list-packs";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
+import { getPackAction } from "@/modules/catalog/actions/get-pack";
+import { listBundlesPageAction } from "@/modules/catalog/actions/list-bundles";
+import { listPacksPageAction } from "@/modules/catalog/actions/list-packs";
 import {
   listDeliveryZonesAction,
   resolveDeliveryFeeAction,
@@ -18,9 +18,14 @@ import { createOrderAction } from "@/modules/orders/actions/create-order";
 import { previewAdminBundleLineAction } from "@/modules/orders/actions/preview-admin-bundle-line";
 import { previewOrderCartAction } from "@/modules/orders/actions/preview-order-cart";
 import { freshQueryOptions } from "@/shared/query/query-cache";
+import { queryKeys } from "@/shared/query/query-keys";
 import { validateBundleCustomization } from "@de-tin-marin/validations/customize-bundle";
 import { OrderForm } from "./order-form";
-import { buildInitialBundleComponents } from "./order-form-bundle.helpers";
+import {
+  addBundleComponent,
+  buildInitialBundleComponents,
+} from "./order-form-bundle.helpers";
+import type { CartCompositionItem } from "./order-form-cart-lines";
 import {
   mergeOrAddProductLine,
   updateProductLineQuantity,
@@ -35,7 +40,17 @@ import {
   type OrderFormBundleDraft,
   type OrderFormLabels,
   type OrderFormValues,
+  type ProductOption,
 } from "./order-form.types";
+
+type PackDetailCache = {
+  components: Array<{
+    productId: string;
+    packageQuantity: number;
+    unitQuantity: number;
+  }>;
+  composition: CartCompositionItem[];
+};
 
 function orderErrorMessage(result: {
   error: string;
@@ -120,9 +135,21 @@ export function OrderFormContainer() {
       productLine: t("form.productLine"),
       surpriseLine: t("form.surpriseLine"),
       formatComponents: (count) => t("form.formatComponents", { count }),
+      viewComponents: (count) => t("form.viewComponents", { count }),
+      formatPackComponentQty: (packages, units) =>
+        units > 0
+          ? t("form.formatPackComponentQtyWithUnits", { packages, units })
+          : t("form.formatPackComponentPackages", { packages }),
       formatQuantityLabel: (quantity) => t("form.quantityLabel", { quantity }),
       quantityBounds: (min, max) => t("form.quantityBounds", { min, max }),
       configureSurprise: t("form.configureSurprise"),
+      addingSurprise: t("form.addingSurprise"),
+      tabProducts: t("form.tabProducts"),
+      tabCombos: t("form.tabCombos"),
+      tabSurprises: t("form.tabSurprises"),
+      selectProductFirst: t("form.selectProductFirst"),
+      productOutOfStock: (min, available) =>
+        t("form.productOutOfStock", { min, available }),
       customizeTitle: t("form.customizeTitle"),
       customizeSubtitle: t("form.customizeSubtitle"),
       candyCount: t("form.candyCount"),
@@ -160,28 +187,40 @@ export function OrderFormContainer() {
     [t],
   );
 
-  const productsQuery = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const result = await listProductsAction();
-      if (!result.ok) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const [pickedProducts, setPickedProducts] = useState<ProductOption[]>([]);
+  const [packDetailsById, setPackDetailsById] = useState<
+    Record<string, PackDetailCache>
+  >({});
 
   const bundlesQuery = useQuery({
-    queryKey: ["bundles"],
+    queryKey: queryKeys.catalog.bundlesPage({
+      page: 1,
+      pageSize: 50,
+      status: "active",
+    }),
     queryFn: async () => {
-      const result = await listBundlesAction();
+      const result = await listBundlesPageAction({
+        page: 1,
+        pageSize: 50,
+        status: "active",
+      });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
   });
 
   const packsQuery = useQuery({
-    queryKey: ["packs"],
+    queryKey: queryKeys.catalog.packsPage({
+      page: 1,
+      pageSize: 50,
+      status: "active",
+    }),
     queryFn: async () => {
-      const result = await listPacksAction();
+      const result = await listPacksPageAction({
+        page: 1,
+        pageSize: 50,
+        status: "active",
+      });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
@@ -196,27 +235,18 @@ export function OrderFormContainer() {
     },
   });
 
-  const productOptions = useMemo(
-    () =>
-      (productsQuery.data ?? []).map((product) => ({
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        finalPrice: product.finalPrice,
-        finalUnitPrice: product.finalUnitPrice,
-        imageUrl: product.imageUrl,
-        productType: product.productType,
-        itemsPerPackage: product.itemsPerPackage,
-        stockTotalBaseUnits: product.stockTotalBaseUnits,
-        purchaseMinQuantity: product.purchaseMinQuantity,
-        purchaseMaxQuantity: product.purchaseMaxQuantity,
-      })),
-    [productsQuery.data],
-  );
+  const productOptions = pickedProducts;
+
+  function handleEnsureProductOption(product: ProductOption) {
+    setPickedProducts((current) => {
+      if (current.some((item) => item.id === product.id)) return current;
+      return [...current, product];
+    });
+  }
 
   const bundleOptions = useMemo(
     () =>
-      (bundlesQuery.data ?? []).map((bundle) => ({
+      (bundlesQuery.data?.items ?? []).map((bundle) => ({
         id: bundle.id,
         name: bundle.name,
         containerId: bundle.containerId,
@@ -229,17 +259,15 @@ export function OrderFormContainer() {
 
   const packOptions = useMemo(
     () =>
-      (packsQuery.data ?? [])
-        .filter((pack) => pack.isActive)
-        .map((pack) => ({
-          id: pack.id,
-          name: pack.name,
-          sku: pack.sku,
-          finalPrice: pack.finalPrice,
-          purchaseMinQuantity: pack.purchaseMinQuantity,
-          purchaseMaxQuantity: pack.purchaseMaxQuantity,
-          itemCount: pack.itemCount,
-        })),
+      (packsQuery.data?.items ?? []).map((pack) => ({
+        id: pack.id,
+        name: pack.name,
+        sku: pack.sku,
+        finalPrice: pack.finalPrice,
+        purchaseMinQuantity: pack.purchaseMinQuantity,
+        purchaseMaxQuantity: pack.purchaseMaxQuantity,
+        itemCount: pack.itemCount,
+      })),
     [packsQuery.data],
   );
 
@@ -253,16 +281,20 @@ export function OrderFormContainer() {
             sku: pack.sku,
             name: pack.name,
             unitPrice: pack.finalPrice,
-            components: [] as Array<{
-              productId: string;
-              packageQuantity: number;
-              unitQuantity: number;
-            }>,
+            components: packDetailsById[pack.id]?.components ?? [],
           },
         ]),
       ),
-    [packOptions],
+    [packOptions, packDetailsById],
   );
+
+  const packCompositionsById = useMemo(() => {
+    const map = new Map<string, CartCompositionItem[]>();
+    for (const [packId, detail] of Object.entries(packDetailsById)) {
+      map.set(packId, detail.composition);
+    }
+    return map;
+  }, [packDetailsById]);
 
   const bundlesById = useMemo(
     () =>
@@ -281,11 +313,6 @@ export function OrderFormContainer() {
         ]),
       ),
     [bundleOptions],
-  );
-
-  const activeProductIds = useMemo(
-    () => new Set(productOptions.map((product) => product.id)),
-    [productOptions],
   );
 
   useEffect(() => {
@@ -441,6 +468,43 @@ export function OrderFormContainer() {
     }));
   }
 
+  async function ensurePackDetails(
+    packId: string,
+  ): Promise<PackDetailCache | null> {
+    const cached = packDetailsById[packId];
+    if (cached) return cached;
+
+    const result = await getPackAction(packId);
+    if (!result.ok) {
+      setError("No se pudo cargar la composición del combo");
+      return null;
+    }
+
+    const detail: PackDetailCache = {
+      components: result.data.items.map((item) => ({
+        productId: item.productId,
+        packageQuantity: item.packageQuantity,
+        unitQuantity: item.unitQuantity,
+      })),
+      composition: result.data.items.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantityLabel:
+          item.unitQuantity > 0
+            ? t("form.formatPackComponentQtyWithUnits", {
+                packages: item.packageQuantity,
+                units: item.unitQuantity,
+              })
+            : t("form.formatPackComponentPackages", {
+                packages: item.packageQuantity,
+              }),
+      })),
+    };
+
+    setPackDetailsById((current) => ({ ...current, [packId]: detail }));
+    return detail;
+  }
+
   function handleAddPackLine(packId: string, quantity: number) {
     const pack = packOptions.find((item) => item.id === packId);
     if (!pack) return;
@@ -448,10 +512,14 @@ export function OrderFormContainer() {
       Math.max(quantity, pack.purchaseMinQuantity),
       pack.purchaseMaxQuantity,
     );
-    setValues((current) => ({
-      ...current,
-      lines: [...current.lines, { type: "pack", packId, quantity: qty }],
-    }));
+
+    void (async () => {
+      await ensurePackDetails(packId);
+      setValues((current) => ({
+        ...current,
+        lines: [...current.lines, { type: "pack", packId, quantity: qty }],
+      }));
+    })();
   }
 
   async function loadBundleDraft(
@@ -475,9 +543,28 @@ export function OrderFormContainer() {
       const bundleOption = bundleOptions.find(
         (bundle) => bundle.id === bundleId,
       );
-      const activeItems = result.data.items.filter((item) =>
-        activeProductIds.has(item.productId),
-      );
+      const activeItems = result.data.items.filter((item) => item.isActive);
+      const templateProducts: ProductOption[] = activeItems.map((item) => ({
+        id: item.productId,
+        name: item.productName,
+        sku: item.sku,
+        finalPrice: item.netPrice,
+        finalUnitPrice: item.unitNetPrice,
+        imageUrl: item.imageUrl,
+        productType: item.productType,
+        itemsPerPackage: item.itemsPerPackage,
+        stockTotalBaseUnits: item.stockTotalBaseUnits,
+        purchaseMinQuantity: 1,
+        purchaseMaxQuantity: 9999,
+      }));
+
+      setPickedProducts((current) => {
+        const byId = new Map(current.map((product) => [product.id, product]));
+        for (const product of templateProducts) {
+          byId.set(product.id, product);
+        }
+        return [...byId.values()];
+      });
 
       setBundleDraft({
         bundleId,
@@ -507,8 +594,85 @@ export function OrderFormContainer() {
     }
   }
 
+  function handleAddBundleCandy(product: ProductOption) {
+    handleEnsureProductOption(product);
+    setBundleDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        components: addBundleComponent(current.components, product.id),
+      };
+    });
+  }
+
   function handleStartBundleDraft(bundleId: string) {
     void loadBundleDraft(bundleId);
+  }
+
+  async function handleAddBundleAsTemplate(bundleId: string) {
+    setBundleDraftLoading(true);
+    setError(null);
+
+    try {
+      const result = await getBundleAction(bundleId);
+      if (!result.ok) {
+        setError("No se pudo cargar la plantilla de sorpresa");
+        return;
+      }
+
+      const activeItems = result.data.items.filter((item) => item.isActive);
+      const templateProducts: ProductOption[] = activeItems.map((item) => ({
+        id: item.productId,
+        name: item.productName,
+        sku: item.sku,
+        finalPrice: item.netPrice,
+        finalUnitPrice: item.unitNetPrice,
+        imageUrl: item.imageUrl,
+        productType: item.productType,
+        itemsPerPackage: item.itemsPerPackage,
+        stockTotalBaseUnits: item.stockTotalBaseUnits,
+        purchaseMinQuantity: 1,
+        purchaseMaxQuantity: 9999,
+      }));
+
+      setPickedProducts((current) => {
+        const byId = new Map(current.map((product) => [product.id, product]));
+        for (const product of templateProducts) {
+          byId.set(product.id, product);
+        }
+        return [...byId.values()];
+      });
+
+      const components = buildInitialBundleComponents(
+        activeItems.map((item) => ({
+          productId: item.productId,
+          unitsPerPerson: item.unitsPerPerson,
+          isActive: true,
+        })),
+      );
+      const validation = validateBundleCustomization(components);
+      if (!validation.ok) {
+        setError(
+          "La plantilla de sorpresa no cumple las reglas de personalización",
+        );
+        return;
+      }
+
+      setValues((current) => ({
+        ...current,
+        lines: [
+          ...current.lines,
+          {
+            type: "bundle" as const,
+            bundleId,
+            quantity: result.data.quantity,
+            components: validation.data,
+          },
+        ],
+      }));
+    } finally {
+      setBundleDraftLoading(false);
+    }
   }
 
   function handleEditBundleLine(index: number) {
@@ -588,7 +752,6 @@ export function OrderFormContainer() {
   }
 
   if (
-    productsQuery.isLoading ||
     bundlesQuery.isLoading ||
     packsQuery.isLoading ||
     deliveryZonesQuery.isLoading
@@ -635,6 +798,7 @@ export function OrderFormContainer() {
         products={productOptions}
         bundles={bundleOptions}
         packs={packOptions}
+        packCompositionsById={packCompositionsById}
         deliveryDistricts={(deliveryZonesQuery.data ?? [])
           .filter((zone) => zone.isActive)
           .map((zone) => zone.district)}
@@ -653,10 +817,15 @@ export function OrderFormContainer() {
         error={error}
         labels={labels}
         onChange={setValues}
+        onEnsureProductOption={handleEnsureProductOption}
         onAddProductLine={handleAddProductLine}
         onUpdateProductLineQuantity={handleUpdateProductLineQuantity}
         onAddPackLine={handleAddPackLine}
         onStartBundleDraft={handleStartBundleDraft}
+        onAddBundleAsTemplate={(bundleId) => {
+          void handleAddBundleAsTemplate(bundleId);
+        }}
+        onAddBundleCandy={handleAddBundleCandy}
         onBundleDraftComponentsChange={(components) =>
           setBundleDraft((current) =>
             current ? { ...current, components } : current,

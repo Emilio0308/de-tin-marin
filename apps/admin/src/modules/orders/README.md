@@ -12,29 +12,44 @@ actions/ → services/ → repositories/ → Supabase schema commerce
 
 ## Server Actions
 
-| Action                         | Service                         | Descripción                                     |
-| ------------------------------ | ------------------------------- | ----------------------------------------------- |
-| `listOrdersAction`             | `listOrdersService`             | Listado completo (dashboard)                    |
-| `listOrdersPageAction`         | `listOrdersPageService`         | Listado paginado (SQL `count` + `range`)        |
-| `getOrderAction`               | `getOrderService`               | Detalle + pagos + envío                         |
-| `createOrderAction`            | `createOrderService`            | Crear → `pending_payment`                       |
-| `cancelOrderAction`            | `cancelOrderService`            | Cancelar desde `pending_payment`                |
-| `confirmPaymentAction`         | `confirmPaymentService`         | Pago manual → `paid` (S2C)                      |
-| `refundPaymentAction`          | `refundPaymentService`          | Reembolso payment (S2C)                         |
-| `transitionOrderStatusAction`  | `transitionOrderStatusService`  | Avance logístico post-pago                      |
-| `upsertShipmentAction`         | `upsertShipmentService`         | Envío 1:1 por orden (S2C)                       |
-| `previewAdminBundleLineAction` | `previewAdminBundleLineService` | Preview línea sorpresa (mismo motor que create) |
-| `previewOrderCartAction`       | `previewOrderCartService`       | Preview carrito / totales                       |
+| Action                         | Service                         | Descripción                                                        |
+| ------------------------------ | ------------------------------- | ------------------------------------------------------------------ |
+| `listOrdersPageAction`         | `listOrdersPageService`         | Listado paginado (SQL `count` + `range`); dashboard usa pageSize 5 |
+| `getOrderAction`               | `getOrderService`               | Detalle + pagos + envío                                            |
+| `createOrderAction`            | `createOrderService`            | Crear → `pending_payment`                                          |
+| `cancelOrderAction`            | `cancelOrderService`            | Cancelar desde `pending_payment`                                   |
+| `confirmPaymentAction`         | `confirmPaymentService`         | Pago manual → `paid` (S2C)                                         |
+| `refundPaymentAction`          | `refundPaymentService`          | Reembolso payment (S2C)                                            |
+| `transitionOrderStatusAction`  | `transitionOrderStatusService`  | Avance logístico post-pago                                         |
+| `upsertShipmentAction`         | `upsertShipmentService`         | Envío 1:1 por orden (S2C)                                          |
+| `previewAdminBundleLineAction` | `previewAdminBundleLineService` | Preview línea sorpresa (mismo motor que create)                    |
+| `previewOrderCartAction`       | `previewOrderCartService`       | Preview carrito / totales                                          |
 
 ## Preview de precios (order-form)
 
 Container: `order-form.container.tsx`
 
-| Query                                                | Fresco                         | Motivo                                  |
-| ---------------------------------------------------- | ------------------------------ | --------------------------------------- |
-| `bundle-preview`                                     | Sí (`freshQueryOptions`)       | Total alineado con `createOrderService` |
-| `cart-preview`                                       | Sí (`freshQueryOptions`)       | Totales de líneas al crear orden        |
-| Catálogo auxiliar (productos, bundles, packs, zonas) | 15 min (default `QueryClient`) | Listados estables en sesión admin       |
+| Query             | Fresco                   | Motivo                                  |
+| ----------------- | ------------------------ | --------------------------------------- |
+| `bundle-preview`  | Sí (`freshQueryOptions`) | Total alineado con `createOrderService` |
+| `cart-preview`    | Sí (`freshQueryOptions`) | Totales de líneas al crear orden        |
+| Catálogo auxiliar | Paginado / on-demand     | Ver tabla abajo                         |
+
+### Catálogo en el formulario
+
+| Uso                                 | Cómo                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Agregar producto / dulce a sorpresa | `ProductSearchPicker` → `listProductsPageAction`                                                             |
+| Listar combos / sorpresas (tabs)    | `listPacksPageAction` / `listBundlesPageAction`                                                              |
+| Armar sorpresa desde plantilla      | `getBundleAction` → solo ítems `isActive`; al agregar dulces, picker paginado                                |
+| Bloqueo al agregar producto         | `resolveProductAddBlockReason` — `OUT_OF_STOCK` si stock < min compra (Regla 21)                             |
+| Líneas en carrito                   | Pack/bundle muestran composición desplegable (`viewComponents`); pack labels dual qty (`paq.` / `paq. + u.`) |
+
+Helpers: `order-form-product.helpers.ts` (+ Vitest). Personalizar sorpresa: `order-form-bundle-customize.tsx` usa el mismo picker (sin select local de catálogo completo).
+
+## Listado `/orders`
+
+SSR + `HydrationBoundary` (mismo patrón que catálogo admin). Default pageSize **5** (`ADMIN_DEFAULT_PAGE_SIZE`).
 
 ## Services
 

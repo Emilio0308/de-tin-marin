@@ -6,7 +6,6 @@ import { startTransition, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createPackAction } from "@/modules/catalog/actions/create-pack";
 import { listActiveCampaignsAction } from "@/modules/catalog/actions/list-active-campaigns";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { updatePackAction } from "@/modules/catalog/actions/update-pack";
 import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
 import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
@@ -94,22 +93,12 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [includeInactiveProducts, setIncludeInactiveProducts] = useState(false);
+  const [pickedProducts, setPickedProducts] = useState<ProductOption[]>([]);
 
   const productStatus =
     SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH && includeInactiveProducts
       ? "all"
       : "active";
-
-  const productsQuery = useQuery({
-    queryKey: queryKeys.catalog.products(productStatus),
-    queryFn: async () => {
-      const result = await listProductsAction({ status: productStatus });
-      if (!result.ok) {
-        throw new Error("message" in result ? result.message : result.error);
-      }
-      return result.data;
-    },
-  });
 
   const campaignsQuery = useQuery({
     queryKey: queryKeys.catalog.activeCampaigns(),
@@ -180,18 +169,16 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
   );
 
   const products = useMemo(
-    () =>
-      mergePackProductOptions(
-        (productsQuery.data ?? []).map((product): ProductOption => ({
-          id: product.id,
-          name: product.name,
-          packageNetPrice: product.netPrice,
-          unitNetPrice: product.unitNetPrice,
-        })),
-        initial,
-      ),
-    [productsQuery.data, initial],
+    () => mergePackProductOptions(pickedProducts, initial),
+    [pickedProducts, initial],
   );
+
+  function handleEnsureProductOption(option: ProductOption) {
+    setPickedProducts((current) => {
+      if (current.some((product) => product.id === option.id)) return current;
+      return [...current, option];
+    });
+  }
 
   async function uploadPackImage(file: File): Promise<PackImageUploadResult> {
     const presign = await createCatalogImageUploadUrlAction({
@@ -291,13 +278,8 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
     router.push("/packs");
   }
 
-  const loading =
-    (productsQuery.isLoading && !productsQuery.data) ||
-    campaignsQuery.isLoading;
-  const loadFailed =
-    productsQuery.isError ||
-    campaignsQuery.isError ||
-    (!productsQuery.isLoading && products.length === 0 && !initial);
+  const loading = campaignsQuery.isLoading;
+  const loadFailed = campaignsQuery.isError;
 
   return (
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-40 lg:p-8 lg:pb-8">
@@ -321,6 +303,8 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
           labels={labels}
           includeInactiveProducts={includeInactiveProducts}
           onIncludeInactiveProductsChange={setIncludeInactiveProducts}
+          onEnsureProductOption={handleEnsureProductOption}
+          productStatus={productStatus}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           submitting={submitting}

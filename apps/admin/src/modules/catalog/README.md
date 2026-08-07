@@ -12,39 +12,38 @@ actions/ → services/ → repositories/ → Supabase schema catalog
 
 ## Server Actions (`actions/`)
 
-| Action                             | Service                             | Descripción                                                                                                                                                    |
-| ---------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listCategoriesAction`             | `listCategoriesService`             | Listado completo (selects/forms)                                                                                                                               |
-| `listCategoriesPageAction`         | `listCategoriesPageService`         | Listado paginado (SQL `count` + `range`)                                                                                                                       |
-| `getCategoryAction`                | `getCategoryService`                | Detalle por id                                                                                                                                                 |
-| `createCategoryAction`             | `createCategoryService`             | Crear                                                                                                                                                          |
-| `updateCategoryAction`             | `updateCategoryService`             | Editar                                                                                                                                                         |
-| `softDeleteCategoryAction`         | `softDeleteCategoryService`         | Soft-delete                                                                                                                                                    |
-| `listProductsAction`               | `listProductsService`               | Listado completo + `finalPrice` + costo/margen; input opcional `{ status?: "all" \| "active" \| "inactive" }` (Zod `adminStatusFilterSchema`, default `"all"`) |
-| `listProductsPageAction`           | `listProductsPageService`           | Listado paginado (`search`/`categoryId`/`status`)                                                                                                              |
-| `getProductAction`                 | `getProductService`                 | Detalle por id                                                                                                                                                 |
-| `createProductAction`              | `createProductService`              | Crear (+ `costNetPrice` opcional)                                                                                                                              |
-| `updateProductAction`              | `updateProductService`              | Editar                                                                                                                                                         |
-| `softDeleteProductAction`          | `softDeleteProductService`          | Soft-delete                                                                                                                                                    |
-| `listBundlesAction`                | `listBundlesService`                | Listado completo + total calculado                                                                                                                             |
-| `listBundlesPageAction`            | `listBundlesPageService`            | Listado paginado (`search`/`status`)                                                                                                                           |
-| `getBundleAction`                  | `getBundleService`                  | Detalle + items                                                                                                                                                |
-| `createBundleAction`               | `createBundleService`               | Crear                                                                                                                                                          |
-| `updateBundleAction`               | `updateBundleService`               | Editar                                                                                                                                                         |
-| `softDeleteBundleAction`           | `softDeleteBundleService`           | Soft-delete                                                                                                                                                    |
-| `listPacksAction`                  | `listPacksService`                  | Listado completo combos + `finalPrice`                                                                                                                         |
-| `listPacksPageAction`              | `listPacksPageService`              | Listado paginado (`search`/`status`)                                                                                                                           |
-| `getPackAction`                    | `getPackService`                    | Detalle + items + reference/normal                                                                                                                             |
-| `createPackAction`                 | `createPackService`                 | Crear (`normal >= reference`)                                                                                                                                  |
-| `updatePackAction`                 | `updatePackService`                 | Editar                                                                                                                                                         |
-| `softDeletePackAction`             | `softDeletePackService`             | Soft-delete                                                                                                                                                    |
-| `listSurpriseContainersAction`     | `listSurpriseContainersService`     | Listado completo envases (selects)                                                                                                                             |
-| `listSurpriseContainersPageAction` | `listSurpriseContainersPageService` | Listado paginado (`search`/`status` incl. `outOfStock`)                                                                                                        |
-| `listActiveCampaignsAction`        | —                                   | Campañas activas para select de pack                                                                                                                           |
+| Action                             | Service                             | Descripción                                                           |
+| ---------------------------------- | ----------------------------------- | --------------------------------------------------------------------- |
+| `listCategoriesAction`             | `listCategoriesService`             | Listado completo (selects/forms)                                      |
+| `listCategoriesPageAction`         | `listCategoriesPageService`         | Listado paginado (SQL `count` + `range`)                              |
+| `getCategoryAction`                | `getCategoryService`                | Detalle por id                                                        |
+| `createCategoryAction`             | `createCategoryService`             | Crear                                                                 |
+| `updateCategoryAction`             | `updateCategoryService`             | Editar                                                                |
+| `softDeleteCategoryAction`         | `softDeleteCategoryService`         | Soft-delete                                                           |
+| `listProductsPageAction`           | `listProductsPageService`           | Listado paginado (`search`/`categoryId`/`status`)                     |
+| `getProductAction`                 | `getProductService`                 | Detalle por id                                                        |
+| `createProductAction`              | `createProductService`              | Crear (+ `costNetPrice` opcional)                                     |
+| `updateProductAction`              | `updateProductService`              | Editar                                                                |
+| `softDeleteProductAction`          | `softDeleteProductService`          | Soft-delete                                                           |
+| `listBundlesAction`                | `listBundlesService`                | Listado completo + total calculado                                    |
+| `listBundlesPageAction`            | `listBundlesPageService`            | Listado paginado (`search`/`status`)                                  |
+| `getBundleAction`                  | `getBundleService`                  | Detalle + items (`BundleFormItemDTO` con sku/imagen/stock/`isActive`) |
+| `createBundleAction`               | `createBundleService`               | Crear                                                                 |
+| `updateBundleAction`               | `updateBundleService`               | Editar                                                                |
+| `softDeleteBundleAction`           | `softDeleteBundleService`           | Soft-delete                                                           |
+| `listPacksAction`                  | `listPacksService`                  | Listado completo combos + `finalPrice`                                |
+| `listPacksPageAction`              | `listPacksPageService`              | Listado paginado (`search`/`status`)                                  |
+| `getPackAction`                    | `getPackService`                    | Detalle + items + reference/normal                                    |
+| `createPackAction`                 | `createPackService`                 | Crear (`normal >= reference`)                                         |
+| `updatePackAction`                 | `updatePackService`                 | Editar                                                                |
+| `softDeletePackAction`             | `softDeletePackService`             | Soft-delete                                                           |
+| `listSurpriseContainersAction`     | `listSurpriseContainersService`     | Listado completo envases (selects)                                    |
+| `listSurpriseContainersPageAction` | `listSurpriseContainersPageService` | Listado paginado (`search`/`status` incl. `outOfStock`)               |
+| `listActiveCampaignsAction`        | —                                   | Campañas activas para select de pack                                  |
 
-Listados admin (`/categories`, `/products`, `/bundles`, `/packs`, `/containers`): paginación SQL real (`count: "exact"` + `.range()`) vía `*PageRepo` → `*PageService` → `*PageAction`, con `page`/`pageSize`/`search`/`status` (y `categoryId` en productos) parseados con `@de-tin-marin/validations/admin-list`. Los `list*Action()` sin sufijo `Page` se conservan para selects de formularios (dropdowns) que necesitan el catálogo completo.
+Listados admin (`/categories`, `/products`, `/bundles`, `/packs`, `/containers`, `/orders`): **SSR + `HydrationBoundary`** + paginación SQL (`count: "exact"` + `.range()`) vía `*PageRepo` → `*PageService` → prefetch en `page.tsx`. Filtros en `searchParams` (`@de-tin-marin/validations/admin-list`).
 
-**Pack/bundle forms (composición):** pasan `listProductsAction({ status: "active" })` por defecto (`queryKeys.catalog.products(status)`). Feature flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (`lib/include-inactive-products-switch.ts`, hoy `false`): UI para listar inactivos en el selector. Create/update siguen validando solo productos activos (Regla 6 / `getActiveProductsByIdsRepo`). Al editar, `mergeBundleProductOptions` / `mergePackProductOptions` conservan ítems ya en la composición aunque no vengan del listado activo.
+**Pack/bundle forms (composición):** `ProductSearchPicker` + `listProductsPageAction` (búsqueda paginada). Feature flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (`lib/include-inactive-products-switch.ts`, hoy `false`). Create/update validan solo productos activos (Regla 6 / `getActiveProductsByIdsRepo`). Al editar, `mergeBundleProductOptions` / `mergePackProductOptions` conservan ítems ya en la composición.
 
 Imágenes de catálogo: `createCatalogImageUploadUrlAction` — preview local; PUT S3 al Guardar (DECISIONS #35).
 
@@ -101,4 +100,20 @@ Todas las actions: `guardAction` + `requireStaff` → `core.user_roles`.
 
 ## Paginación listados
 
-Ver brief [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-list-pagination.md). UI compartida: `AdminTablePagination`; URL: `shared/helpers/admin-list-url.ts`.
+Ver brief [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-list-pagination.md). Default `ADMIN_DEFAULT_PAGE_SIZE = 5`. UI: `AdminTablePagination`; URL: `shared/helpers/admin-list-url.ts`. Prefetch: `page.tsx` + `createAdminQueryClient` + `HydrationBoundary`.
+
+## Product search picker
+
+`components/product-search-picker/` — usado en pack-form, bundle-form y order-form.
+
+| Detalle       | Valor                                                                                                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Boundary      | `listProductsPageAction` (`status` default `"active"`)                                                                                                                           |
+| pageSize      | `ADMIN_DEFAULT_PAGE_SIZE` (hoy **5**)                                                                                                                                            |
+| Búsqueda      | Debounce 300 ms; reset de página/acumulado al cambiar search/status                                                                                                              |
+| Paginación UI | Scroll infinito (`IntersectionObserver` + sentinel); sin botón “Cargar más”                                                                                                      |
+| excludeIds    | Filtra en cliente; si la página visible queda vacía y hay más total, pide la siguiente sola                                                                                      |
+| UI fila       | Thumb (`imageUrl` o placeholder), nombre, precio unidad (`unitNetPrice`), und./presentación si `productType === "package"` o `itemsPerPackage > 1` (`shouldShowItemsPerPackage`) |
+| Colaterales   | `*.types.ts`, `*.helpers.ts`, `*.test.tsx`                                                                                                                                       |
+
+No sustituye la validación de write (create/update solo productos activos — Regla 6 / 23).

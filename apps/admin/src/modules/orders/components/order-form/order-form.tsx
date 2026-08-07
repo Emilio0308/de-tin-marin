@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  Gift,
   MapPin,
+  Package,
   Receipt,
   ShoppingBag,
   User,
@@ -10,12 +12,18 @@ import {
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import { Button } from "@de-tin-marin/ui/button";
+import { ProductSearchPickerContainer } from "@/modules/catalog/components/product-search-picker/product-search-picker.container";
 import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { OrderFormBundleCustomize } from "./order-form-bundle-customize";
 import { buildBundleComponentLabels } from "./order-form-bundle.helpers";
 import { OrderFormCartLines } from "./order-form-cart-lines";
-import { resolveOrderFormProductBounds } from "./order-form-product.helpers";
+import {
+  resolveOrderFormProductBounds,
+  resolveProductAddBlockReason,
+} from "./order-form-product.helpers";
 import type { OrderFormProps } from "./order-form.types";
+
+type CartTab = "products" | "packs" | "bundles";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col rounded-xl border p-5 shadow-sm md:p-6";
@@ -28,6 +36,9 @@ const labelClass =
 
 const fieldClass =
   "border-outline-variant/40 focus:border-secondary bg-surface-container-low font-body text-body-md text-on-surface w-full rounded-xl border-2 px-4 py-3 outline-none transition-colors";
+
+const disabledButtonClass =
+  "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-surface-container-lowest disabled:hover:border-secondary/40";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -64,11 +75,21 @@ function methodPillClass(selected: boolean): string {
   );
 }
 
+function cartTabClass(selected: boolean): string {
+  return cn(
+    "font-label text-label-bold inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-sm transition-colors",
+    selected
+      ? "border-primary bg-primary/5 text-primary"
+      : "border-outline-variant/40 text-on-surface-variant hover:border-secondary/60",
+  );
+}
+
 export function OrderForm({
   values,
   products,
   bundles,
   packs,
+  packCompositionsById,
   deliveryDistricts,
   bundleDraft,
   bundleDraftLoading,
@@ -80,10 +101,13 @@ export function OrderForm({
   error,
   labels,
   onChange,
+  onEnsureProductOption,
   onAddProductLine,
   onUpdateProductLineQuantity,
   onAddPackLine,
   onStartBundleDraft,
+  onAddBundleAsTemplate,
+  onAddBundleCandy,
   onBundleDraftComponentsChange,
   onBundleDraftQuantityChange,
   onConfirmBundleDraft,
@@ -98,6 +122,7 @@ export function OrderForm({
   const [draftBundleId, setDraftBundleId] = useState("");
   const [draftPackId, setDraftPackId] = useState("");
   const [draftPackQty, setDraftPackQty] = useState(1);
+  const [cartTab, setCartTab] = useState<CartTab>("products");
 
   const selectedProduct = products.find(
     (product) => product.id === draftProductId,
@@ -107,11 +132,30 @@ export function OrderForm({
       selectedProduct ? resolveOrderFormProductBounds(selectedProduct) : null,
     [selectedProduct],
   );
+  const productAddBlock = resolveProductAddBlockReason(
+    selectedProduct,
+    selectedProductBounds,
+  );
+  const canAddProduct = productAddBlock === null;
 
   useEffect(() => {
     if (!selectedProductBounds) return;
     setDraftProductQty(selectedProductBounds.minQuantity);
   }, [selectedProductBounds]);
+
+  useEffect(() => {
+    if (!bundleDraft) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onCancelBundleDraft();
+        setDraftBundleId("");
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [bundleDraft, onCancelBundleDraft]);
 
   const bundlesByName = useMemo(
     () => new Map(bundles.map((bundle) => [bundle.id, bundle.name])),
@@ -384,98 +428,144 @@ export function OrderForm({
         <SectionHeader icon={ShoppingBag} title={labels.cartSection} />
 
         <div
-          className={cn(
-            innerCardClass,
-            "md:grid md:grid-cols-[1fr_auto_auto] md:items-end",
-          )}
+          role="tablist"
+          aria-label={labels.cartSection}
+          className="flex flex-wrap gap-2"
         >
-          <Field label={labels.product}>
-            <select
-              className={fieldClass}
-              value={draftProductId}
-              onChange={(event) => setDraftProductId(event.target.value)}
-            >
-              <option value="">{labels.selectProduct}</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name} (S/ {product.finalPrice.toFixed(2)})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={labels.quantity}>
-            <GranularNumberInput
-              mode="integer"
-              min={selectedProductBounds?.minQuantity ?? 1}
-              max={selectedProductBounds?.maxQuantity}
-              emptyFallback={selectedProductBounds?.minQuantity ?? 1}
-              disabled={!selectedProduct || !selectedProductBounds?.purchasable}
-              className={cn(fieldClass, "md:w-28")}
-              value={draftProductQty}
-              onValueChange={(next) =>
-                setDraftProductQty(
-                  next ?? selectedProductBounds?.minQuantity ?? 1,
-                )
-              }
-            />
-            {selectedProductBounds ? (
-              <p className="text-on-surface-variant mt-1.5 text-xs">
-                {labels.quantityBounds(
-                  selectedProductBounds.minQuantity,
-                  selectedProductBounds.maxQuantity,
-                )}
-              </p>
-            ) : null}
-          </Field>
-          <Button
+          <button
             type="button"
-            variant="secondary"
-            className="min-h-11 w-full md:w-auto"
-            disabled={!draftProductId || !selectedProductBounds?.purchasable}
-            onClick={() => {
-              if (!draftProductId) return;
-              onAddProductLine(draftProductId, draftProductQty);
-              setDraftProductId("");
-              setDraftProductQty(1);
-            }}
+            role="tab"
+            aria-selected={cartTab === "products"}
+            className={cartTabClass(cartTab === "products")}
+            onClick={() => setCartTab("products")}
           >
-            {labels.addProduct}
-          </Button>
+            <ShoppingBag className="h-4 w-4" aria-hidden />
+            {labels.tabProducts}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={cartTab === "packs"}
+            className={cartTabClass(cartTab === "packs")}
+            onClick={() => setCartTab("packs")}
+          >
+            <Package className="h-4 w-4" aria-hidden />
+            {labels.tabCombos}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={cartTab === "bundles"}
+            className={cartTabClass(cartTab === "bundles")}
+            onClick={() => setCartTab("bundles")}
+          >
+            <Gift className="h-4 w-4" aria-hidden />
+            {labels.tabSurprises}
+          </button>
         </div>
 
-        <div className={innerCardClass}>
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-            <Field label={labels.surprise}>
-              <select
-                className={fieldClass}
-                value={draftBundleId}
-                onChange={(event) => setDraftBundleId(event.target.value)}
-              >
-                <option value="">{labels.selectSurprise}</option>
-                {bundles.map((bundle) => (
-                  <option key={bundle.id} value={bundle.id}>
-                    {bundle.name}
-                  </option>
-                ))}
-              </select>
+        {cartTab === "products" ? (
+          <div role="tabpanel" className={cn(innerCardClass, "gap-4")}>
+            <Field label={labels.product}>
+              <ProductSearchPickerContainer
+                status="active"
+                excludeIds={[]}
+                onSelect={(item) => {
+                  onEnsureProductOption({
+                    id: item.id,
+                    name: item.name,
+                    sku: item.sku,
+                    finalPrice: item.finalPrice,
+                    finalUnitPrice: item.finalUnitPrice,
+                    imageUrl: item.imageUrl,
+                    productType: item.productType,
+                    itemsPerPackage: item.itemsPerPackage,
+                    stockTotalBaseUnits: item.stockTotalBaseUnits,
+                    purchaseMinQuantity: item.purchaseMinQuantity,
+                    purchaseMaxQuantity: item.purchaseMaxQuantity,
+                  });
+                  setDraftProductId(item.id);
+                }}
+                labels={{
+                  searchPlaceholder: labels.selectProduct,
+                  searchAriaLabel: labels.selectProduct,
+                }}
+              />
+              {draftProductId && selectedProduct ? (
+                <p className="text-on-surface-variant mt-1.5 text-xs">
+                  {selectedProduct.name} · S/{" "}
+                  {selectedProduct.finalPrice.toFixed(2)}
+                </p>
+              ) : null}
             </Field>
-            <Button
-              type="button"
-              variant="secondary"
-              className="min-h-11 w-full sm:w-auto"
-              disabled={!draftBundleId || bundleDraftLoading}
-              onClick={() => {
-                if (!draftBundleId) return;
-                onStartBundleDraft(draftBundleId);
-              }}
-            >
-              {labels.configureSurprise}
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Field label={labels.quantity}>
+                <GranularNumberInput
+                  mode="integer"
+                  min={selectedProductBounds?.minQuantity ?? 1}
+                  max={selectedProductBounds?.maxQuantity}
+                  emptyFallback={selectedProductBounds?.minQuantity ?? 1}
+                  disabled={
+                    !selectedProduct || !selectedProductBounds?.purchasable
+                  }
+                  className={cn(fieldClass, "sm:w-32")}
+                  value={draftProductQty}
+                  onValueChange={(next) =>
+                    setDraftProductQty(
+                      next ?? selectedProductBounds?.minQuantity ?? 1,
+                    )
+                  }
+                />
+                {selectedProductBounds ? (
+                  <p className="text-on-surface-variant mt-1.5 text-xs">
+                    {labels.quantityBounds(
+                      selectedProductBounds.minQuantity,
+                      selectedProductBounds.maxQuantity,
+                    )}
+                  </p>
+                ) : null}
+              </Field>
+              <div className="flex flex-1 flex-col gap-1.5 sm:items-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={cn(
+                    "min-h-11 w-full sm:w-auto",
+                    disabledButtonClass,
+                  )}
+                  disabled={!canAddProduct}
+                  onClick={() => {
+                    if (!draftProductId || !canAddProduct) return;
+                    onAddProductLine(draftProductId, draftProductQty);
+                    setDraftProductId("");
+                    setDraftProductQty(1);
+                  }}
+                >
+                  {labels.addProduct}
+                </Button>
+                {productAddBlock ? (
+                  <p className="text-error text-xs sm:text-right" role="status">
+                    {productAddBlock.code === "NO_SELECTION"
+                      ? labels.selectProductFirst
+                      : labels.productOutOfStock(
+                          productAddBlock.minQuantity,
+                          productAddBlock.available,
+                        )}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className={innerCardClass}>
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+        {cartTab === "packs" ? (
+          <div
+            role="tabpanel"
+            className={cn(
+              innerCardClass,
+              "sm:grid sm:grid-cols-[1fr_auto_auto] sm:items-end",
+            )}
+          >
             <Field label={labels.combo}>
               <select
                 className={fieldClass}
@@ -508,7 +598,7 @@ export function OrderForm({
             <Button
               type="button"
               variant="secondary"
-              className="min-h-11 w-full sm:w-auto"
+              className={cn("min-h-11 w-full sm:w-auto", disabledButtonClass)}
               disabled={!draftPackId}
               onClick={() => {
                 if (!draftPackId) return;
@@ -520,61 +610,140 @@ export function OrderForm({
               {labels.addCombo}
             </Button>
           </div>
-        </div>
+        ) : null}
+
+        {cartTab === "bundles" ? (
+          <div role="tabpanel" className={innerCardClass}>
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+              <Field label={labels.surprise}>
+                <select
+                  className={fieldClass}
+                  value={draftBundleId}
+                  onChange={(event) => setDraftBundleId(event.target.value)}
+                >
+                  <option value="">{labels.selectSurprise}</option>
+                  {bundles.map((bundle) => (
+                    <option key={bundle.id} value={bundle.id}>
+                      {bundle.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={cn(
+                    "min-h-11 w-full sm:w-auto",
+                    disabledButtonClass,
+                  )}
+                  disabled={!draftBundleId || bundleDraftLoading}
+                  onClick={() => {
+                    if (!draftBundleId) return;
+                    onAddBundleAsTemplate(draftBundleId);
+                    setDraftBundleId("");
+                  }}
+                >
+                  {bundleDraftLoading
+                    ? labels.addingSurprise
+                    : labels.addSurprise}
+                </Button>
+                <Button
+                  type="button"
+                  className={cn(
+                    "min-h-11 w-full sm:w-auto",
+                    disabledButtonClass,
+                  )}
+                  disabled={!draftBundleId || bundleDraftLoading}
+                  onClick={() => {
+                    if (!draftBundleId) return;
+                    onStartBundleDraft(draftBundleId);
+                  }}
+                >
+                  {labels.configureSurprise}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {bundleDraft ? (
-          <OrderFormBundleCustomize
-            bundleName={bundleDraft.bundleName}
-            containerName={bundleDraft.containerName}
-            containerNetPrice={bundleDraft.containerNetPrice}
-            templateQuantity={bundleDraft.templateQuantity}
-            components={bundleDraft.components}
-            quantity={bundleDraft.quantity}
-            products={products}
-            labelsByProductId={bundleComponentLabels}
-            priceSummary={bundlePriceSummary}
-            unitPricesByProductId={bundleUnitPricesByProductId}
-            isPricePending={isBundlePricePending}
-            labels={{
-              title: labels.customizeTitle,
-              subtitle: labels.customizeSubtitle,
-              candyCount: labels.candyCount,
-              progressLabel: labels.customizationProgress,
-              minReached: labels.minCandiesReached,
-              maxReached: labels.maxCandiesReached,
-              removeCandy: labels.removeCandy,
-              addCandy: labels.addCandy,
-              surpriseQuantity: labels.surpriseQuantity,
-              surpriseQuantityHint: labels.surpriseQuantityHint,
-              templatePersonCount: labels.templatePersonCount,
-              priceCalculating: labels.priceCalculating,
-              confirm: labels.confirmSurprise,
-              cancel: labels.cancelCustomize,
-              validationMin: labels.validationMinCandies,
-              validationMax: labels.validationMaxCandies,
-              candiesSubtotal: labels.candiesSubtotal,
-              containerSubtotal: labels.containerSubtotal,
-              containerCostHint: labels.containerCostHint,
-              unitPriceSuffix: labels.unitPriceSuffix,
-              customizeTotal: labels.customizeTotal,
-              addCandyAction: labels.addCandyAction,
-              candyAlreadyAdded: labels.candyAlreadyAdded,
-              searchCandies: labels.searchCandies,
-              searchCandiesPlaceholder: labels.searchCandiesPlaceholder,
-              expandPicker: labels.expandPicker,
-              collapsePicker: labels.collapsePicker,
-            }}
-            onComponentsChange={onBundleDraftComponentsChange}
-            onQuantityChange={onBundleDraftQuantityChange}
-            onConfirm={() => {
-              onConfirmBundleDraft();
-              setDraftBundleId("");
-            }}
-            onCancel={() => {
-              onCancelBundleDraft();
-              setDraftBundleId("");
-            }}
-          />
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-bundle-customize-title"
+          >
+            <button
+              type="button"
+              className="bg-inverse-surface/50 absolute inset-0 cursor-default"
+              aria-label={labels.cancelCustomize}
+              onClick={() => {
+                onCancelBundleDraft();
+                setDraftBundleId("");
+              }}
+            />
+            <div className="border-outline-variant/30 bg-surface-container-lowest relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border shadow-2xl sm:rounded-3xl">
+              <div className="p-4 sm:p-6">
+                <p id="order-bundle-customize-title" className="sr-only">
+                  {labels.customizeTitle}
+                </p>
+                <OrderFormBundleCustomize
+                  bundleName={bundleDraft.bundleName}
+                  containerName={bundleDraft.containerName}
+                  containerNetPrice={bundleDraft.containerNetPrice}
+                  templateQuantity={bundleDraft.templateQuantity}
+                  components={bundleDraft.components}
+                  quantity={bundleDraft.quantity}
+                  products={products}
+                  labelsByProductId={bundleComponentLabels}
+                  priceSummary={bundlePriceSummary}
+                  unitPricesByProductId={bundleUnitPricesByProductId}
+                  isPricePending={isBundlePricePending}
+                  labels={{
+                    title: labels.customizeTitle,
+                    subtitle: labels.customizeSubtitle,
+                    candyCount: labels.candyCount,
+                    progressLabel: labels.customizationProgress,
+                    minReached: labels.minCandiesReached,
+                    maxReached: labels.maxCandiesReached,
+                    removeCandy: labels.removeCandy,
+                    addCandy: labels.addCandy,
+                    surpriseQuantity: labels.surpriseQuantity,
+                    surpriseQuantityHint: labels.surpriseQuantityHint,
+                    templatePersonCount: labels.templatePersonCount,
+                    priceCalculating: labels.priceCalculating,
+                    confirm: labels.confirmSurprise,
+                    cancel: labels.cancelCustomize,
+                    validationMin: labels.validationMinCandies,
+                    validationMax: labels.validationMaxCandies,
+                    candiesSubtotal: labels.candiesSubtotal,
+                    containerSubtotal: labels.containerSubtotal,
+                    containerCostHint: labels.containerCostHint,
+                    unitPriceSuffix: labels.unitPriceSuffix,
+                    customizeTotal: labels.customizeTotal,
+                    addCandyAction: labels.addCandyAction,
+                    candyAlreadyAdded: labels.candyAlreadyAdded,
+                    searchCandies: labels.searchCandies,
+                    searchCandiesPlaceholder: labels.searchCandiesPlaceholder,
+                    expandPicker: labels.expandPicker,
+                    collapsePicker: labels.collapsePicker,
+                  }}
+                  onComponentsChange={onBundleDraftComponentsChange}
+                  onAddCandy={onAddBundleCandy}
+                  onQuantityChange={onBundleDraftQuantityChange}
+                  onConfirm={() => {
+                    onConfirmBundleDraft();
+                    setDraftBundleId("");
+                  }}
+                  onCancel={() => {
+                    onCancelBundleDraft();
+                    setDraftBundleId("");
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         ) : null}
 
         <OrderFormCartLines
@@ -582,18 +751,23 @@ export function OrderForm({
           products={products}
           bundlesByName={bundlesByName}
           packsByName={packsByName}
+          packCompositionsById={packCompositionsById}
           labels={{
             surpriseLine: labels.surpriseLine,
             comboLine: labels.comboLine,
             formatQuantityLabel: labels.formatQuantityLabel,
             formatComponents: labels.formatComponents,
+            viewComponents: labels.viewComponents,
             removeLine: labels.removeLine,
             editSurprise: labels.editSurprise,
             emptyLines: labels.emptyLines,
           }}
           onRemoveLine={onRemoveLine}
           onUpdateProductQuantity={onUpdateProductLineQuantity}
-          onEditBundleLine={onEditBundleLine}
+          onEditBundleLine={(index) => {
+            setCartTab("bundles");
+            onEditBundleLine(index);
+          }}
           getLineTotal={getLineTotal}
         />
       </section>

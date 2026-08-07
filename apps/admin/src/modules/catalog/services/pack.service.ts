@@ -24,7 +24,7 @@ import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { getActiveProductsByIdsRepo } from "../repositories/bundle.repository";
 import {
   listCampaignsByIdsRepo,
-  listProductsRepo,
+  getProductsByIdsRepo,
   type CampaignPricingRow,
 } from "../repositories/product.repository";
 import {
@@ -208,9 +208,14 @@ async function resolveReferenceNetPrice(
       return { ok: false, error: itemsCheck.error };
     }
 
-    const allProducts = await listProductsRepo(config);
+    const productIds = [...new Set(itemsInput.map((item) => item.productId))];
+    const products = await getProductsByIdsRepo(config, productIds);
+    if (products.length !== productIds.length) {
+      return { ok: false, error: "PRODUCT_NOT_FOUND" };
+    }
+
     const priceById = new Map(
-      allProducts.map((product) => {
+      products.map((product) => {
         const prices = parseProductPricesJson(product.prices);
         return [
           product.id,
@@ -369,9 +374,14 @@ export async function createPackService(config: SupabaseConfig, raw: unknown) {
     return { ok: false as const, error: campaignCheck.error };
   }
 
-  const allProducts = await listProductsRepo(config);
+  const productIds = [...new Set(data.items.map((item) => item.productId))];
+  const products = await getProductsByIdsRepo(config, productIds);
+  if (products.length !== productIds.length) {
+    return { ok: false as const, error: "PRODUCT_NOT_FOUND" as const };
+  }
+
   const priceById = new Map(
-    allProducts.map((product) => {
+    products.map((product) => {
       const prices = parseProductPricesJson(product.prices);
       return [
         product.id,

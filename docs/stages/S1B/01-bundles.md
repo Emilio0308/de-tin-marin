@@ -51,7 +51,7 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 - Helper `computeBundleTotal({ serviceFee, quantity, items })` → `{ itemsSubtotal, total }` en `@de-tin-marin/shared` + Vitest
 - Módulo `apps/admin/src/modules/catalog/` extendido: `bundle.repository`, `bundle.service`, actions, DTOs
 - UI admin: listado de bundles + formulario create/edit (imagen URL, `service_fee`, `quantity`, selector de productos con `units_per_person`, agregar/quitar filas) mostrando el total calculado en vivo + soft-delete
-- Selector de composición: `listProducts({ status: "active" })` por defecto; al editar, merge de ítems iniciales aunque el producto esté inactivo (Regla 6)
+- Selector de composición: `ProductSearchPicker` + `listProductsPageAction({ status: "active" })`; al editar, merge de ítems iniciales aunque el producto esté inactivo (Regla 6)
 - Navegación admin: entrada "Bundles"
 
 ## Scope OUT (traps)
@@ -80,15 +80,16 @@ Grants en `00004`: `GRANT SELECT` a `anon, authenticated`; `GRANT INSERT, UPDATE
 
 ## Boundaries y DTOs
 
-| Boundary           | Tipo          | Input (Zod)               | Output DTO (allowlist)                                                                                                                                         |
-| ------------------ | ------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listBundles`      | Server Action | —                         | `{ id, name, imageUrl, serviceFee, quantity, itemCount, total, isActive }[]`                                                                                   |
-| `getBundle`        | Server Action | `{ id: uuid }`            | `{ id, name, description, imageUrl, serviceFee, quantity, isActive, items: { productId, productName, unitNetPrice, unitsPerPerson }[], itemsSubtotal, total }` |
-| `createBundle`     | Server Action | `createBundleInputSchema` | `{ ok, id? }`                                                                                                                                                  |
-| `updateBundle`     | Server Action | `updateBundleInputSchema` | `{ ok }`                                                                                                                                                       |
-| `softDeleteBundle` | Server Action | `{ id: uuid }`            | `{ ok }`                                                                                                                                                       |
+| Boundary           | Tipo          | Input (Zod)               | Output DTO (allowlist)                                                                                                                                              |
+| ------------------ | ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listBundles`      | Server Action | —                         | `{ id, name, imageUrl, serviceFee, quantity, itemCount, total, isActive }[]`                                                                                        |
+| `getBundle`        | Server Action | `{ id: uuid }`            | FormDTO: `{ id, name, description, imageUrl, quantity, isActive, containerId, containerName, containerNetPrice, items: BundleFormItemDTO[], itemsSubtotal, total }` |
+| `createBundle`     | Server Action | `createBundleInputSchema` | `{ ok, id? }`                                                                                                                                                       |
+| `updateBundle`     | Server Action | `updateBundleInputSchema` | `{ ok }`                                                                                                                                                            |
+| `softDeleteBundle` | Server Action | `{ id: uuid }`            | `{ ok }`                                                                                                                                                            |
 
 - `createBundleInputSchema`: `{ name, description?, imageUrl?, serviceFee: number>=0, quantity: int>=1, isActive, items: { productId: uuid, unitsPerPerson: int>=1 }[] (min 1) }`.
+- `BundleFormItemDTO` (get/edit): `{ productId, productName, sku, imageUrl, unitNetPrice, netPrice, unitsPerPerson, isActive, productType, itemsPerPackage, stockTotalBaseUnits }` — allowlist para UI admin / order-form (plantilla filtrable por `isActive`).
 - Toda action envuelta en `guardAction(scope, run)` + `requireStaff` (patrón S1A).
 - `total` e `itemsSubtotal` **calculados en backend** (helper `computeBundleTotal`); nunca se persisten.
 

@@ -28,25 +28,25 @@ Las Server Actions invocadas desde el cliente **no** pasan por Next.js Data Cach
 
 ## Cuándo SSR vs CSR
 
-| Tipo de pantalla                                 | Estrategia          | Motivo                                                                                    |
-| ------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------- |
-| Home — categorías, productos, sorpresas          | **SSR** (objetivo)  | First paint, SEO; frescura vía `catalog_version`                                          |
-| Detalle producto `/productos/[slug]`             | **SSR**             | Ya implementado: `page.tsx` → props al container                                          |
-| Detalle sorpresa `/sorpresas/[id]`               | **SSR**             | Ya implementado                                                                           |
-| Wizard — template `/sorpresas/[id]/personalizar` | **SSR**             | Plantilla en servidor; picker y preview en cliente                                        |
-| Wizard — picker / preview                        | **CSR + RQ**        | Interacción; preview con precio/stock al momento                                          |
-| Carrito `/carrito`                               | **CSR + RQ fresco** | Sync precios/límites/stock al montar; rebuild tras checkout drift                         |
-| Checkout `/checkout`                             | **CSR + validate**  | Fee fresco; validación precio/stock al submit                                             |
-| Admin — listados CRUD                            | **CSR + RQ**        | URL `page`/`pageSize`/filtros; SQL `count`+`range`; caché 15 min; invalidar tras mutación |
-| Admin — order-form preview                       | **CSR + RQ fresco** | Mismo motor que `createOrderService`                                                      |
+| Tipo de pantalla                                 | Estrategia                 | Motivo                                                                                    |
+| ------------------------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------- |
+| Home — categorías, productos, sorpresas          | **SSR** + hidratación RQ   | First paint, SEO; frescura vía `catalog_version`                                          |
+| Detalle producto `/productos/[slug]`             | **SSR**                    | Ya implementado: `page.tsx` → props al container                                          |
+| Detalle sorpresa `/sorpresas/[id]`               | **SSR**                    | Ya implementado                                                                           |
+| Wizard — template `/sorpresas/[id]/personalizar` | **SSR**                    | Plantilla en servidor; picker y preview en cliente                                        |
+| Wizard — picker / preview                        | **CSR + RQ**               | Interacción; preview con precio/stock al momento                                          |
+| Carrito `/carrito`                               | **CSR + RQ fresco**        | Sync precios/límites/stock al montar; rebuild tras checkout drift                         |
+| Checkout `/checkout`                             | **CSR + validate**         | Fee fresco; validación precio/stock al submit                                             |
+| Admin — listados CRUD                            | **SSR** + RQ (hidratación) | URL `page`/`pageSize`/filtros; SQL `count`+`range`; caché 15 min; invalidar tras mutación |
+| Admin — order-form preview                       | **CSR + RQ fresco**        | Mismo motor que `createOrderService`                                                      |
 
 ### Estado actual vs objetivo
 
-| Ruta                      | Hoy      | Objetivo (#32)                        |
-| ------------------------- | -------- | ------------------------------------- |
-| `/` (home listados)       | CSR + RQ | SSR + hidratación (deuda documentada) |
-| Detalle producto/sorpresa | SSR      | Mantener                              |
-| Wizard template           | SSR      | Mantener                              |
+| Ruta                      | Hoy                          | Objetivo (#32) |
+| ------------------------- | ---------------------------- | -------------- |
+| `/` (home listados)       | SSR + HydrationBoundary + RQ | Mantener       |
+| Detalle producto/sorpresa | SSR                          | Mantener       |
+| Wizard template           | SSR                          | Mantener       |
 
 **Regla:** si `page.tsx` ya resolvió el DTO en SSR, el container **no** vuelve a pedir el mismo recurso con `useQuery` en mount.
 
@@ -104,7 +104,13 @@ Listados de catálogo usan `...catalogQueryOptions`. La query de versión (`quer
 
 Admin: `invalidateAdminCatalogLists` solo invalida listas de catálogo indicadas (`products`, `categories`, `bundles`, `surpriseContainers`, `packs`) — **nunca** órdenes ni otros dominios. Tras mutación también `bumpCatalogVersionSafe` → RPC `bump_catalog_version` (Broadcast a tienda).
 
-Listados admin paginados: `page` / `pageSize` / filtros en `searchParams` (`admin-list-url`); actions `list*PageAction` con `@de-tin-marin/validations/admin-list`. Brief: [`S3B/01-admin-list-pagination.md`](../stages/S3B/01-admin-list-pagination.md).
+Listados admin paginados: `page` / `pageSize` / filtros en `searchParams` (`admin-list-url`); default **`ADMIN_DEFAULT_PAGE_SIZE = 5`** (max 50) en `@de-tin-marin/validations/admin-list`. Prefetch SSR en `page.tsx` + `createAdminQueryClient` + `HydrationBoundary`; actions `list*PageAction`. Brief: [`S3B/01-admin-list-pagination.md`](../stages/S3B/01-admin-list-pagination.md).
+
+**Home ecommerce:** `loadStorefrontCatalog` (solo tab activo + hero + `catalog_version`) → seed RQ en `app/page.tsx`.
+
+**Admin composición / order-form:** no cargar catálogo completo — `ProductSearchPicker` + `listProductsPageAction` (debounce 300 ms; `pageSize = ADMIN_DEFAULT_PAGE_SIZE`; scroll infinito vía `IntersectionObserver`; auto-avanza página si `excludeIds` deja la vista vacía).
+
+**Dashboard admin:** `getDashboardSummaryService` (counts SQL + recent orders + low-stock candidates) — no `listProducts` / `listOrders` completos.
 
 ## Query keys
 

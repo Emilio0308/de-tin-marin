@@ -3,6 +3,54 @@ import { describe, expect, it, vi } from "vitest";
 import { OrderForm } from "./order-form";
 import { emptyOrderFormValues, type OrderFormLabels } from "./order-form.types";
 
+vi.mock(
+  "@/modules/catalog/components/product-search-picker/product-search-picker.container",
+  () => ({
+    ProductSearchPickerContainer: ({
+      onSelect,
+    }: {
+      onSelect: (item: {
+        id: string;
+        name: string;
+        sku: string;
+        netPrice: number;
+        unitNetPrice: number;
+        finalPrice: number;
+        finalUnitPrice: number;
+        imageUrl: string | null;
+        productType: "unit" | "package";
+        itemsPerPackage: number;
+        stockTotalBaseUnits: number;
+        purchaseMinQuantity: number;
+        purchaseMaxQuantity: number;
+      }) => void;
+    }) => (
+      <button
+        type="button"
+        onClick={() =>
+          onSelect({
+            id: "p1",
+            name: "Galleta",
+            sku: "SKU-1",
+            netPrice: 5,
+            unitNetPrice: 5,
+            finalPrice: 5,
+            finalUnitPrice: 5,
+            imageUrl: null,
+            productType: "unit",
+            itemsPerPackage: 1,
+            stockTotalBaseUnits: 100,
+            purchaseMinQuantity: 10,
+            purchaseMaxQuantity: 100,
+          })
+        }
+      >
+        pick-product
+      </button>
+    ),
+  }),
+);
+
 const labels: OrderFormLabels = {
   contactSection: "Cliente",
   deliverySection: "Entrega",
@@ -42,9 +90,19 @@ const labels: OrderFormLabels = {
   productLine: "Producto",
   surpriseLine: "Sorpresa",
   formatComponents: (count) => `(${count} dulces)`,
+  viewComponents: (count) => `Ver componentes (${count})`,
+  formatPackComponentQty: (packages, units) =>
+    units > 0 ? `${packages} paq. + ${units} u.` : `${packages} paq.`,
   formatQuantityLabel: (quantity) => `Cantidad: ${quantity}`,
   quantityBounds: (min, max) => `Mín. ${min} · Máx. ${max}`,
   configureSurprise: "Configurar sorpresa",
+  addingSurprise: "Agregando…",
+  tabProducts: "Productos",
+  tabCombos: "Combos",
+  tabSurprises: "Sorpresas",
+  selectProductFirst: "Selecciona un producto para agregarlo.",
+  productOutOfStock: (min, available) =>
+    `Sin stock suficiente (mín. ${min}, disponible ${available}).`,
   customizeTitle: "Personalizar sorpresa",
   customizeSubtitle: "Plantilla editable",
   candyCount: "Dulces",
@@ -100,6 +158,7 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       products={[baseProduct]}
       bundles={[]}
       packs={[]}
+      packCompositionsById={new Map()}
       deliveryDistricts={[]}
       bundleDraft={null}
       bundleDraftLoading={false}
@@ -111,10 +170,13 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       error={null}
       labels={labels}
       onChange={vi.fn()}
+      onEnsureProductOption={vi.fn()}
       onAddProductLine={vi.fn()}
       onUpdateProductLineQuantity={vi.fn()}
       onAddPackLine={vi.fn()}
       onStartBundleDraft={vi.fn()}
+      onAddBundleAsTemplate={vi.fn()}
+      onAddBundleCandy={vi.fn()}
       onBundleDraftComponentsChange={vi.fn()}
       onBundleDraftQuantityChange={vi.fn()}
       onConfirmBundleDraft={vi.fn()}
@@ -141,11 +203,46 @@ describe("OrderForm", () => {
   it("shows product minimum quantity hint when a product is selected", () => {
     renderForm();
 
-    fireEvent.change(screen.getByRole("combobox", { name: /producto/i }), {
-      target: { value: "p1" },
-    });
+    fireEvent.click(screen.getByText("pick-product"));
 
     expect(screen.getByText("Mín. 10 · Máx. 100")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Agregar producto" }),
+    ).toBeEnabled();
+  });
+
+  it("disables add product and explains missing selection", () => {
+    renderForm();
+
+    expect(
+      screen.getByRole("button", { name: "Agregar producto" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText("Selecciona un producto para agregarlo."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows surprise actions in the surprises tab", () => {
+    renderForm({
+      bundles: [
+        {
+          id: "b1",
+          name: "Sorpresa fiesta",
+          containerId: "c1",
+          containerName: "Caja",
+          containerNetPrice: 2,
+          templateQuantity: 10,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: /Sorpresas/i }));
+    expect(
+      screen.getByRole("button", { name: "Agregar sorpresa" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Configurar sorpresa" }),
+    ).toBeDisabled();
   });
 
   it("calls onSubmit when form has lines", () => {

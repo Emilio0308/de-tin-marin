@@ -152,7 +152,6 @@ export type OrderFormLabels = {
   surprise: string;
   selectSurprise: string;
   surpriseQuantity: string;
-  addSurprise: string;
   removeLine: string;
   emptyLines: string;
   shipping: string;
@@ -165,9 +164,18 @@ export type OrderFormLabels = {
   productLine: string;
   surpriseLine: string;
   formatComponents: (count: number) => string;
+  viewComponents: (count: number) => string;
+  formatPackComponentQty: (packages: number, units: number) => string;
   formatQuantityLabel: (quantity: number) => string;
   quantityBounds: (min: number, max: number) => string;
   configureSurprise: string;
+  addSurprise: string;
+  addingSurprise: string;
+  tabProducts: string;
+  tabCombos: string;
+  tabSurprises: string;
+  selectProductFirst: string;
+  productOutOfStock: (min: number, available: number) => string;
   customizeTitle: string;
   customizeSubtitle: string;
   candyCount: string;
@@ -207,6 +215,10 @@ export type OrderFormProps = {
   products: ProductOption[];
   bundles: BundleOption[];
   packs: PackOption[];
+  packCompositionsById: Map<
+    string,
+    Array<{ productId: string; productName: string; quantityLabel: string }>
+  >;
   deliveryDistricts: string[];
   bundleDraft: OrderFormBundleDraft | null;
   bundleDraftLoading: boolean;
@@ -223,10 +235,13 @@ export type OrderFormProps = {
   error: string | null;
   labels: OrderFormLabels;
   onChange: (values: OrderFormValues) => void;
+  onEnsureProductOption: (product: ProductOption) => void;
   onAddProductLine: (productId: string, quantity: number) => void;
   onUpdateProductLineQuantity: (index: number, quantity: number) => void;
   onAddPackLine: (packId: string, quantity: number) => void;
   onStartBundleDraft: (bundleId: string) => void;
+  onAddBundleAsTemplate: (bundleId: string) => void;
+  onAddBundleCandy: (product: ProductOption) => void;
   onBundleDraftComponentsChange: (
     components: OrderFormBundleComponent[],
   ) => void;

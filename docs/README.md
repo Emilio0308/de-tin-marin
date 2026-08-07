@@ -40,11 +40,12 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 
 ## Por dominio (en código)
 
-| Módulo                                   | README (actions / services / rutas)                                                       |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Catálogo (categories, products, bundles) | [`apps/admin/src/modules/catalog/README.md`](../apps/admin/src/modules/catalog/README.md) |
-| Orders                                   | [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md)   |
-| Reports                                  | [`apps/admin/src/modules/reports/README.md`](../apps/admin/src/modules/reports/README.md) |
+| Módulo                                   | README (actions / services / rutas)                                                           |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Catálogo (categories, products, bundles) | [`apps/admin/src/modules/catalog/README.md`](../apps/admin/src/modules/catalog/README.md)     |
+| Orders                                   | [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md)       |
+| Dashboard                                | [`apps/admin/src/modules/dashboard/README.md`](../apps/admin/src/modules/dashboard/README.md) |
+| Reports                                  | [`apps/admin/src/modules/reports/README.md`](../apps/admin/src/modules/reports/README.md)     |
 
 Código fuente:
 

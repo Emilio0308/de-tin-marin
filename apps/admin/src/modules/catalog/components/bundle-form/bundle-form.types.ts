@@ -80,6 +80,8 @@ export type BundleFormProps = {
   labels: BundleFormLabels;
   includeInactiveProducts: boolean;
   onIncludeInactiveProductsChange: (value: boolean) => void;
+  onEnsureProductOption: (option: ProductOption) => void;
+  productStatus: "all" | "active" | "inactive";
   onSubmit: (
     values: BundleFormValues,
     pendingImage: File | null,

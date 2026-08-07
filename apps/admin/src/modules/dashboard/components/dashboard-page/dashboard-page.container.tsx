@@ -1,27 +1,23 @@
 import { getTranslations } from "next-intl/server";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
-import { listOrdersAction } from "@/modules/orders/actions/list-orders";
+import { redirect } from "next/navigation";
+import { supabaseConfig } from "@/config/env";
 import { CatalogExportPanelContainer } from "@/modules/reports/components/catalog-export-panel/catalog-export-panel.container";
+import { getDashboardSummaryService } from "@/modules/dashboard/services/dashboard-summary.service";
+import { requireStaff } from "@/shared/auth/require-staff";
 import { DashboardPage } from "./dashboard-page";
 import {
   buildDashboardStats,
   buildLowStockAlerts,
-  countPendingOrders,
   formatRelativeTimeEs,
   mapRecentOrders,
 } from "./dashboard-page.helpers";
 
 export async function DashboardPageContainer() {
+  const auth = await requireStaff(supabaseConfig);
+  if (!auth.ok) redirect("/login");
+
   const t = await getTranslations("dashboard");
-
-  const [productsResult, ordersResult] = await Promise.all([
-    listProductsAction(),
-    listOrdersAction(),
-  ]);
-
-  const products = productsResult.ok ? productsResult.data : [];
-  const orders =
-    ordersResult.ok && "data" in ordersResult ? ordersResult.data : [];
+  const summary = await getDashboardSummaryService(supabaseConfig);
 
   const statusLabels = {
     pending_payment: t("orderStatus.pending_payment"),
@@ -34,11 +30,13 @@ export async function DashboardPageContainer() {
   };
 
   const stats = buildDashboardStats({
-    productCount: products.length,
-    pendingOrderCount: countPendingOrders(orders),
+    productCount: summary.productCount,
+    pendingOrderCount: summary.pendingOrderCount,
     labels: {
       totalProducts: t("stats.totalProducts"),
-      productsTrend: t("stats.productsTrend", { count: products.length }),
+      productsTrend: t("stats.productsTrend", {
+        count: summary.productCount,
+      }),
       activeCampaigns: t("stats.activeCampaigns"),
       campaignsUnavailable: t("stats.campaignsUnavailable"),
       pendingOrders: t("stats.pendingOrders"),
@@ -46,7 +44,7 @@ export async function DashboardPageContainer() {
     },
   });
 
-  const recentOrders = mapRecentOrders(orders, {
+  const recentOrders = mapRecentOrders(summary.recentOrders, {
     statusLabels,
     lineSummary: (lineCount, total) =>
       t("recentOrders.lineSummary", {
@@ -56,7 +54,7 @@ export async function DashboardPageContainer() {
     timeAgo: formatRelativeTimeEs,
   });
 
-  const alerts = buildLowStockAlerts(products, {
+  const alerts = buildLowStockAlerts(summary.lowStockAlerts, {
     lowStock: (name, quantity) => t("alerts.lowStock", { name, quantity }),
   });
 

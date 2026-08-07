@@ -16,6 +16,7 @@ export type BundleItemWithProduct = BundleItemRow & {
     sku: string;
     name: string;
     prices: Json;
+    image_url: string | null;
     is_active: boolean;
     deleted_at: string | null;
     product_type: string;
@@ -25,6 +26,9 @@ export type BundleItemWithProduct = BundleItemRow & {
     stock_loose_base_units: number;
   } | null;
 };
+
+const BUNDLE_ITEM_PRODUCT_SELECT =
+  "sku, name, prices, image_url, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units";
 
 export type BundleContainer = {
   id: string;
@@ -112,7 +116,7 @@ export async function getBundleByIdRepo(
     .schema("catalog")
     .from("bundles")
     .select(
-      "*, surprise_containers(id, sku, name, prices), bundle_items(*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units))",
+      `*, surprise_containers(id, sku, name, prices), bundle_items(*, products(${BUNDLE_ITEM_PRODUCT_SELECT}))`,
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -132,9 +136,7 @@ export async function listBundleItemsByBundleIdsRepo(
   const { data, error } = await supabase
     .schema("catalog")
     .from("bundle_items")
-    .select(
-      "*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units)",
-    )
+    .select(`*, products(${BUNDLE_ITEM_PRODUCT_SELECT})`)
     .in("bundle_id", bundleIds);
 
   if (error) throw new Error(error.message);

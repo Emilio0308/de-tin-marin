@@ -44,6 +44,26 @@
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 
+## Docs sincronizados (2026-08-07 — order-form picker + BundleFormItemDTO)
+
+- `getBundle` / `BundleFormItemDTO`: sku, imageUrl, netPrice, isActive, productType, itemsPerPackage, stockTotalBaseUnits
+- Order-form: tabs + `ProductSearchPicker`; plantilla sorpresa filtra `isActive`; composición pack/bundle en líneas; bloqueo `OUT_OF_STOCK` al add producto
+- Docs: S1B, catalog/orders READMEs, Regla 21 (admin OUT_OF_STOCK), `85-react-components.md`
+
+## Docs sincronizados (2026-08-07 — ProductSearchPicker UX)
+
+- Picker: `pageSize = ADMIN_DEFAULT_PAGE_SIZE`, scroll infinito (IntersectionObserver), auto-page si excludeIds vacía la vista
+- Meta fila: `unitNetPrice` + `shouldShowItemsPerPackage`; i18n `formatUnitPrice` / `formatItemsPerPackage`
+- Docs: catalog README, `50-data-fetching-cache-ssr.md`, S3B, `85-react-components.md`
+
+## Docs sincronizados (2026-08-07 — SSR listados + ProductSearchPicker + pageSize 5)
+
+- Home ecommerce: `loadStorefrontCatalog` + `HydrationBoundary` (DECISIONS #32 cumplido en `/`)
+- Admin listados: SSR prefetch + `createAdminQueryClient` + `HydrationBoundary`
+- `ADMIN_DEFAULT_PAGE_SIZE = 5`; UI composition vía `ProductSearchPicker` + `listProductsPageAction` (eliminado `listProductsAction` de UI)
+- Dashboard: `getDashboardSummaryService` (counts / recent / low-stock) sin listados completos
+- Docs: `50-data-fetching-cache-ssr.md`, `85-react-components.md`, `88-ui-design-i18n.md`, S3B, S1A/S1B/S1D/S1F, Reglas 6/23, READMEs catalog/orders/ecommerce catalog
+
 ## Docs sincronizados (2026-08-07 — GranularNumberInput / number drafts)
 
 - Admin forms: `GranularNumberInput` + `number-draft.helpers` (product, pack, bundle, category, container, delivery, order-form)

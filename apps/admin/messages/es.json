@@ -35,6 +35,16 @@
       "page": "Página {page} de {totalPages}"
     }
   },
+  "productSearchPicker": {
+    "searchPlaceholder": "Buscar producto por nombre o SKU…",
+    "searchAriaLabel": "Buscar producto",
+    "empty": "No hay productos que coincidan.",
+    "loading": "Buscando productos…",
+    "loadMore": "Cargar más",
+    "noMore": "No hay más resultados",
+    "formatUnitPrice": "{price} c/u",
+    "formatItemsPerPackage": "{count} und. / presentación"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "categories": "Categorías",
@@ -183,9 +193,18 @@
       "productLine": "Producto",
       "surpriseLine": "Sorpresa",
       "formatComponents": "({count} dulces)",
+      "viewComponents": "Ver componentes ({count})",
+      "formatPackComponentPackages": "{packages} paq.",
+      "formatPackComponentQtyWithUnits": "{packages} paq. + {units} u.",
       "quantityLabel": "Cantidad: {quantity}",
       "quantityBounds": "Mín. {min} · Máx. {max}",
       "configureSurprise": "Configurar sorpresa",
+      "addingSurprise": "Agregando…",
+      "tabProducts": "Productos",
+      "tabCombos": "Combos",
+      "tabSurprises": "Sorpresas",
+      "selectProductFirst": "Selecciona un producto para agregarlo.",
+      "productOutOfStock": "Sin stock suficiente (mín. {min}, disponible {available}).",
       "customizeTitle": "Personalizar sorpresa",
       "customizeSubtitle": "Parte de la plantilla. Puedes quitar o agregar dulces (8–20).",
       "candyCount": "Dulces en la sorpresa",

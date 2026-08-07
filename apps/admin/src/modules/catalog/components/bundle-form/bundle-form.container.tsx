@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createBundleAction } from "@/modules/catalog/actions/create-bundle";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
 import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
@@ -69,22 +68,12 @@ export function BundleFormContainer({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [includeInactiveProducts, setIncludeInactiveProducts] = useState(false);
+  const [pickedProducts, setPickedProducts] = useState<ProductOption[]>([]);
 
   const productStatus =
     SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH && includeInactiveProducts
       ? "all"
       : "active";
-
-  const productsQuery = useQuery({
-    queryKey: queryKeys.catalog.products(productStatus),
-    queryFn: async () => {
-      const result = await listProductsAction({ status: productStatus });
-      if (!result.ok) {
-        throw new Error("message" in result ? result.message : result.error);
-      }
-      return result.data;
-    },
-  });
 
   const containersQuery = useQuery({
     queryKey: queryKeys.catalog.surpriseContainers(),
@@ -144,17 +133,16 @@ export function BundleFormContainer({
   );
 
   const products = useMemo(
-    () =>
-      mergeBundleProductOptions(
-        (productsQuery.data ?? []).map((product): ProductOption => ({
-          id: product.id,
-          name: product.name,
-          unitNetPrice: product.unitNetPrice,
-        })),
-        initial,
-      ),
-    [productsQuery.data, initial],
+    () => mergeBundleProductOptions(pickedProducts, initial),
+    [pickedProducts, initial],
   );
+
+  function handleEnsureProductOption(option: ProductOption) {
+    setPickedProducts((current) => {
+      if (current.some((product) => product.id === option.id)) return current;
+      return [...current, option];
+    });
+  }
 
   async function uploadBundleImage(
     file: File,
@@ -263,26 +251,20 @@ export function BundleFormContainer({
     router.push("/bundles");
   }
 
-  const productsLoading = productsQuery.isLoading && !productsQuery.data;
   const containersLoading = containersQuery.isLoading;
 
   return (
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-40 lg:p-8 lg:pb-8">
-      {productsLoading || containersLoading ? (
+      {containersLoading ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
             {t("loadingProducts")}
           </p>
         </div>
-      ) : productsQuery.isError ||
-        (!productsQuery.isLoading && products.length === 0 && !initial) ||
-        containersQuery.isError ||
-        !containersQuery.data?.length ? (
+      ) : containersQuery.isError || !containersQuery.data?.length ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
-            {!productsQuery.data?.length && products.length === 0
-              ? t("noProducts")
-              : t("noContainers")}
+            {t("noContainers")}
           </p>
         </div>
       ) : (
@@ -298,6 +280,8 @@ export function BundleFormContainer({
           labels={labels}
           includeInactiveProducts={includeInactiveProducts}
           onIncludeInactiveProductsChange={setIncludeInactiveProducts}
+          onEnsureProductOption={handleEnsureProductOption}
+          productStatus={productStatus}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           submitting={submitting}

@@ -2,6 +2,7 @@ import {
   clampProductPurchaseQuantity,
   mergeProductPurchaseQuantity,
   resolveProductPurchaseBounds,
+  resolveStockInPresentations,
   type ProductPurchaseBounds,
 } from "@de-tin-marin/shared/product-purchase-limits";
 import type { OrderFormLine, ProductOption } from "./order-form.types";
@@ -16,6 +17,32 @@ export function resolveOrderFormProductBounds(
     purchaseMinQuantity: product.purchaseMinQuantity,
     purchaseMaxQuantity: product.purchaseMaxQuantity,
   });
+}
+
+export type ProductAddBlockReason =
+  | { code: "NO_SELECTION" }
+  | {
+      code: "OUT_OF_STOCK";
+      minQuantity: number;
+      available: number;
+    };
+
+export function resolveProductAddBlockReason(
+  product: ProductOption | undefined,
+  bounds: ProductPurchaseBounds | null,
+): ProductAddBlockReason | null {
+  if (!product || !bounds) return { code: "NO_SELECTION" };
+  if (bounds.purchasable) return null;
+
+  return {
+    code: "OUT_OF_STOCK",
+    minQuantity: bounds.minQuantity,
+    available: resolveStockInPresentations({
+      productType: product.productType,
+      itemsPerPackage: product.itemsPerPackage,
+      stockTotalBaseUnits: product.stockTotalBaseUnits,
+    }),
+  };
 }
 
 export function mergeOrAddProductLine(

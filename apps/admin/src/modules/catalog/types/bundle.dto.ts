@@ -3,8 +3,15 @@ import type { BundleListItem } from "@de-tin-marin/validations/bundle";
 export type BundleFormItemDTO = {
   productId: string;
   productName: string;
+  sku: string;
+  imageUrl: string | null;
   unitNetPrice: number;
+  netPrice: number;
   unitsPerPerson: number;
+  isActive: boolean;
+  productType: "unit" | "package";
+  itemsPerPackage: number;
+  stockTotalBaseUnits: number;
 };
 
 export type BundleFormDTO = {

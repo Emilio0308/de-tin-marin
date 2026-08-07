@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADMIN_DEFAULT_PAGE_SIZE,
   adminCategoryListQuerySchema,
   adminListPageBounds,
   adminListRange,
@@ -29,7 +30,7 @@ describe("adminProductListQuerySchema", () => {
     const parsed = adminProductListQuerySchema.parse({});
     expect(parsed).toEqual({
       page: 1,
-      pageSize: 20,
+      pageSize: ADMIN_DEFAULT_PAGE_SIZE,
       status: "all",
     });
   });

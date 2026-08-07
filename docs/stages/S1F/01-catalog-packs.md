@@ -60,7 +60,7 @@ Staff en admin (:3001) puede CRUD combos (packs) con composición de dulces en p
 | `updatePack`     | Server Action | `updatePackInputSchema` | `{ ok }`                                                                                      |
 | `softDeletePack` | Server Action | `{ id }`                | `{ ok }`                                                                                      |
 
-Formulario Combos (`pack-form`): carga productos con `listProducts({ status: "active" })`; al editar, `mergePackProductOptions` conserva ítems ya en la BOM. Persistencia solo productos activos (Regla 23 / `validatePackItems`).
+Formulario Combos (`pack-form`): `ProductSearchPicker` + `listProductsPageAction({ status: "active" })`; al editar, `mergePackProductOptions` conserva ítems ya en la BOM. Persistencia solo productos activos (Regla 23 / `validatePackItems`).
 
 > **Post-S4-04:** cada ítem lleva `packageQuantity` + `unitQuantity` (suma ≥ 1). Contrato canónico: [S4/04-pack-dual-quantities.md](../S4/04-pack-dual-quantities.md).
 

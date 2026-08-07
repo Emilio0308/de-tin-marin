@@ -9,6 +9,7 @@ import {
   type AdminListPage,
 } from "@de-tin-marin/validations/admin-list";
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
+import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { parsePricesJson } from "../repositories/product.repository";
 import {
@@ -47,11 +48,27 @@ function toPriceItems(items: BundleItemWithProduct[]) {
 }
 
 function toFormItemDTO(item: BundleItemWithProduct): BundleFormItemDTO {
+  const product = item.products;
+  const prices = parsePricesJson(product?.prices ?? {});
+  const itemsPerPackage = product?.items_per_package ?? 1;
+  const productType = product?.product_type === "package" ? "package" : "unit";
+
   return {
     productId: item.product_id,
-    productName: item.products?.name ?? "—",
-    unitNetPrice: parsePricesJson(item.products?.prices ?? {}).unitNetPrice,
+    productName: product?.name ?? "—",
+    sku: product?.sku ?? "",
+    imageUrl: product?.image_url ?? null,
+    unitNetPrice: prices.unitNetPrice,
+    netPrice: prices.packageNetPrice,
     unitsPerPerson: item.units_per_person,
+    isActive: Boolean(product?.is_active && !product.deleted_at),
+    productType,
+    itemsPerPackage,
+    stockTotalBaseUnits: computeTotalBaseUnits(
+      product?.stock_sealed_packages ?? 0,
+      product?.stock_loose_base_units ?? 0,
+      itemsPerPackage,
+    ),
   };
 }
 

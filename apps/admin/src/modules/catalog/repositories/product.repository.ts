@@ -59,6 +59,9 @@ function escapeIlike(term: string): string {
   return term.replace(/[%_\\]/g, "\\$&");
 }
 
+const PRODUCT_LIST_SELECT =
+  "id, sku, name, slug, brand, category_id, product_type, items_per_package, package_label, prices, cost_net_price, campaign_id, stock_sealed_packages, stock_loose_base_units, purchase_min_quantity, purchase_max_quantity, is_active, image_url, categories(name)";
+
 export async function listProductsPageRepo(
   config: SupabaseConfig,
   filters: ProductListFilters,
@@ -72,7 +75,7 @@ export async function listProductsPageRepo(
   let query = supabase
     .schema("catalog")
     .from("products")
-    .select("*, categories(name)", { count: "exact" })
+    .select(PRODUCT_LIST_SELECT, { count: "exact" })
     .is("deleted_at", null);
 
   if (filters.categoryId) {
@@ -96,7 +99,10 @@ export async function listProductsPageRepo(
     .range(from, to);
 
   if (error) throw new Error(error.message);
-  return { rows: (data ?? []) as ProductWithCategory[], total: count ?? 0 };
+  return {
+    rows: (data ?? []) as unknown as ProductWithCategory[],
+    total: count ?? 0,
+  };
 }
 
 export async function listCampaignsByIdsRepo(
@@ -242,4 +248,71 @@ export function parsePricesJson(prices: Json): {
   unitNetPrice: number;
 } {
   return parseProductPricesJson(prices);
+}
+
+export type ProductPricesRow = {
+  id: string;
+  prices: Json;
+};
+
+export async function getProductsByIdsRepo(
+  config: SupabaseConfig,
+  productIds: string[],
+): Promise<ProductPricesRow[]> {
+  if (productIds.length === 0) return [];
+
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("catalog")
+    .from("products")
+    .select("id, prices")
+    .in("id", productIds)
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function countProductsRepo(
+  config: SupabaseConfig,
+): Promise<number> {
+  const supabase = await createSupabaseServerClient(config);
+  const { count, error } = await supabase
+    .schema("catalog")
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export type LowStockProductCandidate = {
+  id: string;
+  name: string;
+  items_per_package: number;
+  stock_sealed_packages: number;
+  stock_loose_base_units: number;
+};
+
+/** Candidates ordered by sealed then loose; caller filters computed total. */
+export async function listLowStockProductCandidatesRepo(
+  config: SupabaseConfig,
+  limit = 50,
+): Promise<LowStockProductCandidate[]> {
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("catalog")
+    .from("products")
+    .select(
+      "id, name, items_per_package, stock_sealed_packages, stock_loose_base_units",
+    )
+    .is("deleted_at", null)
+    .eq("is_active", true)
+    .order("stock_sealed_packages", { ascending: true })
+    .order("stock_loose_base_units", { ascending: true })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }

@@ -99,6 +99,8 @@ export type PackFormProps = {
   labels: PackFormLabels;
   includeInactiveProducts: boolean;
   onIncludeInactiveProductsChange: (value: boolean) => void;
+  onEnsureProductOption: (option: ProductOption) => void;
+  productStatus: "all" | "active" | "inactive";
   /** `pendingImage` is set only when the user picked a new file; upload happens in the container on save. */
   onSubmit: (
     values: PackFormValues,
