@@ -184,7 +184,7 @@ describe("ProductForm", () => {
       />,
     );
 
-    expect(screen.getByLabelText(labels.costNetPrice)).toHaveValue(4);
+    expect(screen.getByLabelText(labels.costNetPrice)).toHaveValue("4");
     expect(screen.getByText("S/ 6.00")).toBeInTheDocument();
     expect(screen.getByText("150.0%")).toBeInTheDocument();
 
@@ -203,6 +203,61 @@ describe("ProductForm", () => {
     expect(values.costNetPrice).toBe(4);
     expect(pending).toBeInstanceOf(File);
     expect(pending?.name).toBe("gummy.webp");
+  });
+
+  it("permite borrar 0 en precio y escribir 4 sin forzar 04", () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ProductForm
+        categories={categories}
+        labels={labels}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        submitting={false}
+        error={null}
+      />,
+    );
+
+    const price = screen.getByLabelText(labels.unitPrice);
+    expect(price).toHaveValue("0");
+
+    fireEvent.focus(price);
+    fireEvent.change(price, { target: { value: "" } });
+    expect(price).toHaveValue("");
+
+    fireEvent.change(price, { target: { value: "4" } });
+    expect(price).toHaveValue("4");
+    fireEvent.blur(price);
+
+    const stock = screen.getByDisplayValue("0");
+    fireEvent.focus(stock);
+    fireEvent.change(stock, { target: { value: "" } });
+    expect(stock).toHaveValue("");
+    fireEvent.change(stock, { target: { value: "12" } });
+    expect(stock).toHaveValue("12");
+    fireEvent.blur(stock);
+
+    fireEvent.change(screen.getByLabelText(labels.sku), {
+      target: { value: "SKU-NEW" },
+    });
+    fireEvent.change(screen.getByLabelText(labels.name), {
+      target: { value: "Nuevo" },
+    });
+    fireEvent.change(screen.getByLabelText(labels.category), {
+      target: { value: "cat-1" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: labels.save }));
+
+    expect(onSubmit).toHaveBeenCalled();
+    const [submitted] = onSubmit.mock.calls[0] as [
+      {
+        packageNetPrice: number;
+        stockLooseBaseUnits: number;
+      },
+    ];
+    expect(submitted.packageNetPrice).toBe(4);
+    expect(submitted.stockLooseBaseUnits).toBe(12);
   });
 });
 

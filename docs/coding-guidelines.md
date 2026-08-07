@@ -47,6 +47,38 @@ components/<nombre>/
 - Reutilizar types exportados; no tipar dos veces la misma firma en distintos `*.types.ts`.
 - Detalle: [`rules/85-react-components.md`](rules/85-react-components.md) · [`rules/88-ui-design-i18n.md`](rules/88-ui-design-i18n.md).
 
+## Inputs numéricos controlados
+
+**Prohibido** ligar `value={number}` a un `onChange` que haga `Number(raw) || fallback` (o `Math.max(..., Number(raw) || min)`) en cada tecla. Eso impide borrar el `0` y produce valores como `04`.
+
+**Obligatorio:**
+
+- Mientras se edita, el draft es **string** (vacío permitido).
+- **No** coerción `Number(raw) || fallback` en cada tecla (impide borrar el `0`).
+- Clamp / fallback definitivo en **blur** (y validación Zod al submit). Mientras se escribe, se puede emitir un `number` intermedio solo si el draft parsea; vacío no debe forzar `0` hasta blur (salvo `allowEmpty` → `null`).
+- Preferir `type="text"` + `inputMode="numeric"` | `"decimal"` (evitar spinners nativos de `type="number"`).
+- Enteros: solo dígitos. Decimales: dígitos + un separador `.` (p. ej. `"12."` válido mientras se escribe).
+- El contrato de dominio / Server Action sigue siendo `number` (o `null` si el campo es opcional). El draft de UI **no** sustituye Zod.
+
+```tsx
+// ❌ Anti-patrón
+<input
+  type="number"
+  value={price}
+  onChange={(e) => setPrice(Number(e.target.value) || 0)}
+/>
+
+// ✅ Draft string + commit en blur (usar GranularNumberInput en admin)
+<GranularNumberInput
+  mode="decimal"
+  value={price}
+  min={0}
+  onValueChange={setPrice}
+/>
+```
+
+En admin: helpers en `apps/admin/src/shared/forms/number-draft.helpers.ts` y componente `granular-number-input.tsx` (también [`rules/85-react-components.md`](rules/85-react-components.md) § Inputs numéricos).
+
 ## Capas
 
 ```text
@@ -150,6 +182,7 @@ Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-bound
 - [ ] Variable de entorno nueva → schema `env.ts` + `.env.example` + `turbo.json` `tasks.build.env`
 - [ ] Errores: `guardAction` / `logServerError` (server) o `logClientError` (client) — sin `catch` vacío
 - [ ] Componente nuevo: container + presentational + types + helpers (si aplica) + test de render
+- [ ] Inputs numéricos: draft string, sin coerción `Number(raw) || fallback` por keystroke
 - [ ] Sin `index.ts` / barrels en imports
 - [ ] Docs del dominio actualizados si cambió contrato
 - [ ] Regla de negocio nueva → `business-rules.md`

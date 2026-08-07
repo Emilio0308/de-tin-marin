@@ -44,6 +44,12 @@
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 
+## Docs sincronizados (2026-08-07 — GranularNumberInput / number drafts)
+
+- Admin forms: `GranularNumberInput` + `number-draft.helpers` (product, pack, bundle, category, container, delivery, order-form)
+- `docs/coding-guidelines.md` § Inputs numéricos controlados
+- `docs/rules/85-react-components.md` § Inputs numéricos (admin)
+
 ## Docs sincronizados (2026-08-05 — Vitest Node 25 + unit ceil + pre-commit test)
 
 - `pnpm test` / `test:watch`: `NODE_OPTIONS=--no-webstorage`; jsdom `url`; `vitest.setup.ts` memory `localStorage`

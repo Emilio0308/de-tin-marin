@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronDown, Candy, Search, X } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import { Button } from "@de-tin-marin/ui/button";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
   addBundleComponent,
   BUNDLE_CUSTOMIZATION_MAX,
@@ -391,14 +392,13 @@ export function OrderFormBundleCustomize({
 
       <label className="flex flex-col">
         <span className={labelClass}>{labels.surpriseQuantity}</span>
-        <input
-          type="number"
+        <GranularNumberInput
+          mode="integer"
           min={1}
+          emptyFallback={1}
           className={cn(fieldClass, "max-w-32")}
           value={quantity}
-          onChange={(event) =>
-            onQuantityChange(Math.max(1, Number(event.target.value) || 1))
-          }
+          onValueChange={(next) => onQuantityChange(next ?? 1)}
         />
         <p className="text-on-surface-variant mt-1.5 text-xs">
           {labels.surpriseQuantityHint}

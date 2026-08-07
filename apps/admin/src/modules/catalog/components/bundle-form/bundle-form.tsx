@@ -23,6 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
 import {
   addBundleItem,
@@ -549,21 +550,18 @@ export function BundleForm({
                     className="text-on-surface-variant pointer-events-none absolute right-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2"
                     aria-hidden
                   />
-                  <input
+                  <GranularNumberInput
                     id="quantity"
                     name="quantity"
-                    type="number"
+                    mode="integer"
                     min={1}
-                    step={1}
+                    emptyFallback={1}
                     required
                     value={values.quantity}
-                    onChange={(event) =>
+                    onValueChange={(next) =>
                       setValues((current) => ({
                         ...current,
-                        quantity: Math.max(
-                          1,
-                          Math.floor(Number(event.target.value) || 1),
-                        ),
+                        quantity: next ?? 1,
                       }))
                     }
                     className={fieldClass}

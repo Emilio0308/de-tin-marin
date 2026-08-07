@@ -22,6 +22,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
 import {
   addPackItem,
@@ -581,21 +582,18 @@ export function PackForm({
               <label className={labelClass} htmlFor="normalNetPrice">
                 {labels.normalPrice}
               </label>
-              <input
+              <GranularNumberInput
                 id="normalNetPrice"
                 name="normalNetPrice"
-                type="number"
-                min={referenceNetPrice}
-                step="0.01"
+                mode="decimal"
+                min={0}
+                emptyFallback={0}
                 required
                 value={values.normalNetPrice}
-                onChange={(event) =>
+                onValueChange={(next) =>
                   setValues((current) => ({
                     ...current,
-                    normalNetPrice: Math.max(
-                      0,
-                      Number(event.target.value) || 0,
-                    ),
+                    normalNetPrice: next ?? 0,
                   }))
                 }
                 className={cn(
@@ -687,21 +685,18 @@ export function PackForm({
                 <label className={labelClass} htmlFor="purchaseMinQuantity">
                   {labels.purchaseMin}
                 </label>
-                <input
+                <GranularNumberInput
                   id="purchaseMinQuantity"
                   name="purchaseMinQuantity"
-                  type="number"
+                  mode="integer"
                   min={1}
-                  step={1}
+                  emptyFallback={1}
                   required
                   value={values.purchaseMinQuantity}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setValues((current) => ({
                       ...current,
-                      purchaseMinQuantity: Math.max(
-                        1,
-                        Math.floor(Number(event.target.value) || 1),
-                      ),
+                      purchaseMinQuantity: next ?? 1,
                     }))
                   }
                   className={fieldClass}
@@ -711,21 +706,18 @@ export function PackForm({
                 <label className={labelClass} htmlFor="purchaseMaxQuantity">
                   {labels.purchaseMax}
                 </label>
-                <input
+                <GranularNumberInput
                   id="purchaseMaxQuantity"
                   name="purchaseMaxQuantity"
-                  type="number"
+                  mode="integer"
                   min={1}
-                  step={1}
+                  emptyFallback={1}
                   required
                   value={values.purchaseMaxQuantity}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setValues((current) => ({
                       ...current,
-                      purchaseMaxQuantity: Math.max(
-                        1,
-                        Math.floor(Number(event.target.value) || 1),
-                      ),
+                      purchaseMaxQuantity: next ?? 1,
                     }))
                   }
                   className={fieldClass}

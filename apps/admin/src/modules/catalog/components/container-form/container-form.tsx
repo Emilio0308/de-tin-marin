@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
   buildInitialContainerValues,
   CONTAINER_DESCRIPTION_MAX,
@@ -302,18 +303,16 @@ export function ContainerForm({
                 <span className="text-on-surface-variant font-body text-sm">
                   S/
                 </span>
-                <input
+                <GranularNumberInput
                   id="netPrice"
                   name="netPrice"
-                  type="number"
+                  mode="decimal"
                   min={0}
-                  step="0.01"
+                  emptyFallback={0}
                   required
                   value={values.netPrice}
-                  onChange={(event) =>
-                    setField("netPrice", Number(event.target.value) || 0)
-                  }
-                  className="text-primary font-body text-body-md ml-2 flex-1 border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  onValueChange={(next) => setField("netPrice", next ?? 0)}
+                  className="text-primary font-body text-body-md ml-2 flex-1 border-none bg-transparent p-0 outline-none"
                 />
               </div>
             </div>
@@ -338,21 +337,16 @@ export function ContainerForm({
                 >
                   <Minus className="h-5 w-5" aria-hidden />
                 </button>
-                <input
+                <GranularNumberInput
                   id="stockQuantity"
                   name="stockQuantity"
-                  type="number"
+                  mode="integer"
                   min={0}
-                  step={1}
+                  emptyFallback={0}
                   required
                   value={values.stockQuantity}
-                  onChange={(event) =>
-                    setField(
-                      "stockQuantity",
-                      Math.max(0, Math.floor(Number(event.target.value) || 0)),
-                    )
-                  }
-                  className="text-primary font-display text-headline-md w-full border-none bg-transparent text-center outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  onValueChange={(next) => setField("stockQuantity", next ?? 0)}
+                  className="text-primary font-display text-headline-md w-full border-none bg-transparent text-center outline-none focus:ring-0"
                 />
                 <button
                   type="button"

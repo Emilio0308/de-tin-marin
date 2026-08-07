@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { DeliveryZoneDTO } from "@/modules/delivery/types/delivery.dto";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { DISTRICT_MAX_LENGTH } from "./delivery-settings.helpers";
 import type {
   DeliverySettingsLabels,
@@ -196,33 +197,30 @@ function EditZoneFields({
         />
         <div className="border-outline-variant/40 focus-within:border-secondary bg-surface-container-low flex items-center rounded-xl border-2 px-4 py-3 transition-colors">
           <span className="text-on-surface-variant font-body text-sm">S/</span>
-          <input
-            type="number"
+          <GranularNumberInput
+            mode="decimal"
             min={0}
-            step="0.01"
+            emptyFallback={0}
             value={draft.fee}
-            onChange={(event) =>
+            onValueChange={(next) =>
               onChange({
                 ...draft,
-                fee: Math.max(0, Number(event.target.value) || 0),
+                fee: next ?? 0,
               })
             }
-            className="text-primary font-body text-body-md ml-2 w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="text-primary font-body text-body-md ml-2 w-full border-none bg-transparent p-0 outline-none"
             aria-label={labels.fee}
           />
         </div>
-        <input
-          type="number"
+        <GranularNumberInput
+          mode="integer"
           min={0}
-          step={1}
+          emptyFallback={0}
           value={draft.sortOrder}
-          onChange={(event) =>
+          onValueChange={(next) =>
             onChange({
               ...draft,
-              sortOrder: Math.max(
-                0,
-                Math.floor(Number(event.target.value) || 0),
-              ),
+              sortOrder: next ?? 0,
             })
           }
           className={fieldClass}
@@ -317,19 +315,19 @@ export function DeliverySettings({
             <span className="text-on-surface-variant font-body text-sm">
               S/
             </span>
-            <input
+            <GranularNumberInput
               id="fallbackFee"
-              type="number"
+              mode="decimal"
               min={0}
-              step="0.01"
+              emptyFallback={0}
               value={settings.fallbackFee}
-              onChange={(event) =>
+              onValueChange={(next) =>
                 onSettingsChange({
                   ...settings,
-                  fallbackFee: Math.max(0, Number(event.target.value) || 0),
+                  fallbackFee: next ?? 0,
                 })
               }
-              className="text-primary font-body text-body-md ml-2 w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="text-primary font-body text-body-md ml-2 w-full border-none bg-transparent p-0 outline-none"
             />
           </div>
           <p className="text-on-surface-variant/70 flex items-start gap-2 text-xs">
@@ -375,20 +373,20 @@ export function DeliverySettings({
               <span className="text-on-surface-variant font-body text-sm">
                 S/
               </span>
-              <input
-                type="number"
+              <GranularNumberInput
+                mode="decimal"
                 min={0}
-                step="0.01"
+                emptyFallback={0}
                 value={zoneDraft.fee}
-                onChange={(event) =>
+                onValueChange={(next) =>
                   onZoneDraftChange({
                     ...zoneDraft,
-                    fee: Math.max(0, Number(event.target.value) || 0),
+                    fee: next ?? 0,
                   })
                 }
                 placeholder={labels.feePlaceholder}
                 aria-label={labels.fee}
-                className="text-primary font-body text-body-md ml-2 w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="text-primary font-body text-body-md ml-2 w-full border-none bg-transparent p-0 outline-none"
               />
             </div>
           </div>

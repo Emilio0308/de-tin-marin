@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import type { ProductFormProps, ProductFormValues } from "./product-form.types";
 import {
   applyProductTypeChange,
@@ -23,6 +24,9 @@ import {
   isValidImageUrl,
   slugify,
 } from "./product-form.helpers";
+
+const stockInputClass =
+  "text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none focus:ring-0";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col gap-4 rounded-2xl border p-5 shadow-sm";
@@ -407,18 +411,16 @@ export function ProductForm({
                 <label className={labelClass} htmlFor="itemsPerPackage">
                   {labels.itemsPerPackage}
                 </label>
-                <input
+                <GranularNumberInput
                   id="itemsPerPackage"
                   name="itemsPerPackage"
-                  type="number"
+                  mode="integer"
                   min={2}
+                  emptyFallback={2}
                   required
                   value={values.itemsPerPackage}
-                  onChange={(event) =>
-                    setField(
-                      "itemsPerPackage",
-                      Math.max(2, Math.floor(Number(event.target.value) || 2)),
-                    )
+                  onValueChange={(next) =>
+                    setField("itemsPerPackage", next ?? 2)
                   }
                   className={fieldClass}
                 />
@@ -450,16 +452,16 @@ export function ProductForm({
                 <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
                   S/
                 </span>
-                <input
+                <GranularNumberInput
                   id="packageNetPrice"
                   name="packageNetPrice"
-                  type="number"
+                  mode="decimal"
                   min={0}
-                  step="0.01"
+                  emptyFallback={0}
                   required
                   value={values.packageNetPrice}
-                  onChange={(event) =>
-                    setField("packageNetPrice", Number(event.target.value) || 0)
+                  onValueChange={(next) =>
+                    setField("packageNetPrice", next ?? 0)
                   }
                   className={cn(
                     fieldClass,
@@ -487,20 +489,14 @@ export function ProductForm({
                 <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
                   S/
                 </span>
-                <input
+                <GranularNumberInput
                   id="costNetPrice"
                   name="costNetPrice"
-                  type="number"
+                  mode="decimal"
                   min={0}
-                  step="0.01"
-                  value={values.costNetPrice ?? ""}
-                  onChange={(event) => {
-                    const raw = event.target.value;
-                    setField(
-                      "costNetPrice",
-                      raw === "" ? null : Number(raw) || 0,
-                    );
-                  }}
+                  allowEmpty
+                  value={values.costNetPrice}
+                  onValueChange={(next) => setField("costNetPrice", next)}
                   className={cn(fieldClass, "pl-10")}
                 />
               </div>
@@ -540,23 +536,18 @@ export function ProductForm({
                   >
                     <Minus className="h-5 w-5" aria-hidden />
                   </button>
-                  <input
+                  <GranularNumberInput
                     id="stockSealedPackages"
                     name="stockSealedPackages"
-                    type="number"
+                    mode="integer"
                     min={0}
+                    emptyFallback={0}
                     required
                     value={values.stockSealedPackages}
-                    onChange={(event) =>
-                      setField(
-                        "stockSealedPackages",
-                        Math.max(
-                          0,
-                          Math.floor(Number(event.target.value) || 0),
-                        ),
-                      )
+                    onValueChange={(next) =>
+                      setField("stockSealedPackages", next ?? 0)
                     }
-                    className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className={stockInputClass}
                   />
                   <button
                     type="button"
@@ -579,23 +570,18 @@ export function ProductForm({
                   >
                     <Minus className="h-5 w-5" aria-hidden />
                   </button>
-                  <input
+                  <GranularNumberInput
                     id="stockLooseBaseUnits"
                     name="stockLooseBaseUnits"
-                    type="number"
+                    mode="integer"
                     min={0}
+                    emptyFallback={0}
                     required
                     value={values.stockLooseBaseUnits}
-                    onChange={(event) =>
-                      setField(
-                        "stockLooseBaseUnits",
-                        Math.max(
-                          0,
-                          Math.floor(Number(event.target.value) || 0),
-                        ),
-                      )
+                    onValueChange={(next) =>
+                      setField("stockLooseBaseUnits", next ?? 0)
                     }
-                    className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className={stockInputClass}
                   />
                   <button
                     type="button"
@@ -620,20 +606,18 @@ export function ProductForm({
                 >
                   <Minus className="h-5 w-5" aria-hidden />
                 </button>
-                <input
+                <GranularNumberInput
                   id="stockLooseBaseUnitsUnit"
                   name="stockLooseBaseUnits"
-                  type="number"
+                  mode="integer"
                   min={0}
+                  emptyFallback={0}
                   required
                   value={values.stockLooseBaseUnits}
-                  onChange={(event) =>
-                    setField(
-                      "stockLooseBaseUnits",
-                      Math.max(0, Math.floor(Number(event.target.value) || 0)),
-                    )
+                  onValueChange={(next) =>
+                    setField("stockLooseBaseUnits", next ?? 0)
                   }
-                  className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className={stockInputClass}
                 />
                 <button
                   type="button"
@@ -663,18 +647,16 @@ export function ProductForm({
               <label className={labelClass} htmlFor="purchaseMinQuantity">
                 {labels.purchaseMinQuantity}
               </label>
-              <input
+              <GranularNumberInput
                 id="purchaseMinQuantity"
                 name="purchaseMinQuantity"
-                type="number"
+                mode="integer"
                 min={1}
+                emptyFallback={1}
                 required
                 value={values.purchaseMinQuantity}
-                onChange={(event) =>
-                  setField(
-                    "purchaseMinQuantity",
-                    Math.max(1, Math.floor(Number(event.target.value) || 1)),
-                  )
+                onValueChange={(next) =>
+                  setField("purchaseMinQuantity", next ?? 1)
                 }
                 className={fieldClass}
               />
@@ -683,20 +665,18 @@ export function ProductForm({
               <label className={labelClass} htmlFor="purchaseMaxQuantity">
                 {labels.purchaseMaxQuantity}
               </label>
-              <input
+              <GranularNumberInput
                 id="purchaseMaxQuantity"
                 name="purchaseMaxQuantity"
-                type="number"
+                mode="integer"
                 min={values.purchaseMinQuantity}
+                emptyFallback={values.purchaseMinQuantity}
                 required
                 value={values.purchaseMaxQuantity}
-                onChange={(event) =>
+                onValueChange={(next) =>
                   setField(
                     "purchaseMaxQuantity",
-                    Math.max(
-                      values.purchaseMinQuantity,
-                      Math.floor(Number(event.target.value) || 1),
-                    ),
+                    next ?? values.purchaseMinQuantity,
                   )
                 }
                 className={fieldClass}

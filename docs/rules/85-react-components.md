@@ -213,6 +213,16 @@ Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-ca
 - Container no duplica fetch SSR en mount.
 - Debounce de inputs frecuentes (búsqueda, componentes de bundle) en estado local antes de actualizar la query key.
 
+## Inputs numéricos (admin)
+
+**Prohibido** `value={number}` + `onChange` con `Number(raw) || fallback` / `Math.max(..., Number(raw) || min)` en cada tecla (impide borrar el `0`, produce `04`).
+
+Usar draft **string** + commit (clamp / fallback) en **blur** (y validación Zod al submit). Preferir `type="text"` + `inputMode="numeric"|"decimal"`.
+
+En admin: `apps/admin/src/shared/forms/granular-number-input.tsx` + `number-draft.helpers.ts`. Adoptado en forms de catálogo (product/pack/bundle/category/container), delivery y order-form.
+
+Detalle y anti-patrón: [`coding-guidelines.md`](../coding-guidelines.md) § Inputs numéricos controlados.
+
 ## Enforcement
 
 | Regla                             | Tipo                     |
@@ -222,5 +232,6 @@ Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-ca
 | Props mínimas / sin labels bag    | Convención + review      |
 | Test de render por presentational | Convención + review + CI |
 | Orden interno del archivo         | Convención + review      |
+| Inputs numéricos (draft string)   | Convención + review      |
 
 Ver también [`00-architecture.md`](00-architecture.md) · [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md) · [`coding-guidelines.md`](../coding-guidelines.md).

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import { Button } from "@de-tin-marin/ui/button";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { OrderFormBundleCustomize } from "./order-form-bundle-customize";
 import { buildBundleComponentLabels } from "./order-form-bundle.helpers";
 import { OrderFormCartLines } from "./order-form-cart-lines";
@@ -403,15 +404,18 @@ export function OrderForm({
             </select>
           </Field>
           <Field label={labels.quantity}>
-            <input
-              type="number"
+            <GranularNumberInput
+              mode="integer"
               min={selectedProductBounds?.minQuantity ?? 1}
               max={selectedProductBounds?.maxQuantity}
+              emptyFallback={selectedProductBounds?.minQuantity ?? 1}
               disabled={!selectedProduct || !selectedProductBounds?.purchasable}
               className={cn(fieldClass, "md:w-28")}
               value={draftProductQty}
-              onChange={(event) =>
-                setDraftProductQty(Number(event.target.value) || 1)
+              onValueChange={(next) =>
+                setDraftProductQty(
+                  next ?? selectedProductBounds?.minQuantity ?? 1,
+                )
               }
             />
             {selectedProductBounds ? (
@@ -487,14 +491,17 @@ export function OrderForm({
               </select>
             </Field>
             <Field label={labels.quantity}>
-              <input
-                type="number"
+              <GranularNumberInput
+                mode="integer"
                 min={selectedPack?.purchaseMinQuantity ?? 1}
                 max={selectedPack?.purchaseMaxQuantity ?? 100}
+                emptyFallback={selectedPack?.purchaseMinQuantity ?? 1}
                 className={fieldClass}
                 value={draftPackQty}
-                onChange={(event) =>
-                  setDraftPackQty(Number(event.target.value) || 1)
+                onValueChange={(next) =>
+                  setDraftPackQty(
+                    next ?? selectedPack?.purchaseMinQuantity ?? 1,
+                  )
                 }
               />
             </Field>
@@ -608,16 +615,16 @@ export function OrderForm({
             </p>
           </Field>
           <Field label={labels.discount}>
-            <input
-              type="number"
+            <GranularNumberInput
+              mode="decimal"
               min={0}
-              step="0.01"
+              emptyFallback={0}
               className={fieldClass}
               value={values.discountTotal}
-              onChange={(event) =>
+              onValueChange={(next) =>
                 onChange({
                   ...values,
-                  discountTotal: Number(event.target.value) || 0,
+                  discountTotal: next ?? 0,
                 })
               }
             />

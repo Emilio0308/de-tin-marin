@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
   buildInitialCategoryValues,
   CATEGORY_DESCRIPTION_MAX,
@@ -212,20 +213,16 @@ export function CategoryForm({
                 >
                   <Minus className="h-5 w-5" aria-hidden />
                 </button>
-                <input
+                <GranularNumberInput
                   id="sortOrder"
                   name="sortOrder"
-                  type="number"
+                  mode="integer"
                   min={0}
+                  emptyFallback={0}
                   required
                   value={values.sortOrder}
-                  onChange={(event) =>
-                    setField(
-                      "sortOrder",
-                      Math.max(0, Math.floor(Number(event.target.value) || 0)),
-                    )
-                  }
-                  className="text-primary font-display text-headline-md w-full border-none bg-transparent text-center outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  onValueChange={(next) => setField("sortOrder", next ?? 0)}
+                  className="text-primary font-display text-headline-md w-full border-none bg-transparent text-center outline-none focus:ring-0"
                 />
                 <button
                   type="button"
