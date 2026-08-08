@@ -382,8 +382,8 @@ export function CartPage({
                         key={entry.cartLineId}
                         cartLineId={entry.cartLineId}
                         name={entry.line.name}
-                        unitPrice={entry.line.unitPrice}
-                        quantity={entry.line.quantity}
+                        unitPrice={entry.line.packagePrice}
+                        quantity={entry.line.packageQuantity}
                         lineTotal={entry.line.lineTotal}
                         imageUrl={
                           lineImageUrlByCartLineId[entry.cartLineId] ??
@@ -392,7 +392,7 @@ export function CartPage({
                         bounds={
                           productBoundsByCartLineId[entry.cartLineId] ?? {
                             minQuantity: 1,
-                            maxQuantity: entry.line.quantity,
+                            maxQuantity: entry.line.packageQuantity,
                             purchasable: true,
                           }
                         }

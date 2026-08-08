@@ -72,6 +72,10 @@ export function OrderDetailContainer() {
       surpriseLine: t("detail.surpriseLine"),
       formatQuantityLabel: (quantity) =>
         t("detail.quantityLabel", { quantity }),
+      formatProductDualQty: (packages, units) =>
+        units > 0
+          ? t("detail.formatProductDualQtyWithUnits", { packages, units })
+          : t("detail.formatProductPackages", { packages }),
       formatComponentsLabel: (count) => t("detail.componentsLabel", { count }),
       componentSku: t("detail.componentSku"),
       componentName: t("detail.componentName"),
@@ -82,6 +86,7 @@ export function OrderDetailContainer() {
       cart: t("detail.cart"),
       subtotal: t("detail.subtotal"),
       discount: t("detail.discount"),
+      surcharge: t("detail.surcharge"),
       shipping: t("detail.shipping"),
       total: t("detail.total"),
       paymentStatus: t("detail.paymentStatusLabel"),

@@ -11,7 +11,9 @@ describe("cartLinesToOrderInput", () => {
           productId: "p1",
           sku: "SKU-1",
           name: "Dulce",
-          quantity: 2,
+          packageQuantity: 2,
+          unitQuantity: 0,
+          packagePrice: 5,
           unitPrice: 5,
           lineTotal: 10,
         },
@@ -58,7 +60,7 @@ describe("cartLinesToOrderInput", () => {
     ]);
 
     expect(result).toEqual([
-      { type: "product", productId: "p1", quantity: 2 },
+      { type: "product", productId: "p1", packageQuantity: 2, unitQuantity: 0 },
       { type: "pack", packId: "pack-1", quantity: 3 },
       {
         type: "bundle",

@@ -11,7 +11,10 @@ import {
 const productId = "11111111-1111-1111-1111-111111111111";
 const containerId = "22222222-2222-2222-2222-222222222222";
 
-function productCart(quantity: number): OrderShoppingCart {
+function productCart(
+  packageQuantity: number,
+  unitQuantity = 0,
+): OrderShoppingCart {
   return {
     lines: [
       {
@@ -19,9 +22,11 @@ function productCart(quantity: number): OrderShoppingCart {
         productId,
         sku: "LAYS-10",
         name: "Lay's",
-        quantity,
-        unitPrice: 1,
-        lineTotal: quantity,
+        packageQuantity,
+        unitQuantity,
+        packagePrice: 1,
+        unitPrice: 0.1,
+        lineTotal: packageQuantity + unitQuantity * 0.1,
       },
     ],
   };
@@ -82,11 +87,19 @@ describe("aggregateStockDemands", () => {
     });
   });
 
-  it("acumula presentaciones en líneas producto", () => {
+  it("acumula presentaciones y unidades en líneas producto", () => {
     const { products } = aggregateStockDemands(productCart(10));
     expect(products.get(productId)).toEqual({
       presentationQuantity: 10,
       baseUnits: 0,
+      sku: "LAYS-10",
+      name: "Lay's",
+    });
+
+    const mixed = aggregateStockDemands(productCart(1, 5));
+    expect(mixed.products.get(productId)).toEqual({
+      presentationQuantity: 1,
+      baseUnits: 5,
       sku: "LAYS-10",
       name: "Lay's",
     });
@@ -217,7 +230,9 @@ describe("checkOrderStock", () => {
           productId: unitProductId,
           sku: "MINI-CAN",
           name: "Mini cañonazo",
-          quantity: 10,
+          packageQuantity: 10,
+          unitQuantity: 0,
+          packagePrice: 1,
           unitPrice: 1,
           lineTotal: 10,
         },

@@ -21,7 +21,11 @@ export type OrderShoppingCartProductLine = {
   productId: string;
   sku: string;
   name: string;
-  quantity: number;
+  packageQuantity: number;
+  unitQuantity: number;
+  /** Precio por presentación (final). */
+  packagePrice: number;
+  /** Precio por unidad base (finalUnitPrice). */
   unitPrice: number;
   lineTotal: number;
   imageUrl?: string | null;
@@ -91,10 +95,11 @@ export type ProductForOrderLine = {
   id: string;
   sku: string;
   name: string;
-  /** Precio por unidad base (dulce) — componentes de bundle. */
+  /** Precio por unidad base (dulce) — componentes de bundle y unitQuantity. */
   unitPrice: number;
-  /** Precio por presentación vendida — líneas `type: product` (paquete o unidad). */
+  /** Precio por presentación — packageQuantity en líneas `type: product`. */
   presentationPrice: number;
+  itemsPerPackage: number;
 };
 
 export type BundleComponentInput = {
@@ -105,7 +110,8 @@ export type BundleComponentInput = {
 export type BuildProductLineInput = {
   type: "product";
   productId: string;
-  quantity: number;
+  packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type BuildBundleLineInput = {
@@ -150,6 +156,7 @@ export type BuildShoppingCartInput = {
 export type OrderTotals = {
   subtotal: number;
   discountTotal: number;
+  surchargeTotal: number;
   shippingTotal: number;
   total: number;
 };
@@ -179,19 +186,44 @@ export function getBundleLineContainerUnitPrice(
   return line.serviceFee ?? 0;
 }
 
+export function normalizeProductLineQuantities(
+  packageQuantity: number,
+  unitQuantity: number,
+  itemsPerPackage: number,
+): { packageQuantity: number; unitQuantity: number } {
+  const ipp = Math.max(1, Math.floor(itemsPerPackage));
+  let packages = Math.max(0, Math.floor(packageQuantity));
+  let units = Math.max(0, Math.floor(unitQuantity));
+  packages += Math.floor(units / ipp);
+  units = units % ipp;
+  return { packageQuantity: packages, unitQuantity: units };
+}
+
 export function buildProductLine(
   product: ProductForOrderLine,
-  quantity: number,
+  packageQuantity: number,
+  unitQuantity: number,
 ): OrderShoppingCartProductLine {
-  const unitPrice = roundMoney(product.presentationPrice);
+  const normalized = normalizeProductLineQuantities(
+    packageQuantity,
+    unitQuantity,
+    product.itemsPerPackage,
+  );
+  const packagePrice = roundMoney(product.presentationPrice);
+  const unitPrice = roundMoney(product.unitPrice);
   return {
     type: "product",
     productId: product.id,
     sku: product.sku,
     name: product.name,
-    quantity,
+    packageQuantity: normalized.packageQuantity,
+    unitQuantity: normalized.unitQuantity,
+    packagePrice,
     unitPrice,
-    lineTotal: roundMoney(unitPrice * quantity),
+    lineTotal: roundMoney(
+      packagePrice * normalized.packageQuantity +
+        unitPrice * normalized.unitQuantity,
+    ),
   };
 }
 
@@ -301,7 +333,7 @@ export function buildShoppingCart(
       if (!product) {
         throw new Error(`PRODUCT_NOT_FOUND:${line.productId}`);
       }
-      return buildProductLine(product, line.quantity);
+      return buildProductLine(product, line.packageQuantity, line.unitQuantity);
     }
 
     if (line.type === "pack") {
@@ -328,16 +360,48 @@ export function buildShoppingCart(
 
 export function computeOrderTotals(
   shoppingCart: OrderShoppingCart,
-  options: { discountTotal?: number; shippingTotal?: number } = {},
+  options: {
+    discountTotal?: number;
+    shippingTotal?: number;
+    surchargeTotal?: number;
+  } = {},
 ): OrderTotals {
   const discountTotal = roundMoney(options.discountTotal ?? 0);
+  const surchargeTotal = roundMoney(options.surchargeTotal ?? 0);
   const shippingTotal = roundMoney(options.shippingTotal ?? 0);
   const subtotal = roundMoney(
     shoppingCart.lines.reduce((sum, line) => sum + line.lineTotal, 0),
   );
-  const total = roundMoney(subtotal - discountTotal + shippingTotal);
+  const total = roundMoney(
+    subtotal - discountTotal + shippingTotal + surchargeTotal,
+  );
 
-  return { subtotal, discountTotal, shippingTotal, total };
+  return { subtotal, discountTotal, surchargeTotal, shippingTotal, total };
+}
+
+/**
+ * Derives exclusive discount XOR surcharge so that
+ * `subtotal - discount + shipping + surcharge === finalTotal`.
+ * Base (no adjustments) = subtotal + shipping.
+ */
+export function deriveAdjustmentsFromFinalPrice(input: {
+  subtotal: number;
+  shippingTotal: number;
+  finalTotal: number;
+}): { discountTotal: number; surchargeTotal: number } {
+  const subtotal = roundMoney(input.subtotal);
+  const shippingTotal = roundMoney(input.shippingTotal);
+  const finalTotal = roundMoney(Math.max(0, input.finalTotal));
+  const base = roundMoney(subtotal + shippingTotal);
+  const delta = roundMoney(finalTotal - base);
+
+  if (delta < 0) {
+    return { discountTotal: roundMoney(-delta), surchargeTotal: 0 };
+  }
+  if (delta > 0) {
+    return { discountTotal: 0, surchargeTotal: delta };
+  }
+  return { discountTotal: 0, surchargeTotal: 0 };
 }
 
 export function formatOrderNumber(sequence: number, date = new Date()): string {

@@ -153,6 +153,12 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - **Sin descuento de stock** → S2A
 - **Sin confirmar pago** → S2C
 
+**Evoluciones post-S2B (canónico en [`orders.md`](orders.md)):**
+
+- `surcharge_total` (`00023`) + tabs Totales admin (precio final XOR / discount+surcharge)
+- Línea product dual `packageQuantity`+`unitQuantity` (`00024`); admin sueltas; ecommerce solo presentaciones
+- Packs en carrito (S1F/S4-04); admin salta min/max (Regla 21)
+
 **Depends on:** S1C
 
 ---

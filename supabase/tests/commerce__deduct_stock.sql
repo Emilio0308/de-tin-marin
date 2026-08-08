@@ -121,7 +121,9 @@ begin
           'productId', v_product_id,
           'sku', 'LAYS-TEST',
           'name', 'Lay''s Test',
-          'quantity', 3,
+          'packageQuantity', 3,
+          'unitQuantity', 0,
+          'packagePrice', 1,
           'unitPrice', 1,
           'lineTotal', 3
         )
@@ -190,14 +192,16 @@ select throws_like(
           'lines',
           jsonb_build_array(
             jsonb_build_object(
-              'type', 'product',
-              'productId', v_product_id,
-              'sku', 'LAYS-TEST',
-              'name', 'Lay''s Test',
-              'quantity', 15,
-              'unitPrice', 1,
-              'lineTotal', 15
-            )
+          'type', 'product',
+          'productId', v_product_id,
+          'sku', 'LAYS-TEST',
+          'name', 'Lay''s Test',
+          'packageQuantity', 15,
+          'unitQuantity', 0,
+          'packagePrice', 1,
+          'unitPrice', 1,
+          'lineTotal', 15
+        )
           )
         ),
         15,
@@ -374,7 +378,9 @@ begin
           'productId', v_product_id,
           'sku', 'MINI-TEST',
           'name', 'Mini Test',
-          'quantity', 10,
+          'packageQuantity', 10,
+          'unitQuantity', 0,
+          'packagePrice', 1,
           'unitPrice', 1,
           'lineTotal', 10
         )

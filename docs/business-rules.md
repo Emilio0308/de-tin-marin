@@ -42,7 +42,7 @@
   3. Tras cada movimiento en `package`, normalizar: si `loose >= items_per_package`, convertir excedente a paquetes cerrados. En `unit` no se normaliza sealed↔loose automáticamente.
   4. Display: `"X {package_label} + Y bolsas"` derivado de sealed/loose (o `"N u."` si `items_per_package = 1`).
 - **Fallo:** Si stock insuficiente al pagar → Regla 15 revierte.
-- **Nota:** Líneas `type: product` congelan `quantity` en **presentaciones** vendidas. Componentes de pack usan **presentaciones** (`totalPackages`). Componentes de bundle usan **unidad base** (`totalQuantity`).
+- **Nota:** Líneas `type: product` congelan `packageQuantity` (presentaciones) + `unitQuantity` (unidades base; admin; ecommerce `0`) y precios `packagePrice`/`unitPrice`. Componentes de pack usan **presentaciones** (`totalPackages`) y **unidades** (`totalUnits`). Componentes de bundle usan **unidad base** (`totalQuantity`).
 
 ---
 
@@ -146,26 +146,32 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 ### Regla 15 — Descuento de stock al pagar (v1)
 
 - **Trigger:** Operador confirma pago → orden `paid` (Regla 17).
-- **Pasos (transacción atómica — `commerce.deduct_stock_for_order`):**
+- **Precondición snapshot:** al crear/preview, líneas `type: product` ya pasaron por `normalizeProductLineQuantities` (si `unitQuantity >= items_per_package` → convierte a `packageQuantity`). El JSONB congelado es la fuente de verdad del deduct.
+- **Pasos (transacción atómica — `commerce.deduct_stock_for_order` / `confirm_payment_with_stock_deduct`):**
   1. Agregar demandas por `product_id`:
-     - Líneas `type: product`: `presentationQuantity += quantity` (presentaciones vendidas).
+     - Líneas `type: product`: `presentationQuantity += packageQuantity`; `baseUnits += unitQuantity` (DECISIONS #27). Ecommerce/guest suelen traer `unitQuantity = 0`; admin puede aportar ambos.
      - Componentes de líneas `type: pack`: `presentationQuantity += totalPackages` (`packageQuantity × line.quantity`) y `baseUnits += totalUnits` (`unitQuantity × line.quantity`; legacy sin campo → 0) — Regla 24.
      - Componentes de líneas `type: bundle`: `baseUnits += totalQuantity` (unidad base).
   2. Por producto, `need` en unidades base:
      - `need = presentationQuantity × items_per_package + baseUnits` (con `items_per_package >= 1`).
+     - Equivale a sumar `packageQuantity × ipp + unitQuantity` por cada línea product (más packs/bundles).
   3. Deduct según `product_type` (helpers shared: `deductProductStock` / SQL alineado):
      - **`package`:** consumir loose primero; si falta, abrir sealed y volcar sobrante a loose; normalizar (`deductBaseUnits`).
      - **`unit`:** descontar **solo** `stock_loose_base_units`; **no** tocar `stock_sealed_packages` (`deductUnitProductLoose`). Si loose < need → insuficiente aunque haya sealed.
   4. Por cada línea bundle con `container` congelado: descontar `line.quantity` de `surprise_containers.stock_quantity` (Regla 20). Líneas legacy solo con `serviceFee` → omitir envase.
   5. Si cualquier producto **o envase** queda con stock insuficiente → **ROLLBACK** completo; orden no queda `paid`.
 - **Fallo:** Notificar operador; stock no mutado.
-- **Tests:** Lay’s `package` 5 tiras × 10: pedido 3 presentaciones → sealed=2, loose=0; producto `unit` con sealed=50, loose=20, pedido 10 → loose=10, sealed intacto; pack con componentes en presentaciones; bundle 25 sorpresas → -25 envases.
+- **Tests:** Lay’s `package` 5 tiras × 10: pedido 3 presentaciones → sealed=2, loose=0; pedido admin 2 tiras + 7 bolsas → need=27; producto `unit` con sealed=50, loose=20, pedido 10 → loose=10, sealed intacto; pack con componentes dual; bundle 25 sorpresas → -25 envases; pgTAP `commerce__deduct_stock`.
 
 ### Regla 16 — Orders no recalcula precios
 
-- **Trigger:** Post-checkout.
-- **Pasos:** Usar valores congelados en `orders.shopping_cart`.
-- **Fallo:** Prohibido invocar recálculo de precios.
+- **Trigger:** Post-checkout (y en create: snapshot ya es definitivo).
+- **Pasos:**
+  1. Usar valores congelados en `orders.shopping_cart` (`packagePrice`/`unitPrice`/`lineTotal` product; `unitPrice` pack; components bundle).
+  2. Ajustes de cabecera **admin-only** (`discount_total` / `surcharge_total`) **no** recalculan precios de línea.
+  3. Fórmula cabecera: `total = subtotal − discount_total + shipping_total + surcharge_total` (migración `00023`).
+  4. UI admin Totales: tab Precio final deriva discount **XOR** surcharge (`deriveAdjustmentsFromFinalPrice`); tab Descuento/recargo permite ambos a la vez. Guest: ambos ajustes = 0.
+- **Fallo:** Prohibido invocar recálculo de precios de línea ni mutar `shopping_cart` post-confirm.
 
 ---
 
@@ -212,17 +218,18 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 - **Trigger:** Agregar al carrito, editar cantidad en carrito, checkout guest (**solo ecommerce / storefront**).
 - **Alcance:** Líneas `type: product`. **No** aplica a sorpresas/bundles ni wizard. Packs: ver Regla 25.
-- **Excepción admin:** el **order-form** admin (`/orders/new`) **salta** `purchase_min_quantity` / `purchase_max_quantity`. Cantidad `>= 1` acotada solo por stock en presentaciones (`mode: "admin"` en `@de-tin-marin/shared/product-purchase-limits`). **Jamás** relajar min/max en el front ecommerce ni en checkout guest.
+- **Shape de línea (DECISIONS #27):** `packageQuantity` + `unitQuantity` (suma ≥ 1). Ecommerce/guest **fuerzan** `unitQuantity = 0` (solo presentaciones). Admin order-form permite dual.
+- **Excepción admin:** el **order-form** (`/orders/new`) **salta** `purchase_min_quantity` / `purchase_max_quantity`. Acotación: `needBase = packageQuantity × ipp + unitQuantity ≤ stockTotalBaseUnits` vía `clampProductDualQuantities` (`mode: "admin"`). **Jamás** relajar min/max en el front ecommerce ni en checkout guest.
 - **Pasos (ecommerce):**
-  1. Leer `purchase_min_quantity` y `purchase_max_quantity` del producto (cantidad en **presentación** vendida: unidad o paquete/tira).
+  1. Leer `purchase_min_quantity` y `purchase_max_quantity` del producto (cantidad en **presentación** = `packageQuantity`; `unitQuantity` siempre 0).
   2. `stock_presentaciones` alineado con disponibilidad vendible (Regla 4):
      - `unit` → `stock_loose_base_units` (solo sueltas).
      - `package` → `floor(totalBaseUnits / items_per_package)` con `totalBaseUnits = sealed × items_per_package + loose`.
   3. `max_efectivo = min(purchase_max_quantity, stock_presentaciones)`.
   4. Comprable solo si `stock_presentaciones >= purchase_min_quantity`.
-  5. Cantidad de línea debe cumplir `purchase_min_quantity <= quantity <= max_efectivo`.
-  6. “Añadir rápido” agrega `purchase_min_quantity` por defecto.
-- **UI admin:** `resolveProductAddBlockReason` → `OUT_OF_STOCK` solo si stock disponible es 0 (no por min de catálogo).
+  5. Cantidad de línea: `purchase_min_quantity <= packageQuantity <= max_efectivo` y `unitQuantity = 0`.
+  6. “Añadir rápido” agrega `purchase_min_quantity` presentaciones por defecto.
+- **UI admin:** `resolveProductAddBlockReason` → `OUT_OF_STOCK` solo si `availableBase = 0` (no por min de catálogo). Producto `package` comprable si hay ≥ 1 unidad base (puede vender solo `unitQuantity`).
 - **Fallo:** Rechazar checkout guest si cantidad fuera de rango; UI tienda deshabilita compra si no hay stock para el mínimo.
 
 ---

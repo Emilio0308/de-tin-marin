@@ -457,6 +457,7 @@ export type Database = {
           shopping_cart: Json
           status: string
           subtotal: number
+          surcharge_total: number
           total: number
           updated_at: string
         }
@@ -477,6 +478,7 @@ export type Database = {
           shopping_cart: Json
           status?: string
           subtotal: number
+          surcharge_total?: number
           total: number
           updated_at?: string
         }
@@ -497,6 +499,7 @@ export type Database = {
           shopping_cart?: Json
           status?: string
           subtotal?: number
+          surcharge_total?: number
           total?: number
           updated_at?: string
         }

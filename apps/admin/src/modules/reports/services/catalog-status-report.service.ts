@@ -410,6 +410,7 @@ async function loadOrders(config: SupabaseConfig): Promise<{
       fulfillmentMethod: fulfillment.method ?? null,
       subtotal: Number(row.subtotal),
       discountTotal: Number(row.discount_total),
+      surchargeTotal: Number(row.surcharge_total ?? 0),
       shippingTotal: Number(row.shipping_total),
       total: Number(row.total),
       lineCount: cartLines.filter((line) => line.level === "line").length,

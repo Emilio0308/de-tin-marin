@@ -23,6 +23,16 @@ cart-page.container
 
 Estado del carrito: `localStorage` vía `useCart` (líneas `product` | `bundle` | `pack`). **Precios** se recalculan en servidor con `previewGuestOrderCartAction` y se sincronizan al storage vía `useCartPricingPreview`.
 
+### Líneas `type: product` (DECISIONS #27)
+
+Shape alineado con `OrderShoppingCart` / checkout Zod:
+
+- `packageQuantity` — presentaciones pedidas (la “cantidad” de UI tienda).
+- `unitQuantity` — **siempre `0`** en ecommerce/guest (no se venden sueltas en storefront).
+- Checkout / preview: `surchargeTotal = 0`, `discountTotal = 0`.
+
+Límites min/max y stock: Regla 21 (`mode: "customer"`). Admin dual qty: [`docs/orders.md`](../../../../docs/orders.md) · módulo admin orders.
+
 ## Sync desde checkout (`?sync=1`)
 
 Si checkout detecta drift de precio o stock:

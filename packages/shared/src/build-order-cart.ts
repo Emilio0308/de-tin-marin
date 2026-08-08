@@ -17,7 +17,12 @@ import {
 } from "./prices";
 
 export type OrderLineInput =
-  | { type: "product"; productId: string; quantity: number }
+  | {
+      type: "product";
+      productId: string;
+      packageQuantity: number;
+      unitQuantity: number;
+    }
   | {
       type: "bundle";
       bundleId: string;
@@ -155,6 +160,7 @@ export function resolveProductsForOrder(
           name: product.name,
           unitPrice,
           presentationPrice,
+          itemsPerPackage,
         },
       ] as const;
     }),
@@ -307,6 +313,7 @@ export function buildOrderCartWithTotals(input: {
   bundlesById: Map<string, OrderBundleSource>;
   packsById?: Map<string, OrderPackSource>;
   discountTotal?: number;
+  surchargeTotal?: number;
   shippingTotal?: number;
 }):
   | { ok: true; shoppingCart: OrderShoppingCart; totals: OrderTotals }
@@ -318,6 +325,7 @@ export function buildOrderCartWithTotals(input: {
 
   const totals = computeOrderTotals(cartResult.shoppingCart, {
     discountTotal: input.discountTotal,
+    surchargeTotal: input.surchargeTotal,
     shippingTotal: input.shippingTotal,
   });
 

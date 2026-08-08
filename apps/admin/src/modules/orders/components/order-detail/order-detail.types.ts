@@ -15,6 +15,7 @@ export type OrderDetailLabels = {
   summaryTitle: string;
   surpriseLine: string;
   formatQuantityLabel: (quantity: number) => string;
+  formatProductDualQty: (packages: number, units: number) => string;
   formatComponentsLabel: (count: number) => string;
   componentSku: string;
   componentName: string;
@@ -25,6 +26,7 @@ export type OrderDetailLabels = {
   cart: string;
   subtotal: string;
   discount: string;
+  surcharge: string;
   shipping: string;
   total: string;
   paymentStatus: string;

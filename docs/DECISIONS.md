@@ -33,7 +33,7 @@
 | 25  | Stock deduct — timing     | ✅     | **Regla de negocio:** descontar stock al pasar orden a `paid` (operador confirma pago manual). **Implementación:** S2A, después de S2C y **S1D**. S2B y S2C no incluyen deduct; algoritmo sealed/loose en unidades base                                                                                                                                                                                                       |
 
 | 26 | Order shopping cart | ✅ | Detalle del pedido en **`commerce.orders.shopping_cart`** (JSONB). Sin tablas `order_items` / `order_bundle_items` en v1. Productos y sorpresas (bundles) congelados al pasar a `pending_payment` |
-| 27 | Presentaciones de producto | ✅ | **`product_type`** (`package` \| `unit`), **`items_per_package`** (>= 1), **`package_label`** (UX). Default histórico = `unit` + `items_per_package=1`. Líneas producto venden **presentaciones**; bundles consumen **unidad base**. `unit` y `package` tienen semántica de stock distinta (#29) |
+| 27 | Presentaciones de producto | ✅ | **`product_type`** (`package` \| `unit`), **`items_per_package`** (>= 1), **`package_label`** (UX). Default histórico = `unit` + `items_per_package=1`. Líneas `type: product` dual: **`packageQuantity` + `unitQuantity`** (suma ≥ 1); frozen `packagePrice`/`unitPrice`; al build normalizar `unitQuantity >= ipp` → paquetes. **Admin** puede vender unidades base; **ecommerce/guest** solo presentaciones (`unitQuantity = 0`). Bundles consumen **unidad base**. Stock: #29 |
 | 28 | Precios dual en JSONB | ✅ | **`prices.normal`** = precio presentación; **`prices.unit`** = precio unidad base. Ambos persistidos; **`unit` calculado al guardar** desde `normal` + `items_per_package` con **ceil a 2 decimales** (unidad no más barata que el paquete). Coherencia: `|unit×ipp − normal| ≤ 0.01` **o** `unit×ipp > normal` (Regla 2). Campaña aplica sobre `normal`; `finalUnitPrice` derivado |
 | 29 | Stock por paquetes + tipo | ✅ | **`stock_sealed_packages`** + **`stock_loose_base_units`**. **`package`:** vendible = sealed×ipp+loose; deduct abre paquetes (`deductBaseUnits`). **`unit`:** vendible/deduct = **solo loose** (`deductUnitProductLoose`); sealed no se abre. Líneas product: `need = presentationQty × ipp + baseUnits` bundle. Migración `00014` |
 | 30 | Envases de sorpresa + delivery | ✅ | **S1E.** Insumos en `catalog.surprise_containers` (no productos): stock + precio; 1 envase/sorpresa; bundles con `container_id` (drop `service_fee`). Delivery: `pricing.delivery_zones` + `pricing.delivery_settings`. Brief: `docs/stages/S1E/01-surprise-containers-delivery.md` |
@@ -43,6 +43,17 @@
 | 34 | Media CDN (imágenes) | ✅ | **AWS S3 privado + CloudFront (OAC)** vía **CDK TypeScript** en `infra/cdk/`. Stacks **`MediaStaging`** y **`MediaProduction`** (entornos aislados; nombres AWS genéricos). URL CDN en `image_url`. Doc canónica: [`docs/infra.md`](infra.md). Brief: `docs/stages/S0/02-infra-media-cdn.md` |
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
+
+## Docs sincronizados (2026-08-08 — órdenes: dual product + surcharge)
+
+Canónico detallado: [`orders.md`](orders.md) · README [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md).
+
+- **DECISIONS #27:** líneas product `packageQuantity`/`unitQuantity` + `packagePrice`/`unitPrice`; `normalizeProductLineQuantities` por ipp; admin vende sueltas (`clampProductDualQuantities`); ecommerce/guest `unitQuantity = 0`
+- **`surcharge_total`:** `total = subtotal − discount + shipping + surcharge`; admin tabs Precio final (XOR vía `deriveAdjustmentsFromFinalPrice`) y Descuento/recargo (pueden coexistir); guest surcharge=0
+- Migraciones `00023_order_surcharge_total.sql`, `00024_product_line_dual_quantity.sql`
+- Reglas 4 (nota), **15** (demanda dual + normalize), **16** (cabecera), **21** (admin dual / ecommerce solo pkg)
+- `inventory.md` agregación; `pricing.md` lineTotal dual; cart README ecommerce; S2B nota evoluciones
+- Zod `@de-tin-marin/validations/order`: dual qty + `surchargeTotal`; shared `order-cart` / `product-purchase-limits`
 
 ## Docs sincronizados (2026-08-07 — admin salta min/max compra)
 

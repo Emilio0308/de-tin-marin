@@ -52,6 +52,7 @@ function buildProductsByIdForLine(
         name: product.name,
         unitPrice: product.finalUnitPrice,
         presentationPrice: product.finalPrice,
+        itemsPerPackage: product.itemsPerPackage,
       });
     }
     return map;
@@ -69,6 +70,7 @@ function buildProductsByIdForLine(
         name: product.name,
         unitPrice: product.finalUnitPrice,
         presentationPrice: product.finalPrice,
+        itemsPerPackage: product.itemsPerPackage,
       });
     }
     return map;
@@ -85,6 +87,7 @@ function buildProductsByIdForLine(
       name: product.name,
       unitPrice: product.finalUnitPrice,
       presentationPrice: product.finalPrice,
+      itemsPerPackage: product.itemsPerPackage,
     });
   }
 
@@ -161,7 +164,10 @@ export function estimateOrderFormLineTotal(
 
 /** Fallback cliente cuando el preview server no está disponible. */
 export function previewOrderTotals(
-  values: Pick<OrderFormValues, "lines" | "shippingTotal" | "discountTotal">,
+  values: Pick<
+    OrderFormValues,
+    "lines" | "shippingTotal" | "discountTotal" | "surchargeTotal"
+  >,
   products: ProductOption[],
   bundlesById: Map<string, BundleMeta>,
   packsById: Map<string, PackMeta> = new Map(),
@@ -207,6 +213,7 @@ export function previewOrderTotals(
       {
         shippingTotal: values.shippingTotal,
         discountTotal: values.discountTotal,
+        surchargeTotal: values.surchargeTotal,
       },
     );
   } catch {
@@ -246,6 +253,7 @@ export function toCreateOrderPayload(values: OrderFormValues) {
     }),
     shippingTotal: values.shippingTotal,
     discountTotal: values.discountTotal,
+    surchargeTotal: values.surchargeTotal,
   };
 }
 

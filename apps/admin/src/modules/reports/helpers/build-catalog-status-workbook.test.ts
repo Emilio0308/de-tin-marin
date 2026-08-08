@@ -300,6 +300,7 @@ describe("buildCatalogStatusWorkbook", () => {
             fulfillmentMethod: "pickup",
             subtotal: 20,
             discountTotal: 0,
+            surchargeTotal: 0,
             shippingTotal: 0,
             total: 20,
             lineCount: 1,
@@ -340,8 +341,8 @@ describe("buildCatalogStatusWorkbook", () => {
 
     const ordenes = workbook.getWorksheet("Ordenes");
     expect(ordenes).toBeTruthy();
-    expect(ordenes!.getRow(1).getCell(15).value).toBe("Ver productos");
-    const linkCell = ordenes!.getRow(2).getCell(15).value as {
+    expect(ordenes!.getRow(1).getCell(16).value).toBe("Ver productos");
+    const linkCell = ordenes!.getRow(2).getCell(16).value as {
       text?: string;
       hyperlink?: string;
     };

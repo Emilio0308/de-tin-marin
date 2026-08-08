@@ -15,7 +15,7 @@ export function summarizeGuestOrderLines(
         key: line.productId,
         kind: "product" as const,
         name: line.name,
-        detail: `${line.quantity} ud.`,
+        detail: `${line.packageQuantity} ud.`,
         lineTotal: line.lineTotal,
       };
     }

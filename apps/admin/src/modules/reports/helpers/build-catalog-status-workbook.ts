@@ -80,6 +80,7 @@ const ORDER_LIST_HEADERS = [
   "Fulfillment",
   "Subtotal",
   "Descuento",
+  "Recargo",
   "Envío",
   "Total",
   "# líneas",
@@ -369,6 +370,7 @@ function addOrdersSheets(
       order.fulfillmentMethod,
       order.subtotal,
       order.discountTotal,
+      order.surchargeTotal,
       order.shippingTotal,
       order.total,
       order.lineCount,
@@ -377,7 +379,7 @@ function addOrdersSheets(
       "Ver productos",
     ]);
 
-    const linkCell = row.getCell(15);
+    const linkCell = row.getCell(16);
     const startRow = cartStartRows.get(order.cartAnchor);
     linkCell.value = {
       text: "Ver productos",

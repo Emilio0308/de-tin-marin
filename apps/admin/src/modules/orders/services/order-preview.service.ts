@@ -181,6 +181,7 @@ export async function previewOrderCartService(
       data: {
         subtotal: number;
         discountTotal: number;
+        surchargeTotal: number;
         shippingTotal: number;
         total: number;
         lineTotals: number[];
@@ -205,9 +206,12 @@ export async function previewOrderCartService(
       data: {
         subtotal: 0,
         discountTotal: parsed.data.discountTotal,
+        surchargeTotal: parsed.data.surchargeTotal,
         shippingTotal: parsed.data.shippingTotal,
         total: roundMoney(
-          parsed.data.shippingTotal - parsed.data.discountTotal,
+          parsed.data.shippingTotal -
+            parsed.data.discountTotal +
+            parsed.data.surchargeTotal,
         ),
         lineTotals: [],
       },
@@ -248,6 +252,7 @@ export async function previewOrderCartService(
     bundlesById,
     packsById,
     discountTotal: parsed.data.discountTotal,
+    surchargeTotal: parsed.data.surchargeTotal,
     shippingTotal: parsed.data.shippingTotal,
   });
 
@@ -260,6 +265,7 @@ export async function previewOrderCartService(
     data: {
       subtotal: cartResult.totals.subtotal,
       discountTotal: cartResult.totals.discountTotal,
+      surchargeTotal: cartResult.totals.surchargeTotal,
       shippingTotal: cartResult.totals.shippingTotal,
       total: cartResult.totals.total,
       lineTotals: cartResult.shoppingCart.lines.map((line) => line.lineTotal),

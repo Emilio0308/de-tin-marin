@@ -83,9 +83,16 @@ describe("resolveProductAddBlockReason", () => {
     expect(resolveProductAddBlockReason(product, bounds)).toBeNull();
   });
 
-  it("allows adding when purchasable", () => {
-    const bounds = resolveOrderFormProductBounds(baseProduct);
-    expect(resolveProductAddBlockReason(baseProduct, bounds)).toBeNull();
+  it("allows package product with residual loose units", () => {
+    const product: ProductOption = {
+      ...baseProduct,
+      productType: "package",
+      itemsPerPackage: 12,
+      stockTotalBaseUnits: 5,
+    };
+    const bounds = resolveOrderFormProductBounds(product);
+    expect(bounds.purchasable).toBe(false);
+    expect(resolveProductAddBlockReason(product, bounds)).toBeNull();
   });
 });
 

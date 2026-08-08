@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { deriveAdjustmentsFromFinalPrice } from "@de-tin-marin/shared/order-cart";
 import { Button } from "@de-tin-marin/ui/button";
 import { ProductSearchPickerContainer } from "@/modules/catalog/components/product-search-picker/product-search-picker.container";
 import { GranularNumberInput } from "@/shared/forms/granular-number-input";
@@ -26,6 +27,7 @@ import {
 import type { OrderFormProps } from "./order-form.types";
 
 type CartTab = "products" | "packs" | "bundles";
+type TotalsTab = "final" | "adjustments";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col rounded-xl border p-5 shadow-sm md:p-6";
@@ -39,14 +41,30 @@ const labelClass =
 const fieldClass =
   "border-outline-variant/40 focus:border-secondary bg-surface-container-low font-body text-body-md text-on-surface w-full rounded-xl border-2 px-4 py-3 outline-none transition-colors";
 
+const fieldErrorClass =
+  "border-error focus:border-error bg-surface-container-low font-body text-body-md text-on-surface w-full rounded-xl border-2 px-4 py-3 outline-none transition-colors";
+
 const disabledButtonClass =
   "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-surface-container-lowest disabled:hover:border-secondary/40";
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <label className="flex flex-col">
       <span className={labelClass}>{label}</span>
       {children}
+      {error ? (
+        <p className="text-error mt-1.5 text-xs" role="alert">
+          {error}
+        </p>
+      ) : null}
     </label>
   );
 }
@@ -101,6 +119,7 @@ export function OrderForm({
   totals,
   submitting,
   error,
+  fieldErrors,
   labels,
   onChange,
   onEnsureProductOption,
@@ -120,11 +139,13 @@ export function OrderForm({
   onSubmit,
 }: OrderFormProps) {
   const [draftProductId, setDraftProductId] = useState("");
-  const [draftProductQty, setDraftProductQty] = useState(1);
+  const [draftPackageQty, setDraftPackageQty] = useState(1);
+  const [draftUnitQty, setDraftUnitQty] = useState(0);
   const [draftBundleId, setDraftBundleId] = useState("");
   const [draftPackId, setDraftPackId] = useState("");
   const [draftPackQty, setDraftPackQty] = useState(1);
   const [cartTab, setCartTab] = useState<CartTab>("products");
+  const [totalsTab, setTotalsTab] = useState<TotalsTab>("final");
 
   const selectedProduct = products.find(
     (product) => product.id === draftProductId,
@@ -138,12 +159,37 @@ export function OrderForm({
     selectedProduct,
     selectedProductBounds,
   );
-  const canAddProduct = productAddBlock === null;
+  const isPackageProduct =
+    selectedProduct?.productType === "package" &&
+    (selectedProduct.itemsPerPackage ?? 1) > 1;
+  const packageIpp = Math.max(1, selectedProduct?.itemsPerPackage ?? 1);
+  const availableBase = Math.max(0, selectedProduct?.stockTotalBaseUnits ?? 0);
+  const maxDraftPackages = isPackageProduct
+    ? Math.floor(availableBase / packageIpp)
+    : (selectedProductBounds?.maxQuantity ?? 1);
+  const maxDraftUnits = isPackageProduct
+    ? Math.max(0, availableBase - draftPackageQty * packageIpp)
+    : 0;
+  const canAddProduct =
+    productAddBlock === null && draftPackageQty + draftUnitQty >= 1;
 
   useEffect(() => {
+    if (!selectedProduct) return;
+    if (
+      selectedProduct.productType === "package" &&
+      selectedProduct.itemsPerPackage > 1
+    ) {
+      const ipp = Math.max(1, selectedProduct.itemsPerPackage);
+      const available = Math.max(0, selectedProduct.stockTotalBaseUnits);
+      const maxPkg = Math.floor(available / ipp);
+      setDraftPackageQty(maxPkg >= 1 ? 1 : 0);
+      setDraftUnitQty(maxPkg >= 1 ? 0 : available >= 1 ? 1 : 0);
+      return;
+    }
     if (!selectedProductBounds) return;
-    setDraftProductQty(selectedProductBounds.minQuantity);
-  }, [selectedProductBounds]);
+    setDraftPackageQty(selectedProductBounds.minQuantity);
+    setDraftUnitQty(0);
+  }, [selectedProduct, selectedProductBounds]);
 
   useEffect(() => {
     if (!bundleDraft) return;
@@ -205,10 +251,13 @@ export function OrderForm({
         <div className={cardClass}>
           <SectionHeader icon={User} title={labels.contactSection} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={labels.name}>
+            <Field label={labels.name} error={fieldErrors["contact.name"]}>
               <input
                 id="contact-name"
-                className={fieldClass}
+                className={
+                  fieldErrors["contact.name"] ? fieldErrorClass : fieldClass
+                }
+                aria-invalid={Boolean(fieldErrors["contact.name"])}
                 value={values.contact.name}
                 onChange={(event) =>
                   onChange({
@@ -218,10 +267,16 @@ export function OrderForm({
                 }
               />
             </Field>
-            <Field label={labels.lastName}>
+            <Field
+              label={labels.lastName}
+              error={fieldErrors["contact.lastName"]}
+            >
               <input
                 id="contact-last-name"
-                className={fieldClass}
+                className={
+                  fieldErrors["contact.lastName"] ? fieldErrorClass : fieldClass
+                }
+                aria-invalid={Boolean(fieldErrors["contact.lastName"])}
                 value={values.contact.lastName}
                 onChange={(event) =>
                   onChange({
@@ -234,10 +289,13 @@ export function OrderForm({
                 }
               />
             </Field>
-            <Field label={labels.phone}>
+            <Field label={labels.phone} error={fieldErrors["contact.phone"]}>
               <input
                 id="contact-phone"
-                className={fieldClass}
+                className={
+                  fieldErrors["contact.phone"] ? fieldErrorClass : fieldClass
+                }
+                aria-invalid={Boolean(fieldErrors["contact.phone"])}
                 value={values.contact.phone}
                 onChange={(event) =>
                   onChange({
@@ -247,11 +305,14 @@ export function OrderForm({
                 }
               />
             </Field>
-            <Field label={labels.email}>
+            <Field label={labels.email} error={fieldErrors["contact.email"]}>
               <input
                 id="contact-email"
                 type="email"
-                className={fieldClass}
+                className={
+                  fieldErrors["contact.email"] ? fieldErrorClass : fieldClass
+                }
+                aria-invalid={Boolean(fieldErrors["contact.email"])}
                 value={values.contact.email}
                 onChange={(event) =>
                   onChange({
@@ -291,9 +352,24 @@ export function OrderForm({
           </div>
           {values.fulfillment.method === "delivery" ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={labels.recipientName}>
+              <Field
+                label={labels.recipientName}
+                error={
+                  fieldErrors["fulfillment.deliveryAddress.recipientName"] ??
+                  fieldErrors["fulfillment.deliveryAddress"]
+                }
+              >
                 <input
-                  className={fieldClass}
+                  className={
+                    fieldErrors["fulfillment.deliveryAddress.recipientName"] ||
+                    fieldErrors["fulfillment.deliveryAddress"]
+                      ? fieldErrorClass
+                      : fieldClass
+                  }
+                  aria-invalid={Boolean(
+                    fieldErrors["fulfillment.deliveryAddress.recipientName"] ||
+                    fieldErrors["fulfillment.deliveryAddress"],
+                  )}
                   value={values.fulfillment.deliveryAddress.recipientName}
                   onChange={(event) =>
                     onChange({
@@ -309,9 +385,19 @@ export function OrderForm({
                   }
                 />
               </Field>
-              <Field label={labels.deliveryPhone}>
+              <Field
+                label={labels.deliveryPhone}
+                error={fieldErrors["fulfillment.deliveryAddress.phone"]}
+              >
                 <input
-                  className={fieldClass}
+                  className={
+                    fieldErrors["fulfillment.deliveryAddress.phone"]
+                      ? fieldErrorClass
+                      : fieldClass
+                  }
+                  aria-invalid={Boolean(
+                    fieldErrors["fulfillment.deliveryAddress.phone"],
+                  )}
                   value={values.fulfillment.deliveryAddress.phone}
                   onChange={(event) =>
                     onChange({
@@ -328,9 +414,19 @@ export function OrderForm({
                 />
               </Field>
               <div className="sm:col-span-2">
-                <Field label={labels.address}>
+                <Field
+                  label={labels.address}
+                  error={fieldErrors["fulfillment.deliveryAddress.line1"]}
+                >
                   <input
-                    className={fieldClass}
+                    className={
+                      fieldErrors["fulfillment.deliveryAddress.line1"]
+                        ? fieldErrorClass
+                        : fieldClass
+                    }
+                    aria-invalid={Boolean(
+                      fieldErrors["fulfillment.deliveryAddress.line1"],
+                    )}
                     value={values.fulfillment.deliveryAddress.line1}
                     onChange={(event) =>
                       onChange({
@@ -347,9 +443,19 @@ export function OrderForm({
                   />
                 </Field>
               </div>
-              <Field label={labels.district}>
+              <Field
+                label={labels.district}
+                error={fieldErrors["fulfillment.deliveryAddress.district"]}
+              >
                 <select
-                  className={fieldClass}
+                  className={
+                    fieldErrors["fulfillment.deliveryAddress.district"]
+                      ? fieldErrorClass
+                      : fieldClass
+                  }
+                  aria-invalid={Boolean(
+                    fieldErrors["fulfillment.deliveryAddress.district"],
+                  )}
                   value={values.fulfillment.deliveryAddress.district}
                   onChange={(event) =>
                     onChange({
@@ -372,9 +478,19 @@ export function OrderForm({
                   ))}
                 </select>
               </Field>
-              <Field label={labels.city}>
+              <Field
+                label={labels.city}
+                error={fieldErrors["fulfillment.deliveryAddress.city"]}
+              >
                 <input
-                  className={fieldClass}
+                  className={
+                    fieldErrors["fulfillment.deliveryAddress.city"]
+                      ? fieldErrorClass
+                      : fieldClass
+                  }
+                  aria-invalid={Boolean(
+                    fieldErrors["fulfillment.deliveryAddress.city"],
+                  )}
                   value={values.fulfillment.deliveryAddress.city}
                   onChange={(event) =>
                     onChange({
@@ -390,9 +506,19 @@ export function OrderForm({
                   }
                 />
               </Field>
-              <Field label={labels.province}>
+              <Field
+                label={labels.province}
+                error={fieldErrors["fulfillment.deliveryAddress.province"]}
+              >
                 <input
-                  className={fieldClass}
+                  className={
+                    fieldErrors["fulfillment.deliveryAddress.province"]
+                      ? fieldErrorClass
+                      : fieldClass
+                  }
+                  aria-invalid={Boolean(
+                    fieldErrors["fulfillment.deliveryAddress.province"],
+                  )}
                   value={values.fulfillment.deliveryAddress.province}
                   onChange={(event) =>
                     onChange({
@@ -437,6 +563,11 @@ export function OrderForm({
 
       <section className={cn(cardClass, "gap-4")}>
         <SectionHeader icon={ShoppingBag} title={labels.cartSection} />
+        {fieldErrors.lines ? (
+          <p className="text-error text-xs" role="alert">
+            {fieldErrors.lines}
+          </p>
+        ) : null}
 
         <div
           role="tablist"
@@ -510,32 +641,61 @@ export function OrderForm({
               ) : null}
             </Field>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Field label={labels.quantity}>
-                <GranularNumberInput
-                  mode="integer"
-                  min={selectedProductBounds?.minQuantity ?? 1}
-                  max={selectedProductBounds?.maxQuantity}
-                  emptyFallback={selectedProductBounds?.minQuantity ?? 1}
-                  disabled={
-                    !selectedProduct || !selectedProductBounds?.purchasable
-                  }
-                  className={cn(fieldClass, "sm:w-32")}
-                  value={draftProductQty}
-                  onValueChange={(next) =>
-                    setDraftProductQty(
-                      next ?? selectedProductBounds?.minQuantity ?? 1,
-                    )
-                  }
-                />
-                {selectedProductBounds ? (
-                  <p className="text-on-surface-variant mt-1.5 text-xs">
-                    {labels.quantityBounds(
-                      selectedProductBounds.minQuantity,
-                      selectedProductBounds.maxQuantity,
-                    )}
-                  </p>
-                ) : null}
-              </Field>
+              {isPackageProduct ? (
+                <>
+                  <Field label={labels.packagesLabel}>
+                    <GranularNumberInput
+                      mode="integer"
+                      min={0}
+                      max={maxDraftPackages}
+                      emptyFallback={0}
+                      disabled={!selectedProduct || productAddBlock !== null}
+                      className={cn(fieldClass, "sm:w-28")}
+                      value={draftPackageQty}
+                      onValueChange={(next) => setDraftPackageQty(next ?? 0)}
+                    />
+                  </Field>
+                  <Field label={labels.unitsLabel}>
+                    <GranularNumberInput
+                      mode="integer"
+                      min={0}
+                      max={maxDraftUnits}
+                      emptyFallback={0}
+                      disabled={!selectedProduct || productAddBlock !== null}
+                      className={cn(fieldClass, "sm:w-28")}
+                      value={draftUnitQty}
+                      onValueChange={(next) => setDraftUnitQty(next ?? 0)}
+                    />
+                  </Field>
+                </>
+              ) : (
+                <Field label={labels.quantity}>
+                  <GranularNumberInput
+                    mode="integer"
+                    min={selectedProductBounds?.minQuantity ?? 1}
+                    max={selectedProductBounds?.maxQuantity}
+                    emptyFallback={selectedProductBounds?.minQuantity ?? 1}
+                    disabled={
+                      !selectedProduct || !selectedProductBounds?.purchasable
+                    }
+                    className={cn(fieldClass, "sm:w-32")}
+                    value={draftPackageQty}
+                    onValueChange={(next) =>
+                      setDraftPackageQty(
+                        next ?? selectedProductBounds?.minQuantity ?? 1,
+                      )
+                    }
+                  />
+                  {selectedProductBounds ? (
+                    <p className="text-on-surface-variant mt-1.5 text-xs">
+                      {labels.quantityBounds(
+                        selectedProductBounds.minQuantity,
+                        selectedProductBounds.maxQuantity,
+                      )}
+                    </p>
+                  ) : null}
+                </Field>
+              )}
               <div className="flex flex-1 flex-col gap-1.5 sm:items-end">
                 <Button
                   type="button"
@@ -547,9 +707,14 @@ export function OrderForm({
                   disabled={!canAddProduct}
                   onClick={() => {
                     if (!draftProductId || !canAddProduct) return;
-                    onAddProductLine(draftProductId, draftProductQty);
+                    onAddProductLine(
+                      draftProductId,
+                      draftPackageQty,
+                      draftUnitQty,
+                    );
                     setDraftProductId("");
-                    setDraftProductQty(1);
+                    setDraftPackageQty(1);
+                    setDraftUnitQty(0);
                   }}
                 >
                   {labels.addProduct}
@@ -792,6 +957,9 @@ export function OrderForm({
             surpriseLine: labels.surpriseLine,
             comboLine: labels.comboLine,
             formatQuantityLabel: labels.formatQuantityLabel,
+            formatProductDualQty: labels.formatProductDualQty,
+            packagesLabel: labels.packagesLabel,
+            unitsLabel: labels.unitsLabel,
             formatComponents: labels.formatComponents,
             viewComponents: labels.viewComponents,
             removeLine: labels.removeLine,
@@ -824,26 +992,116 @@ export function OrderForm({
               {labels.shippingHint}
             </p>
           </Field>
-          <Field label={labels.discount}>
-            <GranularNumberInput
-              mode="decimal"
-              min={0}
-              emptyFallback={0}
-              className={fieldClass}
-              value={values.discountTotal}
-              onValueChange={(next) =>
-                onChange({
-                  ...values,
-                  discountTotal: next ?? 0,
-                })
-              }
-            />
-          </Field>
+
+          <div
+            role="tablist"
+            aria-label={labels.totalsSection}
+            className="flex flex-wrap gap-2"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={totalsTab === "final"}
+              className={cartTabClass(totalsTab === "final")}
+              onClick={() => setTotalsTab("final")}
+            >
+              {labels.tabFinalPrice}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={totalsTab === "adjustments"}
+              className={cartTabClass(totalsTab === "adjustments")}
+              onClick={() => setTotalsTab("adjustments")}
+            >
+              {labels.tabAdjustments}
+            </button>
+          </div>
+
+          {totalsTab === "final" ? (
+            <div role="tabpanel" className={innerCardClass}>
+              <Field label={labels.finalPrice}>
+                <GranularNumberInput
+                  mode="decimal"
+                  min={0}
+                  emptyFallback={0}
+                  className={fieldClass}
+                  value={totals?.total ?? values.shippingTotal}
+                  onValueChange={(next) => {
+                    const subtotal = totals?.subtotal ?? 0;
+                    const adjustments = deriveAdjustmentsFromFinalPrice({
+                      subtotal,
+                      shippingTotal: values.shippingTotal,
+                      finalTotal: next ?? 0,
+                    });
+                    onChange({
+                      ...values,
+                      discountTotal: adjustments.discountTotal,
+                      surchargeTotal: adjustments.surchargeTotal,
+                    });
+                  }}
+                />
+                <p className="font-body text-body-sm text-on-surface-variant mt-1.5">
+                  {labels.finalPriceHint}
+                </p>
+              </Field>
+            </div>
+          ) : (
+            <div role="tabpanel" className={cn(innerCardClass, "gap-4")}>
+              <Field label={labels.discount}>
+                <GranularNumberInput
+                  mode="decimal"
+                  min={0}
+                  emptyFallback={0}
+                  className={fieldClass}
+                  value={values.discountTotal}
+                  onValueChange={(next) =>
+                    onChange({
+                      ...values,
+                      discountTotal: next ?? 0,
+                    })
+                  }
+                />
+              </Field>
+              <Field label={labels.surcharge}>
+                <GranularNumberInput
+                  mode="decimal"
+                  min={0}
+                  emptyFallback={0}
+                  className={fieldClass}
+                  value={values.surchargeTotal}
+                  onValueChange={(next) =>
+                    onChange({
+                      ...values,
+                      surchargeTotal: next ?? 0,
+                    })
+                  }
+                />
+              </Field>
+            </div>
+          )}
+
           {totals ? (
             <div className="border-outline-variant/40 rounded-xl border-2 p-4">
               <div className="font-body text-body-md text-on-surface-variant flex justify-between">
                 <span>{labels.subtotal}</span>
                 <span>S/ {totals.subtotal.toFixed(2)}</span>
+              </div>
+              {totals.discountTotal > 0 ? (
+                <div className="font-body text-body-md text-on-surface-variant mt-2 flex justify-between">
+                  <span>{labels.discount}</span>
+                  <span>− S/ {totals.discountTotal.toFixed(2)}</span>
+                </div>
+              ) : null}
+              {totals.surchargeTotal > 0 ? (
+                <div className="font-body text-body-md text-on-surface-variant mt-2 flex justify-between">
+                  <span>{labels.surcharge}</span>
+                  <span>+ S/ {totals.surchargeTotal.toFixed(2)}</span>
+                </div>
+              ) : null}
+              <div className="font-body text-body-md text-on-surface-variant mt-2 flex justify-between">
+                <span>{labels.shipping}</span>
+                <span>S/ {totals.shippingTotal.toFixed(2)}</span>
               </div>
               <div className="border-outline-variant/40 mt-4 border-t pt-4">
                 <div className="flex items-center justify-between">

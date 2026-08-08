@@ -39,10 +39,13 @@ export function flattenOrderCartLines(
         lineType: "product",
         sku: line.sku,
         name: line.name,
-        quantity: line.quantity,
-        unitPrice: line.unitPrice,
+        quantity: line.packageQuantity,
+        unitPrice: line.packagePrice,
         lineTotal: line.lineTotal,
-        detail: null,
+        detail:
+          line.unitQuantity > 0
+            ? `${line.packageQuantity} paq. @ ${line.packagePrice} + ${line.unitQuantity} u. @ ${line.unitPrice}`
+            : null,
       });
       continue;
     }

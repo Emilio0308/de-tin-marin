@@ -17,6 +17,7 @@ import {
   createOrderInputSchema,
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
+import { zodIssuesToFieldErrors } from "../helpers/order-form-validation";
 import {
   adminOrderListQuerySchema,
   type AdminListPage,
@@ -46,20 +47,23 @@ async function resolveBundlesById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
 ): Promise<Map<string, OrderBundleSource>> {
+  const bundleIds = [
+    ...new Set(
+      lines
+        .filter((line) => line.type === "bundle")
+        .map((line) => line.bundleId),
+    ),
+  ];
+
+  const rows = await Promise.all(
+    bundleIds.map((bundleId) => getBundleByIdRepo(config, bundleId)),
+  );
+
   const bundlesById = new Map<string, OrderBundleSource>();
-
-  for (const line of lines) {
-    if (line.type !== "bundle" || bundlesById.has(line.bundleId)) {
-      continue;
-    }
-
-    const bundle = await getBundleByIdRepo(config, line.bundleId);
-    if (!bundle) {
-      continue;
-    }
-
+  for (const bundle of rows) {
+    if (!bundle) continue;
     const containerRow = bundle.surprise_containers;
-    bundlesById.set(line.bundleId, {
+    bundlesById.set(bundle.id, {
       id: bundle.id,
       name: bundle.name,
       is_active: bundle.is_active,
@@ -82,13 +86,15 @@ async function resolvePacksById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
 ): Promise<Map<string, OrderPackSource>> {
+  const packIds = collectPackIdsFromOrderLines(lines);
+  const rows = await Promise.all(
+    packIds.map((packId) => getPackByIdRepo(config, packId)),
+  );
+
   const packsById = new Map<string, OrderPackSource>();
-
-  for (const packId of collectPackIdsFromOrderLines(lines)) {
-    const pack = await getPackByIdRepo(config, packId);
+  for (const pack of rows) {
     if (!pack) continue;
-
-    packsById.set(packId, {
+    packsById.set(pack.id, {
       id: pack.id,
       sku: pack.sku,
       name: pack.name,
@@ -185,10 +191,17 @@ export async function createOrderService(
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE";
+      fieldErrors?: Record<string, string>;
     }
 > {
   const parsed = createOrderInputSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "VALIDATION",
+      fieldErrors: zodIssuesToFieldErrors(parsed.error.issues),
+    };
+  }
 
   const packsById = await resolvePacksById(config, parsed.data.lines);
   for (const line of parsed.data.lines) {
@@ -231,6 +244,7 @@ export async function createOrderService(
     bundlesById,
     packsById,
     discountTotal: parsed.data.discountTotal,
+    surchargeTotal: parsed.data.surchargeTotal,
     shippingTotal,
   });
 
@@ -239,6 +253,10 @@ export async function createOrderService(
   }
 
   const { shoppingCart, totals } = cartResult;
+
+  if (totals.total < 0) {
+    return { ok: false, error: "VALIDATION" };
+  }
 
   const datePrefix = formatOrderNumber(0).slice(0, 12);
   const sequence = (await countOrdersByDatePrefixRepo(config, datePrefix)) + 1;
@@ -254,6 +272,7 @@ export async function createOrderService(
     payment_methods: asJson([]),
     subtotal: totals.subtotal,
     discount_total: totals.discountTotal,
+    surcharge_total: totals.surchargeTotal,
     shipping_total: totals.shippingTotal,
     total: totals.total,
     pricing_snapshot: asJson(totals),

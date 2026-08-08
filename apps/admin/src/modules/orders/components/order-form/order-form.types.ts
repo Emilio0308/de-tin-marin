@@ -44,7 +44,8 @@ export type PackOption = {
 export type OrderFormProductLine = {
   type: "product";
   productId: string;
-  quantity: number;
+  packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type OrderFormBundleComponent = {
@@ -91,6 +92,7 @@ export type OrderFormValues = {
   lines: OrderFormLine[];
   shippingTotal: number;
   discountTotal: number;
+  surchargeTotal: number;
 };
 
 export const emptyOrderFormValues: OrderFormValues = {
@@ -116,6 +118,7 @@ export const emptyOrderFormValues: OrderFormValues = {
   lines: [],
   shippingTotal: 0,
   discountTotal: 0,
+  surchargeTotal: 0,
 };
 
 export type OrderFormBundleDraft = {
@@ -167,6 +170,11 @@ export type OrderFormLabels = {
   shipping: string;
   shippingHint: string;
   discount: string;
+  surcharge: string;
+  finalPrice: string;
+  finalPriceHint: string;
+  tabFinalPrice: string;
+  tabAdjustments: string;
   subtotal: string;
   total: string;
   createOrder: string;
@@ -176,7 +184,10 @@ export type OrderFormLabels = {
   formatComponents: (count: number) => string;
   viewComponents: (count: number) => string;
   formatPackComponentQty: (packages: number, units: number) => string;
+  formatProductDualQty: (packages: number, units: number) => string;
   formatQuantityLabel: (quantity: number) => string;
+  packagesLabel: string;
+  unitsLabel: string;
   quantityBounds: (min: number, max: number) => string;
   configureSurprise: string;
   addSurprise: string;
@@ -223,6 +234,8 @@ export type OrderFormLabels = {
   surpriseQuantityHint: string;
 };
 
+export type OrderFormFieldErrors = Record<string, string>;
+
 export type OrderFormProps = {
   values: OrderFormValues;
   products: ProductOption[];
@@ -241,16 +254,26 @@ export type OrderFormProps = {
   totals: {
     subtotal: number;
     discountTotal: number;
+    surchargeTotal: number;
     shippingTotal: number;
     total: number;
   } | null;
   submitting: boolean;
   error: string | null;
+  fieldErrors: OrderFormFieldErrors;
   labels: OrderFormLabels;
   onChange: (values: OrderFormValues) => void;
   onEnsureProductOption: (product: ProductOption) => void;
-  onAddProductLine: (productId: string, quantity: number) => void;
-  onUpdateProductLineQuantity: (index: number, quantity: number) => void;
+  onAddProductLine: (
+    productId: string,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) => void;
+  onUpdateProductLineQuantity: (
+    index: number,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) => void;
   onAddPackLine: (packId: string, quantity: number) => void;
   onStartBundleDraft: (bundleId: string) => void;
   onAddBundleAsTemplate: (bundleId: string) => void;

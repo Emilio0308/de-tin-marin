@@ -24,7 +24,14 @@ const baseGuestOrder = {
     },
     notes: null,
   },
-  lines: [{ type: "product" as const, productId, quantity: 1 }],
+  lines: [
+    {
+      type: "product" as const,
+      productId,
+      packageQuantity: 1,
+      unitQuantity: 0,
+    },
+  ],
   shippingTotal: 8,
   discountTotal: 0,
   mapPin: { lat: -5.1783, lng: -80.6328 },

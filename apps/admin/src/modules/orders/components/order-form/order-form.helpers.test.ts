@@ -51,7 +51,12 @@ const bundlesById = new Map([
 describe("order-form.helpers fallback", () => {
   it("usa finalPrice para líneas de producto", () => {
     const total = estimateOrderFormLineTotal(
-      { type: "product", productId: "p-unit", quantity: 10 },
+      {
+        type: "product",
+        productId: "p-unit",
+        packageQuantity: 10,
+        unitQuantity: 0,
+      },
       [unitProduct],
       bundlesById,
     );
@@ -88,7 +93,12 @@ describe("order-form.helpers fallback", () => {
     const totals = previewOrderTotals(
       {
         lines: [
-          { type: "product", productId: "p-unit", quantity: 10 },
+          {
+            type: "product",
+            productId: "p-unit",
+            packageQuantity: 10,
+            unitQuantity: 0,
+          },
           {
             type: "bundle",
             bundleId: "b1",
@@ -98,6 +108,7 @@ describe("order-form.helpers fallback", () => {
         ],
         shippingTotal: 5,
         discountTotal: 0,
+        surchargeTotal: 0,
       },
       [unitProduct, packageProduct],
       bundlesById,

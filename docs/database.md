@@ -291,20 +291,20 @@ Resolución al crear orden: `pickup` → `shipping_total = 0`; `delivery` → fe
 
 **`commerce.orders`**:
 
-| Columna / grupo                                         | Notas                                                                    |
-| ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `order_number`                                          | Código legible (`TM-YYYYMMDD-NNNN`)                                      |
-| `customer_id`                                           | → `crm.customers` nullable (guest v1)                                    |
-| `contact`                                               | jsonb — snapshot `name`, `lastName`, `phone`, `email`                    |
-| `fulfillment`                                           | jsonb — `method`, `deliveryAddress`, `notes`                             |
-| `shopping_cart`                                         | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)) |
-| `payment_methods`                                       | jsonb — array flexible; detalle interno → S2C                            |
-| `status`                                                | Ver [`orders.md`](orders.md)                                             |
-| `payment_status`                                        | `pending` \| `confirmed` \| `refunded`                                   |
-| `subtotal`, `discount_total`, `shipping_total`, `total` | Snapshots numéricos (`shipping_total` desde delivery zones en S1E)       |
-| `pricing_snapshot`                                      | jsonb — desglose al confirmar                                            |
-| `currency_code`                                         | default `'PEN'`                                                          |
-| `metadata`                                              | jsonb                                                                    |
+| Columna / grupo                                                            | Notas                                                                                                                                                                                   |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `order_number`                                                             | Código legible (`TM-YYYYMMDD-NNNN`)                                                                                                                                                     |
+| `customer_id`                                                              | → `crm.customers` nullable (guest v1)                                                                                                                                                   |
+| `contact`                                                                  | jsonb — snapshot `name`, `lastName`, `phone`, `email`                                                                                                                                   |
+| `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `notes`                                                                                                                                            |
+| `shopping_cart`                                                            | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)): product dual `packageQuantity`/`unitQuantity`; pack BOM; bundle components. Migración dual histórica: `00024` |
+| `payment_methods`                                                          | jsonb — array flexible; detalle interno → S2C                                                                                                                                           |
+| `status`                                                                   | Ver [`orders.md`](orders.md)                                                                                                                                                            |
+| `payment_status`                                                           | `pending` \| `confirmed` \| `refunded`                                                                                                                                                  |
+| `subtotal`, `discount_total`, `surcharge_total`, `shipping_total`, `total` | Snapshots: `total = subtotal − discount + shipping + surcharge` (`00023`; surcharge admin-only)                                                                                         |
+| `pricing_snapshot`                                                         | jsonb — desglose al confirmar                                                                                                                                                           |
+| `currency_code`                                                            | default `'PEN'`                                                                                                                                                                         |
+| `metadata`                                                                 | jsonb                                                                                                                                                                                   |
 
 **`commerce.payments`** (v1 manual):
 

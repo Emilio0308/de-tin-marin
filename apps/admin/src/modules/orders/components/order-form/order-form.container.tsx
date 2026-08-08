@@ -30,20 +30,21 @@ import {
   clampOrderFormPackQuantity,
   mergeOrAddProductLine,
   resolveOrderFormPackBounds,
-  updateProductLineQuantity,
+  updateProductLineDualQuantity,
 } from "./order-form-product.helpers";
 import {
   estimateOrderFormLineTotal,
   previewOrderTotals,
-  toCreateOrderPayload,
 } from "./order-form.helpers";
 import {
   emptyOrderFormValues,
   type OrderFormBundleDraft,
+  type OrderFormFieldErrors,
   type OrderFormLabels,
   type OrderFormValues,
   type ProductOption,
 } from "./order-form.types";
+import { validateCreateOrderForm } from "../../helpers/order-form-validation";
 
 type PackDetailCache = {
   components: Array<{
@@ -60,7 +61,7 @@ function orderErrorMessage(result: {
 }): string {
   switch (result.error) {
     case "VALIDATION":
-      return "Revisa los campos del formulario";
+      return "Revisa los campos marcados del formulario";
     case "PRODUCT_NOT_FOUND":
       return "Uno o más productos no existen o están inactivos";
     case "BUNDLE_NOT_FOUND":
@@ -87,6 +88,7 @@ export function OrderFormContainer() {
   const [values, setValues] = useState<OrderFormValues>(emptyOrderFormValues);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<OrderFormFieldErrors>({});
   const [bundleDraft, setBundleDraft] = useState<OrderFormBundleDraft | null>(
     null,
   );
@@ -130,6 +132,11 @@ export function OrderFormContainer() {
       shipping: t("form.shipping"),
       shippingHint: t("form.shippingHint"),
       discount: t("form.discount"),
+      surcharge: t("form.surcharge"),
+      finalPrice: t("form.finalPrice"),
+      finalPriceHint: t("form.finalPriceHint"),
+      tabFinalPrice: t("form.tabFinalPrice"),
+      tabAdjustments: t("form.tabAdjustments"),
       subtotal: t("form.subtotal"),
       total: t("form.total"),
       createOrder: t("form.createOrder"),
@@ -142,7 +149,13 @@ export function OrderFormContainer() {
         units > 0
           ? t("form.formatPackComponentQtyWithUnits", { packages, units })
           : t("form.formatPackComponentPackages", { packages }),
+      formatProductDualQty: (packages, units) =>
+        units > 0
+          ? t("form.formatPackComponentQtyWithUnits", { packages, units })
+          : t("form.formatPackComponentPackages", { packages }),
       formatQuantityLabel: (quantity) => t("form.quantityLabel", { quantity }),
+      packagesLabel: t("form.packagesLabel"),
+      unitsLabel: t("form.unitsLabel"),
       quantityBounds: (min, max) => t("form.quantityBounds", { min, max }),
       configureSurprise: t("form.configureSurprise"),
       addingSurprise: t("form.addingSurprise"),
@@ -395,8 +408,14 @@ export function OrderFormContainer() {
       }),
       shippingTotal: values.shippingTotal,
       discountTotal: values.discountTotal,
+      surchargeTotal: values.surchargeTotal,
     }),
-    [values.discountTotal, values.lines, values.shippingTotal],
+    [
+      values.discountTotal,
+      values.surchargeTotal,
+      values.lines,
+      values.shippingTotal,
+    ],
   );
 
   const cartPreviewQuery = useQuery({
@@ -407,6 +426,7 @@ export function OrderFormContainer() {
       cartPreviewPayload.lines,
       cartPreviewPayload.shippingTotal,
       cartPreviewPayload.discountTotal,
+      cartPreviewPayload.surchargeTotal,
     ],
     queryFn: async () => {
       const result = await previewOrderCartAction(cartPreviewPayload);
@@ -452,17 +472,31 @@ export function OrderFormContainer() {
     );
   }
 
-  function handleAddProductLine(productId: string, quantity: number) {
+  function handleAddProductLine(
+    productId: string,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) {
     const product = productsById.get(productId);
     if (!product) return;
 
     setValues((current) => ({
       ...current,
-      lines: mergeOrAddProductLine(current.lines, productId, quantity, product),
+      lines: mergeOrAddProductLine(
+        current.lines,
+        productId,
+        packageQuantity,
+        unitQuantity,
+        product,
+      ),
     }));
   }
 
-  function handleUpdateProductLineQuantity(index: number, quantity: number) {
+  function handleUpdateProductLineQuantity(
+    index: number,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) {
     const line = values.lines[index];
     if (!line || line.type !== "product") return;
 
@@ -471,7 +505,13 @@ export function OrderFormContainer() {
 
     setValues((current) => ({
       ...current,
-      lines: updateProductLineQuantity(current.lines, index, quantity, product),
+      lines: updateProductLineDualQuantity(
+        current.lines,
+        index,
+        packageQuantity,
+        unitQuantity,
+        product,
+      ),
     }));
   }
 
@@ -735,13 +775,29 @@ export function OrderFormContainer() {
   }
 
   function handleSubmit() {
+    const validation = validateCreateOrderForm(values);
+    if (!validation.ok) {
+      setFieldErrors(validation.fieldErrors);
+      setError(validation.formError);
+      return;
+    }
+
     void (async () => {
       setSubmitting(true);
       setError(null);
+      setFieldErrors({});
 
       try {
-        const result = await createOrderAction(toCreateOrderPayload(values));
+        const result = await createOrderAction(validation.payload);
         if (!result.ok) {
+          if (
+            result.error === "VALIDATION" &&
+            "fieldErrors" in result &&
+            result.fieldErrors &&
+            typeof result.fieldErrors === "object"
+          ) {
+            setFieldErrors(result.fieldErrors);
+          }
           setError(orderErrorMessage(result));
           return;
         }
@@ -821,8 +877,13 @@ export function OrderFormContainer() {
         totals={totals}
         submitting={submitting}
         error={error}
+        fieldErrors={fieldErrors}
         labels={labels}
-        onChange={setValues}
+        onChange={(next) => {
+          setFieldErrors({});
+          setError(null);
+          setValues(next);
+        }}
         onEnsureProductOption={handleEnsureProductOption}
         onAddProductLine={handleAddProductLine}
         onUpdateProductLineQuantity={handleUpdateProductLineQuantity}

@@ -152,7 +152,7 @@ export function CartPageContainer() {
             meta[entry.cartLineId] = {
               bounds: {
                 minQuantity: 1,
-                maxQuantity: entry.line.quantity,
+                maxQuantity: entry.line.packageQuantity,
                 purchasable: false,
               },
             };
@@ -229,7 +229,10 @@ export function CartPageContainer() {
       bounds[entry.cartLineId] = quantityMetaQuery.data?.[entry.cartLineId]
         ?.bounds ?? {
         minQuantity: 1,
-        maxQuantity: entry.line.quantity,
+        maxQuantity:
+          entry.line.type === "product"
+            ? entry.line.packageQuantity
+            : entry.line.quantity,
         purchasable: true,
       };
     }
@@ -266,7 +269,10 @@ export function CartPageContainer() {
         if (entry.line.type === "product" || entry.line.type === "pack") {
           emptyBounds[entry.cartLineId] = {
             minQuantity: 1,
-            maxQuantity: entry.line.quantity,
+            maxQuantity:
+              entry.line.type === "product"
+                ? entry.line.packageQuantity
+                : entry.line.quantity,
             purchasable: true,
           };
         }

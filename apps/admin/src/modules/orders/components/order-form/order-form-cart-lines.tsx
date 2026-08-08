@@ -3,7 +3,6 @@
 import { Boxes, Candy, ChevronDown, Gift, Minus, Plus } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { OrderFormLine, ProductOption } from "./order-form.types";
-import { resolveOrderFormProductBounds } from "./order-form-product.helpers";
 
 export type CartCompositionItem = {
   productId: string;
@@ -21,6 +20,9 @@ type OrderFormCartLinesProps = {
     surpriseLine: string;
     comboLine: string;
     formatQuantityLabel: (quantity: number) => string;
+    formatProductDualQty: (packages: number, units: number) => string;
+    packagesLabel: string;
+    unitsLabel: string;
     formatComponents: (count: number) => string;
     viewComponents: (count: number) => string;
     removeLine: string;
@@ -28,7 +30,11 @@ type OrderFormCartLinesProps = {
     emptyLines: string;
   };
   onRemoveLine: (index: number) => void;
-  onUpdateProductQuantity: (index: number, quantity: number) => void;
+  onUpdateProductQuantity: (
+    index: number,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) => void;
   onEditBundleLine: (index: number) => void;
   getLineTotal: (index: number) => number | null;
 };
@@ -99,9 +105,17 @@ export function OrderFormCartLines({
 
         if (line.type === "product") {
           const product = productsById.get(line.productId);
-          const bounds = product
-            ? resolveOrderFormProductBounds(product)
-            : null;
+          const isPackage =
+            product?.productType === "package" &&
+            (product.itemsPerPackage ?? 1) > 1;
+          const ipp = Math.max(1, product?.itemsPerPackage ?? 1);
+          const available = Math.max(0, product?.stockTotalBaseUnits ?? 0);
+          const maxPackages = isPackage
+            ? Math.floor(available / ipp)
+            : available;
+          const maxUnitsForLine = isPackage
+            ? Math.max(0, available - line.packageQuantity * ipp)
+            : 0;
 
           return (
             <div
@@ -116,32 +130,93 @@ export function OrderFormCartLines({
                   <p className="font-label text-label-bold text-on-surface truncate">
                     {product?.name ?? "—"}
                   </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="border-outline-variant/50 bg-surface-container-lowest text-on-surface flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
-                      disabled={!bounds || line.quantity <= bounds.minQuantity}
-                      onClick={() =>
-                        onUpdateProductQuantity(index, line.quantity - 1)
-                      }
-                      aria-label="-"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="font-label text-label-bold text-on-surface min-w-8 text-center text-sm">
-                      {line.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      className="border-outline-variant/50 bg-surface-container-lowest text-on-surface flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
-                      disabled={!bounds || line.quantity >= bounds.maxQuantity}
-                      onClick={() =>
-                        onUpdateProductQuantity(index, line.quantity + 1)
-                      }
-                      aria-label="+"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                  <p className="text-on-surface-variant mt-1 text-xs">
+                    {labels.formatProductDualQty(
+                      line.packageQuantity,
+                      line.unitQuantity,
+                    )}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      {isPackage ? (
+                        <span className="text-on-surface-variant text-xs">
+                          {labels.packagesLabel}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="border-outline-variant/50 bg-surface-container-lowest text-on-surface flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
+                        disabled={line.packageQuantity <= 0}
+                        onClick={() =>
+                          onUpdateProductQuantity(
+                            index,
+                            line.packageQuantity - 1,
+                            line.unitQuantity,
+                          )
+                        }
+                        aria-label="-"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <span className="font-label text-label-bold text-on-surface min-w-8 text-center text-sm">
+                        {line.packageQuantity}
+                      </span>
+                      <button
+                        type="button"
+                        className="border-outline-variant/50 bg-surface-container-lowest text-on-surface flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
+                        disabled={line.packageQuantity >= maxPackages}
+                        onClick={() =>
+                          onUpdateProductQuantity(
+                            index,
+                            line.packageQuantity + 1,
+                            line.unitQuantity,
+                          )
+                        }
+                        aria-label="+"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {isPackage ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-on-surface-variant text-xs">
+                          {labels.unitsLabel}
+                        </span>
+                        <button
+                          type="button"
+                          className="border-outline-variant/50 bg-surface-container-lowest text-on-surface flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
+                          disabled={line.unitQuantity <= 0}
+                          onClick={() =>
+                            onUpdateProductQuantity(
+                              index,
+                              line.packageQuantity,
+                              line.unitQuantity - 1,
+                            )
+                          }
+                          aria-label="-"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="font-label text-label-bold text-on-surface min-w-8 text-center text-sm">
+                          {line.unitQuantity}
+                        </span>
+                        <button
+                          type="button"
+                          className="border-outline-variant/50 bg-surface-container-lowest text-on-surface flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
+                          disabled={line.unitQuantity >= maxUnitsForLine}
+                          onClick={() =>
+                            onUpdateProductQuantity(
+                              index,
+                              line.packageQuantity,
+                              line.unitQuantity + 1,
+                            )
+                          }
+                          aria-label="+"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

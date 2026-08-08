@@ -83,6 +83,11 @@ const labels: OrderFormLabels = {
   shipping: "Envío",
   shippingHint: "Calculado según distrito.",
   discount: "Descuento",
+  surcharge: "Recargo",
+  finalPrice: "Precio final",
+  finalPriceHint: "Incluye todo",
+  tabFinalPrice: "Precio final",
+  tabAdjustments: "Descuento / recargo",
   subtotal: "Subtotal",
   total: "Total",
   createOrder: "Crear orden",
@@ -93,7 +98,11 @@ const labels: OrderFormLabels = {
   viewComponents: (count) => `Ver componentes (${count})`,
   formatPackComponentQty: (packages, units) =>
     units > 0 ? `${packages} paq. + ${units} u.` : `${packages} paq.`,
+  formatProductDualQty: (packages, units) =>
+    units > 0 ? `${packages} paq. + ${units} u.` : `${packages} paq.`,
   formatQuantityLabel: (quantity) => `Cantidad: ${quantity}`,
+  packagesLabel: "Paquetes",
+  unitsLabel: "Unidades",
   quantityBounds: (min, max) => `Mín. ${min} · Máx. ${max}`,
   configureSurprise: "Configurar sorpresa",
   addingSurprise: "Agregando…",
@@ -172,6 +181,7 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       totals={null}
       submitting={false}
       error={null}
+      fieldErrors={{}}
       labels={labels}
       onChange={vi.fn()}
       onEnsureProductOption={vi.fn()}
@@ -254,11 +264,19 @@ describe("OrderForm", () => {
     renderForm({
       values: {
         ...emptyOrderFormValues,
-        lines: [{ type: "product", productId: "p1", quantity: 10 }],
+        lines: [
+          {
+            type: "product",
+            productId: "p1",
+            packageQuantity: 10,
+            unitQuantity: 0,
+          },
+        ],
       },
       totals: {
         subtotal: 50,
         discountTotal: 0,
+        surchargeTotal: 0,
         shippingTotal: 0,
         total: 50,
       },

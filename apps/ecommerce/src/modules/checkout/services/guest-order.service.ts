@@ -174,15 +174,26 @@ async function resolvePacksById(
 }
 
 function validateProductPurchaseQuantities(
-  lines: { type: string; productId?: string; quantity?: number }[],
+  lines: {
+    type: string;
+    productId?: string;
+    packageQuantity?: number;
+    unitQuantity?: number;
+  }[],
   catalogProducts: PublicProductRow[],
 ): boolean {
   const productsById = new Map(catalogProducts.map((row) => [row.id, row]));
 
   for (const line of lines) {
-    if (line.type !== "product" || !line.productId || line.quantity == null) {
+    if (
+      line.type !== "product" ||
+      !line.productId ||
+      line.packageQuantity == null
+    ) {
       continue;
     }
+
+    if ((line.unitQuantity ?? 0) > 0) return false;
 
     const product = productsById.get(line.productId);
     if (!product) return false;
@@ -203,8 +214,8 @@ function validateProductPurchaseQuantities(
 
     if (
       !bounds.purchasable ||
-      line.quantity < bounds.minQuantity ||
-      line.quantity > bounds.maxQuantity
+      line.packageQuantity < bounds.minQuantity ||
+      line.packageQuantity > bounds.maxQuantity
     ) {
       return false;
     }
@@ -630,7 +641,8 @@ function snapshotLinesToOrderInput(
       return {
         type: "product" as const,
         productId: line.productId,
-        quantity: line.quantity,
+        packageQuantity: line.packageQuantity,
+        unitQuantity: 0,
       };
     }
     if (line.type === "pack") {
@@ -665,7 +677,10 @@ function detectSnapshotPriceDrift(
 
     if (local.type === "product" && server.type === "product") {
       if (
+        local.packagePrice !== server.packagePrice ||
         local.unitPrice !== server.unitPrice ||
+        local.packageQuantity !== server.packageQuantity ||
+        local.unitQuantity !== server.unitQuantity ||
         local.lineTotal !== server.lineTotal
       ) {
         return true;

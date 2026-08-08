@@ -38,7 +38,8 @@ export const orderFulfillmentSchema = z
 export const orderProductLineInputSchema = z.object({
   type: z.literal("product"),
   productId: z.string().uuid(),
-  quantity: z.number().int().min(1),
+  packageQuantity: z.number().int().min(0),
+  unitQuantity: z.number().int().min(0),
 });
 
 export const orderBundleComponentInputSchema = z.object({
@@ -59,7 +60,7 @@ export const orderPackLineInputSchema = z.object({
   quantity: z.number().int().min(1),
 });
 
-export const createOrderInputSchema = z.object({
+const createOrderInputObjectSchema = z.object({
   contact: orderContactSchema,
   fulfillment: orderFulfillmentSchema,
   lines: z
@@ -73,13 +74,47 @@ export const createOrderInputSchema = z.object({
     .min(1),
   shippingTotal: z.number().nonnegative().default(0),
   discountTotal: z.number().nonnegative().default(0),
+  surchargeTotal: z.number().nonnegative().default(0),
 });
 
-export const previewOrderCartInputSchema = createOrderInputSchema.pick({
-  lines: true,
-  shippingTotal: true,
-  discountTotal: true,
-});
+export { createOrderInputObjectSchema };
+
+function refineProductLineDualQuantities(
+  value: {
+    lines: Array<{
+      type: string;
+      packageQuantity?: number;
+      unitQuantity?: number;
+    }>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  value.lines.forEach((line, index) => {
+    if (
+      line.type === "product" &&
+      (line.packageQuantity ?? 0) + (line.unitQuantity ?? 0) < 1
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "packageQuantity + unitQuantity must be >= 1",
+        path: ["lines", index, "packageQuantity"],
+      });
+    }
+  });
+}
+
+export const createOrderInputSchema = createOrderInputObjectSchema.superRefine(
+  refineProductLineDualQuantities,
+);
+
+export const previewOrderCartInputSchema = createOrderInputObjectSchema
+  .pick({
+    lines: true,
+    shippingTotal: true,
+    discountTotal: true,
+    surchargeTotal: true,
+  })
+  .superRefine(refineProductLineDualQuantities);
 
 export const transitionOrderStatusInputSchema = z.object({
   id: z.string().uuid(),
@@ -110,7 +145,9 @@ export const orderShoppingCartProductLineSchema = z.object({
   productId: z.string().uuid(),
   sku: z.string(),
   name: z.string(),
-  quantity: z.number(),
+  packageQuantity: z.number(),
+  unitQuantity: z.number(),
+  packagePrice: z.number(),
   unitPrice: z.number(),
   lineTotal: z.number(),
   imageUrl: z.string().nullable().optional(),
@@ -202,6 +239,7 @@ export const orderDetailSchema = z.object({
   paymentMethods: z.array(z.unknown()),
   subtotal: z.number(),
   discountTotal: z.number(),
+  surchargeTotal: z.number(),
   shippingTotal: z.number(),
   total: z.number(),
   currencyCode: z.literal("PEN"),

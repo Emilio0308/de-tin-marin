@@ -1,6 +1,7 @@
 import {
+  clampProductDualQuantities,
   clampProductPurchaseQuantity,
-  mergeProductPurchaseQuantity,
+  resolveAdminProductDualPurchasable,
   resolveProductPurchaseBounds,
   resolveStockInPresentations,
   type ProductPurchaseBounds,
@@ -59,6 +60,18 @@ export function resolveProductAddBlockReason(
   bounds: ProductPurchaseBounds | null,
 ): ProductAddBlockReason | null {
   if (!product || !bounds) return { code: "NO_SELECTION" };
+
+  if (product.productType === "package") {
+    if (resolveAdminProductDualPurchasable(product.stockTotalBaseUnits)) {
+      return null;
+    }
+    return {
+      code: "OUT_OF_STOCK",
+      minQuantity: 1,
+      available: Math.max(0, Math.floor(product.stockTotalBaseUnits)),
+    };
+  }
+
   if (bounds.purchasable) return null;
 
   return {
@@ -97,53 +110,104 @@ export function clampOrderFormPackQuantity(
   );
 }
 
+function clampDualForProduct(
+  packageQuantity: number,
+  unitQuantity: number,
+  product: ProductOption,
+): { packageQuantity: number; unitQuantity: number } {
+  if (product.productType === "unit") {
+    const bounds = resolveOrderFormProductBounds(product);
+    const safe = clampProductPurchaseQuantity(packageQuantity, bounds);
+    return { packageQuantity: safe, unitQuantity: 0 };
+  }
+
+  return clampProductDualQuantities({
+    packageQuantity,
+    unitQuantity,
+    itemsPerPackage: product.itemsPerPackage,
+    availableBaseUnits: product.stockTotalBaseUnits,
+  });
+}
+
 export function mergeOrAddProductLine(
   lines: OrderFormLine[],
   productId: string,
-  quantity: number,
+  packageQuantity: number,
+  unitQuantity: number,
   product: ProductOption,
 ): OrderFormLine[] {
-  const bounds = resolveOrderFormProductBounds(product);
-  const safeQuantity = clampProductPurchaseQuantity(quantity, bounds);
   const existingIndex = lines.findIndex(
     (line) => line.type === "product" && line.productId === productId,
   );
 
   if (existingIndex === -1) {
-    return [...lines, { type: "product", productId, quantity: safeQuantity }];
+    const clamped = clampDualForProduct(packageQuantity, unitQuantity, product);
+    if (clamped.packageQuantity + clamped.unitQuantity < 1) return lines;
+    return [
+      ...lines,
+      {
+        type: "product",
+        productId,
+        packageQuantity: clamped.packageQuantity,
+        unitQuantity: clamped.unitQuantity,
+      },
+    ];
   }
 
   const existing = lines[existingIndex];
   if (!existing || existing.type !== "product") return lines;
 
-  const mergedQuantity = mergeProductPurchaseQuantity(
-    existing.quantity,
-    safeQuantity,
-    bounds,
+  const clamped = clampDualForProduct(
+    existing.packageQuantity + packageQuantity,
+    existing.unitQuantity + unitQuantity,
+    product,
   );
+
+  if (clamped.packageQuantity + clamped.unitQuantity < 1) return lines;
 
   return lines.map((line, index) =>
     index === existingIndex && line.type === "product"
-      ? { ...line, quantity: mergedQuantity }
+      ? {
+          ...line,
+          packageQuantity: clamped.packageQuantity,
+          unitQuantity: clamped.unitQuantity,
+        }
       : line,
   );
 }
 
+export function updateProductLineDualQuantity(
+  lines: OrderFormLine[],
+  index: number,
+  packageQuantity: number,
+  unitQuantity: number,
+  product: ProductOption,
+): OrderFormLine[] {
+  const line = lines[index];
+  if (!line || line.type !== "product") return lines;
+
+  const clamped = clampDualForProduct(packageQuantity, unitQuantity, product);
+  if (clamped.packageQuantity + clamped.unitQuantity < 1) {
+    return lines;
+  }
+
+  return lines.map((current, lineIndex) =>
+    lineIndex === index && current.type === "product"
+      ? {
+          ...current,
+          packageQuantity: clamped.packageQuantity,
+          unitQuantity: clamped.unitQuantity,
+        }
+      : current,
+  );
+}
+
+/** @deprecated use updateProductLineDualQuantity */
 export function updateProductLineQuantity(
   lines: OrderFormLine[],
   index: number,
   quantity: number,
   product: ProductOption,
 ): OrderFormLine[] {
-  const line = lines[index];
-  if (!line || line.type !== "product") return lines;
-
-  const bounds = resolveOrderFormProductBounds(product);
-  const safeQuantity = clampProductPurchaseQuantity(quantity, bounds);
-
-  return lines.map((current, lineIndex) =>
-    lineIndex === index && current.type === "product"
-      ? { ...current, quantity: safeQuantity }
-      : current,
-  );
+  return updateProductLineDualQuantity(lines, index, quantity, 0, product);
 }

@@ -91,7 +91,18 @@ Grants: `GRANT USAGE ON SCHEMA commerce`; `GRANT SELECT, INSERT, UPDATE ON comme
 
 - Ninguna — guest `contact` + `fulfillment` en jsonb; pagos y avance post-`paid` en S2C.
 
+## Evoluciones posteriores (no reabrir S2B)
+
+Canónico actual: [`orders.md`](../../orders.md).
+
+| Cambio                        | Migración / artefacto                  | Nota                                                                                                                                |
+| ----------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `surcharge_total` en cabecera | `00023_order_surcharge_total.sql`      | `total = subtotal − discount + shipping + surcharge`; admin Totales (XOR precio final / dual discount+surcharge); guest surcharge=0 |
+| Línea product dual            | `00024_product_line_dual_quantity.sql` | `packageQuantity`+`unitQuantity` (+ precios); admin vende sueltas; ecommerce `unitQuantity=0`; normalize por `items_per_package`    |
+| Packs en carrito              | S1F / S4-04                            | Línea `type: pack` + BOM dual en deduct                                                                                             |
+| Admin salta min/max           | Regla 21/25                            | Techo = stock / `availableQuantity`                                                                                                 |
+
 ## Depends on
 
 - [orders.md](../../orders.md), [database.md](../../database.md) § `commerce.orders`
-- DECISIONS #17, #25, #26
+- DECISIONS #17, #25, #26, #27 (dual product), #33 (packs)

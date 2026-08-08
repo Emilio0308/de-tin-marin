@@ -46,6 +46,8 @@ type ProductPriceDTO = {
 };
 ```
 
+**Línea orden `type: product` (DECISIONS #27):** al congelar, `packagePrice = finalPrice`, `unitPrice = finalUnitPrice`, `lineTotal = packagePrice × packageQuantity + unitPrice × unitQuantity`. Admin puede aportar ambos qty; ecommerce solo presentaciones (`unitQuantity = 0`). Ajustes de cabecera (`discount`/`surcharge`) **no** entran en esta línea — ver [`orders.md`](orders.md) § Totales.
+
 **Reglas:** 2, 9, 10, 11, 12.
 
 > **Costo / margen (admin, DECISIONS #36 / Regla 26):** `cost_net_price` es dato de adquisición; **no** forma parte del pipeline de `finalPrice` ni de DTOs públicos. Margen = `normal.netPrice − cost` (derivado en app vía `computeProductMargin`).

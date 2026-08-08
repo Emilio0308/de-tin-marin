@@ -321,7 +321,10 @@ export function OrderDetailView({
                           {line.name}
                         </p>
                         <p className="text-on-surface-variant text-sm">
-                          {labels.formatQuantityLabel(line.quantity)}
+                          {labels.formatProductDualQty(
+                            line.packageQuantity,
+                            line.unitQuantity,
+                          )}
                         </p>
                       </div>
                     </div>
@@ -495,6 +498,14 @@ export function OrderDetailView({
                   S/ {order.discountTotal.toFixed(2)}
                 </span>
               </div>
+              {order.surchargeTotal > 0 ? (
+                <div className="flex justify-between">
+                  <span>{labels.surcharge}</span>
+                  <span className="font-label text-label-bold text-on-surface">
+                    S/ {order.surchargeTotal.toFixed(2)}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex justify-between">
                 <span>{labels.shipping}</span>
                 <span className="font-label text-label-bold text-on-surface">

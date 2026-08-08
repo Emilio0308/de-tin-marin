@@ -2,12 +2,21 @@
 
 Órdenes manuales con **Order shopping cart** congelado en JSONB.
 
-Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [orders.md](../../../docs/orders.md)
+Canónico: [`docs/orders.md`](../../../docs/orders.md) · reglas 13–18, 21, 24 · DECISIONS #26, #27, #29, #31, #33.
+
+Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
 
 ## Capas
 
 ```text
 actions/ → services/ → repositories/ → Supabase schema commerce
+```
+
+Helpers UI/validación (no service):
+
+```text
+helpers/order-form-validation.ts   — createOrderInputSchema + mensajes de campo
+components/order-form/*.helpers.ts — dual qty, bounds pack/product, add-block
 ```
 
 ## Server Actions
@@ -25,17 +34,11 @@ actions/ → services/ → repositories/ → Supabase schema commerce
 | `previewAdminBundleLineAction` | `previewAdminBundleLineService` | Preview línea sorpresa (mismo motor que create)                    |
 | `previewOrderCartAction`       | `previewOrderCartService`       | Preview carrito / totales                                          |
 
-## Preview de precios (order-form)
+## Crear orden (`/orders/new`)
 
-Container: `order-form.container.tsx`
+Container: `order-form.container.tsx`.
 
-| Query             | Fresco                   | Motivo                                  |
-| ----------------- | ------------------------ | --------------------------------------- |
-| `bundle-preview`  | Sí (`freshQueryOptions`) | Total alineado con `createOrderService` |
-| `cart-preview`    | Sí (`freshQueryOptions`) | Totales de líneas al crear orden        |
-| Catálogo auxiliar | Paginado / on-demand     | Ver tabla abajo                         |
-
-### Catálogo en el formulario
+### Catálogo (tabs)
 
 | Uso                                 | Cómo                                                                                                                                                       |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,13 +46,89 @@ Container: `order-form.container.tsx`
 | Listar combos / sorpresas (tabs)    | `listPacksPageAction` / `listBundlesPageAction`                                                                                                            |
 | Armar sorpresa desde plantilla      | `getBundleAction` → solo ítems `isActive`; al agregar dulces, picker paginado                                                                              |
 | Bloqueo al agregar producto / combo | `resolveProductAddBlockReason` / `resolvePackAddBlockReason` — `OUT_OF_STOCK` si stock/available = 0; packs listan `stockShortages` (productos bottleneck) |
-| Líneas en carrito                   | Pack/bundle muestran composición desplegable (`viewComponents`); pack labels dual qty (`paq.` / `paq. + u.`)                                               |
 
-Helpers: `order-form-product.helpers.ts` (`mode: "admin"` vía `resolveOrderFormProductBounds` / `resolveOrderFormPackBounds`; + Vitest). Personalizar sorpresa: `order-form-bundle-customize.tsx` usa el mismo picker (sin select local de catálogo completo).
+### Líneas `type: product` — dual package + unit
+
+Contrato snapshot: [`docs/orders.md`](../../../docs/orders.md) § Línea product · DECISIONS #27 · migración `00024`.
+
+| UI                                                   | Regla                                        |
+| ---------------------------------------------------- | -------------------------------------------- |
+| Stepper **presentaciones**                           | `packageQuantity`                            |
+| Stepper **unidades** (solo `product_type = package`) | `unitQuantity`                               |
+| `product_type = unit`                                | Un solo stepper (presentación ≡ unidad base) |
+
+**Payload create/preview:**
+
+```typescript
+{
+  type: "product";
+  productId;
+  packageQuantity;
+  unitQuantity;
+}
+// packageQuantity + unitQuantity >= 1
+```
+
+**Clamp (admin, Regla 21 excepción):**
+
+- Shared: `clampProductDualQuantities` / `productLineNeedBaseUnits` (`@de-tin-marin/shared/product-purchase-limits`).
+- `needBase = packageQuantity × items_per_package + unitQuantity`.
+- Techo: `needBase ≤ stockTotalBaseUnits` (`mode: "admin"` — **no** aplica `purchase_min/max`).
+- Al build servidor: `normalizeProductLineQuantities` (si `unitQuantity >= ipp` → convierte a paquetes).
+- `lineTotal = packagePrice × packageQuantity + unitPrice × unitQuantity`.
+
+Helpers locales: `order-form-product.helpers.ts`.
+
+### Líneas pack / bundle
+
+- Pack: qty de combos; composición BOM dual (`packageQuantity`/`unitQuantity` por componente) desplegable.
+- Bundle: preview fresco; composición por componente; envase congelado (S1E).
+- Bounds pack: `resolveOrderFormPackBounds` — techo = `availableQuantity` (salta min/max catálogo).
+
+### Totales de cabecera
+
+Fórmula:
+
+```text
+total = subtotal − discount_total + shipping_total + surcharge_total
+```
+
+Migración columna: `00023_order_surcharge_total.sql`. Shared: `computeOrderTotals`, `deriveAdjustmentsFromFinalPrice`.
+
+| Tab                     | Comportamiento                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Precio final**        | Input = total a cobrar (**incluye** envío). Deriva **XOR**: `final < subtotal+shipping` → solo `discountTotal`; `final > base` → solo `surchargeTotal`; igual → ambos 0. |
+| **Descuento / recargo** | Inputs independientes; **pueden coexistir** (p. ej. discount 5 + surcharge 2).                                                                                           |
+
+Los ajustes **no** mutan precios de línea (`packagePrice` / `unitPrice` / `lineTotal`) — Regla 16.
+
+Ecommerce / guest: `discountTotal = 0`, `surchargeTotal = 0`.
+
+### Validación cliente
+
+`helpers/order-form-validation.ts`:
+
+1. Arma input con líneas dual + `shippingTotal` / `discountTotal` / `surchargeTotal`.
+2. Parsea con `createOrderInputSchema` (`@de-tin-marin/validations/order`).
+3. Mapea issues Zod → errores por campo (contacto, fulfillment, líneas, totales).
+
+### Preview de precios
+
+| Query             | Fresco                   | Motivo                                  |
+| ----------------- | ------------------------ | --------------------------------------- |
+| `bundle-preview`  | Sí (`freshQueryOptions`) | Total alineado con `createOrderService` |
+| `cart-preview`    | Sí (`freshQueryOptions`) | Totales de líneas + cabecera al crear   |
+| Catálogo auxiliar | Paginado / on-demand     | Picker / tabs                           |
 
 ## Listado `/orders`
 
 SSR + `HydrationBoundary` (mismo patrón que catálogo admin). Default pageSize **5** (`ADMIN_DEFAULT_PAGE_SIZE`).
+
+## Detalle `/orders/[id]`
+
+- Muestra `shoppingCart` congelado (product dual, pack BOM, bundle components).
+- Totales: `subtotal`, `discountTotal`, **`surchargeTotal`**, `shippingTotal`, `total`.
+- Acciones: confirmar pago / reembolso / transición logística / envío (S2C).
 
 ## Services
 
@@ -58,7 +137,15 @@ SSR + `HydrationBoundary` (mismo patrón que catálogo admin). Default pageSize 
 - `payment.service.ts` — confirmar / reembolsar pago (deduct atómico S2A)
 - `shipment.service.ts` — upsert envío
 
-Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29). Líneas `type: pack` aportan `totalPackages` → presentaciones y `totalUnits` → `baseUnits` (Regla 24 / DECISIONS #33 / S4-04).
+Stock pre-confirm: `checkOrderStock` requiere `productType` en filas de producto (Regla 15 / DECISIONS #29).
+
+Demandas:
+
+| Línea     | Demanda                                                               |
+| --------- | --------------------------------------------------------------------- |
+| `product` | `presentationQuantity = packageQuantity`, `baseUnits = unitQuantity`  |
+| `pack`    | por componente: `totalPackages` → presentaciones, `totalUnits` → base |
+| `bundle`  | `totalQuantity` → base + envase                                       |
 
 Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock cambió → invalidar listados tienda).
 
@@ -81,3 +168,12 @@ Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock c
 `@de-tin-marin/validations/order` · `payment` · `shipment` · **`admin-list`** (`listOrdersPageAction`)
 
 Paginación `/orders`: mismos patrones que catálogo — [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-list-pagination.md).
+
+## Shared / migraciones
+
+| Artefacto                                      | Rol                                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------------ |
+| `@de-tin-marin/shared/order-cart`              | normalize product dual, build lines, totals, `deriveAdjustmentsFromFinalPrice` |
+| `@de-tin-marin/shared/product-purchase-limits` | `mode: admin\|customer`, `clampProductDualQuantities`                          |
+| `00023_order_surcharge_total.sql`              | columna `surcharge_total`                                                      |
+| `00024_product_line_dual_quantity.sql`         | rewrite legacy `quantity` → dual en JSONB histórico                            |

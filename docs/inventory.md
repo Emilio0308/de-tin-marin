@@ -67,14 +67,19 @@ Ejemplo Lay’s (`product_type = package`, `items_per_package = 10`, `package_la
 
 | Origen                       | Campo en demanda       | Unidad                                                    |
 | ---------------------------- | ---------------------- | --------------------------------------------------------- |
-| Línea `type: product`        | `presentationQuantity` | Presentaciones vendidas                                   |
+| Línea `type: product`        | `presentationQuantity` | `packageQuantity` (presentaciones)                        |
+| Línea `type: product`        | `baseUnits`            | `unitQuantity` (unidades base; ecommerce siempre 0)       |
 | Componente de línea `pack`   | `presentationQuantity` | `totalPackages` (= packageQty × line.qty)                 |
 | Componente de línea `pack`   | `baseUnits`            | `totalUnits` (= unitQty × line.qty; legacy sin campo → 0) |
 | Componente de línea `bundle` | `baseUnits`            | Unidades base                                             |
 
 ```text
 need = presentationQuantity × items_per_package + baseUnits
+# línea product equivalente:
+# need = packageQuantity × items_per_package + unitQuantity
 ```
+
+**Antes del snapshot:** `normalizeProductLineQuantities` convierte `unitQuantity >= ipp` en paquetes (`packageQuantity += floor(unitQuantity / ipp)`; resto en `unitQuantity`). Migración histórica: `00024_product_line_dual_quantity.sql` (legacy `quantity` → dual). Detalle canal admin vs ecommerce: [`orders.md`](orders.md) § Línea product.
 
 ### `package` — sealed/loose
 

@@ -11,7 +11,14 @@ describe("createOrderInputSchema", () => {
         email: "maria@test.com",
       },
       fulfillment: { method: "delivery" },
-      lines: [{ type: "product", productId: crypto.randomUUID(), quantity: 1 }],
+      lines: [
+        {
+          type: "product",
+          productId: crypto.randomUUID(),
+          packageQuantity: 1,
+          unitQuantity: 0,
+        },
+      ],
     });
 
     expect(result.success).toBe(false);
@@ -26,7 +33,14 @@ describe("createOrderInputSchema", () => {
         email: "maria@test.com",
       },
       fulfillment: { method: "pickup" },
-      lines: [{ type: "product", productId: crypto.randomUUID(), quantity: 1 }],
+      lines: [
+        {
+          type: "product",
+          productId: crypto.randomUUID(),
+          packageQuantity: 1,
+          unitQuantity: 0,
+        },
+      ],
     });
 
     expect(result.success).toBe(true);

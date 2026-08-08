@@ -1,3 +1,5 @@
+import { normalizeProductLineQuantities } from "./order-cart";
+
 export type ProductPurchaseMode = "customer" | "admin";
 
 export type ProductPurchaseLimitInput = {
@@ -28,6 +30,50 @@ export function resolveStockInPresentations(input: {
   }
 
   return input.stockTotalBaseUnits;
+}
+
+export function productLineNeedBaseUnits(input: {
+  packageQuantity: number;
+  unitQuantity: number;
+  itemsPerPackage: number;
+}): number {
+  const ipp = Math.max(1, Math.floor(input.itemsPerPackage));
+  const normalized = normalizeProductLineQuantities(
+    input.packageQuantity,
+    input.unitQuantity,
+    ipp,
+  );
+  return normalized.packageQuantity * ipp + normalized.unitQuantity;
+}
+
+/** Clamp dual qty so needBase ≤ availableBase (admin product lines). */
+export function clampProductDualQuantities(input: {
+  packageQuantity: number;
+  unitQuantity: number;
+  itemsPerPackage: number;
+  availableBaseUnits: number;
+}): { packageQuantity: number; unitQuantity: number } {
+  const ipp = Math.max(1, Math.floor(input.itemsPerPackage));
+  const available = Math.max(0, Math.floor(input.availableBaseUnits));
+  const normalized = normalizeProductLineQuantities(
+    input.packageQuantity,
+    input.unitQuantity,
+    ipp,
+  );
+  const need = normalized.packageQuantity * ipp + normalized.unitQuantity;
+  if (need <= available) {
+    return normalized;
+  }
+  return {
+    packageQuantity: Math.floor(available / ipp),
+    unitQuantity: available % ipp,
+  };
+}
+
+export function resolveAdminProductDualPurchasable(
+  availableBaseUnits: number,
+): boolean {
+  return Math.floor(availableBaseUnits) >= 1;
 }
 
 export function resolveProductPurchaseBounds(

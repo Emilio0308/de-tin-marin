@@ -114,6 +114,7 @@ export type CatalogStatusOrderListRow = {
   fulfillmentMethod: string | null;
   subtotal: number;
   discountTotal: number;
+  surchargeTotal: number;
   shippingTotal: number;
   total: number;
   lineCount: number;

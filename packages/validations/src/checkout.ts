@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  createOrderInputSchema,
+  createOrderInputObjectSchema,
   orderShoppingCartBundleLineSchema,
   orderShoppingCartPackLineSchema,
   orderShoppingCartProductLineSchema,
@@ -12,7 +12,7 @@ export const mapPinSchema = z.object({
   lng: z.number().min(-180).max(180),
 });
 
-export const createGuestOrderInputSchema = createOrderInputSchema
+export const createGuestOrderInputSchema = createOrderInputObjectSchema
   .extend({
     mapPin: mapPinSchema,
   })
@@ -26,6 +26,25 @@ export const createGuestOrderInputSchema = createOrderInputSchema
         });
       }
     }
+
+    value.lines.forEach((line, index) => {
+      if (line.type === "product") {
+        if (line.packageQuantity + line.unitQuantity < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "packageQuantity + unitQuantity must be >= 1",
+            path: ["lines", index, "packageQuantity"],
+          });
+        }
+        if (line.unitQuantity > 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Guest checkout does not allow unitQuantity > 0",
+            path: ["lines", index, "unitQuantity"],
+          });
+        }
+      }
+    });
   });
 
 export const resolveCheckoutDeliveryFeeInputSchema = z.object({

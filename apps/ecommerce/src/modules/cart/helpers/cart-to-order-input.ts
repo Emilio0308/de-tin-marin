@@ -9,7 +9,8 @@ export function cartLinesToOrderInput(
       return {
         type: "product" as const,
         productId: entry.line.productId,
-        quantity: entry.line.quantity,
+        packageQuantity: entry.line.packageQuantity,
+        unitQuantity: 0,
       };
     }
 
