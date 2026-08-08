@@ -18,7 +18,9 @@ import { OrderFormBundleCustomize } from "./order-form-bundle-customize";
 import { buildBundleComponentLabels } from "./order-form-bundle.helpers";
 import { OrderFormCartLines } from "./order-form-cart-lines";
 import {
+  resolveOrderFormPackBounds,
   resolveOrderFormProductBounds,
+  resolvePackAddBlockReason,
   resolveProductAddBlockReason,
 } from "./order-form-product.helpers";
 import type { OrderFormProps } from "./order-form.types";
@@ -168,11 +170,20 @@ export function OrderForm({
   );
 
   const selectedPack = packs.find((pack) => pack.id === draftPackId);
+  const selectedPackBounds = useMemo(
+    () => (selectedPack ? resolveOrderFormPackBounds(selectedPack) : null),
+    [selectedPack],
+  );
+  const packAddBlock = resolvePackAddBlockReason(
+    selectedPack,
+    selectedPackBounds,
+  );
+  const canAddPack = packAddBlock === null;
 
   useEffect(() => {
-    if (!selectedPack) return;
-    setDraftPackQty(selectedPack.purchaseMinQuantity);
-  }, [selectedPack]);
+    if (!selectedPackBounds) return;
+    setDraftPackQty(selectedPackBounds.minQuantity);
+  }, [selectedPackBounds]);
 
   const bundleComponentLabels = useMemo(() => {
     if (!bundleDraft) return {};
@@ -559,56 +570,81 @@ export function OrderForm({
         ) : null}
 
         {cartTab === "packs" ? (
-          <div
-            role="tabpanel"
-            className={cn(
-              innerCardClass,
-              "sm:grid sm:grid-cols-[1fr_auto_auto] sm:items-end",
-            )}
-          >
-            <Field label={labels.combo}>
-              <select
-                className={fieldClass}
-                value={draftPackId}
-                onChange={(event) => setDraftPackId(event.target.value)}
+          <div role="tabpanel" className={innerCardClass}>
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+              <Field label={labels.combo}>
+                <select
+                  className={fieldClass}
+                  value={draftPackId}
+                  onChange={(event) => setDraftPackId(event.target.value)}
+                >
+                  <option value="">{labels.selectCombo}</option>
+                  {packs.map((pack) => (
+                    <option key={pack.id} value={pack.id}>
+                      {pack.name} — S/ {pack.finalPrice.toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={labels.quantity}>
+                <GranularNumberInput
+                  mode="integer"
+                  min={selectedPackBounds?.minQuantity ?? 1}
+                  max={selectedPackBounds?.maxQuantity}
+                  emptyFallback={selectedPackBounds?.minQuantity ?? 1}
+                  disabled={!selectedPack || !selectedPackBounds?.purchasable}
+                  className={cn(fieldClass, "sm:w-32")}
+                  value={draftPackQty}
+                  onValueChange={(next) =>
+                    setDraftPackQty(
+                      next ?? selectedPackBounds?.minQuantity ?? 1,
+                    )
+                  }
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="secondary"
+                className={cn("min-h-11 w-full sm:w-auto", disabledButtonClass)}
+                disabled={!canAddPack}
+                onClick={() => {
+                  if (!draftPackId || !canAddPack) return;
+                  onAddPackLine(draftPackId, draftPackQty);
+                  setDraftPackId("");
+                  setDraftPackQty(1);
+                }}
               >
-                <option value="">{labels.selectCombo}</option>
-                {packs.map((pack) => (
-                  <option key={pack.id} value={pack.id}>
-                    {pack.name} — S/ {pack.finalPrice.toFixed(2)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={labels.quantity}>
-              <GranularNumberInput
-                mode="integer"
-                min={selectedPack?.purchaseMinQuantity ?? 1}
-                max={selectedPack?.purchaseMaxQuantity ?? 100}
-                emptyFallback={selectedPack?.purchaseMinQuantity ?? 1}
-                className={fieldClass}
-                value={draftPackQty}
-                onValueChange={(next) =>
-                  setDraftPackQty(
-                    next ?? selectedPack?.purchaseMinQuantity ?? 1,
-                  )
-                }
-              />
-            </Field>
-            <Button
-              type="button"
-              variant="secondary"
-              className={cn("min-h-11 w-full sm:w-auto", disabledButtonClass)}
-              disabled={!draftPackId}
-              onClick={() => {
-                if (!draftPackId) return;
-                onAddPackLine(draftPackId, draftPackQty);
-                setDraftPackId("");
-                setDraftPackQty(1);
-              }}
-            >
-              {labels.addCombo}
-            </Button>
+                {labels.addCombo}
+              </Button>
+            </div>
+            {selectedPackBounds ? (
+              <p className="text-on-surface-variant text-xs">
+                {labels.quantityBounds(
+                  selectedPackBounds.minQuantity,
+                  selectedPackBounds.maxQuantity,
+                )}
+              </p>
+            ) : null}
+            {packAddBlock ? (
+              <div className="text-error text-xs" role="status">
+                {packAddBlock.code === "NO_SELECTION" ? (
+                  <p>{labels.selectComboFirst}</p>
+                ) : (
+                  <>
+                    <p>{labels.packOutOfStock(packAddBlock.available)}</p>
+                    {packAddBlock.stockShortages.length > 0 ? (
+                      <p className="mt-1">
+                        {labels.packStockShortages(
+                          packAddBlock.stockShortages
+                            .map((item) => `${item.productName} (${item.sku})`)
+                            .join(", "),
+                        )}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

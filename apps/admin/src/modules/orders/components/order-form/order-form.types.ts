@@ -21,11 +21,21 @@ export type BundleOption = {
   templateQuantity: number;
 };
 
+export type PackStockShortageOption = {
+  productId: string;
+  productName: string;
+  sku: string;
+  availableCombos: number;
+  reason: "missing_product" | "inactive" | "insufficient_stock";
+};
+
 export type PackOption = {
   id: string;
   name: string;
   sku: string;
   finalPrice: number;
+  availableQuantity: number;
+  stockShortages: PackStockShortageOption[];
   purchaseMinQuantity: number;
   purchaseMaxQuantity: number;
   itemCount: number;
@@ -192,8 +202,11 @@ export type OrderFormLabels = {
   editSurprise: string;
   combo: string;
   selectCombo: string;
+  selectComboFirst: string;
   addCombo: string;
   comboLine: string;
+  packOutOfStock: (available: number) => string;
+  packStockShortages: (names: string) => string;
   candiesSubtotal: string;
   containerSubtotal: string;
   containerCostHint: (unitPrice: string, quantity: number) => string;

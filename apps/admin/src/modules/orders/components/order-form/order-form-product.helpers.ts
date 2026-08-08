@@ -5,7 +5,11 @@ import {
   resolveStockInPresentations,
   type ProductPurchaseBounds,
 } from "@de-tin-marin/shared/product-purchase-limits";
-import type { OrderFormLine, ProductOption } from "./order-form.types";
+import type {
+  OrderFormLine,
+  PackOption,
+  ProductOption,
+} from "./order-form.types";
 
 export function resolveOrderFormProductBounds(
   product: ProductOption,
@@ -16,6 +20,20 @@ export function resolveOrderFormProductBounds(
     stockTotalBaseUnits: product.stockTotalBaseUnits,
     purchaseMinQuantity: product.purchaseMinQuantity,
     purchaseMaxQuantity: product.purchaseMaxQuantity,
+    mode: "admin",
+  });
+}
+
+export function resolveOrderFormPackBounds(
+  pack: PackOption,
+): ProductPurchaseBounds {
+  return resolveProductPurchaseBounds({
+    productType: "unit",
+    itemsPerPackage: 1,
+    stockTotalBaseUnits: pack.availableQuantity,
+    purchaseMinQuantity: pack.purchaseMinQuantity,
+    purchaseMaxQuantity: pack.purchaseMaxQuantity,
+    mode: "admin",
   });
 }
 
@@ -25,6 +43,15 @@ export type ProductAddBlockReason =
       code: "OUT_OF_STOCK";
       minQuantity: number;
       available: number;
+    };
+
+export type PackAddBlockReason =
+  | { code: "NO_SELECTION" }
+  | {
+      code: "OUT_OF_STOCK";
+      minQuantity: number;
+      available: number;
+      stockShortages: PackOption["stockShortages"];
     };
 
 export function resolveProductAddBlockReason(
@@ -43,6 +70,31 @@ export function resolveProductAddBlockReason(
       stockTotalBaseUnits: product.stockTotalBaseUnits,
     }),
   };
+}
+
+export function resolvePackAddBlockReason(
+  pack: PackOption | undefined,
+  bounds: ProductPurchaseBounds | null,
+): PackAddBlockReason | null {
+  if (!pack || !bounds) return { code: "NO_SELECTION" };
+  if (bounds.purchasable) return null;
+
+  return {
+    code: "OUT_OF_STOCK",
+    minQuantity: bounds.minQuantity,
+    available: Math.max(0, Math.floor(pack.availableQuantity)),
+    stockShortages: pack.stockShortages,
+  };
+}
+
+export function clampOrderFormPackQuantity(
+  quantity: number,
+  pack: PackOption,
+): number {
+  return clampProductPurchaseQuantity(
+    quantity,
+    resolveOrderFormPackBounds(pack),
+  );
 }
 
 export function mergeOrAddProductLine(

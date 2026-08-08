@@ -235,8 +235,11 @@
       "surpriseQuantityHint": "Número de sorpresas a pedir (cada una incluye su envase).",
       "combo": "Combo",
       "selectCombo": "Selecciona un combo",
+      "selectComboFirst": "Selecciona un combo para agregarlo.",
       "addCombo": "Agregar combo",
-      "comboLine": "Combo"
+      "comboLine": "Combo",
+      "packOutOfStock": "Sin stock para armar el combo (disponible {available}).",
+      "packStockShortages": "Productos sin stock: {names}."
     },
     "paymentStatus": {
       "pending": "Pendiente",

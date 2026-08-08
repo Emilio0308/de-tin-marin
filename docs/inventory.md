@@ -132,7 +132,8 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 
 - **Sin stock propio** en `packs` (DECISIONS #33 / Regla 22).
 - BOM dual: `package_quantity` + `unit_quantity` (suma ≥ 1). Disponibilidad = mínimo de `floor(availableBase / needBase)` con `needBase = package_quantity × ipp + unit_quantity`.
-- Helper canónico: `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`).
+- Helper canónico: `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`, `listPackStockShortages`).
+- Listados admin: `availableQuantity` + `stockShortages` en `PackListItem` cuando no se puede armar ≥ 1 combo.
 - Al `paid`: `totalPackages` → `presentationQuantity`; `totalUnits` → `baseUnits`. Branch bundle intacto.
 
 ## Admin (v1)

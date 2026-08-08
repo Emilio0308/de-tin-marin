@@ -82,3 +82,82 @@ export function computePackAvailableQuantity(
 
   return Number.isFinite(min) ? Math.max(0, min) : 0;
 }
+
+export type PackStockShortageInput = PackAvailabilityComponent & {
+  productId: string;
+  productName: string;
+  sku: string;
+};
+
+export type PackStockShortageReason =
+  "missing_product" | "inactive" | "insufficient_stock";
+
+export type PackStockShortage = {
+  productId: string;
+  productName: string;
+  sku: string;
+  availableCombos: number;
+  reason: PackStockShortageReason;
+};
+
+/**
+ * Componentes que no alcanzan para armar al menos 1 combo
+ * (stock insuficiente, inactivo o producto ausente).
+ */
+export function listPackStockShortages(
+  components: PackStockShortageInput[],
+): PackStockShortage[] {
+  const shortages: PackStockShortage[] = [];
+
+  for (const item of components) {
+    const product = item.product;
+    if (!product) {
+      shortages.push({
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku,
+        availableCombos: 0,
+        reason: "missing_product",
+      });
+      continue;
+    }
+
+    if (!product.isActive || product.deletedAt !== null) {
+      shortages.push({
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku,
+        availableCombos: 0,
+        reason: "inactive",
+      });
+      continue;
+    }
+
+    const needBase = packComponentNeedBaseUnits(item, product.itemsPerPackage);
+    if (needBase <= 0) {
+      shortages.push({
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku,
+        availableCombos: 0,
+        reason: "insufficient_stock",
+      });
+      continue;
+    }
+
+    const availableCombos = Math.floor(
+      packComponentAvailableBaseUnits(product) / needBase,
+    );
+    if (availableCombos < 1) {
+      shortages.push({
+        productId: item.productId,
+        productName: item.productName,
+        sku: item.sku,
+        availableCombos: Math.max(0, availableCombos),
+        reason: "insufficient_stock",
+      });
+    }
+  }
+
+  return shortages;
+}

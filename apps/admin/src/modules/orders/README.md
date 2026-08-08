@@ -37,15 +37,15 @@ Container: `order-form.container.tsx`
 
 ### Catálogo en el formulario
 
-| Uso                                 | Cómo                                                                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Agregar producto / dulce a sorpresa | `ProductSearchPicker` → `listProductsPageAction`                                                             |
-| Listar combos / sorpresas (tabs)    | `listPacksPageAction` / `listBundlesPageAction`                                                              |
-| Armar sorpresa desde plantilla      | `getBundleAction` → solo ítems `isActive`; al agregar dulces, picker paginado                                |
-| Bloqueo al agregar producto         | `resolveProductAddBlockReason` — `OUT_OF_STOCK` si stock < min compra (Regla 21)                             |
-| Líneas en carrito                   | Pack/bundle muestran composición desplegable (`viewComponents`); pack labels dual qty (`paq.` / `paq. + u.`) |
+| Uso                                 | Cómo                                                                                                                                                       |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agregar producto / dulce a sorpresa | `ProductSearchPicker` → `listProductsPageAction`                                                                                                           |
+| Listar combos / sorpresas (tabs)    | `listPacksPageAction` / `listBundlesPageAction`                                                                                                            |
+| Armar sorpresa desde plantilla      | `getBundleAction` → solo ítems `isActive`; al agregar dulces, picker paginado                                                                              |
+| Bloqueo al agregar producto / combo | `resolveProductAddBlockReason` / `resolvePackAddBlockReason` — `OUT_OF_STOCK` si stock/available = 0; packs listan `stockShortages` (productos bottleneck) |
+| Líneas en carrito                   | Pack/bundle muestran composición desplegable (`viewComponents`); pack labels dual qty (`paq.` / `paq. + u.`)                                               |
 
-Helpers: `order-form-product.helpers.ts` (+ Vitest). Personalizar sorpresa: `order-form-bundle-customize.tsx` usa el mismo picker (sin select local de catálogo completo).
+Helpers: `order-form-product.helpers.ts` (`mode: "admin"` vía `resolveOrderFormProductBounds` / `resolveOrderFormPackBounds`; + Vitest). Personalizar sorpresa: `order-form-bundle-customize.tsx` usa el mismo picker (sin select local de catálogo completo).
 
 ## Listado `/orders`
 

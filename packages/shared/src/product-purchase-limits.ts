@@ -1,9 +1,13 @@
+export type ProductPurchaseMode = "customer" | "admin";
+
 export type ProductPurchaseLimitInput = {
   productType: "unit" | "package";
   itemsPerPackage: number;
   stockTotalBaseUnits: number;
   purchaseMinQuantity: number;
   purchaseMaxQuantity: number;
+  /** Default `"customer"`. Admin ignores purchase min/max; stock still caps qty. */
+  mode?: ProductPurchaseMode;
 };
 
 export type ProductPurchaseBounds = {
@@ -29,16 +33,33 @@ export function resolveStockInPresentations(input: {
 export function resolveProductPurchaseBounds(
   input: ProductPurchaseLimitInput,
 ): ProductPurchaseBounds {
-  const minQuantity = Math.max(1, Math.floor(input.purchaseMinQuantity));
-  const configuredMax = Math.max(
-    minQuantity,
-    Math.floor(input.purchaseMaxQuantity),
-  );
   const stockInPresentations = resolveStockInPresentations({
     productType: input.productType,
     itemsPerPackage: input.itemsPerPackage,
     stockTotalBaseUnits: input.stockTotalBaseUnits,
   });
+
+  if (input.mode === "admin") {
+    if (stockInPresentations < 1) {
+      return {
+        minQuantity: 1,
+        maxQuantity: 1,
+        purchasable: false,
+      };
+    }
+
+    return {
+      minQuantity: 1,
+      maxQuantity: stockInPresentations,
+      purchasable: true,
+    };
+  }
+
+  const minQuantity = Math.max(1, Math.floor(input.purchaseMinQuantity));
+  const configuredMax = Math.max(
+    minQuantity,
+    Math.floor(input.purchaseMaxQuantity),
+  );
 
   if (stockInPresentations < minQuantity) {
     return {

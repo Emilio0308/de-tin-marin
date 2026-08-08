@@ -10,6 +10,10 @@ import {
 } from "@de-tin-marin/validations/admin-list";
 import { computePackReference } from "@de-tin-marin/shared/pack-price";
 import {
+  computePackAvailableQuantity,
+  listPackStockShortages,
+} from "@de-tin-marin/shared/pack-availability";
+import {
   buildPackPrices,
   parsePackPricesJson,
   parseProductPricesJson,
@@ -102,6 +106,29 @@ function toListItem(
   const { normalNetPrice, referenceNetPrice } = parsePackPricesJson(row.prices);
   const finalPrice = resolveFinalPrice(normalNetPrice, campaign);
   const campaignForPricing = campaign ? toCampaignForPricing(campaign) : null;
+  const availabilityComponents = items.map((item) => ({
+    productId: item.product_id,
+    productName: item.products?.name ?? "—",
+    sku: item.products?.sku ?? "—",
+    packageQuantity: item.package_quantity,
+    unitQuantity: item.unit_quantity ?? 0,
+    product: item.products
+      ? {
+          isActive: item.products.is_active,
+          deletedAt: item.products.deleted_at,
+          productType:
+            (item.products.product_type as "unit" | "package") ?? "unit",
+          itemsPerPackage: item.products.items_per_package ?? 1,
+          stockSealedPackages: item.products.stock_sealed_packages,
+          stockLooseBaseUnits: item.products.stock_loose_base_units,
+        }
+      : null,
+  }));
+  const availableQuantity = computePackAvailableQuantity(
+    availabilityComponents,
+  );
+  const stockShortages =
+    availableQuantity < 1 ? listPackStockShortages(availabilityComponents) : [];
 
   return {
     id: row.id,
@@ -112,6 +139,8 @@ function toListItem(
     referencePrice: referenceNetPrice,
     finalPrice,
     itemCount: items.length,
+    availableQuantity,
+    stockShortages,
     purchaseMinQuantity: row.purchase_min_quantity,
     purchaseMaxQuantity: row.purchase_max_quantity,
     isActive: row.is_active,

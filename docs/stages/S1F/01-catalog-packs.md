@@ -52,13 +52,13 @@ Staff en admin (:3001) puede CRUD combos (packs) con composición de dulces en p
 
 ## Boundaries y DTOs
 
-| Boundary         | Tipo          | Input                   | Output DTO                                                                                    |
-| ---------------- | ------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
-| `listPacks`      | Server Action | —                       | `{ id, sku, name, imageUrl, normalPrice, referencePrice, finalPrice, itemCount, isActive }[]` |
-| `getPack`        | Server Action | `{ id }`                | FormDTO + items + reference/normal/final + campaign                                           |
-| `createPack`     | Server Action | `createPackInputSchema` | `{ ok, id? }`                                                                                 |
-| `updatePack`     | Server Action | `updatePackInputSchema` | `{ ok }`                                                                                      |
-| `softDeletePack` | Server Action | `{ id }`                | `{ ok }`                                                                                      |
+| Boundary         | Tipo          | Input                   | Output DTO                                                                                                                                                                 |
+| ---------------- | ------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listPacks`      | Server Action | —                       | `{ id, sku, name, imageUrl, normalPrice, referencePrice, finalPrice, itemCount, availableQuantity, stockShortages, purchaseMinQuantity, purchaseMaxQuantity, isActive }[]` |
+| `getPack`        | Server Action | `{ id }`                | FormDTO + items + reference/normal/final + campaign                                                                                                                        |
+| `createPack`     | Server Action | `createPackInputSchema` | `{ ok, id? }`                                                                                                                                                              |
+| `updatePack`     | Server Action | `updatePackInputSchema` | `{ ok }`                                                                                                                                                                   |
+| `softDeletePack` | Server Action | `{ id }`                | `{ ok }`                                                                                                                                                                   |
 
 Formulario Combos (`pack-form`): `ProductSearchPicker` + `listProductsPageAction({ status: "active" })`; al editar, `mergePackProductOptions` conserva ítems ya en la BOM. Persistencia solo productos activos (Regla 23 / `validatePackItems`).
 

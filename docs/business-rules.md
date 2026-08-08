@@ -210,9 +210,10 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ### Regla 21 — Límites min/max de compra (productos sueltos)
 
-- **Trigger:** Agregar al carrito, editar cantidad en carrito, checkout guest; **admin order-form** al agregar línea producto.
+- **Trigger:** Agregar al carrito, editar cantidad en carrito, checkout guest (**solo ecommerce / storefront**).
 - **Alcance:** Líneas `type: product`. **No** aplica a sorpresas/bundles ni wizard. Packs: ver Regla 25.
-- **Pasos:**
+- **Excepción admin:** el **order-form** admin (`/orders/new`) **salta** `purchase_min_quantity` / `purchase_max_quantity`. Cantidad `>= 1` acotada solo por stock en presentaciones (`mode: "admin"` en `@de-tin-marin/shared/product-purchase-limits`). **Jamás** relajar min/max en el front ecommerce ni en checkout guest.
+- **Pasos (ecommerce):**
   1. Leer `purchase_min_quantity` y `purchase_max_quantity` del producto (cantidad en **presentación** vendida: unidad o paquete/tira).
   2. `stock_presentaciones` alineado con disponibilidad vendible (Regla 4):
      - `unit` → `stock_loose_base_units` (solo sueltas).
@@ -221,8 +222,8 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
   4. Comprable solo si `stock_presentaciones >= purchase_min_quantity`.
   5. Cantidad de línea debe cumplir `purchase_min_quantity <= quantity <= max_efectivo`.
   6. “Añadir rápido” agrega `purchase_min_quantity` por defecto.
-- **UI admin:** `resolveProductAddBlockReason` → `OUT_OF_STOCK` (mín. vs disponible) si no es comprable.
-- **Fallo:** Rechazar checkout si cantidad fuera de rango; UI deshabilita compra / bloquea add en order-form si no hay stock para el mínimo.
+- **UI admin:** `resolveProductAddBlockReason` → `OUT_OF_STOCK` solo si stock disponible es 0 (no por min de catálogo).
+- **Fallo:** Rechazar checkout guest si cantidad fuera de rango; UI tienda deshabilita compra si no hay stock para el mínimo.
 
 ---
 
@@ -232,7 +233,8 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 - **Trigger:** Cualquier operación sobre pack/combo.
 - **Pasos:** `catalog.packs` **no** tiene columnas de stock. Por componente activo (`is_active`, sin `deleted_at`): `needBase = package_quantity × items_per_package + unit_quantity`; `availableBase` según Regla 4 (`package` = sealed×ipp+loose; `unit` = solo loose). Disponibilidad del combo = mínimo de `floor(availableBase / needBase)`.
-- **Implementación:** `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`) — usada en ecommerce, checkout y export admin (S4-01).
+- **Implementación:** `@de-tin-marin/shared/pack-availability` — `computePackAvailableQuantity` (ecommerce, checkout, Excel, listados admin) y `listPackStockShortages` (componentes bottleneck: `missing_product` | `inactive` | `insufficient_stock`).
+- **DTO admin list:** `PackListItem.availableQuantity` + `stockShortages` (vacío si `availableQuantity >= 1`).
 - **Fallo:** N/A.
 
 ### Regla 23 — Precio pack reference + normal
@@ -254,10 +256,12 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ### Regla 25 — Límites min/max de compra (packs)
 
-- **Trigger:** Agregar pack al carrito / crear orden admin.
+- **Trigger:** Agregar pack al carrito / checkout guest (**solo ecommerce / storefront**).
 - **Alcance:** Líneas `type: pack`.
-- **Pasos:** Igual espíritu Regla 21 usando `packs.purchase_min_quantity` / `purchase_max_quantity` y disponibilidad derivada de componentes (Regla 22).
-- **Fallo:** Rechazar si cantidad fuera de rango o stock insuficiente para el mínimo.
+- **Excepción admin:** order-form salta min/max de compra del pack; cantidad `>= 1` acotada por `availableQuantity` (Regla 22). **Jamás** en front ecommerce.
+- **Pasos (ecommerce):** Igual espíritu Regla 21 usando `packs.purchase_min_quantity` / `purchase_max_quantity` y disponibilidad derivada de componentes (Regla 22).
+- **UI admin:** `resolvePackAddBlockReason` → `OUT_OF_STOCK` si `availableQuantity < 1`; mensaje con nombres de `stockShortages`.
+- **Fallo:** Rechazar checkout guest si cantidad fuera de rango o stock insuficiente para el mínimo.
 
 ### Regla 26 — Costo de adquisición y margen (productos, admin)
 

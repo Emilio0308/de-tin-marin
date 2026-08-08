@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   computePackAvailableQuantity,
+  listPackStockShortages,
   packComponentAvailableBaseUnits,
   packComponentNeedBaseUnits,
   packComponentPresentations,
   type PackAvailabilityComponent,
   type PackAvailabilityProduct,
+  type PackStockShortageInput,
 } from "./pack-availability";
 
 function product(
@@ -166,5 +168,71 @@ describe("computePackAvailableQuantity", () => {
         ),
       ]),
     ).toBe(2); // floor(20/7)=2
+  });
+});
+
+describe("listPackStockShortages", () => {
+  function labeled(
+    productId: string,
+    packageQuantity: number,
+    productOverrides?: Partial<PackAvailabilityProduct> | null,
+    unitQuantity = 0,
+  ): PackStockShortageInput {
+    return {
+      productId,
+      productName: `Name ${productId}`,
+      sku: `SKU-${productId}`,
+      ...component(packageQuantity, productOverrides, unitQuantity),
+    };
+  }
+
+  it("lista componentes activos sin stock para 1 combo", () => {
+    expect(
+      listPackStockShortages([
+        labeled("a", 1, { stockLooseBaseUnits: 5 }),
+        labeled("b", 2, { stockLooseBaseUnits: 1 }),
+      ]),
+    ).toEqual([
+      {
+        productId: "b",
+        productName: "Name b",
+        sku: "SKU-b",
+        availableCombos: 0,
+        reason: "insufficient_stock",
+      },
+    ]);
+  });
+
+  it("incluye producto ausente o inactivo", () => {
+    expect(
+      listPackStockShortages([
+        labeled("missing", 1, null),
+        labeled("off", 1, { isActive: false, stockLooseBaseUnits: 100 }),
+      ]),
+    ).toEqual([
+      {
+        productId: "missing",
+        productName: "Name missing",
+        sku: "SKU-missing",
+        availableCombos: 0,
+        reason: "missing_product",
+      },
+      {
+        productId: "off",
+        productName: "Name off",
+        sku: "SKU-off",
+        availableCombos: 0,
+        reason: "inactive",
+      },
+    ]);
+  });
+
+  it("devuelve vacío si todos alcanzan para al menos 1 combo", () => {
+    expect(
+      listPackStockShortages([
+        labeled("a", 1, { stockLooseBaseUnits: 5 }),
+        labeled("b", 1, { stockLooseBaseUnits: 2 }),
+      ]),
+    ).toEqual([]);
   });
 });

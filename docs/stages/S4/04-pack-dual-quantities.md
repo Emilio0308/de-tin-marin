@@ -47,12 +47,12 @@ Staff puede definir por componente `package_quantity` y `unit_quantity` (suma �
 
 ## Boundaries y DTOs
 
-| Boundary    | Cambio clave                                                  |
-| ----------- | ------------------------------------------------------------- |
-| Pack item   | `{ productId, packageQuantity, unitQuantity }` suma ≥ 1       |
-| Pack cart   | + `unitQuantity`, `totalUnits` (legacy ausente → 0)           |
-| Reference   | Σ(`normal×packageQuantity` + `unit×unitQuantity`)             |
-| Disponibles | `floor(availableBase / (packageQuantity×ipp + unitQuantity))` |
+| Boundary    | Cambio clave                                                                                         |
+| ----------- | ---------------------------------------------------------------------------------------------------- |
+| Pack item   | `{ productId, packageQuantity, unitQuantity }` suma ≥ 1                                              |
+| Pack cart   | + `unitQuantity`, `totalUnits` (legacy ausente → 0)                                                  |
+| Reference   | Σ(`normal×packageQuantity` + `unit×unitQuantity`)                                                    |
+| Disponibles | `floor(availableBase / (packageQuantity×ipp + unitQuantity))`; admin list + `listPackStockShortages` |
 
 ## Rules que aplican
 

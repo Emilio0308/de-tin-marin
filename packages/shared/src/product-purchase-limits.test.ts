@@ -57,6 +57,40 @@ describe("resolveProductPurchaseBounds", () => {
     expect(bounds.purchasable).toBe(false);
     expect(bounds.maxQuantity).toBe(10);
   });
+
+  it("modo admin ignora min/max de compra y acota solo por stock", () => {
+    const bounds = resolveProductPurchaseBounds({
+      productType: "unit",
+      itemsPerPackage: 1,
+      stockTotalBaseUnits: 5,
+      purchaseMinQuantity: 10,
+      purchaseMaxQuantity: 100,
+      mode: "admin",
+    });
+
+    expect(bounds).toEqual({
+      minQuantity: 1,
+      maxQuantity: 5,
+      purchasable: true,
+    });
+  });
+
+  it("modo admin no comprable si stock es 0", () => {
+    const bounds = resolveProductPurchaseBounds({
+      productType: "package",
+      itemsPerPackage: 4,
+      stockTotalBaseUnits: 0,
+      purchaseMinQuantity: 10,
+      purchaseMaxQuantity: 100,
+      mode: "admin",
+    });
+
+    expect(bounds).toEqual({
+      minQuantity: 1,
+      maxQuantity: 1,
+      purchasable: false,
+    });
+  });
 });
 
 describe("clampProductPurchaseQuantity", () => {

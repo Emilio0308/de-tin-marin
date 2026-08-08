@@ -133,8 +133,12 @@ const labels: OrderFormLabels = {
   surpriseQuantityHint: "Número de sorpresas a pedir.",
   combo: "Combo",
   selectCombo: "Seleccionar combo…",
+  selectComboFirst: "Selecciona un combo para agregarlo.",
   addCombo: "Agregar combo",
   comboLine: "Combo",
+  packOutOfStock: (available) =>
+    `Sin stock para armar el combo (disponible ${available}).`,
+  packStockShortages: (names) => `Productos sin stock: ${names}.`,
 };
 
 const baseProduct = {
@@ -200,12 +204,12 @@ describe("OrderForm", () => {
     expect(screen.getByRole("button", { name: "Crear orden" })).toBeDisabled();
   });
 
-  it("shows product minimum quantity hint when a product is selected", () => {
+  it("shows product quantity bounds by stock when a product is selected", () => {
     renderForm();
 
     fireEvent.click(screen.getByText("pick-product"));
 
-    expect(screen.getByText("Mín. 10 · Máx. 100")).toBeInTheDocument();
+    expect(screen.getByText("Mín. 1 · Máx. 100")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Agregar producto" }),
     ).toBeEnabled();

@@ -27,7 +27,9 @@ import {
 } from "./order-form-bundle.helpers";
 import type { CartCompositionItem } from "./order-form-cart-lines";
 import {
+  clampOrderFormPackQuantity,
   mergeOrAddProductLine,
+  resolveOrderFormPackBounds,
   updateProductLineQuantity,
 } from "./order-form-product.helpers";
 import {
@@ -181,8 +183,11 @@ export function OrderFormContainer() {
       surpriseQuantityHint: t("form.surpriseQuantityHint"),
       combo: t("form.combo"),
       selectCombo: t("form.selectCombo"),
+      selectComboFirst: t("form.selectComboFirst"),
       addCombo: t("form.addCombo"),
       comboLine: t("form.comboLine"),
+      packOutOfStock: (available) => t("form.packOutOfStock", { available }),
+      packStockShortages: (names) => t("form.packStockShortages", { names }),
     }),
     [t],
   );
@@ -264,6 +269,8 @@ export function OrderFormContainer() {
         name: pack.name,
         sku: pack.sku,
         finalPrice: pack.finalPrice,
+        availableQuantity: pack.availableQuantity,
+        stockShortages: pack.stockShortages,
         purchaseMinQuantity: pack.purchaseMinQuantity,
         purchaseMaxQuantity: pack.purchaseMaxQuantity,
         itemCount: pack.itemCount,
@@ -508,10 +515,9 @@ export function OrderFormContainer() {
   function handleAddPackLine(packId: string, quantity: number) {
     const pack = packOptions.find((item) => item.id === packId);
     if (!pack) return;
-    const qty = Math.min(
-      Math.max(quantity, pack.purchaseMinQuantity),
-      pack.purchaseMaxQuantity,
-    );
+    const bounds = resolveOrderFormPackBounds(pack);
+    if (!bounds.purchasable) return;
+    const qty = clampOrderFormPackQuantity(quantity, pack);
 
     void (async () => {
       await ensurePackDetails(packId);
