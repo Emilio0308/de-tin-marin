@@ -2,12 +2,15 @@
 
 import { MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { ABOUT_WHATSAPP_HREF } from "@/modules/about/data/about.data";
 
-export function HelpFab() {
+type HelpFabProps = {
+  whatsappHref: string;
+};
+
+export function HelpFab({ whatsappHref }: HelpFabProps) {
   const t = useTranslations("home.help");
   const label = t("label");
-  const href = `${ABOUT_WHATSAPP_HREF}?text=${encodeURIComponent(t("whatsappMessage"))}`;
+  const href = `${whatsappHref}?text=${encodeURIComponent(t("whatsappMessage"))}`;
 
   return (
     <a

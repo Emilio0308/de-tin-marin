@@ -321,13 +321,26 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 **Depends on:** S1F ✅, S2A ✅, S3A-05 ✅
 
+### S4-05 — Contacto e instrucciones de pago dinámicas ✅
+
+**Goal:** Staff mantiene una única configuración pública de contacto, Yape y
+transferencia; ecommerce la consume sin valores de cobro hardcodeados.
+
+- [x] Migración `00026_public_business_settings.sql` + pgTAP de RLS/singleton
+- [x] Admin `/business-settings`, actions staff y validación compartida
+- [x] Ecommerce: FAB WhatsApp, páginas legales/Nosotros y confirmación/lookup
+      de pedidos pendientes
+- [x] DTO allowlist público + caché React Query de 5 min
+
+**Depends on:** S2C ✅, S3A-04 ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)
 - Users / roles
 - Notifications
 - Más reports (ventas, PDF, métricas)
-- Settings (otros)
+- Settings (otros; contacto y pagos dinámicos ya implementados)
 - Inventory v2 (ledger movimientos)
 - Cupones, VIP, pasarela de pagos (epoch posterior)
 

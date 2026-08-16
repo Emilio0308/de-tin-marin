@@ -53,6 +53,7 @@
     "bundles": "Sorpresas",
     "packs": "Combos",
     "delivery": "Delivery",
+    "businessSettings": "Contacto y pagos",
     "webCustomization": "Personalización web",
     "orders": "Órdenes",
     "brand": "De Tin Marín",
@@ -984,6 +985,35 @@
       "missingImage": "Elige una imagen antes de guardar",
       "uploadFailed": "No se pudo subir la imagen a S3",
       "default": "No se pudo guardar la imagen"
+    }
+  },
+  "businessSettings": {
+    "title": "Contacto y pagos",
+    "subtitle": "Datos públicos que ve la tienda: WhatsApp, correo e instrucciones de pago",
+    "loading": "Cargando configuración…",
+    "loadError": "No pudimos cargar la configuración de contacto y pagos.",
+    "sectionContact": "Contacto",
+    "sectionPayments": "Datos de pago",
+    "whatsappE164": "WhatsApp (E.164)",
+    "whatsappHint": "Solo dígitos, con código de país. Ejemplo: 51980966238",
+    "email": "Correo de contacto",
+    "emailHint": "Se muestra en términos, privacidad y nosotros",
+    "yapePhone": "Número Yape",
+    "yapePhoneHint": "Móvil peruano de 9 dígitos. No es el mismo que WhatsApp",
+    "yapeHolderName": "Titular Yape",
+    "bankName": "Banco",
+    "bankAccountHolderName": "Titular de la cuenta",
+    "bankAccountNumber": "Número de cuenta",
+    "bankAccountNumberHint": "Se muestra tal cual al cliente",
+    "bankInterbankAccountNumber": "CCI (cuenta interbancaria)",
+    "bankInterbankAccountNumberHint": "Exactamente 20 dígitos",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Configuración guardada",
+    "infoTip": "Los cambios se reflejan de inmediato en la tienda para pedidos pendientes de pago y páginas de contacto.",
+    "errors": {
+      "validation": "Revisa los campos del formulario",
+      "default": "No se pudo guardar la configuración"
     }
   }
 }

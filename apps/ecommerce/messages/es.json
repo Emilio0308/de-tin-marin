@@ -300,7 +300,7 @@
       "yapeLabel": "Yape",
       "transferLabel": "Transferencia bancaria",
       "yape": "Yape al número {phone} a nombre de {holder}.",
-      "transfer": "Transferencia {bank} — cuenta {account} ({holder}).",
+      "transfer": "Transferencia {bank} — cuenta {account} · CCI {cci} ({holder}).",
       "note": "Envía el voucher por WhatsApp indicando tu número de pedido. Confirmaremos tu pago en breve."
     }
   },

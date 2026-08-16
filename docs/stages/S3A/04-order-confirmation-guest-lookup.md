@@ -13,7 +13,7 @@
 
 - S3A-3 crea orden guest y redirige a confirmación con `orderNumber` + `email`.
 - Sin auth S4: consulta pedido por **email + número de orden** (no exponer todas las órdenes).
-- Pago v1 manual: pantalla con instrucciones Yape/transferencia solo si `status === pending_payment`.
+- Pago v1 manual: pantalla con instrucciones Yape/transferencia solo si `status === pending_payment`; datos dinámicos de `core.public_business_settings`.
 - RLS guest no permite `SELECT` libre → RPC **`commerce.get_guest_order(p_order_number, p_email)`** SECURITY DEFINER.
 
 ## Objetivo
@@ -32,6 +32,9 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
 - Limpiar carrito localStorage tras `createGuestOrder` exitoso (antes de redirigir a confirmación)
 - Nav textual “Mis pedidos” en barra principal + icono usuario
 - i18n — confirmación, instrucciones pago, estados orden, errores “no encontrado”
+- `getPublicBusinessSettingsAction` + TanStack Query para las instrucciones:
+  teléfono/titular Yape y banco/titular/cuenta/CCI. El texto de etiquetas
+  sigue en i18n; los datos de cobro no se hardcodean.
 - Vitest — parser DTO guest order
 - Playwright — `guest-order-lookup-smoke.spec.ts`: crear orden (fixture o UI) + consultar en mis-pedidos
 
@@ -105,7 +108,9 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
 
 ## Preguntas abiertas
 
-- **Texto instrucciones pago:** hardcode i18n v1; mover a `core.settings` en S4 si se desea.
+- **Instrucciones de pago:** resuelto con `core.public_business_settings`
+  (migración `00026`), no `core.settings`. Los datos se leen en vivo y no se
+  incluyen en el snapshot de la orden.
 
 ## Depends on
 

@@ -85,7 +85,7 @@ const defaultLabels = {
     transferLabel: "Transferencia bancaria",
     yape: "Yape al número 999 888 777 a nombre de De Tin Marín.",
     transfer:
-      "Transferencia BCP — cuenta 191-12345678-0-12 (De Tin Marín SAC).",
+      "Transferencia BCP — cuenta 191-12345678-0-12 · CCI 00219100123456789012 (De Tin Marín SAC).",
     note: "Envía el voucher",
   },
 };

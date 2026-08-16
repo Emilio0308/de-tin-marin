@@ -741,6 +741,48 @@ export type Database = {
         }
         Relationships: []
       }
+      public_business_settings: {
+        Row: {
+          bank_account_holder_name: string
+          bank_account_number: string
+          bank_interbank_account_number: string
+          bank_name: string
+          email: string
+          id: string
+          singleton_key: string
+          updated_at: string
+          whatsapp_e164: string
+          yape_holder_name: string
+          yape_phone: string
+        }
+        Insert: {
+          bank_account_holder_name: string
+          bank_account_number: string
+          bank_interbank_account_number: string
+          bank_name: string
+          email: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+          whatsapp_e164: string
+          yape_holder_name: string
+          yape_phone: string
+        }
+        Update: {
+          bank_account_holder_name?: string
+          bank_account_number?: string
+          bank_interbank_account_number?: string
+          bank_name?: string
+          email?: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+          whatsapp_e164?: string
+          yape_holder_name?: string
+          yape_phone?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

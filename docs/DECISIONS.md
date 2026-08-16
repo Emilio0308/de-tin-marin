@@ -44,6 +44,24 @@
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 | 37 | Logging server (consola) | ✅ | Observabilidad v1 = **solo stdout/stderr** vía **`@de-tin-marin/logging`** (JSON una línea). `createServerErrorHelpers({ app, includeUnexpectedMessage })` en shims de app. `guardAction` / `withOperation` + `logServerError` / `Info` / `Warn` + `safeMeta` (redact PII/secrets). Metadata = resumen (IDs, conteos, códigos); nunca payloads crudos. Admin puede devolver `message` en `UNEXPECTED`; ecommerce no. Detalle: `rules/40-validation-and-boundaries.md` · `packages/logging/README.md` |
+| 38 | Contacto y cobro público dinámico | ✅ | Singleton `core.public_business_settings`: WhatsApp/email + instrucciones Yape/transferencia. Staff actualiza; `SELECT` público deliberado para storefront. Ecommerce usa DTO allowlist validado, no valores hardcodeados. Las instrucciones de órdenes `pending_payment` se leen al visualizarse, no se congelan en `orders` ni confirman pagos. Migración `00026`; Regla 27 |
+
+## Docs sincronizados (2026-08-16 — contacto y pagos dinámicos)
+
+- Nueva fuente única: `core.public_business_settings` (singleton `default`),
+  con WhatsApp E.164, email, Yape/titular y banco/titular/cuenta/CCI.
+  Migración `00026` inserta la fila inicial, valida formato y habilita RLS:
+  lectura pública; actualización solo `core.is_staff()`.
+- Admin `/business-settings` actualiza con `requireStaff` y
+  `businessSettingsSchema`; no crea/elimina filas.
+- Ecommerce recibe `PublicBusinessSettings` como DTO allowlist validado:
+  Help FAB, Nosotros, Términos, Privacidad y las instrucciones de órdenes
+  guest `pending_payment`. Query key pública y `staleTime` de cinco minutos.
+- Instrucciones visibles ≠ pago confirmado: no escriben `payments`, no cambian
+  `payment_status`, no descuentan stock y no se incluyen en el snapshot de
+  una orden.
+- Docs: `database.md`, `orders.md`, Regla 17/27, S3A-04, roadmap y READMEs de
+  los módulos admin/ecommerce.
 
 ## Docs sincronizados (2026-08-15 — cantidad de sorpresa ecommerce)
 

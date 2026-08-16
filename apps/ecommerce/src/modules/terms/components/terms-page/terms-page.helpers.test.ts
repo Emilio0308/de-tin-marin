@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { TERMS_CONTENT } from "@/modules/terms/data/terms.data";
-import { getTermsTocItems, termsSectionHref } from "./terms-page.helpers";
+import { TERMS_SECTIONS } from "@/modules/terms/data/terms.data";
+import { getTermsTocItems } from "./terms-page.helpers";
 
-describe("terms-page.helpers", () => {
-  it("arma el TOC con anclas por sección", () => {
-    const toc = getTermsTocItems(TERMS_CONTENT.sections);
+describe("getTermsTocItems", () => {
+  it("arma el índice con un item por sección", () => {
+    const toc = getTermsTocItems(TERMS_SECTIONS);
 
-    expect(toc).toHaveLength(TERMS_CONTENT.sections.length);
+    expect(toc).toHaveLength(TERMS_SECTIONS.length);
     expect(toc[0]).toEqual({
-      id: "about",
-      title: "1. Sobre De Tin Marín",
-      href: "#about",
+      id: TERMS_SECTIONS[0]?.id,
+      title: TERMS_SECTIONS[0]?.title,
+      href: `#${TERMS_SECTIONS[0]?.id}`,
     });
-    expect(termsSectionHref("contact")).toBe("#contact");
   });
 });

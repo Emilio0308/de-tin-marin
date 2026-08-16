@@ -80,14 +80,15 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 ### Schema `core`
 
-| Tabla                | Descripción                                       |
-| -------------------- | ------------------------------------------------- |
-| `core.profiles`      | Perfil extendido de auth.users                    |
-| `core.user_roles`    | Rol staff: `admin` \| `super_admin`               |
-| `core.settings`      | Configuración global key-value                    |
-| `core.audit_log`     | Auditoría de acciones sensibles                   |
-| `core.hero_settings` | Singleton modo hero home (`static` \| `carousel`) |
-| `core.hero_images`   | Slides del hero (URL, orden, vigencia)            |
+| Tabla                           | Descripción                                         |
+| ------------------------------- | --------------------------------------------------- |
+| `core.profiles`                 | Perfil extendido de auth.users                      |
+| `core.user_roles`               | Rol staff: `admin` \| `super_admin`                 |
+| `core.settings`                 | Configuración global key-value                      |
+| `core.audit_log`                | Auditoría de acciones sensibles                     |
+| `core.hero_settings`            | Singleton modo hero home (`static` \| `carousel`)   |
+| `core.hero_images`              | Slides del hero (URL, orden, vigencia)              |
+| `core.public_business_settings` | Singleton contacto + instrucciones de pago públicas |
 
 **`core.hero_settings`** (singleton, `singleton_key = 'default'`):
 
@@ -109,6 +110,36 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `deleted_at` | timestamptz | Soft-delete                                 |
 
 Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**, no solo en RLS. Imágenes hero: **aspecto cuadrado 1:1** (±2 %), lado ≥ 600 px (validación admin). Folder S3: `hero/`.
+
+**`core.public_business_settings`** (singleton, `singleton_key = 'default'`;
+migración `00026_public_business_settings.sql`):
+
+| Columna                         | Tipo        | Notas                               |
+| ------------------------------- | ----------- | ----------------------------------- |
+| `id`                            | uuid        | PK                                  |
+| `singleton_key`                 | text unique | Solo `'default'`                    |
+| `whatsapp_e164`                 | text        | E.164 sin `+` (ej. `51980966238`)   |
+| `email`                         | text        | Correo de contacto público          |
+| `yape_phone`                    | text        | Móvil Yape `9XXXXXXXX` (≠ WhatsApp) |
+| `yape_holder_name`              | text        | Titular Yape                        |
+| `bank_name`                     | text        | Banco (ej. BCP)                     |
+| `bank_account_holder_name`      | text        | Titular de la cuenta                |
+| `bank_account_number`           | text        | Número de cuenta (texto libre)      |
+| `bank_interbank_account_number` | text        | CCI — 20 dígitos                    |
+| `updated_at`                    | timestamptz |                                     |
+
+Checks SQL: WhatsApp E.164 de 11–15 dígitos sin `+`, email con `@`, Yape
+`9XXXXXXXX` y CCI de 20 dígitos. La capa Zod mantiene la misma semántica y
+acota nombres, banco y cuenta.
+
+**Acceso/RLS:** `SELECT` público (`anon`, `authenticated`) porque WhatsApp,
+email e instrucciones de cobro se muestran en tienda. `UPDATE` solo
+`core.is_staff()` y no hay policy de `INSERT`/`DELETE`: la migración crea la
+única fila `singleton_key = 'default'`. No reutilizar `core.settings`
+(key-value staff-only).
+
+Es información **pública operativa**: no guardar secretos, tokens de pasarela
+ni credenciales bancarias fuera de los datos que se muestran al cliente.
 
 ### Schema `catalog`
 
@@ -381,20 +412,21 @@ erDiagram
 
 ## RLS (postura resumida)
 
-| Tabla                          | Lectura                       | Escritura                   |
-| ------------------------------ | ----------------------------- | --------------------------- |
-| `catalog.products` activos     | Público                       | Staff                       |
-| `catalog.surprise_containers`  | Público activos               | Staff                       |
-| `catalog.packs` / `pack_items` | Público activos               | Staff                       |
-| `pricing.campaigns`            | Público (SELECT)              | Staff                       |
-| `pricing.delivery_zones`       | Público activos               | Staff                       |
-| `pricing.delivery_settings`    | Público                       | Staff (update)              |
-| `core.hero_settings`           | Público                       | Staff (update)              |
-| `core.hero_images`             | Público (no deleted)          | Staff                       |
-| `catalog.catalog_cache_meta`   | Público                       | Staff (update / bump RPC)   |
-| `commerce.orders`              | Cliente propias / staff todas | Server + staff              |
-| `commerce.payments`            | Staff                         | Staff (confirmación manual) |
-| `commerce.shipments`           | Staff                         | Staff                       |
+| Tabla                           | Lectura                       | Escritura                   |
+| ------------------------------- | ----------------------------- | --------------------------- |
+| `catalog.products` activos      | Público                       | Staff                       |
+| `catalog.surprise_containers`   | Público activos               | Staff                       |
+| `catalog.packs` / `pack_items`  | Público activos               | Staff                       |
+| `pricing.campaigns`             | Público (SELECT)              | Staff                       |
+| `pricing.delivery_zones`        | Público activos               | Staff                       |
+| `pricing.delivery_settings`     | Público                       | Staff (update)              |
+| `core.hero_settings`            | Público                       | Staff (update)              |
+| `core.public_business_settings` | Público                       | Staff (update)              |
+| `core.hero_images`              | Público (no deleted)          | Staff                       |
+| `catalog.catalog_cache_meta`    | Público                       | Staff (update / bump RPC)   |
+| `commerce.orders`               | Cliente propias / staff todas | Server + staff              |
+| `commerce.payments`             | Staff                         | Staff (confirmación manual) |
+| `commerce.shipments`            | Staff                         | Staff                       |
 
 ---
 

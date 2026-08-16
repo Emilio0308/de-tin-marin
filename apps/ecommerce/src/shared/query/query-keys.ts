@@ -23,6 +23,10 @@ export const queryKeys = {
     all: ["home"] as const,
     hero: () => [...queryKeys.home.all, "hero"] as const,
   },
+  businessSettings: {
+    all: ["business-settings"] as const,
+    public: () => [...queryKeys.businessSettings.all, "public"] as const,
+  },
   cart: {
     all: ["cart"] as const,
     current: () => [...queryKeys.cart.all, "current"] as const,

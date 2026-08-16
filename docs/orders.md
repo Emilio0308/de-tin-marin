@@ -287,6 +287,28 @@ Sin pasarela. El operador en admin:
 
 Ver Reglas 17–18. Reversión de stock en reembolso: manual (Regla 18).
 
+### Instrucciones de pago dinámicas (ecommerce)
+
+Mientras una orden guest esté en `pending_payment`, las páginas de
+confirmación y consulta muestran instrucciones construidas desde
+`core.public_business_settings`:
+
+- Yape: teléfono y titular.
+- Transferencia: banco, titular, número de cuenta y CCI.
+- La fuente también abastece WhatsApp/email de contacto en el FAB de ayuda,
+  Nosotros, Términos y Privacidad.
+
+El DTO público es una allowlist (`PublicBusinessSettings`) validada con
+`@de-tin-marin/validations/business-settings`; no se expone una fila cruda.
+La confirmación obtiene la configuración mediante React Query con
+`queryKeys.businessSettings.public()` y `staleTime` de 5 min. El contenido se
+lee al mostrar la página: **no se snapshottea en la orden**. Por eso una
+actualización staff puede cambiar las instrucciones visibles de órdenes
+pendientes ya creadas.
+
+Ver instrucciones no registra un pago, no altera `payment_status` y no
+sustituye la confirmación manual/admin + RPC atómica de stock.
+
 ## DTO de respuesta
 
 ```typescript

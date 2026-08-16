@@ -1,12 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import {
-  PRIVACY_CONTENT,
-  PRIVACY_EMAIL,
-  PRIVACY_EMAIL_HREF,
-  PRIVACY_WHATSAPP_HREF,
-} from "@/modules/privacy/data/privacy.data";
+import { buildPrivacyContent } from "@/modules/privacy/data/privacy.data";
 import { PrivacyPage } from "./privacy-page";
+
+const PRIVACY_CONTENT = buildPrivacyContent({
+  email: "detinmarindulcesyconfiteria@gmail.com",
+  emailHref: "mailto:detinmarindulcesyconfiteria@gmail.com",
+  whatsappDisplay: "+51 980 966 238",
+  whatsappHref: "https://wa.me/51980966238",
+});
 
 vi.mock(
   "@/modules/home/components/storefront-layout/storefront-layout",
@@ -64,13 +66,21 @@ describe("PrivacyPage", () => {
       screen.getByRole("navigation", { name: "Contenido" }),
     ).toBeInTheDocument();
 
-    const emailLinks = screen.getAllByRole("link", { name: PRIVACY_EMAIL });
+    const emailLinks = screen.getAllByRole("link", {
+      name: PRIVACY_CONTENT.contact.email,
+    });
     expect(emailLinks.length).toBeGreaterThan(0);
-    expect(emailLinks[0]).toHaveAttribute("href", PRIVACY_EMAIL_HREF);
+    expect(emailLinks[0]).toHaveAttribute(
+      "href",
+      PRIVACY_CONTENT.contact.emailHref,
+    );
 
     const whatsapp = screen.getAllByRole("link", {
       name: PRIVACY_CONTENT.contact.whatsappDisplay,
     });
-    expect(whatsapp[0]).toHaveAttribute("href", PRIVACY_WHATSAPP_HREF);
+    expect(whatsapp[0]).toHaveAttribute(
+      "href",
+      PRIVACY_CONTENT.contact.whatsappHref,
+    );
   });
 });

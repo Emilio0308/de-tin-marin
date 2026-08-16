@@ -181,6 +181,10 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 - **Trigger:** Operador registra pago en admin.
 - **Pasos:** Insertar/actualizar `commerce.payments` (`status = confirmed`, `confirmed_by`, `notes`) → transicionar orden a `paid` → disparar Regla 15.
+- **Instrucciones al cliente:** ecommerce lee Yape/transferencia desde
+  `core.public_business_settings` mientras la orden está `pending_payment`.
+  Son datos de contacto/cobro públicos y dinámicos; mostrarlos **no** crea una
+  fila `payments`, no confirma el pago ni reserva stock.
 - **Fallo:** No confirmar `paid` sin registro en `payments`.
 
 ### Regla 18 — Reembolso manual
@@ -283,6 +287,29 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ---
 
+## Settings públicos
+
+### Regla 27 — Contacto e instrucciones de pago
+
+- **Trigger:** Staff modifica `/business-settings`; ecommerce muestra contacto
+  o una orden guest queda pendiente de pago.
+- **Pasos:**
+  1. Fuente única: singleton `core.public_business_settings` con
+     `singleton_key = 'default'`.
+  2. Staff actualiza mediante Server Action autenticada/autorizada + Zod:
+     WhatsApp E.164, email, Yape/titular y banco/titular/cuenta/CCI.
+  3. Ecommerce consume solo `PublicBusinessSettings` (allowlist validada):
+     FAB WhatsApp, Nosotros, Términos, Privacidad y las instrucciones de
+     confirmación/lookup cuando `status = pending_payment`.
+  4. Las instrucciones no se guardan en `orders`, `payment_methods` ni
+     `commerce.payments`; son vigentes al momento de visualizarse.
+- **RLS:** `SELECT` público deliberado; `UPDATE` solo staff. No hay
+  `INSERT`/`DELETE` público para preservar el singleton.
+- **Fallo:** Rechazar configuración inválida; no renderizar ni fabricar datos
+  estáticos si la configuración pública no está disponible.
+
+---
+
 ## Futuro (v2 — no implementar en v1)
 
 | ID  | Tema                           |
@@ -308,3 +335,4 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 21    | Products           | Min/max compra por presentación (default 10/100)                   |
 | 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
 | 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
+| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
