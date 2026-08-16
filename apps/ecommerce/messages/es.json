@@ -311,13 +311,22 @@
     "hero": {
       "titlePrefix": "¡Endulza cada ",
       "titleHighlight": "sorpresa!",
-      "description": "Creamos despertares mágicos con los dulces más deliciosos y regalos personalizados que roban sonrisas. El toque perfecto para cada cumpleaños.",
+      "description": "Dulces y regalos personalizados para celebrar, agradecer o simplemente sacar una sonrisa.",
       "ctaSurprises": "Ver sorpresas",
       "ctaProducts": "Ver dulces",
+      "benefits": {
+        "personalized": "Personalizable",
+        "delivery": "Entrega en Piura",
+        "readyToGift": "Listo para regalar"
+      },
       "imageAlt": "Caja de regalo de cumpleaños repleta de dulces artesanales y chocolates de colores",
       "favoriteKit": "Kit Favorito",
       "carouselPrev": "Imagen anterior",
-      "carouselNext": "Imagen siguiente"
+      "carouselNext": "Imagen siguiente",
+      "carouselPause": "Pausar carrusel",
+      "carouselResume": "Reanudar carrusel",
+      "carouselLabel": "Promociones destacadas",
+      "carouselSlide": "Ir a imagen {index} de {total}"
     },
     "help": {
       "label": "¿Necesitas ayuda?",

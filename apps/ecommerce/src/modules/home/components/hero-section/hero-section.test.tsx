@@ -13,6 +13,11 @@ const defaultProps = {
   description: "Descripción del hero.",
   ctaSurprises: "Ver sorpresas",
   ctaProducts: "Ver dulces",
+  benefits: ["Personalizable", "Entrega en Piura", "Listo para regalar"] as [
+    string,
+    string,
+    string,
+  ],
   imageAlt: "Caja de regalo con dulces",
   favoriteKit: "Kit Favorito",
   displayMode: "static" as const,
@@ -24,6 +29,11 @@ const defaultProps = {
   ],
   prevLabel: "Anterior",
   nextLabel: "Siguiente",
+  pauseLabel: "Pausar carrusel",
+  resumeLabel: "Reanudar carrusel",
+  carouselLabel: "Promociones destacadas",
+  slideLabel: (index: number, total: number) =>
+    `Ir a imagen ${index} de ${total}`,
 };
 
 describe("HeroSection", () => {
@@ -59,6 +69,12 @@ describe("HeroSection", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /siguiente/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /pausar carrusel/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /ir a imagen 2 de 2/i }),
     ).toBeInTheDocument();
   });
 });

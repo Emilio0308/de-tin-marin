@@ -30,12 +30,12 @@ export function SiteHeader({
   const renderLinks = (mobile = false) =>
     navLinks.map((link, index) => {
       const className = cn(
-        "font-label transition-colors duration-300",
+        "font-label focus-visible:ring-primary rounded-full transition-[color,transform,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2",
         mobile
-          ? "block py-3 text-lg"
-          : "text-label-bold hover:text-secondary hover:scale-105",
+          ? "block px-3 py-3 text-lg"
+          : "text-label-bold px-2 py-1.5 hover:bg-primary-fixed/40 hover:text-secondary",
         index === activeIndex && activeIndex >= 0
-          ? "text-primary font-bold"
+          ? "bg-primary-fixed/50 text-primary font-bold"
           : "text-on-surface-variant",
       );
 
@@ -71,20 +71,23 @@ export function SiteHeader({
     <>
       <header
         className={cn(
-          "bg-background/90 fixed top-0 z-50 w-full shadow-sm backdrop-blur-md transition-all duration-300",
+          "bg-background/90 border-outline-variant/15 fixed top-0 z-50 w-full border-b backdrop-blur-md transition-all duration-300",
           scrolled ? "py-1" : "py-base",
         )}
       >
         <div className="container-max flex h-20 items-center px-4">
           {/* Logo */}
-          <Link href="/" className="relative flex h-14 shrink-0 items-center">
+          <Link
+            href="/"
+            className="focus-visible:ring-primary relative flex h-16 shrink-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2"
+          >
             <Image
               src="/brand/detinmarin-logo.png"
               alt="De Tin Marín"
-              width={160}
-              height={56}
+              width={180}
+              height={64}
               priority
-              className="h-12 w-auto object-contain md:h-14"
+              className="h-14 w-auto object-contain md:h-16"
             />
           </Link>
 
@@ -115,7 +118,7 @@ export function SiteHeader({
             <Link
               href="/carrito"
               aria-label="Carrito"
-              className="text-primary relative p-2 transition hover:scale-105"
+              className="text-primary hover:bg-primary-fixed/50 focus-visible:ring-primary relative flex h-11 w-11 items-center justify-center rounded-full transition-[transform,background-color] duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2"
             >
               <ShoppingCart className="h-6 w-6" />
 
@@ -130,7 +133,7 @@ export function SiteHeader({
             <Link
               href="/mis-pedidos"
               aria-label="Mis pedidos"
-              className="text-primary hidden p-2 transition hover:scale-105 lg:block"
+              className="text-primary hover:bg-primary-fixed/50 focus-visible:ring-primary hidden h-11 w-11 items-center justify-center rounded-full transition-[transform,background-color] duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 lg:flex"
             >
               <User className="h-6 w-6" />
             </Link>
@@ -139,7 +142,7 @@ export function SiteHeader({
             <button
               aria-label="Abrir menú"
               onClick={() => setMobileMenuOpen(true)}
-              className="text-primary p-2 transition hover:scale-105 lg:hidden"
+              className="text-primary hover:bg-primary-fixed/50 focus-visible:ring-primary flex h-11 w-11 items-center justify-center rounded-full transition-[transform,background-color] duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 lg:hidden"
             >
               <Menu className="h-7 w-7" />
             </button>
@@ -155,13 +158,17 @@ export function SiteHeader({
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          <aside className="bg-background fixed right-0 top-0 z-50 flex h-full w-72 flex-col shadow-xl lg:hidden">
+          <aside
+            aria-label="Menú principal"
+            className="bg-background fixed right-0 top-0 z-50 flex h-full w-72 flex-col shadow-xl lg:hidden"
+          >
             <div className="flex items-center justify-between border-b p-4">
               <span className="text-lg font-bold">Menú</span>
 
               <button
                 aria-label="Cerrar menú"
                 onClick={() => setMobileMenuOpen(false)}
+                className="text-primary hover:bg-primary-fixed/50 focus-visible:ring-primary flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2"
               >
                 <X className="h-6 w-6" />
               </button>

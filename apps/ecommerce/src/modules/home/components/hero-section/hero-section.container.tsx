@@ -37,12 +37,21 @@ export function HeroSectionContainer() {
       description={t("description")}
       ctaSurprises={t("ctaSurprises")}
       ctaProducts={t("ctaProducts")}
+      benefits={[
+        t("benefits.personalized"),
+        t("benefits.delivery"),
+        t("benefits.readyToGift"),
+      ]}
       imageAlt={t("imageAlt")}
       favoriteKit={t("favoriteKit")}
       displayMode={displayMode}
       slides={slides}
       prevLabel={t("carouselPrev")}
       nextLabel={t("carouselNext")}
+      pauseLabel={t("carouselPause")}
+      resumeLabel={t("carouselResume")}
+      carouselLabel={t("carouselLabel")}
+      slideLabel={(index, total) => t("carouselSlide", { index, total })}
     />
   );
 }
