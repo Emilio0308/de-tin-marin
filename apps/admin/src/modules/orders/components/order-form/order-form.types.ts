@@ -265,6 +265,7 @@ export type OrderFormProps = {
   fieldErrors: OrderFormFieldErrors;
   labels: OrderFormLabels;
   onChange: (values: OrderFormValues) => void;
+  onFieldBlur: (path: string) => void;
   onEnsureProductOption: (product: ProductOption) => void;
   onAddProductLine: (
     productId: string,

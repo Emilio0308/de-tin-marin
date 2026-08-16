@@ -15,6 +15,9 @@ export type GuestOrderLookupPageProps = {
   labels: {
     title: string;
     subtitle: string;
+    lookupTitle: string;
+    lookupHint: string;
+    secureNote: string;
     orderNumber: string;
     email: string;
     submit: string;

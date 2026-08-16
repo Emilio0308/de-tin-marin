@@ -8,9 +8,12 @@ type StorefrontLayoutProps = {
 
 export function StorefrontLayout({ children }: StorefrontLayoutProps) {
   return (
-    <div id="top" className="bg-background text-on-surface">
+    <div
+      id="top"
+      className="bg-background text-on-surface flex min-h-dvh flex-col"
+    >
       <SiteHeaderContainer />
-      <main className="pt-storefront-header">{children}</main>
+      <main className="pt-storefront-header flex-1">{children}</main>
       <SiteFooter />
       <HelpFab />
     </div>

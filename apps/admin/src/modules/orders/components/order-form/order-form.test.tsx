@@ -187,6 +187,7 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       fieldErrors={{}}
       labels={labels}
       onChange={vi.fn()}
+      onFieldBlur={vi.fn()}
       onEnsureProductOption={vi.fn()}
       onAddProductLine={vi.fn()}
       onUpdateProductLineQuantity={vi.fn()}

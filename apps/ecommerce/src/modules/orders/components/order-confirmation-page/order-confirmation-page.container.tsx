@@ -123,6 +123,12 @@ export function OrderConfirmationPageContainer() {
           packBadge: t("summary.packBadge"),
           bundleComponents: t("summary.bundleComponents"),
           packComponents: t("summary.packComponents"),
+          progressTitle: t("summary.progressTitle"),
+          orderPlaced: t("summary.orderPlaced"),
+          orderNumber: t("summary.orderNumber"),
+          dateLabel: t("summary.dateLabel"),
+          statusCurrent: t("summary.statusCurrent"),
+          paymentPendingHint: t("summary.paymentPendingHint"),
           formatBundlePersons: (count) => t("summary.bundlePersons", { count }),
           formatStatus: (status) =>
             resolveGuestOrderStatusLabel(status, statusLabels),

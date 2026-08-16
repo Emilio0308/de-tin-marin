@@ -19,7 +19,7 @@ function CartAtmosphere() {
         aria-hidden
       />
       <div
-        className="bg-secondary-fixed pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full opacity-30 blur-3xl"
+        className="bg-secondary-fixed pointer-events-none absolute -bottom-8 -left-16 h-48 w-48 rounded-full opacity-25 blur-3xl"
         aria-hidden
       />
       <div
@@ -432,7 +432,7 @@ export function CartPage({
   return (
     <StorefrontLayout>
       <section
-        className={`pt-stack-md md:pt-stack-lg relative overflow-hidden ${hasLines ? "md:pb-section-lg pb-40" : "pb-section-lg"}`}
+        className={`pt-stack-md md:pt-stack-lg relative overflow-hidden ${hasLines ? "md:pb-section-lg pb-40" : "pb-stack-lg md:pb-section-lg"}`}
       >
         <CartAtmosphere />
 
@@ -462,7 +462,7 @@ export function CartPage({
           </div>
 
           {!hasLines ? (
-            <div className="storefront-rise border-outline-variant/30 bg-surface-container-lowest soft-glow-pink mt-stack-lg rounded-4xl mx-auto max-w-lg border px-6 py-12 text-center sm:px-10">
+            <div className="storefront-rise border-outline-variant/30 bg-surface-container-lowest soft-glow-pink mt-stack-lg mb-stack-md rounded-4xl mx-auto max-w-lg border px-6 py-12 text-center sm:px-10">
               <div className="from-primary-fixed to-secondary-fixed bg-linear-to-br mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full">
                 <ShoppingBag
                   className="text-primary h-11 w-11"

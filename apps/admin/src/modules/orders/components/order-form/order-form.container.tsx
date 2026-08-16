@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -47,7 +47,15 @@ import {
   type OrderFormValues,
   type ProductOption,
 } from "./order-form.types";
-import { validateCreateOrderForm } from "../../helpers/order-form-validation";
+import {
+  mapOrderFormFieldErrorKeys,
+  sanitizeOrderFormValues,
+  validateCreateOrderField,
+  validateCreateOrderForm,
+  type CustomerDeliveryFieldPath,
+  type OrderFormFieldErrorKeys,
+  type OrderFormValidationKey,
+} from "../../helpers/order-form-validation";
 
 type PackDetailCache = {
   components: Array<{
@@ -58,42 +66,96 @@ type PackDetailCache = {
   composition: CartCompositionItem[];
 };
 
-function orderErrorMessage(result: {
-  error: string;
-  message?: string;
-}): string {
-  switch (result.error) {
-    case "VALIDATION":
-      return "Revisa los campos marcados del formulario";
-    case "PRODUCT_NOT_FOUND":
-      return "Uno o más productos no existen o están inactivos";
-    case "BUNDLE_NOT_FOUND":
-      return "La plantilla de sorpresa no existe o está inactiva";
-    case "PACK_NOT_FOUND":
-      return "El combo no existe o está inactivo";
-    case "DUPLICATE_PRODUCT_IN_BUNDLE":
-      return "No puedes repetir el mismo producto en una sorpresa";
-    case "INVALID_BUNDLE_CUSTOMIZATION":
-      return "La sorpresa no cumple el mínimo o máximo de dulces de la plantilla";
-    case "UNAUTHORIZED":
-      return "Tu sesión expiró. Inicia sesión de nuevo.";
-    case "FORBIDDEN":
-      return "No tienes permisos de administrador.";
-    default:
-      return result.message
-        ? `No se pudo crear la orden: ${result.message}`
-        : "No se pudo crear la orden";
+const ORDER_FORM_VALIDATION_KEYS = new Set<OrderFormValidationKey>([
+  "requiredName",
+  "requiredLastName",
+  "requiredPhone",
+  "invalidEmail",
+  "requiredDeliveryAddress",
+  "requiredRecipient",
+  "requiredLine1",
+  "requiredDistrict",
+  "requiredCity",
+  "requiredProvince",
+  "requiredDeliveryPhone",
+  "requiredLines",
+  "invalidName",
+  "tooShortName",
+  "invalidPhone",
+  "tooShortAddress",
+  "invalidField",
+  "reviewForm",
+]);
+
+function isOrderFormValidationKey(
+  value: string,
+): value is OrderFormValidationKey {
+  return ORDER_FORM_VALIDATION_KEYS.has(value as OrderFormValidationKey);
+}
+
+function toFieldErrorKeys(
+  value: Record<string, string>,
+): OrderFormFieldErrorKeys {
+  const keys: OrderFormFieldErrorKeys = {};
+  for (const [path, maybeKey] of Object.entries(value)) {
+    if (isOrderFormValidationKey(maybeKey)) {
+      keys[path] = maybeKey;
+    }
   }
+  return keys;
 }
 
 export function OrderFormContainer() {
   const router = useRouter();
   const t = useTranslations("orders");
   const tDashboard = useTranslations("dashboard.orderStatus");
+
+  function translateValidation(key: OrderFormValidationKey): string {
+    return t(`form.validation.${key}`);
+  }
+
+  function translateFieldErrors(
+    keys: OrderFormFieldErrorKeys,
+  ): OrderFormFieldErrors {
+    return mapOrderFormFieldErrorKeys(keys, translateValidation);
+  }
+
+  function orderErrorMessage(result: {
+    error: string;
+    message?: string;
+  }): string {
+    switch (result.error) {
+      case "VALIDATION":
+        return t("form.errors.validation");
+      case "PRODUCT_NOT_FOUND":
+        return t("form.errors.productNotFound");
+      case "BUNDLE_NOT_FOUND":
+        return t("form.errors.bundleNotFound");
+      case "PACK_NOT_FOUND":
+        return t("form.errors.packNotFound");
+      case "DUPLICATE_PRODUCT_IN_BUNDLE":
+        return t("form.errors.duplicateProductInBundle");
+      case "INVALID_BUNDLE_CUSTOMIZATION":
+        return t("form.errors.invalidBundleCustomization");
+      case "UNAUTHORIZED":
+        return t("form.errors.unauthorized");
+      case "FORBIDDEN":
+        return t("form.errors.forbidden");
+      default:
+        return result.message
+          ? t("form.errors.unexpectedWithMessage", {
+              message: result.message,
+            })
+          : t("form.errors.unexpected");
+    }
+  }
   const [values, setValues] = useState<OrderFormValues>(emptyOrderFormValues);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<OrderFormFieldErrors>({});
+  const touchedCustomerDeliveryFields = useRef(
+    new Set<CustomerDeliveryFieldPath>(),
+  );
   const [bundleDraft, setBundleDraft] = useState<OrderFormBundleDraft | null>(
     null,
   );
@@ -533,7 +595,7 @@ export function OrderFormContainer() {
 
     const result = await getPackAction(packId);
     if (!result.ok) {
-      setError("No se pudo cargar la composición del combo");
+      setError(t("form.loadPackCompositionError"));
       return null;
     }
 
@@ -592,7 +654,7 @@ export function OrderFormContainer() {
     try {
       const result = await getBundleAction(bundleId);
       if (!result.ok) {
-        setError("No se pudo cargar la plantilla de sorpresa");
+        setError(t("form.loadBundleTemplateError"));
         return;
       }
 
@@ -683,7 +745,7 @@ export function OrderFormContainer() {
     try {
       const result = await getBundleAction(bundleId);
       if (!result.ok) {
-        setError("No se pudo cargar la plantilla de sorpresa");
+        setError(t("form.loadBundleTemplateError"));
         return;
       }
 
@@ -724,9 +786,7 @@ export function OrderFormContainer() {
       );
       const validation = validateBundleCustomization(components, bounds);
       if (!validation.ok) {
-        setError(
-          "La plantilla de sorpresa no cumple las reglas de personalización",
-        );
+        setError(t("form.bundleTemplateInvalid"));
         return;
       }
 
@@ -766,7 +826,7 @@ export function OrderFormContainer() {
       maxProducts: bundleDraft.customizationMaxProducts,
     });
     if (!validation.ok) {
-      setError("La sorpresa no cumple las reglas de personalización");
+      setError(t("form.bundleCustomizationInvalid"));
       return;
     }
 
@@ -806,8 +866,8 @@ export function OrderFormContainer() {
   function handleSubmit() {
     const validation = validateCreateOrderForm(values);
     if (!validation.ok) {
-      setFieldErrors(validation.fieldErrors);
-      setError(validation.formError);
+      setFieldErrors(translateFieldErrors(validation.fieldErrorKeys));
+      setError(translateValidation(validation.formErrorKey));
       return;
     }
 
@@ -825,7 +885,9 @@ export function OrderFormContainer() {
             result.fieldErrors &&
             typeof result.fieldErrors === "object"
           ) {
-            setFieldErrors(result.fieldErrors);
+            setFieldErrors(
+              translateFieldErrors(toFieldErrorKeys(result.fieldErrors)),
+            );
           }
           setError(orderErrorMessage(result));
           return;
@@ -835,11 +897,43 @@ export function OrderFormContainer() {
           router.push(`/orders/${result.data.id}`);
         });
       } catch {
-        setError("No se pudo crear la orden");
+        setError(t("form.errors.unexpected"));
       } finally {
         setSubmitting(false);
       }
     })();
+  }
+
+  function updateTouchedFieldErrors(nextValues: OrderFormValues) {
+    if (touchedCustomerDeliveryFields.current.size === 0) return;
+
+    setFieldErrors((current) => {
+      const next = { ...current };
+      for (const path of touchedCustomerDeliveryFields.current) {
+        const key = validateCreateOrderField(nextValues, path);
+        if (key) {
+          next[path] = translateValidation(key);
+        } else {
+          delete next[path];
+        }
+      }
+      return next;
+    });
+  }
+
+  function handleCustomerDeliveryFieldBlur(path: CustomerDeliveryFieldPath) {
+    touchedCustomerDeliveryFields.current.add(path);
+    const key = validateCreateOrderField(values, path);
+
+    setFieldErrors((current) => {
+      const next = { ...current };
+      if (key) {
+        next[path] = translateValidation(key);
+      } else {
+        delete next[path];
+      }
+      return next;
+    });
   }
 
   if (
@@ -909,10 +1003,14 @@ export function OrderFormContainer() {
         fieldErrors={fieldErrors}
         labels={labels}
         onChange={(next) => {
-          setFieldErrors({});
+          const sanitized = sanitizeOrderFormValues(next);
           setError(null);
-          setValues(next);
+          setValues(sanitized);
+          updateTouchedFieldErrors(sanitized);
         }}
+        onFieldBlur={(path) =>
+          handleCustomerDeliveryFieldBlur(path as CustomerDeliveryFieldPath)
+        }
         onEnsureProductOption={handleEnsureProductOption}
         onAddProductLine={handleAddProductLine}
         onUpdateProductLineQuantity={handleUpdateProductLineQuantity}

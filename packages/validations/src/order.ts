@@ -7,12 +7,14 @@ export const orderContactSchema = z.object({
     .string()
     .trim()
     .min(1)
+    .min(2)
     .max(200)
     .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
   lastName: z
     .string()
     .trim()
     .min(1)
+    .min(2)
     .max(200)
     .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
   phone: z
@@ -23,11 +25,29 @@ export const orderContactSchema = z.object({
 });
 
 export const deliveryAddressSchema = z.object({
-  recipientName: z.string().trim().min(1).max(200),
-  line1: z.string().trim().min(1).max(300),
+  recipientName: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  line1: z.string().trim().min(1).min(5).max(300),
   district: z.string().trim().min(1).max(120),
-  city: z.string().trim().min(1).max(120),
-  province: z.string().trim().min(1).max(120),
+  city: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(120)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  province: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(120)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
   reference: z.string().max(500).optional().nullable(),
   phone: z
     .string()

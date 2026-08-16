@@ -273,7 +273,13 @@
       "packBadge": "Combo",
       "bundleComponents": "dulces",
       "packComponents": "productos",
-      "bundlePersons": "Para {count} personas"
+      "bundlePersons": "Para {count} personas",
+      "progressTitle": "Seguimiento del pedido",
+      "orderPlaced": "Pedido registrado",
+      "orderNumber": "Número de pedido",
+      "dateLabel": "Creado",
+      "statusCurrent": "Estado actual",
+      "paymentPendingHint": "Te avisaremos cuando confirmemos tu pago."
     },
     "status": {
       "pending_payment": "Pendiente de pago",
@@ -301,6 +307,9 @@
   "guestOrderLookup": {
     "title": "Mis pedidos",
     "subtitle": "Consulta tu pedido con el número de orden y el correo que usaste al comprar.",
+    "lookupTitle": "Seguimiento de pedido",
+    "lookupHint": "Ingresa los datos de tu confirmación",
+    "secureNote": "Solo usamos estos datos para mostrarte tu pedido.",
     "orderNumber": "Número de pedido",
     "email": "Correo electrónico",
     "submit": "Buscar pedido",

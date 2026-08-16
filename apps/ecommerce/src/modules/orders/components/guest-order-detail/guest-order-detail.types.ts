@@ -21,6 +21,12 @@ export type GuestOrderDetailLabels = {
   packBadge: string;
   bundleComponents: string;
   packComponents: string;
+  progressTitle: string;
+  orderPlaced: string;
+  orderNumber: string;
+  dateLabel: string;
+  statusCurrent: string;
+  paymentPendingHint: string;
   formatBundlePersons: (count: number) => string;
   formatStatus: (status: string) => string;
   formatPaymentStatus: (paymentStatus: string) => string;

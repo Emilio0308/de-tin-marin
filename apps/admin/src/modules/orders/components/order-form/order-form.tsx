@@ -122,6 +122,7 @@ export function OrderForm({
   fieldErrors,
   labels,
   onChange,
+  onFieldBlur,
   onEnsureProductOption,
   onAddProductLine,
   onUpdateProductLineQuantity,
@@ -259,12 +260,17 @@ export function OrderForm({
                 }
                 aria-invalid={Boolean(fieldErrors["contact.name"])}
                 value={values.contact.name}
+                autoComplete="given-name"
+                autoCapitalize="words"
+                spellCheck={false}
+                maxLength={200}
                 onChange={(event) =>
                   onChange({
                     ...values,
                     contact: { ...values.contact, name: event.target.value },
                   })
                 }
+                onBlur={() => onFieldBlur("contact.name")}
               />
             </Field>
             <Field
@@ -278,6 +284,10 @@ export function OrderForm({
                 }
                 aria-invalid={Boolean(fieldErrors["contact.lastName"])}
                 value={values.contact.lastName}
+                autoComplete="family-name"
+                autoCapitalize="words"
+                spellCheck={false}
+                maxLength={200}
                 onChange={(event) =>
                   onChange({
                     ...values,
@@ -287,6 +297,7 @@ export function OrderForm({
                     },
                   })
                 }
+                onBlur={() => onFieldBlur("contact.lastName")}
               />
             </Field>
             <Field label={labels.phone} error={fieldErrors["contact.phone"]}>
@@ -297,12 +308,18 @@ export function OrderForm({
                 }
                 aria-invalid={Boolean(fieldErrors["contact.phone"])}
                 value={values.contact.phone}
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                spellCheck={false}
+                maxLength={9}
                 onChange={(event) =>
                   onChange({
                     ...values,
                     contact: { ...values.contact, phone: event.target.value },
                   })
                 }
+                onBlur={() => onFieldBlur("contact.phone")}
               />
             </Field>
             <Field label={labels.email} error={fieldErrors["contact.email"]}>
@@ -314,12 +331,18 @@ export function OrderForm({
                 }
                 aria-invalid={Boolean(fieldErrors["contact.email"])}
                 value={values.contact.email}
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="off"
+                spellCheck={false}
+                maxLength={320}
                 onChange={(event) =>
                   onChange({
                     ...values,
                     contact: { ...values.contact, email: event.target.value },
                   })
                 }
+                onBlur={() => onFieldBlur("contact.email")}
               />
             </Field>
           </div>
@@ -371,6 +394,10 @@ export function OrderForm({
                     fieldErrors["fulfillment.deliveryAddress"],
                   )}
                   value={values.fulfillment.deliveryAddress.recipientName}
+                  autoComplete="name"
+                  autoCapitalize="words"
+                  spellCheck={false}
+                  maxLength={200}
                   onChange={(event) =>
                     onChange({
                       ...values,
@@ -382,6 +409,9 @@ export function OrderForm({
                         },
                       },
                     })
+                  }
+                  onBlur={() =>
+                    onFieldBlur("fulfillment.deliveryAddress.recipientName")
                   }
                 />
               </Field>
@@ -399,6 +429,11 @@ export function OrderForm({
                     fieldErrors["fulfillment.deliveryAddress.phone"],
                   )}
                   value={values.fulfillment.deliveryAddress.phone}
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  spellCheck={false}
+                  maxLength={9}
                   onChange={(event) =>
                     onChange({
                       ...values,
@@ -410,6 +445,9 @@ export function OrderForm({
                         },
                       },
                     })
+                  }
+                  onBlur={() =>
+                    onFieldBlur("fulfillment.deliveryAddress.phone")
                   }
                 />
               </Field>
@@ -428,6 +466,8 @@ export function OrderForm({
                       fieldErrors["fulfillment.deliveryAddress.line1"],
                     )}
                     value={values.fulfillment.deliveryAddress.line1}
+                    autoComplete="street-address"
+                    maxLength={300}
                     onChange={(event) =>
                       onChange({
                         ...values,
@@ -439,6 +479,9 @@ export function OrderForm({
                           },
                         },
                       })
+                    }
+                    onBlur={() =>
+                      onFieldBlur("fulfillment.deliveryAddress.line1")
                     }
                   />
                 </Field>
@@ -457,6 +500,7 @@ export function OrderForm({
                     fieldErrors["fulfillment.deliveryAddress.district"],
                   )}
                   value={values.fulfillment.deliveryAddress.district}
+                  autoComplete="address-level3"
                   onChange={(event) =>
                     onChange({
                       ...values,
@@ -468,6 +512,9 @@ export function OrderForm({
                         },
                       },
                     })
+                  }
+                  onBlur={() =>
+                    onFieldBlur("fulfillment.deliveryAddress.district")
                   }
                 >
                   <option value="">{labels.selectDistrict}</option>
@@ -492,6 +539,10 @@ export function OrderForm({
                     fieldErrors["fulfillment.deliveryAddress.city"],
                   )}
                   value={values.fulfillment.deliveryAddress.city}
+                  autoComplete="address-level2"
+                  autoCapitalize="words"
+                  spellCheck={false}
+                  maxLength={120}
                   onChange={(event) =>
                     onChange({
                       ...values,
@@ -504,6 +555,7 @@ export function OrderForm({
                       },
                     })
                   }
+                  onBlur={() => onFieldBlur("fulfillment.deliveryAddress.city")}
                 />
               </Field>
               <Field
@@ -520,6 +572,10 @@ export function OrderForm({
                     fieldErrors["fulfillment.deliveryAddress.province"],
                   )}
                   value={values.fulfillment.deliveryAddress.province}
+                  autoComplete="address-level1"
+                  autoCapitalize="words"
+                  spellCheck={false}
+                  maxLength={120}
                   onChange={(event) =>
                     onChange({
                       ...values,
@@ -532,6 +588,9 @@ export function OrderForm({
                       },
                     })
                   }
+                  onBlur={() =>
+                    onFieldBlur("fulfillment.deliveryAddress.province")
+                  }
                 />
               </Field>
               <div className="sm:col-span-2">
@@ -539,6 +598,7 @@ export function OrderForm({
                   <input
                     className={fieldClass}
                     value={values.fulfillment.deliveryAddress.reference}
+                    maxLength={500}
                     onChange={(event) =>
                       onChange({
                         ...values,
@@ -550,6 +610,9 @@ export function OrderForm({
                           },
                         },
                       })
+                    }
+                    onBlur={() =>
+                      onFieldBlur("fulfillment.deliveryAddress.reference")
                     }
                   />
                 </Field>

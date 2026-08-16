@@ -22,7 +22,7 @@ import {
   validateOrderLinesBundleCustomization,
   type BundleCustomizationBounds,
 } from "@de-tin-marin/validations/customize-bundle";
-import { zodIssuesToFieldErrors } from "../helpers/order-form-validation";
+import { zodIssuesToFieldErrorKeys } from "../helpers/order-form-validation";
 import {
   adminOrderListQuerySchema,
   type AdminListPage,
@@ -216,7 +216,7 @@ export async function createOrderService(
     return {
       ok: false,
       error: "VALIDATION",
-      fieldErrors: zodIssuesToFieldErrors(parsed.error.issues),
+      fieldErrors: zodIssuesToFieldErrorKeys(parsed.error.issues),
     };
   }
 

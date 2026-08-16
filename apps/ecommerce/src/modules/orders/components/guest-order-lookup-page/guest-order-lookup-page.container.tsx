@@ -117,6 +117,9 @@ export function GuestOrderLookupPageContainer() {
       labels={{
         title: t("title"),
         subtitle: t("subtitle"),
+        lookupTitle: t("lookupTitle"),
+        lookupHint: t("lookupHint"),
+        secureNote: t("secureNote"),
         orderNumber: t("orderNumber"),
         email: t("email"),
         submit: t("submit"),
@@ -134,6 +137,12 @@ export function GuestOrderLookupPageContainer() {
           packBadge: tConfirmation("summary.packBadge"),
           bundleComponents: tConfirmation("summary.bundleComponents"),
           packComponents: tConfirmation("summary.packComponents"),
+          progressTitle: tConfirmation("summary.progressTitle"),
+          orderPlaced: tConfirmation("summary.orderPlaced"),
+          orderNumber: tConfirmation("summary.orderNumber"),
+          dateLabel: tConfirmation("summary.dateLabel"),
+          statusCurrent: tConfirmation("summary.statusCurrent"),
+          paymentPendingHint: tConfirmation("summary.paymentPendingHint"),
           formatBundlePersons: (count) =>
             tConfirmation("summary.bundlePersons", { count }),
           formatStatus: (status) =>
