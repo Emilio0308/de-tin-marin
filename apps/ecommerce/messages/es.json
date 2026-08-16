@@ -312,5 +312,41 @@
     "socialTiktok": "TikTok",
     "socialFacebook": "Facebook",
     "socialEmail": "Gmail"
+  },
+  "privacy": {
+    "eyebrow": "Política de Privacidad",
+    "heroTitle": "Tu privacidad también nos importa",
+    "heroDescription": "En De Tin Marín queremos que disfrutes de tu experiencia con tranquilidad. Aquí te explicamos qué información recopilamos, cómo la utilizamos y cómo protegemos tus datos cuando compras con nosotros.",
+    "lastUpdated": "Última actualización: {date}",
+    "tocLabel": "Contenido",
+    "contactEmail": "Correo",
+    "contactWhatsapp": "WhatsApp",
+    "contactLegalName": "Titular",
+    "contactFooterNote": "Estamos para ayudarte con cualquier duda sobre el tratamiento de tus datos."
+  },
+  "terms": {
+    "eyebrow": "Términos y Condiciones",
+    "giftTag": "Antes de tu sorpresa",
+    "heroTitle": "Todo claro antes de tu sorpresa",
+    "heroDescription": "Estos términos explican las condiciones para comprar en De Tin Marín, personalizar tus sorpresas, realizar pagos, recibir tus pedidos y utilizar nuestro sitio web.",
+    "lastUpdated": "Última actualización: {date}",
+    "tocLabel": "Contenido",
+    "contactEmail": "Correo",
+    "contactWhatsapp": "WhatsApp",
+    "contactFooterNote": "Estamos aquí para ayudarte con cualquier duda sobre una compra o estos términos."
+  },
+  "footer": {
+    "explore": "Explora",
+    "help": "Ayuda",
+    "subscribe": "Suscríbete",
+    "subscribeEmailPlaceholder": "Tu email",
+    "subscribeEmailAria": "Correo para suscripción",
+    "subscribeSubmitAria": "Suscribirse",
+    "tagline": "Endulzamos cada mañana de cumpleaños con magia y sabor.",
+    "copyright": "© 2026 De Tin Marín. Endulzando cada mañana de cumpleaños.",
+    "contact": "Contáctanos",
+    "privacy": "Política de privacidad",
+    "terms": "Términos y condiciones",
+    "homeAria": "Ir al inicio"
   }
 }
