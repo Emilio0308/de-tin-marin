@@ -20,10 +20,14 @@ vi.mock("../delivery-map/delivery-map.dynamic", () => ({
 }));
 
 const defaultLabels: CheckoutPageLabels = {
-  title: "Checkout",
+  title: "Datos de entrega",
+  subtitle: "Cuéntanos a dónde enviamos tu pedido en Piura.",
   backToCart: "Volver al carrito",
+  summaryTitle: "Tu pedido",
+  secureNote: "Revisamos stock y cobertura antes de confirmar.",
   contactTitle: "Datos de contacto",
   addressTitle: "Dirección de entrega",
+  mapSectionTitle: "Ubicación",
   name: "Nombre",
   lastName: "Apellido",
   phone: "Teléfono",
@@ -38,6 +42,7 @@ const defaultLabels: CheckoutPageLabels = {
   requiredHint: "Campo obligatorio",
   mapTitle: "Ubicación en el mapa",
   mapHint: "Arrastra el pin o haz clic para indicar tu ubicación en Piura.",
+  phoneHint: "9 dígitos, sin espacios ni letras",
   subtotal: "Subtotal",
   shipping: "Envío",
   shippingPending: "Calculando…",
@@ -49,9 +54,16 @@ const defaultLabels: CheckoutPageLabels = {
   stockChecking: "Verificando stock…",
   emptyCart: "Tu carrito está vacío.",
   validationSummary: "Revisa los campos marcados en rojo antes de continuar.",
+  stepsLabel: "Progreso del pedido",
+  stepCart: "Carrito",
+  stepCheckout: "Entrega",
+  stepDone: "Listo",
   validation: {
     required: "Este campo es obligatorio",
     invalidEmail: "Ingresa un correo electrónico válido",
+    invalidName: "Solo letras (puedes usar tildes, espacios o guion)",
+    invalidPhone: "Ingresa un celular de 9 dígitos que empiece con 9",
+    tooShort: "Escribe un poco más de detalle",
   },
 };
 
@@ -103,7 +115,7 @@ describe("CheckoutPage", () => {
     renderCheckout();
 
     expect(
-      screen.getByRole("heading", { name: "Checkout" }),
+      screen.getByRole("heading", { name: "Datos de entrega" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Datos de contacto")).toBeInTheDocument();
     expect(screen.getByText("Dirección de entrega")).toBeInTheDocument();

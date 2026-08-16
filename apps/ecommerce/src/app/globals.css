@@ -155,3 +155,33 @@
   background-origin: border-box;
   background-clip: padding-box, border-box;
 }
+
+/* Entrada suave de ítems del carrito / checkout (respetar reduced-motion). */
+@keyframes storefront-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.storefront-rise {
+  animation: storefront-rise 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-rise {
+    animation: none;
+  }
+
+  .press-down {
+    transition: none;
+  }
+
+  .press-down:active {
+    transform: none;
+  }
+}

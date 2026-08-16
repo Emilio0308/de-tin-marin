@@ -25,6 +25,7 @@ import {
   hasCheckoutFieldError,
   mapCheckoutFieldError,
   mapCheckoutFieldErrors,
+  sanitizeCheckoutField,
   type CheckoutFieldErrors,
   type CheckoutFormField,
   type CheckoutFormValues,
@@ -74,13 +75,27 @@ export function CheckoutPageContainer() {
   const [fieldErrors, setFieldErrors] = useState<CheckoutFieldErrors>({});
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<
+    Partial<Record<CheckoutFormField, boolean>>
+  >({});
 
   const validationLabels = useMemo(
     () => ({
       required: t("validation.required"),
       invalidEmail: t("validation.invalidEmail"),
+      invalidName: t("validation.invalidName"),
+      invalidPhone: t("validation.invalidPhone"),
+      tooShort: t("validation.tooShort"),
     }),
     [t],
+  );
+
+  const shouldValidateLive = useCallback(
+    (field: CheckoutFormField) =>
+      hasAttemptedSubmit ||
+      Boolean(touchedFields[field]) ||
+      hasCheckoutFieldError(fieldErrors, field),
+    [fieldErrors, hasAttemptedSubmit, touchedFields],
   );
 
   const validateForm = useCallback(
@@ -333,9 +348,13 @@ export function CheckoutPageContainer() {
       stockMessages={[]}
       labels={{
         title: t("title"),
+        subtitle: t("subtitle"),
         backToCart: t("backToCart"),
+        summaryTitle: t("summaryTitle"),
+        secureNote: t("secureNote"),
         contactTitle: t("contactTitle"),
         addressTitle: t("addressTitle"),
+        mapSectionTitle: t("mapSectionTitle"),
         name: t("name"),
         lastName: t("lastName"),
         phone: t("phone"),
@@ -350,6 +369,7 @@ export function CheckoutPageContainer() {
         requiredHint: t("requiredHint"),
         mapTitle: t("mapTitle"),
         mapHint: t("mapHint"),
+        phoneHint: t("phoneHint"),
         subtotal: t("subtotal"),
         shipping: t("shipping"),
         shippingPending: t("shippingPending"),
@@ -361,15 +381,23 @@ export function CheckoutPageContainer() {
         stockChecking: t("stockChecking"),
         emptyCart: t("emptyCart"),
         validationSummary: t("validationSummary"),
+        stepsLabel: t("steps.label"),
+        stepCart: t("steps.cart"),
+        stepCheckout: t("steps.checkout"),
+        stepDone: t("steps.done"),
         validation: {
           required: t("validation.required"),
           invalidEmail: t("validation.invalidEmail"),
+          invalidName: t("validation.invalidName"),
+          invalidPhone: t("validation.invalidPhone"),
+          tooShort: t("validation.tooShort"),
         },
       }}
       onChange={(field, value) => {
+        const sanitized = sanitizeCheckoutField(field, value);
         setForm((current) => {
-          const next = { ...current, [field]: value };
-          if (hasAttemptedSubmit || hasCheckoutFieldError(fieldErrors, field)) {
+          const next = { ...current, [field]: sanitized };
+          if (shouldValidateLive(field)) {
             validateField(field, next);
           }
           return next;
@@ -377,9 +405,16 @@ export function CheckoutPageContainer() {
         if (errorMessage) setErrorMessage(null);
       }}
       onFieldBlur={(field, values) => {
-        if (hasAttemptedSubmit || hasCheckoutFieldError(fieldErrors, field)) {
-          validateField(field, values);
+        const trimmedValue =
+          field === "email"
+            ? values[field].trim().toLowerCase()
+            : values[field].trim();
+        const next = { ...values, [field]: trimmedValue };
+        if (trimmedValue !== values[field]) {
+          setForm(next);
         }
+        setTouchedFields((current) => ({ ...current, [field]: true }));
+        validateField(field, next);
       }}
       onMapPinChange={setMapPin}
       onSubmit={() => {

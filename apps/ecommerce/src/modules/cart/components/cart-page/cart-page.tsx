@@ -1,13 +1,34 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Minus, Plus, ShoppingBag } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { formatPrice } from "@/modules/home/components/product-card/product-card.helpers";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { storefrontTabHref } from "@/modules/home/helpers/storefront-url";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
+import { StorefrontFunnelSteps } from "@/shared/components/storefront-funnel-steps/storefront-funnel-steps";
 import { StockBannerSection } from "@/shared/components/stock-banner/stock-banner";
 import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import type { CartPageProps } from "./cart-page.types";
+
+function CartAtmosphere() {
+  return (
+    <>
+      <div
+        className="bg-primary-fixed pointer-events-none absolute -right-20 -top-16 h-64 w-64 rounded-full opacity-40 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="bg-secondary-fixed pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full opacity-30 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="bg-tertiary-fixed pointer-events-none absolute right-1/3 top-1/2 hidden h-40 w-40 rounded-full opacity-20 blur-3xl md:block"
+        aria-hidden
+      />
+    </>
+  );
+}
 
 function CartQuantitySelector({
   quantity,
@@ -27,13 +48,13 @@ function CartQuantitySelector({
   onIncrease: () => void;
 }) {
   return (
-    <div className="border-outline-variant/50 bg-surface-container-lowest flex items-center rounded-full border px-1">
+    <div className="border-outline-variant/40 bg-surface-container-low flex items-center rounded-full border px-1">
       <button
         type="button"
         onClick={onDecrease}
         disabled={quantity <= minQuantity}
         aria-label={decreaseLabel}
-        className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+        className="text-primary hover:bg-primary-fixed/60 focus-visible:ring-primary disabled:text-on-surface-variant/40 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
       >
         <Minus className="h-4 w-4" aria-hidden />
       </button>
@@ -49,7 +70,7 @@ function CartQuantitySelector({
         onClick={onIncrease}
         disabled={quantity >= maxQuantity}
         aria-label={increaseLabel}
-        className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+        className="text-primary hover:bg-primary-fixed/60 focus-visible:ring-primary disabled:text-on-surface-variant/40 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
       >
         <Plus className="h-4 w-4" aria-hidden />
       </button>
@@ -59,45 +80,90 @@ function CartQuantitySelector({
 
 function CartSummaryPanel({
   subtotal,
+  itemCountLabel,
   labels,
   checkoutHref = "/checkout",
   compact = false,
 }: {
   subtotal: number;
+  itemCountLabel: string;
   labels: CartPageProps["labels"];
   checkoutHref?: string;
   compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="font-body text-body-sm text-on-surface-variant">
+            {labels.subtotal}
+          </p>
+          <p className="font-body text-body-xs text-on-surface-variant">
+            {itemCountLabel}
+          </p>
+        </div>
+        <p className="font-display text-price-display text-primary text-[28px] leading-none">
+          {formatPrice(subtotal)}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        compact
-          ? "space-y-1"
-          : "border-outline-variant/30 bg-surface-container-lowest soft-glow-pink space-y-4 rounded-3xl border p-6 shadow-sm"
-      }
-    >
-      <p
-        className={
-          compact
-            ? "font-body text-body-sm text-on-surface-variant"
-            : "font-label text-label-bold text-on-surface"
-        }
-      >
-        {labels.subtotal}
-      </p>
-      <p className="font-display text-price-display text-primary">
-        {formatPrice(subtotal)}
-      </p>
-      {!compact ? (
+    <div className="border-outline-variant/30 soft-glow-pink bg-surface-container-lowest overflow-hidden rounded-[28px] border shadow-sm">
+      <div className="from-primary via-secondary to-tertiary bg-linear-to-r h-1.5" />
+      <div className="space-y-5 p-6">
+        <div>
+          <p className="font-label text-label-bold text-on-surface">
+            {labels.summaryTitle}
+          </p>
+          <p className="font-body text-body-sm text-on-surface-variant mt-1">
+            {itemCountLabel}
+          </p>
+        </div>
+        <div className="border-outline-variant/25 flex items-end justify-between gap-3 border-t pt-4">
+          <span className="font-body text-body-md text-on-surface-variant">
+            {labels.subtotal}
+          </span>
+          <span className="font-display text-price-display text-primary">
+            {formatPrice(subtotal)}
+          </span>
+        </div>
         <Link
           href={checkoutHref}
-          className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-6 py-3 transition-all duration-300 hover:scale-[1.02]"
+          className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container focus-visible:ring-primary flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-6 py-3 transition-[transform,background-color] duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2"
         >
           {labels.checkout}
           <ArrowRight className="h-5 w-5" aria-hidden />
         </Link>
-      ) : null}
+      </div>
     </div>
+  );
+}
+
+function CartLineShell({
+  children,
+  accent = "default",
+  index,
+}: {
+  children: ReactNode;
+  accent?: "default" | "pack" | "bundle";
+  index: number;
+}) {
+  const accentClass =
+    accent === "bundle"
+      ? "surprise-card-border soft-glow-pink"
+      : accent === "pack"
+        ? "border-tertiary/25 soft-glow-pink"
+        : "border-outline-variant/35 soft-glow-pink";
+
+  return (
+    <li
+      className={`bg-surface-container-lowest storefront-rise rounded-3xl border p-4 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 sm:p-5 ${accentClass}`}
+      style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+    >
+      {children}
+    </li>
   );
 }
 
@@ -110,6 +176,7 @@ function CartProductLine({
   imageUrl,
   bounds,
   labels,
+  index,
   onUpdateQuantity,
   onRemove,
 }: {
@@ -121,6 +188,7 @@ function CartProductLine({
   imageUrl: string;
   bounds: ProductPurchaseBounds;
   labels: CartPageProps["labels"];
+  index: number;
   onUpdateQuantity: (
     cartLineId: string,
     quantity: number,
@@ -129,46 +197,55 @@ function CartProductLine({
   onRemove: (cartLineId: string) => void;
 }) {
   return (
-    <li className="border-outline-variant bg-surface-container-lowest flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center">
-      <div className="bg-surface-container relative h-16 w-16 shrink-0 overflow-hidden rounded-xl shadow-sm">
-        <Image
-          src={imageUrl}
-          alt=""
-          fill
-          sizes="64px"
-          className="object-cover"
-        />
-      </div>
+    <CartLineShell index={index}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="bg-surface-container relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-sm sm:h-24 sm:w-24">
+          <Image
+            src={imageUrl}
+            alt=""
+            fill
+            sizes="96px"
+            className="object-cover"
+          />
+        </div>
 
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="font-label text-label-bold text-on-surface">{name}</p>
-        <p className="font-body text-body-sm text-on-surface-variant">
-          {formatPrice(unitPrice)} {labels.unitPriceSuffix}
-        </p>
-      </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="font-label text-label-bold text-on-surface text-base">
+            {name}
+          </p>
+          <p className="font-body text-body-sm text-on-surface-variant">
+            {formatPrice(unitPrice)} {labels.unitPriceSuffix}
+          </p>
+        </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-        <CartQuantitySelector
-          quantity={quantity}
-          minQuantity={bounds.minQuantity}
-          maxQuantity={bounds.maxQuantity}
-          decreaseLabel={labels.decreaseQuantity}
-          increaseLabel={labels.increaseQuantity}
-          onDecrease={() => onUpdateQuantity(cartLineId, quantity - 1, bounds)}
-          onIncrease={() => onUpdateQuantity(cartLineId, quantity + 1, bounds)}
-        />
-        <p className="font-display text-price-display text-primary min-w-20 text-right">
-          {formatPrice(lineTotal)}
-        </p>
-        <button
-          type="button"
-          onClick={() => onRemove(cartLineId)}
-          className="font-label text-label-bold text-primary hover:text-secondary transition-colors"
-        >
-          {labels.remove}
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end sm:gap-4">
+          <CartQuantitySelector
+            quantity={quantity}
+            minQuantity={bounds.minQuantity}
+            maxQuantity={bounds.maxQuantity}
+            decreaseLabel={labels.decreaseQuantity}
+            increaseLabel={labels.increaseQuantity}
+            onDecrease={() =>
+              onUpdateQuantity(cartLineId, quantity - 1, bounds)
+            }
+            onIncrease={() =>
+              onUpdateQuantity(cartLineId, quantity + 1, bounds)
+            }
+          />
+          <p className="font-display text-primary min-w-24 text-right text-[22px] font-extrabold leading-none">
+            {formatPrice(lineTotal)}
+          </p>
+          <button
+            type="button"
+            onClick={() => onRemove(cartLineId)}
+            aria-label={labels.remove}
+            className="text-on-surface-variant hover:bg-error-container hover:text-error focus-visible:ring-error flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
       </div>
-    </li>
+    </CartLineShell>
   );
 }
 
@@ -182,6 +259,7 @@ function CartPackLine({
   imageUrl,
   bounds,
   labels,
+  index,
   onUpdateQuantity,
   onRemove,
 }: {
@@ -194,6 +272,7 @@ function CartPackLine({
   imageUrl: string;
   bounds: ProductPurchaseBounds;
   labels: CartPageProps["labels"];
+  index: number;
   onUpdateQuantity: (
     cartLineId: string,
     quantity: number,
@@ -202,52 +281,61 @@ function CartPackLine({
   onRemove: (cartLineId: string) => void;
 }) {
   return (
-    <li className="border-outline-variant bg-surface-container-lowest flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center">
-      <div className="bg-surface-container relative h-16 w-16 shrink-0 overflow-hidden rounded-xl shadow-sm">
-        <Image
-          src={imageUrl}
-          alt=""
-          fill
-          sizes="64px"
-          className="object-cover"
-        />
-      </div>
+    <CartLineShell accent="pack" index={index}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="bg-surface-container relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-sm sm:h-24 sm:w-24">
+          <Image
+            src={imageUrl}
+            alt=""
+            fill
+            sizes="96px"
+            className="object-cover"
+          />
+        </div>
 
-      <div className="min-w-0 flex-1 space-y-1">
-        <span className="bg-tertiary-container text-on-tertiary-container font-label text-label-bold inline-block rounded-full px-3 py-1 text-xs">
-          {labels.packBadge}
-        </span>
-        <p className="font-label text-label-bold text-on-surface">{name}</p>
-        <p className="font-body text-body-sm text-on-surface-variant">
-          {formatPrice(unitPrice)} {labels.unitPriceSuffix}
-          {componentCount > 0
-            ? ` · ${componentCount} ${labels.packComponents}`
-            : null}
-        </p>
-      </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <span className="bg-tertiary-container text-on-tertiary-container font-label text-label-bold inline-block rounded-full px-3 py-1 text-xs">
+            {labels.packBadge}
+          </span>
+          <p className="font-label text-label-bold text-on-surface text-base">
+            {name}
+          </p>
+          <p className="font-body text-body-sm text-on-surface-variant">
+            {formatPrice(unitPrice)} {labels.unitPriceSuffix}
+            {componentCount > 0
+              ? ` · ${componentCount} ${labels.packComponents}`
+              : null}
+          </p>
+        </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-        <CartQuantitySelector
-          quantity={quantity}
-          minQuantity={bounds.minQuantity}
-          maxQuantity={bounds.maxQuantity}
-          decreaseLabel={labels.decreaseQuantity}
-          increaseLabel={labels.increaseQuantity}
-          onDecrease={() => onUpdateQuantity(cartLineId, quantity - 1, bounds)}
-          onIncrease={() => onUpdateQuantity(cartLineId, quantity + 1, bounds)}
-        />
-        <p className="font-display text-price-display text-primary min-w-20 text-right">
-          {formatPrice(lineTotal)}
-        </p>
-        <button
-          type="button"
-          onClick={() => onRemove(cartLineId)}
-          className="font-label text-label-bold text-primary hover:text-secondary transition-colors"
-        >
-          {labels.remove}
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end sm:gap-4">
+          <CartQuantitySelector
+            quantity={quantity}
+            minQuantity={bounds.minQuantity}
+            maxQuantity={bounds.maxQuantity}
+            decreaseLabel={labels.decreaseQuantity}
+            increaseLabel={labels.increaseQuantity}
+            onDecrease={() =>
+              onUpdateQuantity(cartLineId, quantity - 1, bounds)
+            }
+            onIncrease={() =>
+              onUpdateQuantity(cartLineId, quantity + 1, bounds)
+            }
+          />
+          <p className="font-display text-primary min-w-24 text-right text-[22px] font-extrabold leading-none">
+            {formatPrice(lineTotal)}
+          </p>
+          <button
+            type="button"
+            onClick={() => onRemove(cartLineId)}
+            aria-label={labels.remove}
+            className="text-on-surface-variant hover:bg-error-container hover:text-error focus-visible:ring-error flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
       </div>
-    </li>
+    </CartLineShell>
   );
 }
 
@@ -260,6 +348,7 @@ function CartBundleLine({
   lineTotal,
   imageUrl,
   labels,
+  index,
   formatBundlePersons,
   onRemove,
 }: {
@@ -271,18 +360,19 @@ function CartBundleLine({
   lineTotal: number;
   imageUrl: string;
   labels: CartPageProps["labels"];
+  index: number;
   formatBundlePersons: (count: number) => string;
   onRemove: (cartLineId: string) => void;
 }) {
   return (
-    <li className="border-outline-variant surprise-card-border soft-glow-pink bg-surface-container-lowest rounded-2xl border p-4">
+    <CartLineShell accent="bundle" index={index}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="bg-surface-container-low relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+        <div className="bg-surface-container-low relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl sm:h-24 sm:w-24">
           <Image
             src={imageUrl}
             alt=""
             fill
-            sizes="64px"
+            sizes="96px"
             className="object-cover"
           />
         </div>
@@ -291,7 +381,9 @@ function CartBundleLine({
           <span className="bg-secondary-container text-on-secondary-container font-label text-label-bold inline-block rounded-full px-3 py-1 text-xs">
             {labels.bundleBadge}
           </span>
-          <p className="font-label text-label-bold text-on-surface">{name}</p>
+          <p className="font-label text-label-bold text-on-surface text-base">
+            {name}
+          </p>
           <p className="font-body text-body-sm text-on-surface-variant">
             {formatBundlePersons(personCount)} · {componentCount}{" "}
             {labels.components}
@@ -304,19 +396,20 @@ function CartBundleLine({
         </div>
 
         <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end">
-          <p className="font-display text-price-display text-primary">
+          <p className="font-display text-primary text-[22px] font-extrabold leading-none sm:text-[28px]">
             {formatPrice(lineTotal)}
           </p>
           <button
             type="button"
             onClick={() => onRemove(cartLineId)}
-            className="font-label text-label-bold text-primary hover:text-secondary transition-colors"
+            aria-label={labels.remove}
+            className="text-on-surface-variant hover:bg-error-container hover:text-error focus-visible:ring-error flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2"
           >
-            {labels.remove}
+            <Trash2 className="h-4 w-4" aria-hidden />
           </button>
         </div>
       </div>
-    </li>
+    </CartLineShell>
   );
 }
 
@@ -334,37 +427,64 @@ export function CartPage({
   onRemove,
 }: CartPageProps) {
   const hasLines = lines.length > 0;
+  const itemCountLabel = labels.itemCount;
 
   return (
     <StorefrontLayout>
       <section
-        className={`bg-tertiary/5 pt-stack-md md:pt-stack-lg ${hasLines ? "md:pb-section-lg pb-40" : "pb-section-lg"}`}
+        className={`pt-stack-md md:pt-stack-lg relative overflow-hidden ${hasLines ? "md:pb-section-lg pb-40" : "pb-section-lg"}`}
       >
-        <div className="container-max px-gutter">
-          <h1 className="font-display text-display-lg-mobile text-on-surface md:text-display-lg">
-            {labels.title}
-          </h1>
+        <CartAtmosphere />
+
+        <div className="container-max px-gutter relative z-10">
+          <div className="gap-stack-md flex flex-col lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-xl">
+              <h1 className="font-display text-display-lg-mobile text-primary md:text-display-lg">
+                {labels.title}
+              </h1>
+              {hasLines ? (
+                <p className="font-body text-body-lg text-on-surface-variant mt-2 leading-relaxed">
+                  {labels.subtitle}
+                </p>
+              ) : null}
+            </div>
+            {hasLines ? (
+              <StorefrontFunnelSteps
+                active="cart"
+                ariaLabel={labels.stepsLabel}
+                labels={{
+                  cart: labels.stepCart,
+                  checkout: labels.stepCheckout,
+                  done: labels.stepDone,
+                }}
+              />
+            ) : null}
+          </div>
 
           {!hasLines ? (
-            <div className="mt-stack-lg py-stack-lg text-center">
-              <div className="bg-surface-container-low mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
+            <div className="storefront-rise border-outline-variant/30 bg-surface-container-lowest soft-glow-pink mt-stack-lg rounded-4xl mx-auto max-w-lg border px-6 py-12 text-center sm:px-10">
+              <div className="from-primary-fixed to-secondary-fixed bg-linear-to-br mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full">
                 <ShoppingBag
-                  className="text-on-surface-variant h-10 w-10"
+                  className="text-primary h-11 w-11"
                   aria-hidden
+                  strokeWidth={1.75}
                 />
               </div>
-              <p className="font-body text-body-lg text-on-surface-variant mb-6">
+              <p className="font-display text-headline-md text-on-surface mb-2">
                 {labels.empty}
+              </p>
+              <p className="font-body text-body-md text-on-surface-variant mb-8">
+                {labels.emptyHint}
               </p>
               <Link
                 href={storefrontTabHref("productos")}
-                className="press-down bg-primary font-label text-label-bold text-on-primary inline-flex min-h-12 items-center justify-center rounded-full px-8 py-3"
+                className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container focus-visible:ring-primary inline-flex min-h-12 cursor-pointer items-center justify-center rounded-full px-8 py-3 transition-[transform,background-color] duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2"
               >
                 {labels.continueShopping}
               </Link>
             </div>
           ) : (
-            <div className="gap-stack-lg mt-stack-md grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+            <div className="gap-stack-lg mt-stack-md grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
               <div className="space-y-stack-md">
                 <StockBannerSection
                   isStockPending={isStockPending}
@@ -376,7 +496,7 @@ export function CartPage({
                 />
 
                 <ul className="space-y-4">
-                  {lines.map((entry) =>
+                  {lines.map((entry, index) =>
                     entry.line.type === "product" ? (
                       <CartProductLine
                         key={entry.cartLineId}
@@ -397,6 +517,7 @@ export function CartPage({
                           }
                         }
                         labels={labels}
+                        index={index}
                         onUpdateQuantity={onUpdateQuantity}
                         onRemove={onRemove}
                       />
@@ -421,6 +542,7 @@ export function CartPage({
                           }
                         }
                         labels={labels}
+                        index={index}
                         onUpdateQuantity={onUpdateQuantity}
                         onRemove={onRemove}
                       />
@@ -438,6 +560,7 @@ export function CartPage({
                           CATALOG_PLACEHOLDER_IMAGE
                         }
                         labels={labels}
+                        index={index}
                         formatBundlePersons={formatBundlePersons}
                         onRemove={onRemove}
                       />
@@ -455,7 +578,11 @@ export function CartPage({
                     checkingLabel={labels.stockChecking}
                     messages={stockMessages}
                   />
-                  <CartSummaryPanel subtotal={subtotal} labels={labels} />
+                  <CartSummaryPanel
+                    subtotal={subtotal}
+                    itemCountLabel={itemCountLabel}
+                    labels={labels}
+                  />
                 </div>
               </aside>
             </div>
@@ -467,10 +594,15 @@ export function CartPage({
         <footer className="border-outline-variant/20 bg-surface/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md lg:hidden">
           <div className="container-max px-gutter mx-auto py-3">
             <div className="flex flex-col gap-3">
-              <CartSummaryPanel subtotal={subtotal} labels={labels} compact />
+              <CartSummaryPanel
+                subtotal={subtotal}
+                itemCountLabel={itemCountLabel}
+                labels={labels}
+                compact
+              />
               <Link
                 href="/checkout"
-                className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-6 py-3"
+                className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary focus-visible:ring-primary flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-6 py-3 focus-visible:outline-none focus-visible:ring-2"
               >
                 {labels.checkout}
                 <ArrowRight className="h-5 w-5" aria-hidden />

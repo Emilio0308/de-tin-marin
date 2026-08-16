@@ -2,25 +2,59 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPinned,
+  ShieldCheck,
+  Truck,
+  UserRound,
+} from "lucide-react";
 import { formatPrice } from "@/modules/home/components/product-card/product-card.helpers";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
+import { StorefrontFunnelSteps } from "@/shared/components/storefront-funnel-steps/storefront-funnel-steps";
 import { StockBannerSection } from "@/shared/components/stock-banner/stock-banner";
 import { DeliveryMap } from "../delivery-map/delivery-map.dynamic";
 import { CheckoutSelectField, CheckoutTextField } from "./checkout-form-field";
 import type { CheckoutPageProps } from "./checkout-page.types";
 
+function CheckoutAtmosphere() {
+  return (
+    <>
+      <div
+        className="bg-secondary-fixed pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full opacity-35 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="bg-primary-fixed pointer-events-none absolute -bottom-28 -right-16 h-72 w-72 rounded-full opacity-30 blur-3xl"
+        aria-hidden
+      />
+    </>
+  );
+}
+
 function CheckoutFormSection({
   title,
+  step,
+  icon,
   children,
 }: {
   title: string;
+  step: string;
+  icon: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="border-outline-variant/30 bg-surface-container-lowest space-y-4 rounded-2xl border p-4 shadow-sm md:p-6">
-      <h2 className="font-label text-label-bold text-on-surface">{title}</h2>
-      {children}
+    <section className="border-outline-variant/30 soft-glow-pink bg-surface-container-lowest storefront-rise overflow-hidden rounded-3xl border shadow-sm">
+      <div className="border-outline-variant/20 bg-surface-container-low/80 flex items-center gap-3 border-b px-4 py-3.5 md:px-6">
+        <span className="bg-primary text-on-primary font-label text-label-bold flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs">
+          {step}
+        </span>
+        <div className="text-primary shrink-0" aria-hidden>
+          {icon}
+        </div>
+        <h2 className="font-label text-label-bold text-on-surface">{title}</h2>
+      </div>
+      <div className="space-y-4 p-4 md:p-6">{children}</div>
     </section>
   );
 }
@@ -52,56 +86,87 @@ function CheckoutSummaryPanel({
     ? labels.shippingPending
     : formatPrice(shippingTotal);
 
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        <div className="font-body text-body-sm text-on-surface-variant flex justify-between gap-3">
+          <span>{labels.subtotal}</span>
+          <span>{formatPrice(subtotal)}</span>
+        </div>
+        <div className="font-body text-body-sm text-on-surface-variant flex justify-between gap-3">
+          <span>{labels.shipping}</span>
+          <span>{shippingLabel}</span>
+        </div>
+        <div className="flex items-end justify-between gap-3 pt-1">
+          <span className="font-body text-body-sm text-on-surface-variant">
+            {labels.total}
+          </span>
+          <span className="font-display text-primary text-[28px] font-extrabold leading-none">
+            {formatPrice(total)}
+          </span>
+        </div>
+        {!covered && !isDeliveryPending ? (
+          <p role="alert" className="font-body text-body-sm text-error">
+            {labels.outOfCoverage}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={
-        compact
-          ? "space-y-3"
-          : "border-outline-variant/30 bg-surface-container-lowest soft-glow-pink space-y-4 rounded-3xl border p-6 shadow-sm"
-      }
-    >
-      <div className="font-body text-body-md text-on-surface-variant flex justify-between">
-        <span>{labels.subtotal}</span>
-        <span>{formatPrice(subtotal)}</span>
+    <div className="border-outline-variant/30 soft-glow-pink bg-surface-container-lowest overflow-hidden rounded-[28px] border shadow-sm">
+      <div className="from-primary via-secondary to-tertiary bg-linear-to-r h-1.5" />
+      <div className="space-y-4 p-6">
+        <div>
+          <p className="font-label text-label-bold text-on-surface">
+            {labels.summaryTitle}
+          </p>
+          <p className="font-body text-body-sm text-on-surface-variant mt-1 flex items-start gap-2">
+            <ShieldCheck
+              className="text-secondary mt-0.5 h-4 w-4 shrink-0"
+              aria-hidden
+            />
+            <span>{labels.secureNote}</span>
+          </p>
+        </div>
+
+        <div className="border-outline-variant/20 space-y-3 border-t pt-4">
+          <div className="font-body text-body-md text-on-surface-variant flex justify-between gap-3">
+            <span>{labels.subtotal}</span>
+            <span className="text-on-surface">{formatPrice(subtotal)}</span>
+          </div>
+          <div className="font-body text-body-md text-on-surface-variant flex justify-between gap-3">
+            <span>{labels.shipping}</span>
+            <span className="text-on-surface">{shippingLabel}</span>
+          </div>
+        </div>
+
+        <div className="border-outline-variant/20 flex items-end justify-between gap-3 border-t pt-4">
+          <span className="font-label text-label-bold text-on-surface">
+            {labels.total}
+          </span>
+          <span className="font-display text-price-display text-primary">
+            {formatPrice(total)}
+          </span>
+        </div>
+
+        {showSubmitButton ? (
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container focus-visible:ring-primary hidden min-h-12 w-full cursor-pointer items-center justify-center rounded-full px-6 py-3 transition-[transform,background-color,opacity] duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 lg:flex"
+          >
+            {isSubmitting ? labels.submitting : labels.submit}
+          </button>
+        ) : null}
+
+        {!covered && !isDeliveryPending ? (
+          <p role="alert" className="font-body text-body-sm text-error">
+            {labels.outOfCoverage}
+          </p>
+        ) : null}
       </div>
-      <div className="font-body text-body-md text-on-surface-variant flex justify-between">
-        <span>{labels.shipping}</span>
-        <span>{shippingLabel}</span>
-      </div>
-      <div
-        className={
-          compact
-            ? "flex items-end justify-between gap-3"
-            : "border-outline-variant/20 border-t pt-4"
-        }
-      >
-        <span
-          className={
-            compact
-              ? "font-body text-body-sm text-on-surface-variant"
-              : "font-label text-label-bold text-on-surface"
-          }
-        >
-          {labels.total}
-        </span>
-        <span className="font-display text-price-display text-primary">
-          {formatPrice(total)}
-        </span>
-      </div>
-      {showSubmitButton ? (
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container hidden min-h-12 w-full items-center justify-center rounded-full px-6 py-3 transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 lg:flex"
-        >
-          {isSubmitting ? labels.submitting : labels.submit}
-        </button>
-      ) : null}
-      {!covered && !isDeliveryPending ? (
-        <p role="alert" className="font-body text-body-sm text-error">
-          {labels.outOfCoverage}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -138,25 +203,43 @@ export function CheckoutPage({
 
   return (
     <StorefrontLayout>
-      <section className="bg-tertiary/5 pt-stack-md md:pt-stack-lg md:pb-section-lg pb-44">
-        <div className="container-max px-gutter">
+      <section className="pt-stack-md md:pt-stack-lg md:pb-section-lg relative overflow-hidden pb-44">
+        <CheckoutAtmosphere />
+
+        <div className="container-max px-gutter relative z-10">
           <Link
             href="/carrito"
-            className="font-label text-label-bold text-primary hover:text-secondary inline-flex items-center gap-2 transition-colors"
+            className="font-label text-label-bold text-primary hover:bg-primary-fixed/50 focus-visible:ring-primary inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {labels.backToCart}
           </Link>
 
-          <h1 className="font-display text-display-lg-mobile text-primary md:text-display-lg mt-stack-sm">
-            {labels.title}
-          </h1>
+          <div className="gap-stack-md mt-stack-sm flex flex-col lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-xl">
+              <h1 className="font-display text-display-lg-mobile text-primary md:text-display-lg">
+                {labels.title}
+              </h1>
+              <p className="font-body text-body-lg text-on-surface-variant mt-2 leading-relaxed">
+                {labels.subtitle}
+              </p>
+            </div>
+            <StorefrontFunnelSteps
+              active="checkout"
+              ariaLabel={labels.stepsLabel}
+              labels={{
+                cart: labels.stepCart,
+                checkout: labels.stepCheckout,
+                done: labels.stepDone,
+              }}
+            />
+          </div>
 
           <form
             id="checkout-form"
             noValidate
             autoComplete="on"
-            className="gap-stack-lg mt-stack-md grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start"
+            className="gap-stack-lg mt-stack-md grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start"
             onSubmit={(event) => {
               event.preventDefault();
               onSubmit();
@@ -166,7 +249,7 @@ export function CheckoutPage({
               {showValidationSummary ? (
                 <div
                   role="alert"
-                  className="border-error/30 bg-error-container text-on-error-container rounded-2xl border px-4 py-3"
+                  className="border-error/30 bg-error-container text-on-error-container storefront-rise rounded-2xl border px-4 py-3"
                 >
                   <p className="font-body text-body-sm">
                     {labels.validationSummary}
@@ -177,13 +260,17 @@ export function CheckoutPage({
               {errorMessage ? (
                 <div
                   role="alert"
-                  className="border-error/30 bg-error-container text-on-error-container rounded-2xl border px-4 py-3"
+                  className="border-error/30 bg-error-container text-on-error-container storefront-rise rounded-2xl border px-4 py-3"
                 >
                   <p className="font-body text-body-sm">{errorMessage}</p>
                 </div>
               ) : null}
 
-              <CheckoutFormSection title={labels.contactTitle}>
+              <CheckoutFormSection
+                title={labels.contactTitle}
+                step="1"
+                icon={<UserRound className="h-5 w-5" strokeWidth={2} />}
+              >
                 <div className="grid gap-4 md:grid-cols-2">
                   <CheckoutTextField
                     id="name"
@@ -193,6 +280,9 @@ export function CheckoutPage({
                     error={fieldErrors.name}
                     requiredHint={labels.requiredHint}
                     autoComplete="given-name"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                    maxLength={200}
                     onChange={(value) => onChange("name", value)}
                     onBlur={() => onFieldBlur("name", form)}
                   />
@@ -204,6 +294,9 @@ export function CheckoutPage({
                     error={fieldErrors.lastName}
                     requiredHint={labels.requiredHint}
                     autoComplete="family-name"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                    maxLength={200}
                     onChange={(value) => onChange("lastName", value)}
                     onBlur={() => onFieldBlur("lastName", form)}
                   />
@@ -213,10 +306,13 @@ export function CheckoutPage({
                     value={form.phone}
                     required
                     error={fieldErrors.phone}
+                    hint={fieldErrors.phone ? undefined : labels.phoneHint}
                     requiredHint={labels.requiredHint}
                     type="tel"
-                    inputMode="tel"
+                    inputMode="numeric"
                     autoComplete="tel"
+                    maxLength={9}
+                    spellCheck={false}
                     onChange={(value) => onChange("phone", value)}
                     onBlur={() => onFieldBlur("phone", form)}
                   />
@@ -230,13 +326,20 @@ export function CheckoutPage({
                     type="email"
                     inputMode="email"
                     autoComplete="email"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    maxLength={320}
                     onChange={(value) => onChange("email", value)}
                     onBlur={() => onFieldBlur("email", form)}
                   />
                 </div>
               </CheckoutFormSection>
 
-              <CheckoutFormSection title={labels.addressTitle}>
+              <CheckoutFormSection
+                title={labels.addressTitle}
+                step="2"
+                icon={<Truck className="h-5 w-5" strokeWidth={2} />}
+              >
                 <CheckoutTextField
                   id="line1"
                   label={labels.line1}
@@ -245,6 +348,7 @@ export function CheckoutPage({
                   error={fieldErrors.line1}
                   requiredHint={labels.requiredHint}
                   autoComplete="street-address"
+                  maxLength={300}
                   onChange={(value) => onChange("line1", value)}
                   onBlur={() => onFieldBlur("line1", form)}
                 />
@@ -272,6 +376,9 @@ export function CheckoutPage({
                     error={fieldErrors.city}
                     requiredHint={labels.requiredHint}
                     autoComplete="address-level2"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                    maxLength={120}
                     onChange={(value) => onChange("city", value)}
                     onBlur={() => onFieldBlur("city", form)}
                   />
@@ -283,6 +390,9 @@ export function CheckoutPage({
                     error={fieldErrors.province}
                     requiredHint={labels.requiredHint}
                     autoComplete="address-level1"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                    maxLength={120}
                     onChange={(value) => onChange("province", value)}
                     onBlur={() => onFieldBlur("province", form)}
                   />
@@ -293,19 +403,24 @@ export function CheckoutPage({
                     hint={labels.referenceHint}
                     requiredHint={labels.requiredHint}
                     autoComplete="off"
+                    maxLength={500}
                     onChange={(value) => onChange("reference", value)}
                     onBlur={() => onFieldBlur("reference", form)}
                   />
                 </div>
               </CheckoutFormSection>
 
-              <section className="border-outline-variant/30 bg-surface-container-lowest space-y-4 rounded-2xl border p-4 shadow-sm md:p-6">
+              <CheckoutFormSection
+                title={labels.mapSectionTitle}
+                step="3"
+                icon={<MapPinned className="h-5 w-5" strokeWidth={2} />}
+              >
                 <DeliveryMap
                   mapPin={mapPin}
                   onChange={onMapPinChange}
-                  labels={{ title: labels.mapTitle, hint: labels.mapHint }}
+                  labels={{ title: "", hint: labels.mapHint }}
                 />
-              </section>
+              </CheckoutFormSection>
 
               <div className="space-y-4 lg:hidden">
                 <StockBannerSection
@@ -360,7 +475,7 @@ export function CheckoutPage({
             type="submit"
             form="checkout-form"
             disabled={!canSubmit}
-            className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary mt-3 flex min-h-12 w-full items-center justify-center rounded-full px-6 py-3 disabled:cursor-not-allowed disabled:opacity-60"
+            className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary focus-visible:ring-primary mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full px-6 py-3 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? labels.submitting : labels.submit}
           </button>

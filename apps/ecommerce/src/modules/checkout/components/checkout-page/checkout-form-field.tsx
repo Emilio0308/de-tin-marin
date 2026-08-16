@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 const inputBaseClass =
-  "font-body text-body-md text-on-surface bg-surface-container-lowest w-full rounded-xl border-2 px-4 py-3 transition-colors outline-none min-h-12";
-const inputNormalClass = `${inputBaseClass} border-outline-variant/40 focus:border-secondary`;
-const inputErrorClass = `${inputBaseClass} border-error focus:border-error`;
+  "font-body text-body-md text-on-surface bg-surface-container-low w-full rounded-2xl border-2 px-4 py-3 transition-[border-color,background-color,box-shadow] duration-200 outline-none min-h-12 focus-visible:ring-2 focus-visible:ring-offset-0";
+const inputNormalClass = `${inputBaseClass} border-outline-variant/35 focus:border-secondary focus:bg-surface-container-lowest focus-visible:ring-secondary/30`;
+const inputErrorClass = `${inputBaseClass} border-error bg-error-container/30 focus:border-error focus-visible:ring-error/30`;
 
 type CheckoutFormFieldWrapperProps = {
   id: string;
@@ -90,7 +90,10 @@ type CheckoutTextFieldProps = {
   requiredHint: string;
   type?: "text" | "email" | "tel";
   autoComplete: string;
-  inputMode?: "text" | "email" | "tel";
+  inputMode?: "text" | "email" | "tel" | "numeric";
+  maxLength?: number;
+  autoCapitalize?: "off" | "none" | "on" | "sentences" | "words" | "characters";
+  spellCheck?: boolean;
   onChange: (value: string) => void;
   onBlur?: () => void;
 };
@@ -106,6 +109,9 @@ export function CheckoutTextField({
   type = "text",
   autoComplete,
   inputMode,
+  maxLength,
+  autoCapitalize,
+  spellCheck,
   onChange,
   onBlur,
 }: CheckoutTextFieldProps) {
@@ -127,6 +133,9 @@ export function CheckoutTextField({
           required={required}
           autoComplete={autoComplete}
           inputMode={inputMode}
+          maxLength={maxLength}
+          autoCapitalize={autoCapitalize}
+          spellCheck={spellCheck}
           aria-invalid={invalid}
           aria-describedby={describedBy}
           onChange={(event) => onChange(event.target.value)}

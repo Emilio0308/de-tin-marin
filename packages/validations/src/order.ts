@@ -3,20 +3,36 @@ import { paymentSummarySchema } from "./payment";
 import { shipmentDtoSchema } from "./shipment";
 
 export const orderContactSchema = z.object({
-  name: z.string().min(1).max(200),
-  lastName: z.string().min(1).max(200),
-  phone: z.string().min(1).max(50),
-  email: z.string().email().max(320),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  lastName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^9\d{8}$/),
+  email: z.string().trim().email().max(320),
 });
 
 export const deliveryAddressSchema = z.object({
-  recipientName: z.string().min(1).max(200),
-  line1: z.string().min(1).max(300),
-  district: z.string().min(1).max(120),
-  city: z.string().min(1).max(120),
-  province: z.string().min(1).max(120),
+  recipientName: z.string().trim().min(1).max(200),
+  line1: z.string().trim().min(1).max(300),
+  district: z.string().trim().min(1).max(120),
+  city: z.string().trim().min(1).max(120),
+  province: z.string().trim().min(1).max(120),
   reference: z.string().max(500).optional().nullable(),
-  phone: z.string().min(1).max(50),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^9\d{8}$/),
 });
 
 export const orderFulfillmentSchema = z

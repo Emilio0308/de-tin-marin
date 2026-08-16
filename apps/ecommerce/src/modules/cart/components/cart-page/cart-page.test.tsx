@@ -22,11 +22,15 @@ vi.mock("next/image", () => ({
 
 const defaultLabels: CartPageLabels = {
   title: "Tu carrito",
+  subtitle: "Revisa tus dulces y sorpresas antes de pedir.",
   empty: "Tu carrito está vacío.",
+  emptyHint: "Explora el catálogo y arma tu próxima sorpresa.",
   continueShopping: "Seguir comprando",
-  checkout: "Ir a checkout",
+  checkout: "Continuar al pedido",
   remove: "Quitar",
   subtotal: "Subtotal",
+  summaryTitle: "Resumen",
+  itemCount: "2 ítems",
   unitPriceSuffix: "/ ud.",
   decreaseQuantity: "Disminuir cantidad",
   increaseQuantity: "Aumentar cantidad",
@@ -38,6 +42,10 @@ const defaultLabels: CartPageLabels = {
   bundleBadge: "Sorpresa",
   packBadge: "Combo",
   packComponents: "productos",
+  stepsLabel: "Progreso del pedido",
+  stepCart: "Carrito",
+  stepCheckout: "Entrega",
+  stepDone: "Listo",
 };
 
 const productLine: StoredCartLine = {
@@ -142,7 +150,7 @@ describe("CartPage", () => {
     expect(screen.getByText("Para 10 personas · 1 dulces")).toBeInTheDocument();
     expect(screen.getAllByText("S/94.90").length).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole("link", { name: /ir a checkout/i }).length,
+      screen.getAllByRole("link", { name: /continuar al pedido/i }).length,
     ).toBeGreaterThan(0);
   });
 

@@ -155,11 +155,15 @@
   },
   "cart": {
     "title": "Tu carrito",
+    "subtitle": "Revisa tus dulces y sorpresas antes de pedir.",
     "empty": "Tu carrito está vacío.",
+    "emptyHint": "Explora el catálogo y arma tu próxima sorpresa.",
     "continueShopping": "Seguir comprando",
-    "checkout": "Ir a checkout",
+    "checkout": "Continuar al pedido",
     "remove": "Quitar",
     "subtotal": "Subtotal",
+    "summaryTitle": "Resumen",
+    "itemCount": "{count, plural, one {# ítem} other {# ítems}}",
     "unitPriceSuffix": "/ ud.",
     "decreaseQuantity": "Disminuir cantidad",
     "increaseQuantity": "Aumentar cantidad",
@@ -173,6 +177,12 @@
     "stockChecking": "Verificando stock…",
     "stockProduct": "Dulce",
     "stockContainer": "Envase",
+    "steps": {
+      "label": "Progreso del pedido",
+      "cart": "Carrito",
+      "checkout": "Entrega",
+      "done": "Listo"
+    },
     "sync": {
       "priceUpdated": "Actualizamos los precios de tu carrito.",
       "stockRemoved": "Quitamos del carrito los productos sin stock suficiente.",
@@ -180,10 +190,20 @@
     }
   },
   "checkout": {
-    "title": "Checkout",
+    "title": "Datos de entrega",
+    "subtitle": "Cuéntanos a dónde enviamos tu pedido en Piura.",
     "backToCart": "Volver al carrito",
+    "summaryTitle": "Tu pedido",
+    "secureNote": "Revisamos stock y cobertura antes de confirmar.",
     "contactTitle": "Datos de contacto",
     "addressTitle": "Dirección de entrega",
+    "mapSectionTitle": "Ubicación",
+    "steps": {
+      "label": "Progreso del pedido",
+      "cart": "Carrito",
+      "checkout": "Entrega",
+      "done": "Listo"
+    },
     "name": "Nombre",
     "lastName": "Apellido",
     "phone": "Teléfono",
@@ -209,8 +229,12 @@
     "validationSummary": "Revisa los campos marcados en rojo antes de continuar.",
     "validation": {
       "required": "Este campo es obligatorio",
-      "invalidEmail": "Ingresa un correo electrónico válido"
+      "invalidEmail": "Ingresa un correo electrónico válido",
+      "invalidName": "Solo letras (puedes usar tildes, espacios o guion)",
+      "invalidPhone": "Ingresa un celular de 9 dígitos que empiece con 9",
+      "tooShort": "Escribe un poco más de detalle"
     },
+    "phoneHint": "9 dígitos, sin espacios ni letras",
     "stockTitle": "Stock limitado",
     "stockChecking": "Verificando stock…",
     "stockProduct": "Dulce",

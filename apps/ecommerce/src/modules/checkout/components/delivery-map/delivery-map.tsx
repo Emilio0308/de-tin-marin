@@ -49,9 +49,11 @@ import type { DeliveryMapProps } from "./delivery-map.types";
 export function DeliveryMap({ mapPin, onChange, labels }: DeliveryMapProps) {
   return (
     <div className="space-y-2">
-      <h3 className="font-label text-label-bold text-on-surface">
-        {labels.title}
-      </h3>
+      {labels.title ? (
+        <h3 className="font-label text-label-bold text-on-surface">
+          {labels.title}
+        </h3>
+      ) : null}
       <p className="font-body text-body-sm text-on-surface-variant">
         {labels.hint}
       </p>

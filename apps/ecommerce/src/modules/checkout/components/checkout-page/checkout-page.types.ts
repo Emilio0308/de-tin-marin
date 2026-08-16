@@ -9,9 +9,13 @@ export type { CheckoutFormField, CheckoutFormValues };
 
 export type CheckoutPageLabels = {
   title: string;
+  subtitle: string;
   backToCart: string;
+  summaryTitle: string;
+  secureNote: string;
   contactTitle: string;
   addressTitle: string;
+  mapSectionTitle: string;
   name: string;
   lastName: string;
   phone: string;
@@ -26,6 +30,7 @@ export type CheckoutPageLabels = {
   requiredHint: string;
   mapTitle: string;
   mapHint: string;
+  phoneHint: string;
   subtotal: string;
   shipping: string;
   shippingPending: string;
@@ -37,9 +42,16 @@ export type CheckoutPageLabels = {
   stockChecking: string;
   emptyCart: string;
   validationSummary: string;
+  stepsLabel: string;
+  stepCart: string;
+  stepCheckout: string;
+  stepDone: string;
   validation: {
     required: string;
     invalidEmail: string;
+    invalidName: string;
+    invalidPhone: string;
+    tooShort: string;
   };
 };
 
