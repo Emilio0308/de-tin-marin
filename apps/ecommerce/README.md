@@ -19,7 +19,8 @@ Cada módulo tiene su propio `README.md` con el alcance de la etapa.
 
 - `src/shared/providers/query-provider.tsx` — TanStack Query
 - `src/shared/query/query-keys.ts` — convención de keys
-- `src/shared/errors/server-error.ts` — `guardAction` para Server Actions
+- `src/shared/errors/server-error.ts` — shim de `@de-tin-marin/logging`
+  (`guardAction`, `logServer*`; `UNEXPECTED` **sin** mensaje interno al cliente)
 
 ## Feature flags
 

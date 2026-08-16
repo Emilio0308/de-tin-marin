@@ -14,6 +14,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1097.0",
     "@de-tin-marin/config": "workspace:*",
     "@de-tin-marin/db": "workspace:*",
+    "@de-tin-marin/logging": "workspace:*",
     "@de-tin-marin/shared": "workspace:*",
     "@de-tin-marin/types": "workspace:*",
     "@de-tin-marin/ui": "workspace:*",

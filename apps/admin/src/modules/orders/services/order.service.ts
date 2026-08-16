@@ -47,6 +47,7 @@ import {
   type OrderDetail,
   type OrderListItem,
 } from "../types/order.dto";
+import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 
 async function resolveBundlesById(
   config: SupabaseConfig,
@@ -189,7 +190,8 @@ export async function getOrderService(
   try {
     const data = await parseOrderDetailWithRelations(config, row);
     return { ok: true, data };
-  } catch {
+  } catch (error) {
+    logServerError("getOrderService", error, { orderId: id });
     return { ok: false, error: "INVALID_ORDER_ROW" };
   }
 }
@@ -213,12 +215,20 @@ export async function createOrderService(
 > {
   const parsed = createOrderInputSchema.safeParse(raw);
   if (!parsed.success) {
+    logServerError("createOrderService", {
+      message: "VALIDATION",
+      issueCount: parsed.error.issues.length,
+    });
     return {
       ok: false,
       error: "VALIDATION",
       fieldErrors: zodIssuesToFieldErrorKeys(parsed.error.issues),
     };
   }
+
+  logServerInfo("createOrderService", "start", {
+    lineCount: parsed.data.lines.length,
+  });
 
   const packsById = await resolvePacksById(config, parsed.data.lines);
   for (const line of parsed.data.lines) {
@@ -315,6 +325,12 @@ export async function createOrderService(
     metadata: asJson({}),
   });
 
+  logServerInfo("createOrderService", "created", {
+    orderId: row.id,
+    orderNumber: row.order_number,
+    total: totals.total,
+  });
+
   return { ok: true, data: { id: row.id, orderNumber: row.order_number } };
 }
 
@@ -342,14 +358,31 @@ export async function transitionOrderStatusService(
   const to = parsed.data.status;
 
   if (to === "paid") {
+    logServerError("transitionOrderStatusService", {
+      message: "PAYMENT_CONFIRMATION_REQUIRED",
+      orderId: parsed.data.id,
+      from,
+      to,
+    });
     return { ok: false, error: "PAYMENT_CONFIRMATION_REQUIRED" };
   }
 
   if (!canTransitionOrderStatus(from, to)) {
+    logServerError("transitionOrderStatusService", {
+      message: "INVALID_TRANSITION",
+      orderId: parsed.data.id,
+      from,
+      to,
+    });
     return { ok: false, error: "INVALID_TRANSITION" };
   }
 
   const updated = await updateOrderStatusRepo(config, parsed.data.id, to);
+  logServerInfo("transitionOrderStatusService", "transitioned", {
+    orderId: updated.id,
+    from,
+    to,
+  });
   return { ok: true, data: { id: updated.id, status: to } };
 }
 

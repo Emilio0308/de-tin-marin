@@ -120,6 +120,7 @@ Reglas 6–7; detalle de orden: [`docs/orders.md`](../../../docs/orders.md).
 ## Auth
 
 Todas las actions: `guardAction` + `requireStaff` → `core.user_roles`.
+Logging: shim `@/shared/errors/server-error` → `@de-tin-marin/logging` (DECISIONS #37).
 
 ## Paginación listados
 

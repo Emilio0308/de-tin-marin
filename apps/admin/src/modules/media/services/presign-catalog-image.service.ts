@@ -8,7 +8,7 @@ import {
   createCatalogImageUploadUrlInputSchema,
   type CatalogImageContentType,
 } from "@/modules/media/schemas/presign-catalog-image.schema";
-import { logServerError } from "@/shared/errors/server-error";
+import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 
 const PRESIGN_EXPIRES_IN_SECONDS = 300;
 
@@ -73,9 +73,11 @@ export async function createCatalogImageUploadUrlService(
     expiresIn: PRESIGN_EXPIRES_IN_SECONDS,
   });
 
-  console.info(
-    `[createCatalogImageUploadUrlService] presigned folder=${folder} key=${key} bucket=${mediaConfig.bucket}`,
-  );
+  logServerInfo("createCatalogImageUploadUrlService", "presigned", {
+    folder,
+    key,
+    bucket: mediaConfig.bucket,
+  });
 
   return {
     ok: true,

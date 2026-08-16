@@ -16,6 +16,9 @@ export default defineConfig({
     projects: [
       {
         esbuild: jsxAutomatic,
+        resolve: {
+          alias: { "server-only": serverOnlyStub },
+        },
         test: {
           name: "packages",
           environment: "node",

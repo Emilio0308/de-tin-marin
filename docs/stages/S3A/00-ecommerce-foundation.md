@@ -29,7 +29,8 @@ El app `ecommerce` tiene infraestructura de módulos, TanStack Query, i18n, flag
   - `checkout/` — formulario + mapa (S3A-3)
   - `orders/` — confirmación + consulta guest (S3A-4)
 - `QueryClientProvider` + convención query keys en ecommerce layout
-- `apps/ecommerce/src/shared/errors/server-error.ts` — `guardAction` (mismo patrón admin)
+- `apps/ecommerce/src/shared/errors/server-error.ts` — shim `@de-tin-marin/logging`
+  (`guardAction`; ecommerce: `UNEXPECTED` sin mensaje interno) — mismo patrón que admin
 - **`@de-tin-marin/config/store-features`** (o `apps/ecommerce/src/config/store-features.ts` exportado vía config):
 
 ```typescript

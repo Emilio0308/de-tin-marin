@@ -18,3 +18,4 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 9. **UI / i18n:** responsive, paleta, sin mocks — [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md).
 10. **Repo:** `de-tin-marin` · scope `@de-tin-marin/*`.
 11. **Media CDN:** S3 + CloudFront vía CDK — [`docs/infra.md`](docs/infra.md) · DECISIONS #34/#35.
+12. **Logging server:** `@de-tin-marin/logging` (JSON consola); shim `shared/errors/server-error.ts` — DECISIONS #37 · [`rules/40`](docs/rules/40-validation-and-boundaries.md).

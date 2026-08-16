@@ -14,6 +14,7 @@ de-tin-marin/
     types/              # Tipos TypeScript compartidos
     services/           # Servicios compartidos (si aplica)
     validations/        # Esquemas Zod compartidos
+    logging/            # Logger server JSON + guardAction (DECISIONS #37)
     config/             # Env validado, presets ESLint/TS
     ai/                 # Contexto y utilidades para desarrollo con IA
   supabase/

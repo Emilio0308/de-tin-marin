@@ -25,7 +25,7 @@
 | 17  | Bundles en órdenes        | ✅     | Plantilla editable al crear orden; snapshot en `orders.shopping_cart` (Order shopping cart JSONB)                                                                                                                                                                                                                                                                                                                                                                             |
 | 18  | Precio en listado         | ✅     | Backend incluye campaña activa en query de productos y devuelve **precio final** — el front no recalcula                                                                                                                                                                                                                                                                                                                                                                      |
 | 19  | Nombre del proyecto       | ✅     | **`de-tin-marin`** (carpeta repo, scope npm `@de-tin-marin/*`, marca **De Tin Marín**). Reemplaza nombre provisional `candy`                                                                                                                                                                                                                                                                                                                                                  |
-| 20  | Errores en Server Actions | ✅     | Cuerpo de toda action envuelto en `guardAction(scope, run)`. Nunca tragar errores: `logServerError` en helpers server-only. Inesperados → `{ ok:false, error:"UNEXPECTED", message }`. Servicio: `apps/admin/src/shared/errors/server-error.ts`                                                                                                                                                                                                                               |
+| 20  | Errores en Server Actions | ✅     | Cuerpo de toda action envuelto en `guardAction(scope, run)` desde `@de-tin-marin/logging` (shim en `apps/*/src/shared/errors/server-error.ts`). Emite eventos JSON `started`/`completed`/`failed` a **consola del server** (terminal / Vercel Runtime Logs). Nunca tragar errores. Admin: `UNEXPECTED` puede incluir `message`. Ecommerce: `UNEXPECTED` **sin** mensaje interno. Ver #37                                                                                      |
 | 21  | Grants de schemas propios | ✅     | Exponer schema en la API **no basta**: cada migración que crea tablas en un schema propio debe incluir `GRANT USAGE` + privilegios para `anon`/`authenticated`. RLS gobierna filas. Ver `00003_api_grants.sql`                                                                                                                                                                                                                                                                |
 | 22  | Modelo de bundles         | ✅     | Bundle = plantilla con `quantity` = **cantidad de sorpresas** (default al personalizar) + `container_id` (envase; #30). `bundle_items` guarda `units_per_person` por producto (**v1 fija en 1**; nombre histórico = unidades por sorpresa). Sin stock (#5), sin `prices` propio; total dinámico (#6). En ecommerce/guest, `line.quantity` (sorpresas pedidas) es editable **15–100**, init = `clamp(bundles.quantity, 15, 100)`; admin permite `quantity >= 1` sin ese rango. |
 | 23  | i18n                      | ✅     | **`next-intl` sin routing por URL** en ambas apps. `defaultLocale = 'es'`; v1 solo español (`en` declarado en `@de-tin-marin/config/i18n` para habilitar sin refactor). Catálogos en `apps/<app>/messages/es.json`; config en `apps/<app>/src/i18n/request.ts`; tipos aumentados en `src/global.d.ts`. Presentacionales puros: el texto se resuelve en container/layout y baja por props o `useTranslations` en client leaves                                                 |
@@ -43,6 +43,7 @@
 | 34 | Media CDN (imágenes) | ✅ | **AWS S3 privado + CloudFront (OAC)** vía **CDK TypeScript** en `infra/cdk/`. Stacks **`MediaStaging`** y **`MediaProduction`** (entornos aislados; nombres AWS genéricos). URL CDN en `image_url`. Doc canónica: [`docs/infra.md`](infra.md). Brief: `docs/stages/S0/02-infra-media-cdn.md` |
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
+| 37 | Logging server (consola) | ✅ | Observabilidad v1 = **solo stdout/stderr** vía **`@de-tin-marin/logging`** (JSON una línea). `createServerErrorHelpers({ app, includeUnexpectedMessage })` en shims de app. `guardAction` / `withOperation` + `logServerError` / `Info` / `Warn` + `safeMeta` (redact PII/secrets). Metadata = resumen (IDs, conteos, códigos); nunca payloads crudos. Admin puede devolver `message` en `UNEXPECTED`; ecommerce no. Detalle: `rules/40-validation-and-boundaries.md` · `packages/logging/README.md` |
 
 ## Docs sincronizados (2026-08-15 — cantidad de sorpresa ecommerce)
 
@@ -307,6 +308,18 @@ Canónico detallado: [`orders.md`](orders.md) · README [`apps/admin/src/modules
 - `docs/stages/S3B/01-admin-list-pagination.md`
 - `docs/roadmap.md` § S3B · `docs/rules/50-data-fetching-cache-ssr.md`
 - READMEs admin catalog/orders · `@de-tin-marin/validations/admin-list`
+
+## Docs sincronizados (2026-08-15 — logging consola server)
+
+- DECISIONS #20 (actualizado) · **#37** — observabilidad v1 = stdout/stderr JSON
+- Package **`@de-tin-marin/logging`**: `createLogger`, `safeMeta`, `guardAction` /
+  `withOperation`, `createServerErrorHelpers`
+- Shims: `apps/*/src/shared/errors/server-error.ts` (`admin` con
+  `includeUnexpectedMessage: true`; `ecommerce` con `false`)
+- Mutaciones críticas (orden, pago, guest checkout, media, catalog bump) loguean
+  en service además del wrapper de action
+- Docs: `rules/40-validation-and-boundaries.md`, `coding-guidelines.md`,
+  `architecture.md`, `packages/logging/README.md`, READMEs ecommerce / S3A-0
 
 ## Cómo añadir una decisión
 

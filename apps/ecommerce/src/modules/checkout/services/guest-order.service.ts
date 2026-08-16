@@ -496,15 +496,15 @@ export async function createGuestOrderService(
   if (!parsed.success) {
     logServerError(scope, {
       message: "VALIDATION",
-      issues: parsed.error.flatten(),
+      issueCount: parsed.error.issues.length,
     });
     return { ok: false, error: "VALIDATION" };
   }
 
   logServerInfo(scope, "start", {
     lineCount: parsed.data.lines.length,
-    district: parsed.data.fulfillment.deliveryAddress?.district ?? null,
-    mapPin: parsed.data.mapPin,
+    hasDistrict: Boolean(parsed.data.fulfillment.deliveryAddress?.district),
+    hasMapPin: Boolean(parsed.data.mapPin),
   });
 
   const packsById = await resolvePacksById(config, parsed.data.lines);
@@ -527,7 +527,6 @@ export async function createGuestOrderService(
       message: "PRODUCT_NOT_FOUND",
       requested: productIds.length,
       found: products.length,
-      productIds,
     });
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
@@ -536,9 +535,7 @@ export async function createGuestOrderService(
     logServerError(scope, {
       message: "PRODUCT_NOT_FOUND",
       reason: "inactive_product",
-      inactiveIds: products
-        .filter((product) => !product.is_active)
-        .map((product) => product.id),
+      inactiveCount: products.filter((product) => !product.is_active).length,
     });
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
@@ -614,8 +611,8 @@ export async function createGuestOrderService(
   if (!deliveryResult.covered) {
     logServerError(scope, {
       message: "OUT_OF_COVERAGE",
-      district: parsed.data.fulfillment.deliveryAddress?.district ?? null,
-      mapPin: parsed.data.mapPin,
+      hasDistrict: Boolean(parsed.data.fulfillment.deliveryAddress?.district),
+      hasMapPin: Boolean(parsed.data.mapPin),
     });
     return { ok: false, error: "OUT_OF_COVERAGE" };
   }
@@ -660,7 +657,7 @@ export async function createGuestOrderService(
   if (!stockCheck.data.ok) {
     logServerError(scope, {
       message: "INSUFFICIENT_STOCK",
-      shortages: stockCheck.data.shortages,
+      shortageCount: stockCheck.data.shortages.length,
     });
     return { ok: false, error: "INSUFFICIENT_STOCK" };
   }

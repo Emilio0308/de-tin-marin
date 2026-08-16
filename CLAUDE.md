@@ -100,16 +100,16 @@ Máquina de estados de órdenes: ver [`docs/orders.md`](docs/orders.md).
 
 ## Docs de reglas (una fuente canónica cada una)
 
-| Doc                                                                                        | Alcance                                                     |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| [`docs/rules/00-architecture.md`](docs/rules/00-architecture.md)                           | Capas, DAL, boundaries de import, no-barrels                |
-| [`docs/rules/10-auth-and-authorization.md`](docs/rules/10-auth-and-authorization.md)       | Auth, ownership, roles admin vs customer                    |
-| [`docs/rules/30-rls-and-postgres.md`](docs/rules/30-rls-and-postgres.md)                   | RLS, policies, SECURITY DEFINER                             |
-| [`docs/rules/40-validation-and-boundaries.md`](docs/rules/40-validation-and-boundaries.md) | Zod, parse-don't-validate, env                              |
-| [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md)     | SSR vs CSR, React Query, staleTime, query keys              |
-| [`docs/rules/95-guardrails-lint-ci.md`](docs/rules/95-guardrails-lint-ci.md)               | ESLint, CI, pre-commit                                      |
-| [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md)                       | Responsive, i18n, paleta, no mocks en UI                    |
-| [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md)                   | Container/presentational, orden de archivo, tests de render |
+| Doc                                                                                        | Alcance                                                           |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| [`docs/rules/00-architecture.md`](docs/rules/00-architecture.md)                           | Capas, DAL, boundaries de import, no-barrels                      |
+| [`docs/rules/10-auth-and-authorization.md`](docs/rules/10-auth-and-authorization.md)       | Auth, ownership, roles admin vs customer                          |
+| [`docs/rules/30-rls-and-postgres.md`](docs/rules/30-rls-and-postgres.md)                   | RLS, policies, SECURITY DEFINER                                   |
+| [`docs/rules/40-validation-and-boundaries.md`](docs/rules/40-validation-and-boundaries.md) | Zod, parse-don't-validate, env, logging (`@de-tin-marin/logging`) |
+| [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md)     | SSR vs CSR, React Query, staleTime, query keys                    |
+| [`docs/rules/95-guardrails-lint-ci.md`](docs/rules/95-guardrails-lint-ci.md)               | ESLint, CI, pre-commit                                            |
+| [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md)                       | Responsive, i18n, paleta, no mocks en UI                          |
+| [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md)                   | Container/presentational, orden de archivo, tests de render       |
 
 ## Docs de dominio y arquitectura
 
@@ -153,11 +153,12 @@ Detalle: [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md
 
 ## Trampas comunes (triage rápido)
 
-| Síntoma                                | Causa probable                                                         |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| `permission denied for table`          | Cliente Supabase incorrecto o RLS sin policy                           |
-| Precio distinto en checkout vs carrito | Orders recalculando en lugar de usar snapshot de Pricing               |
-| Stock negativo en producción           | Regla 14 no atómica o bundle sin descontar componentes                 |
-| Hydration mismatch                     | Valor no determinístico en render (fecha, random, localStorage)        |
-| Secret en bundle del cliente           | Import de valor desde módulo `server-only` en `'use client'`           |
-| Usuarios deslogueados al azar          | Código entre `createServerClient` y primera llamada auth en middleware |
+| Síntoma                                 | Causa probable                                                         |
+| --------------------------------------- | ---------------------------------------------------------------------- |
+| `permission denied for table`           | Cliente Supabase incorrecto o RLS sin policy                           |
+| Precio distinto en checkout vs carrito  | Orders recalculando en lugar de usar snapshot de Pricing               |
+| Stock negativo en producción            | Regla 14 no atómica o bundle sin descontar componentes                 |
+| Hydration mismatch                      | Valor no determinístico en render (fecha, random, localStorage)        |
+| Secret en bundle del cliente            | Import de valor desde módulo `server-only` en `'use client'`           |
+| Usuarios deslogueados al azar           | Código entre `createServerClient` y primera llamada auth en middleware |
+| UI genérica + Vercel/terminal sin causa | Action sin `guardAction` o `catch` vacío — ver `@de-tin-marin/logging` |

@@ -12,6 +12,7 @@ import {
 } from "../repositories/payment.repository";
 import { updateOrderPaymentStatusRepo } from "../repositories/order.repository";
 import { bumpCatalogVersionSafe } from "@/modules/catalog/repositories/catalog-cache-meta.repository";
+import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 
 type ConfirmPaymentError =
   | "VALIDATION"
@@ -65,7 +66,13 @@ export async function confirmPaymentService(
     }
 > {
   const parsed = confirmPaymentInputSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+  if (!parsed.success) {
+    logServerError("confirmPaymentService", {
+      message: "VALIDATION",
+      issueCount: parsed.error.issues.length,
+    });
+    return { ok: false, error: "VALIDATION" };
+  }
 
   try {
     const data = await confirmPaymentWithStockDeductRepo(config, {
@@ -76,6 +83,11 @@ export async function confirmPaymentService(
     });
 
     await bumpCatalogVersionSafe(config);
+
+    logServerInfo("confirmPaymentService", "confirmed", {
+      orderId: data.orderId,
+      paymentId: data.paymentId,
+    });
 
     return {
       ok: true,
@@ -88,6 +100,11 @@ export async function confirmPaymentService(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const parsedError = parseConfirmPaymentError(message);
+    logServerError("confirmPaymentService", error, {
+      orderId: parsed.data.orderId,
+      errorCode: parsedError.error,
+      sku: parsedError.details?.sku,
+    });
     return {
       ok: false,
       error: parsedError.error,

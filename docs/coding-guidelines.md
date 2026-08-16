@@ -117,17 +117,22 @@ Detalle de boundaries: [`rules/40-validation-and-boundaries.md`](rules/40-valida
 
 **Nunca tragar un error en silencio.** Un `catch {}` vacío o un `Result` fallido sin log deja la UI con mensaje genérico y Vercel/terminal sin causa.
 
-| Dónde                             | Qué usar                                                                     | Dónde se ve                                |
-| --------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------ |
-| Server Action / service           | `guardAction` + `logServerError` (`shared/errors/server-error.ts`)           | **Vercel → Runtime Logs** / terminal local |
-| Container client (`'use client'`) | `logClientError` (`shared/errors/client-error.ts`) + mostrar `message` en UI | **Consola del browser** (DevTools)         |
+**Sink v1:** solo consola del servidor (JSON una línea vía `@de-tin-marin/logging`). Sin guardar registros. Detalle: DECISIONS #37 · [`rules/40`](rules/40-validation-and-boundaries.md) · [`packages/logging/README.md`](../packages/logging/README.md).
+
+| Dónde                   | Qué usar                                                            | Dónde se ve                                |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
+| Server Action / service | `guardAction` + `logServerError` / `Info` / `Warn` (shim → package) | **Vercel → Runtime Logs** / terminal local |
+| Container client admin  | `logClientError` (`shared/errors/client-error.ts`)                  | **Consola del browser** (DevTools)         |
 
 Reglas:
 
-1. Toda Server Action envuelve el cuerpo en `guardAction("scope", …)`.
-2. Todo `catch` en containers debe `logClientError(scope, error)` y preferir `defaultWithMessage` con el mensaje real (backoffice).
-3. Fallos de PUT a S3 (CORS/red) ocurren en el **browser** — no aparecen en Vercel. Usar `putPresignedCatalogImage` (loguea) y revisar Network/CORS.
-4. Tras un deploy, si Vercel no muestra logs al fallar: o el fallo es client-side, o el action no llegó a ejecutarse.
+1. Toda Server Action envuelve el cuerpo en `guardAction("scope", …)` → eventos `started` / `completed` / `failed`.
+2. Mutaciones críticas también loguean en el **service** (resumen seguro).
+3. Metadata = resumen (IDs, códigos, conteos); nunca PII, secrets ni payloads crudos (`safeMeta`).
+4. Todo `catch` en containers admin debe `logClientError(scope, error)`.
+5. Fallos de PUT a S3 (CORS/red) ocurren en el **browser** — no aparecen en Vercel.
+6. Tras un deploy, si Vercel no muestra logs al fallar: o el fallo es client-side, o el action no llegó a ejecutarse.
+7. Admin: `UNEXPECTED` puede incluir `message`. Ecommerce: **sin** mensaje interno.
 
 Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md) § Manejo de errores.
 
@@ -180,7 +185,7 @@ Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-bound
 - [ ] `pnpm check` verde
 - [ ] `pnpm build` verde
 - [ ] Variable de entorno nueva → schema `env.ts` + `.env.example` + `turbo.json` `tasks.build.env`
-- [ ] Errores: `guardAction` / `logServerError` (server) o `logClientError` (client) — sin `catch` vacío
+- [ ] Errores: `guardAction` / `logServer*` (server JSON vía `@de-tin-marin/logging`) o `logClientError` (client admin) — sin `catch` vacío; meta sin PII
 - [ ] Componente nuevo: container + presentational + types + helpers (si aplica) + test de render
 - [ ] Inputs numéricos: draft string, sin coerción `Number(raw) || fallback` por keystroke
 - [ ] Sin `index.ts` / barrels en imports

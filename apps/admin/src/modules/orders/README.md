@@ -174,6 +174,10 @@ Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock c
 
 `@de-tin-marin/validations/order` · `payment` · `shipment` · **`admin-list`** (`listOrdersPageAction`)
 
+Actions: `guardAction` (shim → `@de-tin-marin/logging`). Services críticos
+(`createOrder`, confirm payment, etc.) también usan `logServerInfo` /
+`logServerError` con meta segura (conteos, IDs; sin `shopping_cart` ni contacto).
+
 Paginación `/orders`: mismos patrones que catálogo — [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-list-pagination.md).
 
 ## Shared / migraciones

@@ -1,0 +1,23 @@
+{
+  "name": "@de-tin-marin/logging",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./logger": "./src/logger.ts",
+    "./redact": "./src/redact.ts",
+    "./guard-action": "./src/guard-action.ts",
+    "./get-error-message": "./src/get-error-message.ts",
+    "./server-error": "./src/server-error.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
+}
