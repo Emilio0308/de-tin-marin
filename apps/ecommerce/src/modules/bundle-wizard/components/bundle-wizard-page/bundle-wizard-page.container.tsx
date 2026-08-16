@@ -11,6 +11,9 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
+  BUNDLE_LINE_QUANTITY_MAX,
+  BUNDLE_LINE_QUANTITY_MIN,
+  clampBundleLineQuantity,
   validateBundleCustomization,
   type BundleWizardTemplate,
   type CustomizeBundleComponent,
@@ -59,8 +62,12 @@ export function BundleWizardPageContainer({
   const [components, setComponents] = useState<CustomizeBundleComponent[]>(
     () => template.initialComponents,
   );
+  const [quantity, setQuantity] = useState(() =>
+    clampBundleLineQuantity(template.personCount),
+  );
   const [debouncedComponents, setDebouncedComponents] =
     useState<CustomizeBundleComponent[]>(components);
+  const [debouncedQuantity, setDebouncedQuantity] = useState(quantity);
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pickerLabels, setPickerLabels] = useState<Record<string, string>>({});
@@ -74,11 +81,21 @@ export function BundleWizardPageContainer({
     return () => window.clearTimeout(timeout);
   }, [components]);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuantity(quantity);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [quantity]);
+
   const validation = useMemo(
     () => validateBundleCustomization(components, bounds),
     [bounds, components],
   );
-  const isValid = validation.ok;
+  const isQuantityValid =
+    quantity >= BUNDLE_LINE_QUANTITY_MIN &&
+    quantity <= BUNDLE_LINE_QUANTITY_MAX;
+  const isValid = validation.ok && isQuantityValid;
 
   const selectedProductIds = useMemo(
     () => new Set(components.map((component) => component.productId)),
@@ -131,18 +148,29 @@ export function BundleWizardPageContainer({
     void fetchNextPage();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
+  const isDebouncedQuantityValid =
+    debouncedQuantity >= BUNDLE_LINE_QUANTITY_MIN &&
+    debouncedQuantity <= BUNDLE_LINE_QUANTITY_MAX;
+
   const previewQuery = useQuery({
     ...freshQueryOptions,
-    queryKey: queryKeys.wizard.preview(template.bundleId, debouncedComponents),
+    queryKey: queryKeys.wizard.preview(
+      template.bundleId,
+      debouncedQuantity,
+      debouncedComponents,
+    ),
     queryFn: async () => {
       const result = await previewBundleLineAction({
         bundleId: template.bundleId,
+        quantity: debouncedQuantity,
         components: debouncedComponents,
       });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
-    enabled: validateBundleCustomization(debouncedComponents, bounds).ok,
+    enabled:
+      validateBundleCustomization(debouncedComponents, bounds).ok &&
+      isDebouncedQuantityValid,
   });
 
   const unitPricesByProductId = useMemo(() => {
@@ -172,6 +200,10 @@ export function BundleWizardPageContainer({
     setComponents((current) => addComponent(current, product.id, bounds));
   };
 
+  const handleQuantityChange = (next: number) => {
+    setQuantity(clampBundleLineQuantity(next));
+  };
+
   const handleAddToCart = () => {
     if (isAddingToCart || !previewQuery.data?.line || !isValid) return;
     setIsAddingToCart(true);
@@ -184,6 +216,9 @@ export function BundleWizardPageContainer({
     <BundleWizardPage
       template={template}
       components={components}
+      quantity={quantity}
+      minQuantity={BUNDLE_LINE_QUANTITY_MIN}
+      maxQuantity={BUNDLE_LINE_QUANTITY_MAX}
       searchValue={searchDraft}
       products={pickerProducts}
       selectedProductIds={selectedProductIds}
@@ -206,6 +241,13 @@ export function BundleWizardPageContainer({
         back: t("back"),
         title: t("title"),
         personCount: t("personCount", { count: template.personCount }),
+        surpriseQuantity: t("surpriseQuantity"),
+        surpriseQuantityHint: t("surpriseQuantityHint", {
+          min: BUNDLE_LINE_QUANTITY_MIN,
+          max: BUNDLE_LINE_QUANTITY_MAX,
+        }),
+        decreaseQuantity: t("decreaseQuantity"),
+        increaseQuantity: t("increaseQuantity"),
         addToCart: t("addToCart"),
         addToCartLoading: t("addToCartLoading"),
         validationMin: t("validation.min", { min: bounds.minProducts }),
@@ -242,6 +284,7 @@ export function BundleWizardPageContainer({
       }}
       onRemove={handleRemove}
       onAdd={handleAdd}
+      onQuantityChange={handleQuantityChange}
       onSearchChange={setSearchDraft}
       onSearchSubmit={() => {
         startTransition(() => {

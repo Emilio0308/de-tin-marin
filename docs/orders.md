@@ -126,11 +126,35 @@ plantilla (`catalog.bundles.customization_min_products` /
 `validateBundleCustomization(components, bounds)` en
 `@de-tin-marin/validations/customize-bundle` son los contratos canónicos.
 
+### Sorpresa personalizada: cantidad de línea ecommerce
+
+`bundles.quantity` es la **cantidad de sorpresas** definida en la plantilla
+(default al personalizar). En la orden, esa cantidad queda en
+`shopping_cart.lines[].quantity` para una línea `type: "bundle"`.
+
+| Canal                                  | Regla de `quantity`                                                                                                                                                                                      |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plantilla (`catalog.bundles.quantity`) | Entero `>= 1`; default de cuántas sorpresas arma esa plantilla.                                                                                                                                          |
+| Ecommerce / guest (`line.quantity`)    | Entero **15–100**. El wizard inicia con `clamp(bundles.quantity, 15, 100)` (DTO: `personCount` = ese valor), permite cambiarlo y hace preview con el elegido. Checkout vuelve a rechazar fuera de rango. |
+| Admin order-form                       | Entero `>= 1`; no aplica el rango 15–100.                                                                                                                                                                |
+
+El rango ecommerce de cantidad de sorpresas es independiente de los límites de
+productos distintos de la plantilla. Precio, componentes y envase se congelan
+en la línea al agregar al carrito; cada unidad de `line.quantity` consume un
+envase y las unidades base de todos los componentes.
+
+Constantes: `BUNDLE_LINE_QUANTITY_MIN = 15` y
+`BUNDLE_LINE_QUANTITY_MAX = 100` en
+`@de-tin-marin/validations/customize-bundle`.
+
 ### Ejemplo sorpresa personalizada
 
-Plantilla base: productos 1–5, 25 sorpresas. Cliente modifica → productos 1,2,3,5,6,8.
+Plantilla: productos 1–5, `bundles.quantity = 25` sorpresas. Cliente modifica
+composición → productos 1,2,3,5,6,8 y deja cantidad 30.
 
-Una línea `type: "bundle"` con `quantity: 25`, `serviceFee` congelado y 6 `components`, cada uno con `quantityPerUnit: 1`, `totalQuantity: 25`, `unitPrice` del momento del pedido.
+Línea `type: "bundle"` con `quantity: 30`, `container` congelado y 6
+`components`; con `quantityPerUnit: 1`, cada componente tiene
+`totalQuantity: 30` y el `unitPrice` final del momento del preview.
 
 ## Cabecera de la orden
 

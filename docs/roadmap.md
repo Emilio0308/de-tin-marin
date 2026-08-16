@@ -223,7 +223,10 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
   `customization_min_products` / `customization_max_products` (defaults
   8/20; `1 ≤ min ≤ max ≤ 100`; migración `00025`). La composición inicial,
   wizard, preview y creación de orden revalidan el rango.
-- Plantilla editable; personas fijas de plantilla
+- Plantilla editable; `bundles.quantity` = sorpresas de plantilla. En
+  ecommerce/guest `line.quantity` editable (**15–100**), init =
+  `clamp(bundles.quantity, 15, 100)`, preview + revalidación en checkout
+  (admin no usa ese rango)
 - `enableUnitsPerPerson=false`; stock warning only
 - Brief: [`docs/stages/S3A/02-bundle-customization-wizard.md`](stages/S3A/02-bundle-customization-wizard.md)
 

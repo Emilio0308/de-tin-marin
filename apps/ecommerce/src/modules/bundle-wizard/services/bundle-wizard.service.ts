@@ -143,7 +143,7 @@ export async function previewBundleLineService(
     return { ok: false, error: "VALIDATION" };
   }
 
-  const { bundleId, components } = parsed.data;
+  const { bundleId, quantity, components } = parsed.data;
   const bundleRow = await getPublicBundleByIdRepo(config, bundleId);
   if (!bundleRow) return { ok: false, error: "NOT_FOUND" };
 
@@ -191,7 +191,7 @@ export async function previewBundleLineService(
       {
         type: "bundle",
         bundleId,
-        quantity: bundleRow.quantity,
+        quantity,
         components,
       },
     ],

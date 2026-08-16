@@ -15,7 +15,7 @@
 - Modelo base en [database.md](../../database.md) § catalog.
 - **DECISIONS #5** — bundles **no tienen stock**; son plantillas por demanda. Solo `products` tiene `stock_quantity`.
 - **DECISIONS #6** — precio del bundle **dinámico, NO persistido**; se recalcula en cada consulta desde componentes vivos.
-- **DECISIONS #22** — bundle = plantilla con `quantity` (personas/porciones) + `service_fee`; `bundle_items` con `units_per_person` (v1 = 1).
+- **DECISIONS #22** — bundle = plantilla con `quantity` (**sorpresas**; docs antiguos decían “personas”) + `service_fee` (luego `container_id` en S1E); `bundle_items` con `units_per_person` (v1 = 1; unidades por sorpresa).
 - **Invariante 9/11** — pricing se calcula en backend; el bundle es plantilla y su precio se **congela** recién al crear la orden (`orders.shopping_cart`, S2B) — no aquí.
 - Los componentes referencian **solo `catalog.products`** (sin bundles anidados).
 - Grants: cada tabla nueva en schema propio necesita `GRANT` para `anon`/`authenticated` (lección S1A, ver `00003_api_grants.sql`).

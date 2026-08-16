@@ -58,7 +58,7 @@ describe("createGuestOrderInputSchema", () => {
         {
           type: "bundle",
           bundleId,
-          quantity: 10,
+          quantity: 15,
           components: [
             { productId, quantityPerUnit: 1 },
             {
@@ -82,5 +82,26 @@ describe("createGuestOrderInputSchema", () => {
       ],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rechaza bundle con quantity fuera de 15–100", () => {
+    const result = createGuestOrderInputSchema.safeParse({
+      ...baseGuestOrder,
+      lines: [
+        {
+          type: "bundle",
+          bundleId,
+          quantity: 14,
+          components: [
+            { productId, quantityPerUnit: 1 },
+            {
+              productId: "00000000-0000-4000-8000-000000000002",
+              quantityPerUnit: 1,
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
   });
 });

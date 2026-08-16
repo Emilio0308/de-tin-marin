@@ -37,8 +37,14 @@ export const queryKeys = {
     all: ["wizard"] as const,
     template: (bundleId: string) =>
       [...queryKeys.wizard.all, "template", bundleId] as const,
-    preview: (bundleId: string, components: unknown) =>
-      [...queryKeys.wizard.all, "preview", bundleId, components] as const,
+    preview: (bundleId: string, quantity: number, components: unknown) =>
+      [
+        ...queryKeys.wizard.all,
+        "preview",
+        bundleId,
+        quantity,
+        components,
+      ] as const,
     productSearch: (search: string) =>
       [...queryKeys.wizard.all, "product-search", search] as const,
   },

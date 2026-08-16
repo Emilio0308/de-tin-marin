@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  BUNDLE_LINE_QUANTITY_MAX,
+  BUNDLE_LINE_QUANTITY_MIN,
+} from "./customize-bundle";
+import {
   createOrderInputObjectSchema,
   orderShoppingCartBundleLineSchema,
   orderShoppingCartPackLineSchema,
@@ -41,6 +45,19 @@ export const createGuestOrderInputSchema = createOrderInputObjectSchema
             code: z.ZodIssueCode.custom,
             message: "Guest checkout does not allow unitQuantity > 0",
             path: ["lines", index, "unitQuantity"],
+          });
+        }
+      }
+
+      if (line.type === "bundle") {
+        if (
+          line.quantity < BUNDLE_LINE_QUANTITY_MIN ||
+          line.quantity > BUNDLE_LINE_QUANTITY_MAX
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `bundle quantity must be between ${BUNDLE_LINE_QUANTITY_MIN} and ${BUNDLE_LINE_QUANTITY_MAX}`,
+            path: ["lines", index, "quantity"],
           });
         }
       }

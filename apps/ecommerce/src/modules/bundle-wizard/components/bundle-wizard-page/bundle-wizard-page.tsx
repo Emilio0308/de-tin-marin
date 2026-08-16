@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Minus, Plus, ShoppingCart } from "lucide-react";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { WizardComponentList } from "../wizard-component-list/wizard-component-list";
 import { WizardPriceSummary } from "../wizard-price-summary/wizard-price-summary";
@@ -37,9 +37,74 @@ function resolveBundleValidationMessage({
   return { message: labels.validationDuplicate, severity: "muted" };
 }
 
+function SurpriseQuantitySelector({
+  quantity,
+  minQuantity,
+  maxQuantity,
+  labels,
+  onQuantityChange,
+}: {
+  quantity: number;
+  minQuantity: number;
+  maxQuantity: number;
+  labels: Pick<
+    BundleWizardPageProps["labels"],
+    | "surpriseQuantity"
+    | "surpriseQuantityHint"
+    | "decreaseQuantity"
+    | "increaseQuantity"
+  >;
+  onQuantityChange: (quantity: number) => void;
+}) {
+  return (
+    <div className="border-outline-variant/40 bg-surface-container-lowest space-y-3 rounded-[24px] border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-label text-label-bold text-on-surface text-sm">
+            {labels.surpriseQuantity}
+          </p>
+          <p className="font-body text-body-sm text-on-surface-variant mt-1">
+            {labels.surpriseQuantityHint}
+          </p>
+        </div>
+        <div className="border-outline-variant bg-surface flex items-center rounded-full border px-1">
+          <button
+            type="button"
+            onClick={() => onQuantityChange(quantity - 1)}
+            disabled={quantity <= minQuantity}
+            aria-label={labels.decreaseQuantity}
+            className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-11 w-11 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+          >
+            <Minus className="h-5 w-5" aria-hidden />
+          </button>
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            className="font-label text-label-bold text-on-surface min-w-10 text-center"
+          >
+            {quantity}
+          </span>
+          <button
+            type="button"
+            onClick={() => onQuantityChange(quantity + 1)}
+            disabled={quantity >= maxQuantity}
+            aria-label={labels.increaseQuantity}
+            className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-11 w-11 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+          >
+            <Plus className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BundleWizardPage({
   template,
   components,
+  quantity,
+  minQuantity,
+  maxQuantity,
   searchValue,
   products,
   selectedProductIds,
@@ -61,6 +126,7 @@ export function BundleWizardPage({
   labels,
   onRemove,
   onAdd,
+  onQuantityChange,
   onSearchChange,
   onSearchSubmit,
   onProductsRetry,
@@ -133,12 +199,20 @@ export function BundleWizardPage({
                   </p>
                 ) : null}
               </div>
+
+              <SurpriseQuantitySelector
+                quantity={quantity}
+                minQuantity={minQuantity}
+                maxQuantity={maxQuantity}
+                labels={labels}
+                onQuantityChange={onQuantityChange}
+              />
             </div>
 
             <div className="space-y-stack-md">
               <WizardComponentList
                 components={components}
-                personCount={template.personCount}
+                personCount={quantity}
                 minProducts={minProducts}
                 maxProducts={maxProducts}
                 labelsByProductId={labelsByProductId}

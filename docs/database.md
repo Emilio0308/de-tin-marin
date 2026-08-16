@@ -189,7 +189,7 @@ Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**
 | `name`, `description`        | text        |                                                                                              |
 | `image_url`                  | text        | URL CDN / texto (upload admin S0-03 → `bundles/`)                                            |
 | `container_id`               | uuid        | FK → `catalog.surprise_containers` (S1E)                                                     |
-| `quantity`                   | int         | Nº de personas/porciones a las que apunta el pack (`>= 1`)                                   |
+| `quantity`                   | int         | Cantidad de **sorpresas** de la plantilla (`>= 1`); default al personalizar                  |
 | `customization_min_products` | int         | Mín. productos **distintos** al personalizar (default **8**; `not null`; migración `00025`)  |
 | `customization_max_products` | int         | Máx. productos **distintos** al personalizar (default **20**; `not null`; techo app **100**) |
 | `is_active`                  | boolean     |                                                                                              |

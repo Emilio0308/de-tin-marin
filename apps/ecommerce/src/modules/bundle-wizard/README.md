@@ -8,12 +8,21 @@ Wizard de personalización de sorpresas (S3A-2), integrado con el carrito (S3A-3
 
 ## Boundaries
 
-| Action / Service           | Descripción                                                     |
-| -------------------------- | --------------------------------------------------------------- |
-| `getBundleForWizardAction` | Plantilla + `description` + items + container + `personCount`   |
-| `previewBundleLineAction`  | Preview precio + stock vía `buildOrderCart` y `checkOrderStock` |
+| Action / Service           | Descripción                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------- |
+| `getBundleForWizardAction` | Plantilla + `description` + items + container + `personCount` (= `bundles.quantity`, sorpresas) |
+| `previewBundleLineAction`  | Preview precio + stock con `quantity` editable (15–100)                                         |
 
 UI: si `template.description` no es `null`, se muestra bajo el encabezado de la plantilla.
+
+## Cantidad de sorpresas
+
+- `bundles.quantity` / `template.personCount` = cantidad de **sorpresas** de la plantilla (default; `personCount` es nombre legacy en el DTO).
+- `line.quantity` = sorpresas pedidas (multiplica dulces, envase y precio); puede diferir del default tras editar en el wizard.
+- Ecommerce / guest: **15 ≤ quantity ≤ 100** (`BUNDLE_LINE_QUANTITY_MIN` / `MAX`).
+- Valor inicial: `clampBundleLineQuantity(template.personCount)`.
+- Admin order-form: `quantity >= 1` sin tope ecommerce.
+- Guest checkout revalida el rango 15–100 en `createGuestOrderInputSchema`.
 
 ## Integración con carrito
 
@@ -28,13 +37,12 @@ Al confirmar, `BundleWizardPageContainer` llama `useCart().addBundleLine()` con 
 - `getBundleForWizardService` expone los límites en la plantilla y recorta `initialComponents` al máximo de **esa** sorpresa.
 - La plantilla y el estado del wizard tienen productos por `productId` único;
   la cardinalidad cuenta productos distintos, no
-  `unitsPerPerson` ni personas de la sorpresa.
-- Preview solo corre para una composición válida. El service vuelve a cargar
-  los límites de la plantilla y valida antes de calcular precio o stock:
+  `unitsPerPerson` ni la cantidad de sorpresas.
+- Preview solo corre para una composición válida **y** `quantity` en 15–100. El service
+  vuelve a cargar los límites de la plantilla y valida antes de calcular precio o stock:
   los límites recibidos en el cliente no son una autorización.
-- El order-form admin usa los mismos límites al personalizar una línea bundle.
-  Crear la orden vuelve a validarlos; el snapshot resultante no cambia si el
-  administrador edita la plantilla después.
+- El order-form admin usa los mismos límites de **dulces** al personalizar; la cantidad de
+  sorpresas en admin no usa el tope 15–100.
 - Persistencia: `00025_bundle_customization_limits.sql` agrega ambas columnas,
   conserva bundles existentes con 8/20 y aplica `1 ≤ min ≤ max` en DB. El
   máximo absoluto de 100 se aplica en Zod/app.

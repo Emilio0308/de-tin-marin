@@ -12,52 +12,53 @@
 ## Contexto (leer esto, no todo docs/)
 
 - **Regla 7** — personalización desde plantilla; snapshot independiente del template.
-- **Regla 8** — precio línea = Σ(`totalQuantity × unitPrice`) + `container.unitPrice × bundle.quantity` (personas fijas de plantilla).
-- Admin `order-form` ya permite editar componentes de bundle al crear orden — **misma semántica** que ecommerce.
+- **Regla 8** — precio línea = Σ(`totalQuantity × unitPrice`) + `container.unitPrice × line.quantity` (cantidad de sorpresas editable).
+- Admin `order-form` ya permite editar componentes y `quantity` al crear orden — **misma semántica** que ecommerce (admin sin tope 15–100).
 - `storeFeatures.enableUnitsPerPerson = false` — UI oculta/deshabilita cantidad por dulce; código soporta `unitsPerPerson` cuando flag = true.
 - Stock: **solo warning** vía `checkOrderStock` (no bloquear agregar al wizard en v1).
 
 ## Objetivo
 
-Desde una plantilla en `/sorpresas/[id]/personalizar`, el cliente agrega/quita/reemplaza dulces (mín./máx. **por plantilla**, defaults 8/20), ve precio en vivo y total de personas fijo de la plantilla; al finalizar obtiene una línea lista para el carrito (S3A-3).
+Desde una plantilla en `/sorpresas/[id]/personalizar`, el cliente agrega/quita/reemplaza dulces (mín./máx. **por plantilla**, defaults 8/20), elige la **cantidad de sorpresas** (15–100), ve precio en vivo y al finalizar obtiene una línea lista para el carrito (S3A-3).
 
 ## Reglas de personalización (cerradas)
 
-| Regla                 | Valor                                                                               |
-| --------------------- | ----------------------------------------------------------------------------------- |
-| Mínimo productos      | Por plantilla: `bundles.customization_min_products` (default **8**)                 |
-| Máximo productos      | Por plantilla: `bundles.customization_max_products` (default **20**; techo **100**) |
-| Catálogo de reemplazo | **Cualquier producto activo** (mismo universo que admin)                            |
-| Plantilla default     | Items `bundle_items` precargados; usuario puede quitar cualquiera respetando mínimo |
-| `quantity` (personas) | **No editable** — viene de `bundles.quantity` de plantilla                          |
-| `unitsPerPerson`      | **1** en v1; UI condicionada por `enableUnitsPerPerson`                             |
-| Envase                | De plantilla (`container_id`); congelado al agregar al carrito                      |
-| Stock UI              | Warning si `checkOrderStock` falla para composición actual (no bloqueo)             |
+| Regla                 | Valor                                                                                                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mínimo productos      | Por plantilla: `bundles.customization_min_products` (default **8**)                                                                                                           |
+| Máximo productos      | Por plantilla: `bundles.customization_max_products` (default **20**; techo **100**)                                                                                           |
+| Catálogo de reemplazo | **Cualquier producto activo** (mismo universo que admin)                                                                                                                      |
+| Plantilla default     | Items `bundle_items` precargados; usuario puede quitar cualquiera respetando mínimo                                                                                           |
+| `quantity` (línea)    | **Editable** en ecommerce: **15 ≤ quantity ≤ 100** sorpresas; init = `clamp(bundles.quantity, 15, 100)`. Admin: `>= 1` sin tope. `bundles.quantity` = sorpresas de plantilla. |
+| `unitsPerPerson`      | **1** en v1; UI condicionada por `enableUnitsPerPerson`                                                                                                                       |
+| Envase                | De plantilla (`container_id`); congelado al agregar al carrito                                                                                                                |
+| Stock UI              | Warning si `checkOrderStock` falla para composición actual (no bloqueo)                                                                                                       |
 
 ## Scope IN
 
 - Ruta `/sorpresas/[id]/personalizar` — wizard multi-paso o single-page (UX a criterio; lógica fija)
 - Cargar plantilla: `getPublicBundle` + items + container
-- Estado wizard: `components: { productId, quantityPerUnit }[]` alineado con `orderBundleComponentInputSchema`
+- Estado wizard: `components` + `quantity` alineados con `customizeBundleInputSchema`
 - Panel “Agregar dulce”: buscador sobre catálogo activo (reutilizar listado S3A-1)
 - Quitar / reemplazar con validación min/max
-- Preview precio en vivo: `computeBundleTotal` + `buildShoppingCart` (1 línea bundle, `quantity` = plantilla.personas)
-- Validación Zod estructural + bounds por plantilla (`validateBundleCustomization`)
-- Salida: `CartBundleLine` tipado (ver S3A-3) — “Agregar al carrito” (si carrito no listo, guardar en sessionStorage stub)
+- Control de cantidad de sorpresas (15–100) con preview en vivo
+- Preview precio en vivo: `buildOrderCart` / `buildShoppingCart` (1 línea bundle, `quantity` editable)
+- Validación Zod estructural + bounds por plantilla (`validateBundleCustomization`) + bounds de cantidad
+- Salida: `CartBundleLine` tipado (ver S3A-3) — “Agregar al carrito”
 - i18n — wizard, límites, warnings stock
-- Vitest — validación min/max por plantilla, precio igual admin para misma composición
+- Vitest — validación min/max por plantilla, cantidad 15–100, precio igual admin para misma composición
 - Playwright — `apps/ecommerce/e2e/bundle-wizard-smoke.spec.ts`: abrir plantilla, quitar 1 dulce, agregar otro, ver total
 
 ## Scope OUT (traps)
 
-- **NO editar número de personas** — fijo en plantilla
+- **NO** relajar 15–100 en ecommerce / guest checkout (admin order-form sí puede `quantity < 15`)
 - **NO `enableUnitsPerPerson` UI activa** en v1 (flag false)
 - **NO bloqueo por stock** — solo banner warning
 - **NO crear orden** — S3A-3
-- **NO múltiples sorpresas distintas en un solo wizard** — 1 plantilla → 1 línea carrito; cantidad de **pedidos** de esa sorpresa = 1 en v1 (personas = `bundle.quantity` en precio)
+- **NO múltiples plantillas en un solo wizard** — 1 plantilla → 1 línea carrito con `quantity` N
 - **NO `index.ts` barrels**
 
-> **Nota precio:** `bundles.quantity` = personas que cubre la plantilla; `line.quantity` en orden = número de sorpresas físicas. v1 wizard produce **una** sorpresa configurada; el carrito puede duplicar línea en S3A-3 si se permite cantidad >1 allí.
+> **Nota cantidad:** `bundles.quantity` = cantidad de **sorpresas** de la plantilla (default). `line.quantity` en orden = sorpresas pedidas (puede cambiarse en el wizard). Init ecommerce = `clamp(bundles.quantity, 15, 100)`. El DTO wizard expone ese default como `personCount` (nombre legacy).
 
 ## Tablas y RLS
 
@@ -73,19 +74,20 @@ Lectura pública catálogo existente; no cambia la superficie RLS.
 
 ## Boundaries y DTOs
 
-| Boundary                      | Tipo          | Input                        | Output                                                  |
-| ----------------------------- | ------------- | ---------------------------- | ------------------------------------------------------- |
-| `getBundleForWizard`          | Server Action | `{ bundleId }`               | Plantilla + límites + items + container + `personCount` |
-| `previewBundleLine`           | Server Action | `customizeBundleInputSchema` | `{ lineTotal, components, stockCheck }`                 |
-| `validateBundleCustomization` | shared/Zod    | components[] + bounds        | ok / error codes                                        |
+| Boundary                      | Tipo          | Input                        | Output                                                                                    |
+| ----------------------------- | ------------- | ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `getBundleForWizard`          | Server Action | `{ bundleId }`               | Plantilla + límites + items + container + `personCount` (= `bundles.quantity`, sorpresas) |
+| `previewBundleLine`           | Server Action | `customizeBundleInputSchema` | `{ lineTotal, components, stockCheck }`                                                   |
+| `validateBundleCustomization` | shared/Zod    | components[] + bounds        | ok / error codes                                                                          |
 
-DTO plantilla (`bundleWizardTemplateSchema`): incluye `description`, `customizationMinProducts`, `customizationMaxProducts`.
+DTO plantilla (`bundleWizardTemplateSchema`): incluye `description`, `customizationMinProducts`, `customizationMaxProducts`, `personCount` (= cantidad de sorpresas de plantilla; nombre legacy).
 
-`customizeBundleInputSchema` (forma estructural; cardinalidad se aplica con bounds de la plantilla):
+`customizeBundleInputSchema`:
 
 ```typescript
 {
   bundleId: string; // uuid plantilla
+  quantity: number; // entero 15–100 (ecommerce)
   components: Array<{ productId: string; quantityPerUnit: number }>; // unique; min/max por bundle
 }
 ```

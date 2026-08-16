@@ -37,7 +37,7 @@ describe("cartLinesToOrderInput", () => {
           type: "bundle",
           bundleId: "b1",
           name: "Sorpresa",
-          quantity: 10,
+          quantity: 15,
           lineTotal: 90,
           container: {
             containerId: "c1",
@@ -51,7 +51,7 @@ describe("cartLinesToOrderInput", () => {
               productName: "Gomita",
               sku: "SKU-2",
               quantityPerUnit: 1,
-              totalQuantity: 10,
+              totalQuantity: 15,
               unitPrice: 1,
             },
           ],
@@ -65,7 +65,7 @@ describe("cartLinesToOrderInput", () => {
       {
         type: "bundle",
         bundleId: "b1",
-        quantity: 10,
+        quantity: 15,
         components: [{ productId: "p2", quantityPerUnit: 1 }],
       },
     ]);

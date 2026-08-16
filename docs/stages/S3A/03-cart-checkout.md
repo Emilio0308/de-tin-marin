@@ -41,7 +41,11 @@ interface CartRepository {
 // v2: customerSessionCartRepository (S4)
 ```
 
-- Líneas: `type: 'product' | 'bundle'` — bundle lleva `components` + `container` congelados del wizard
+- Líneas: `type: 'product' | 'bundle'` — bundle lleva `components` +
+  `container` congelados del wizard. En ecommerce/guest,
+  `bundle.quantity` es un entero **15–100** (sorpresas pedidas); multiplica
+  componentes/envases. Parte del default `bundles.quantity` de la plantilla
+  (también cantidad de sorpresas), acotado con `clamp(..., 15, 100)`.
 - Totales en cliente vía `computeOrderTotals` (validar de nuevo en server al submit)
 - Rutas: `/carrito`, acciones editar cantidad producto, eliminar línea
 
@@ -57,6 +61,9 @@ interface CartRepository {
 - `shipping_total` = `resolveDeliveryFee(district)` (mismo helper S1E)
 - Stock: banner warnings; si `strictStockValidationOnCheckout` → service retorna `INSUFFICIENT_STOCK` y no crea orden
 - Server Action `createGuestOrder` — reutiliza lógica extraída S3A-0 (mismo path que admin `createOrderService`)
+- Validación guest: `createGuestOrderInputSchema` rechaza líneas bundle con
+  `quantity < 15` o `quantity > 100`, además de revalidar la personalización
+  contra los límites configurados en la plantilla.
 
 ### Migración `00011_guest_orders_rls.sql` (nombre provisional)
 

@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_CUSTOMIZATION_MIN,
+  BUNDLE_LINE_QUANTITY_MAX,
+  BUNDLE_LINE_QUANTITY_MIN,
   type BundleWizardTemplate,
 } from "@de-tin-marin/validations/customize-bundle";
 import { BundleWizardPage } from "./bundle-wizard-page";
@@ -83,6 +85,10 @@ const defaultLabels: BundleWizardPageLabels = {
   back: "Volver al combo",
   title: "Personaliza tu sorpresa",
   personCount: "Para 10 personas",
+  surpriseQuantity: "Cantidad de sorpresas",
+  surpriseQuantityHint: `Mín. ${BUNDLE_LINE_QUANTITY_MIN} · Máx. ${BUNDLE_LINE_QUANTITY_MAX}`,
+  decreaseQuantity: "Disminuir cantidad de sorpresas",
+  increaseQuantity: "Aumentar cantidad de sorpresas",
   addToCart: "Agregar al carrito",
   addToCartLoading: "Agregando…",
   validationMin: `Agrega al menos ${BUNDLE_CUSTOMIZATION_MIN} dulces para continuar.`,
@@ -121,6 +127,9 @@ const defaultLabels: BundleWizardPageLabels = {
 const defaultProps = {
   template: baseTemplate,
   components: baseTemplate.initialComponents,
+  quantity: BUNDLE_LINE_QUANTITY_MIN,
+  minQuantity: BUNDLE_LINE_QUANTITY_MIN,
+  maxQuantity: BUNDLE_LINE_QUANTITY_MAX,
   searchValue: "",
   products: [],
   selectedProductIds: new Set(
@@ -171,6 +180,7 @@ const defaultProps = {
   labels: defaultLabels,
   onRemove: vi.fn(),
   onAdd: vi.fn(),
+  onQuantityChange: vi.fn(),
   onSearchChange: vi.fn(),
   onSearchSubmit: vi.fn(),
   onProductsRetry: vi.fn(),
@@ -192,6 +202,7 @@ describe("BundleWizardPage", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("Caja mediana").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Para 10 personas").length).toBeGreaterThan(0);
+    expect(screen.getByText("Cantidad de sorpresas")).toBeInTheDocument();
     expect(screen.getByText("8 de 20 dulces")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /volver al combo/i }),
@@ -246,5 +257,47 @@ describe("BundleWizardPage", () => {
     );
 
     expect(onAddToCart).toHaveBeenCalledTimes(1);
+  });
+
+  it("invoca onQuantityChange al aumentar la cantidad de sorpresas", () => {
+    const onQuantityChange = vi.fn();
+
+    render(
+      <BundleWizardPage
+        {...defaultProps}
+        quantity={BUNDLE_LINE_QUANTITY_MIN}
+        onQuantityChange={onQuantityChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /aumentar cantidad de sorpresas/i }),
+    );
+
+    expect(onQuantityChange).toHaveBeenCalledWith(BUNDLE_LINE_QUANTITY_MIN + 1);
+  });
+
+  it("deshabilita disminuir en el mínimo y aumentar en el máximo", () => {
+    const { rerender } = render(
+      <BundleWizardPage
+        {...defaultProps}
+        quantity={BUNDLE_LINE_QUANTITY_MIN}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /disminuir cantidad de sorpresas/i }),
+    ).toBeDisabled();
+
+    rerender(
+      <BundleWizardPage
+        {...defaultProps}
+        quantity={BUNDLE_LINE_QUANTITY_MAX}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /aumentar cantidad de sorpresas/i }),
+    ).toBeDisabled();
   });
 });

@@ -13,10 +13,26 @@ export const BUNDLE_CUSTOMIZATION_DEFAULT_MAX = 20;
 /** Absolute ceiling for configurable max (abuse guard). */
 export const BUNDLE_CUSTOMIZATION_ABSOLUTE_MAX = 100;
 
+/**
+ * Cantidad de sorpresas (line.quantity) en ecommerce / guest.
+ * Admin order-form no aplica este rango (solo `>= 1`).
+ */
+export const BUNDLE_LINE_QUANTITY_MIN = 15;
+export const BUNDLE_LINE_QUANTITY_MAX = 100;
+
 /** @deprecated Prefer BUNDLE_CUSTOMIZATION_DEFAULT_MIN — kept for call-site migration. */
 export const BUNDLE_CUSTOMIZATION_MIN = BUNDLE_CUSTOMIZATION_DEFAULT_MIN;
 /** @deprecated Prefer BUNDLE_CUSTOMIZATION_DEFAULT_MAX — kept for call-site migration. */
 export const BUNDLE_CUSTOMIZATION_MAX = BUNDLE_CUSTOMIZATION_DEFAULT_MAX;
+
+export function clampBundleLineQuantity(quantity: number): number {
+  const n = Math.floor(quantity);
+  if (!Number.isFinite(n)) return BUNDLE_LINE_QUANTITY_MIN;
+  return Math.min(
+    BUNDLE_LINE_QUANTITY_MAX,
+    Math.max(BUNDLE_LINE_QUANTITY_MIN, n),
+  );
+}
 
 export type BundleCustomizationBounds = {
   minProducts: number;
@@ -93,13 +109,18 @@ export function resolveBundleCustomizationBounds(input: {
 export const customizeBundleInputSchema = z
   .object({
     bundleId: z.string().uuid(),
+    quantity: z
+      .number()
+      .int()
+      .min(BUNDLE_LINE_QUANTITY_MIN)
+      .max(BUNDLE_LINE_QUANTITY_MAX),
     components: customizeBundleComponentsSchema,
   })
   .superRefine((value, ctx) => {
     refineUniqueProductIds(value.components, ctx);
   });
 
-/** Preview admin: cantidad de sorpresas editable (a diferencia del wizard ecommerce). */
+/** Preview admin: cantidad editable sin tope ecommerce (solo `>= 1`). */
 export const previewAdminBundleLineInputSchema = z.object({
   bundleId: z.string().uuid(),
   quantity: z.number().int().min(1),

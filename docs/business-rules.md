@@ -65,8 +65,8 @@
 ### Regla 7 — Personalización en la orden
 
 - **Trigger:** Cliente crea/edita una sorpresa en el pedido.
-- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos y ajustar cantidades por sorpresa respetando los límites **de esa plantilla** (`customization_min_products` / `customization_max_products`). Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`, independiente de la plantilla). Revalidar min/max en preview y al crear la orden (ecommerce y admin).
-- **Fallo:** Rechazar productos inactivos, cantidades <= 0, o cardinalidad de componentes fuera del rango de la plantilla.
+- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos respetando los límites **de esa plantilla** (`customization_min_products` / `customization_max_products`). `bundles.quantity` = cantidad de **sorpresas** de la plantilla. En ecommerce / guest, `line.quantity` (sorpresas pedidas) es editable con **15 ≤ quantity ≤ 100** (init = `clamp(bundles.quantity, 15, 100)`). Admin order-form permite `quantity >= 1` sin ese tope. Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`, independiente de la plantilla). Revalidar min/max de componentes y cantidad (ecommerce) en preview y al crear la orden.
+- **Fallo:** Rechazar productos inactivos, cantidades <= 0, cardinalidad de componentes fuera del rango de la plantilla, o (ecommerce/guest) `quantity` fuera de 15–100.
 
 ### Regla 8 — Precio de sorpresa en orden
 

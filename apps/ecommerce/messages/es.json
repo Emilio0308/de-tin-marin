@@ -108,6 +108,10 @@
       "title": "Personaliza tu sorpresa",
       "back": "Volver al combo",
       "personCount": "Para {count} personas",
+      "surpriseQuantity": "Cantidad de sorpresas",
+      "surpriseQuantityHint": "Mín. {min} · Máx. {max}",
+      "decreaseQuantity": "Disminuir cantidad de sorpresas",
+      "increaseQuantity": "Aumentar cantidad de sorpresas",
       "addToCart": "Agregar al carrito",
       "addToCartLoading": "Agregando…",
       "validation": {
