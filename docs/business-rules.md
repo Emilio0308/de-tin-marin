@@ -57,16 +57,16 @@
 ### Regla 6 — Composición base de plantilla
 
 - **Trigger:** Crear/editar bundle en admin.
-- **Pasos:** `bundle_items` referencia productos existentes y activos; al menos un item; **`container_id`** apunta a envase activo en `catalog.surprise_containers`.
+- **Pasos:** `bundle_items` referencia productos existentes y activos; al menos un item; **`container_id`** apunta a envase activo en `catalog.surprise_containers`. Configurar **`customization_min_products`** / **`customization_max_products`** (default 8/20; `1 ≤ min ≤ max ≤ 100`). La composición base debe cumplir `min ≤ |items| ≤ max`.
 - **UI admin (picker):** `ProductSearchPicker` → `listProductsPageAction` con `status: "active"` (búsqueda paginada). Al editar, ítems ya guardados en la plantilla se muestran aunque el producto esté inactivo (`mergeBundleProductOptions`). Switch “incluir inactivos” detrás de flag `SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH` (hoy `false`); habilitarlo sin relajar la validación de write falla con `PRODUCT_NOT_FOUND`.
-- **Persistencia:** create/update rechazan productos inactivos (`getActiveProductsByIdsRepo`).
-- **Fallo:** Rechazar bundle vacío, productos inválidos o envase inactivo.
+- **Persistencia:** create/update rechazan productos inactivos (`getActiveProductsByIdsRepo`) y composiciones fuera del rango de personalización.
+- **Fallo:** Rechazar bundle vacío, productos inválidos, envase inactivo o ítems fuera de min/max.
 
 ### Regla 7 — Personalización en la orden
 
 - **Trigger:** Cliente crea/edita una sorpresa en el pedido.
-- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos y ajustar cantidades por sorpresa. Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`, independiente de la plantilla).
-- **Fallo:** Rechazar productos inactivos o cantidades <= 0.
+- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos y ajustar cantidades por sorpresa respetando los límites **de esa plantilla** (`customization_min_products` / `customization_max_products`). Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`, independiente de la plantilla). Revalidar min/max en preview y al crear la orden (ecommerce y admin).
+- **Fallo:** Rechazar productos inactivos, cantidades <= 0, o cardinalidad de componentes fuera del rango de la plantilla.
 
 ### Regla 8 — Precio de sorpresa en orden
 

@@ -23,6 +23,8 @@ export type BundleFormDTO = {
   containerName: string;
   containerNetPrice: number;
   quantity: number;
+  customizationMinProducts: number;
+  customizationMaxProducts: number;
   isActive: boolean;
   items: BundleFormItemDTO[];
   itemsSubtotal: number;

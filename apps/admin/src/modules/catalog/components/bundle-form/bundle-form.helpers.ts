@@ -1,5 +1,9 @@
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
 import {
+  BUNDLE_CUSTOMIZATION_DEFAULT_MAX,
+  BUNDLE_CUSTOMIZATION_DEFAULT_MIN,
+} from "@de-tin-marin/validations/customize-bundle";
+import {
   CATALOG_IMAGE_CONTENT_TYPES,
   CATALOG_IMAGE_MAX_BYTES,
 } from "@/modules/media/schemas/presign-catalog-image.schema";
@@ -39,6 +43,10 @@ export function buildDefaultBundleValues(
     imageUrl: initial?.imageUrl ?? "",
     containerId: initial?.containerId ?? "",
     quantity: initial?.quantity ?? 1,
+    customizationMinProducts:
+      initial?.customizationMinProducts ?? BUNDLE_CUSTOMIZATION_DEFAULT_MIN,
+    customizationMaxProducts:
+      initial?.customizationMaxProducts ?? BUNDLE_CUSTOMIZATION_DEFAULT_MAX,
     isActive: initial?.isActive ?? true,
     items:
       initial?.items.map((item) => ({

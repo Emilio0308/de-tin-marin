@@ -894,6 +894,12 @@ export function OrderForm({
                   containerName={bundleDraft.containerName}
                   containerNetPrice={bundleDraft.containerNetPrice}
                   templateQuantity={bundleDraft.templateQuantity}
+                  customizationMinProducts={
+                    bundleDraft.customizationMinProducts
+                  }
+                  customizationMaxProducts={
+                    bundleDraft.customizationMaxProducts
+                  }
                   components={bundleDraft.components}
                   quantity={bundleDraft.quantity}
                   products={products}
@@ -903,11 +909,18 @@ export function OrderForm({
                   isPricePending={isBundlePricePending}
                   labels={{
                     title: labels.customizeTitle,
-                    subtitle: labels.customizeSubtitle,
+                    subtitle: labels.customizeSubtitle(
+                      bundleDraft.customizationMinProducts,
+                      bundleDraft.customizationMaxProducts,
+                    ),
                     candyCount: labels.candyCount,
                     progressLabel: labels.customizationProgress,
-                    minReached: labels.minCandiesReached,
-                    maxReached: labels.maxCandiesReached,
+                    minReached: labels.minCandiesReached(
+                      bundleDraft.customizationMinProducts,
+                    ),
+                    maxReached: labels.maxCandiesReached(
+                      bundleDraft.customizationMaxProducts,
+                    ),
                     removeCandy: labels.removeCandy,
                     addCandy: labels.addCandy,
                     surpriseQuantity: labels.surpriseQuantity,
@@ -916,8 +929,12 @@ export function OrderForm({
                     priceCalculating: labels.priceCalculating,
                     confirm: labels.confirmSurprise,
                     cancel: labels.cancelCustomize,
-                    validationMin: labels.validationMinCandies,
-                    validationMax: labels.validationMaxCandies,
+                    validationMin: labels.validationMinCandies(
+                      bundleDraft.customizationMinProducts,
+                    ),
+                    validationMax: labels.validationMaxCandies(
+                      bundleDraft.customizationMaxProducts,
+                    ),
                     candiesSubtotal: labels.candiesSubtotal,
                     containerSubtotal: labels.containerSubtotal,
                     containerCostHint: labels.containerCostHint,

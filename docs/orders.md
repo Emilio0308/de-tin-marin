@@ -104,6 +104,28 @@ Ejemplo admin Lay’s (`ipp = 10`): pedido 2 tiras + 7 bolsas → congelado `pac
 
 Helpers canónicos: `buildProductLine`, `normalizeProductLineQuantities`, `computeOrderTotals`, `deriveAdjustmentsFromFinalPrice` en `@de-tin-marin/shared/order-cart`; clamp admin en `@de-tin-marin/shared/product-purchase-limits`.
 
+### Sorpresa personalizada: límites por plantilla
+
+Cada línea `type: "bundle"` debe respetar la cardinalidad configurada en su
+plantilla (`catalog.bundles.customization_min_products` /
+`customization_max_products`), no un límite global.
+
+- Valores por defecto e históricos: **8** productos distintos como mínimo y
+  **20** como máximo.
+- El rango válido es `1 ≤ min ≤ max ≤ 100`; `100` es un techo de aplicación
+  contra abuso.
+- La composición base de `bundle_items` también debe caber en ese rango:
+  no se puede guardar una plantilla cuyo estado inicial sea inválido.
+- Se valida en el wizard ecommerce, en el preview del order-form admin y de
+  nuevo al crear la orden. La validación exige IDs de producto únicos y
+  cantidades por componente positivas.
+- Las órdenes ya creadas conservan su `shopping_cart` congelado: cambiar los
+  límites de una plantilla no altera ni invalida snapshots históricos.
+
+`resolveBundleCustomizationBounds` y
+`validateBundleCustomization(components, bounds)` en
+`@de-tin-marin/validations/customize-bundle` son los contratos canónicos.
+
 ### Ejemplo sorpresa personalizada
 
 Plantilla base: productos 1–5, 25 sorpresas. Cliente modifica → productos 1,2,3,5,6,8.

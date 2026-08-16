@@ -19,7 +19,10 @@ import { previewAdminBundleLineAction } from "@/modules/orders/actions/preview-a
 import { previewOrderCartAction } from "@/modules/orders/actions/preview-order-cart";
 import { freshQueryOptions } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
-import { validateBundleCustomization } from "@de-tin-marin/validations/customize-bundle";
+import {
+  validateBundleCustomization,
+  resolveBundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
 import { OrderForm } from "./order-form";
 import {
   addBundleComponent,
@@ -70,6 +73,8 @@ function orderErrorMessage(result: {
       return "El combo no existe o está inactivo";
     case "DUPLICATE_PRODUCT_IN_BUNDLE":
       return "No puedes repetir el mismo producto en una sorpresa";
+    case "INVALID_BUNDLE_CUSTOMIZATION":
+      return "La sorpresa no cumple el mínimo o máximo de dulces de la plantilla";
     case "UNAUTHORIZED":
       return "Tu sesión expiró. Inicia sesión de nuevo.";
     case "FORBIDDEN":
@@ -166,18 +171,19 @@ export function OrderFormContainer() {
       productOutOfStock: (min, available) =>
         t("form.productOutOfStock", { min, available }),
       customizeTitle: t("form.customizeTitle"),
-      customizeSubtitle: t("form.customizeSubtitle"),
+      customizeSubtitle: (min, max) =>
+        t("form.customizeSubtitle", { min, max }),
       candyCount: t("form.candyCount"),
       customizationProgress: t("form.customizationProgress"),
-      minCandiesReached: t("form.minCandiesReached"),
-      maxCandiesReached: t("form.maxCandiesReached"),
+      minCandiesReached: (min) => t("form.minCandiesReached", { min }),
+      maxCandiesReached: (max) => t("form.maxCandiesReached", { max }),
       removeCandy: t("form.removeCandy"),
       addCandy: t("form.addCandy"),
       selectCandy: t("form.selectCandy"),
       confirmSurprise: t("form.confirmSurprise"),
       cancelCustomize: t("form.cancelCustomize"),
-      validationMinCandies: t("form.validationMinCandies"),
-      validationMaxCandies: t("form.validationMaxCandies"),
+      validationMinCandies: (min) => t("form.validationMinCandies", { min }),
+      validationMaxCandies: (max) => t("form.validationMaxCandies", { max }),
       editSurprise: t("form.editSurprise"),
       candiesSubtotal: t("form.candiesSubtotal"),
       containerSubtotal: t("form.containerSubtotal"),
@@ -385,7 +391,11 @@ export function OrderFormContainer() {
     },
     enabled:
       debouncedBundlePreview !== null &&
-      validateBundleCustomization(debouncedBundlePreview.components).ok,
+      bundleDraft !== null &&
+      validateBundleCustomization(debouncedBundlePreview.components, {
+        minProducts: bundleDraft.customizationMinProducts,
+        maxProducts: bundleDraft.customizationMaxProducts,
+      }).ok,
   });
 
   const cartPreviewPayload = useMemo(
@@ -590,6 +600,10 @@ export function OrderFormContainer() {
         (bundle) => bundle.id === bundleId,
       );
       const activeItems = result.data.items.filter((item) => item.isActive);
+      const bounds = resolveBundleCustomizationBounds({
+        customizationMinProducts: result.data.customizationMinProducts,
+        customizationMaxProducts: result.data.customizationMaxProducts,
+      });
       const templateProducts: ProductOption[] = activeItems.map((item) => ({
         id: item.productId,
         name: item.productName,
@@ -619,6 +633,8 @@ export function OrderFormContainer() {
         containerNetPrice:
           bundleOption?.containerNetPrice ?? result.data.containerNetPrice,
         templateQuantity: result.data.quantity,
+        customizationMinProducts: bounds.minProducts,
+        customizationMaxProducts: bounds.maxProducts,
         templateItems: activeItems.map((item) => ({
           productId: item.productId,
           productName: item.productName,
@@ -631,6 +647,7 @@ export function OrderFormContainer() {
               unitsPerPerson: item.unitsPerPerson,
               isActive: true,
             })),
+            bounds,
           ),
         quantity: options?.quantity ?? result.data.quantity,
         editingLineIndex: options?.editingLineIndex ?? null,
@@ -644,9 +661,13 @@ export function OrderFormContainer() {
     handleEnsureProductOption(product);
     setBundleDraft((current) => {
       if (!current) return current;
+      const bounds = {
+        minProducts: current.customizationMinProducts,
+        maxProducts: current.customizationMaxProducts,
+      };
       return {
         ...current,
-        components: addBundleComponent(current.components, product.id),
+        components: addBundleComponent(current.components, product.id, bounds),
       };
     });
   }
@@ -667,6 +688,10 @@ export function OrderFormContainer() {
       }
 
       const activeItems = result.data.items.filter((item) => item.isActive);
+      const bounds = resolveBundleCustomizationBounds({
+        customizationMinProducts: result.data.customizationMinProducts,
+        customizationMaxProducts: result.data.customizationMaxProducts,
+      });
       const templateProducts: ProductOption[] = activeItems.map((item) => ({
         id: item.productId,
         name: item.productName,
@@ -695,8 +720,9 @@ export function OrderFormContainer() {
           unitsPerPerson: item.unitsPerPerson,
           isActive: true,
         })),
+        bounds,
       );
-      const validation = validateBundleCustomization(components);
+      const validation = validateBundleCustomization(components, bounds);
       if (!validation.ok) {
         setError(
           "La plantilla de sorpresa no cumple las reglas de personalización",
@@ -735,7 +761,10 @@ export function OrderFormContainer() {
   function handleConfirmBundleDraft() {
     if (!bundleDraft) return;
 
-    const validation = validateBundleCustomization(bundleDraft.components);
+    const validation = validateBundleCustomization(bundleDraft.components, {
+      minProducts: bundleDraft.customizationMinProducts,
+      maxProducts: bundleDraft.customizationMaxProducts,
+    });
     if (!validation.ok) {
       setError("La sorpresa no cumple las reglas de personalización");
       return;

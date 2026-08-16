@@ -1,10 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
-import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
-} from "@de-tin-marin/validations/customize-bundle";
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { WizardComponentList } from "../wizard-component-list/wizard-component-list";
 import { WizardPriceSummary } from "../wizard-price-summary/wizard-price-summary";
@@ -15,10 +11,14 @@ import type { BundleWizardPageProps } from "./bundle-wizard-page.types";
 function resolveBundleValidationMessage({
   isValid,
   componentCount,
+  minProducts,
+  maxProducts,
   labels,
 }: {
   isValid: boolean;
   componentCount: number;
+  minProducts: number;
+  maxProducts: number;
   labels: Pick<
     BundleWizardPageProps["labels"],
     "validationMin" | "validationMax" | "validationDuplicate"
@@ -26,11 +26,11 @@ function resolveBundleValidationMessage({
 }): { message: string; severity: "error" | "muted" } | null {
   if (isValid) return null;
 
-  if (componentCount < BUNDLE_CUSTOMIZATION_MIN) {
+  if (componentCount < minProducts) {
     return { message: labels.validationMin, severity: "error" };
   }
 
-  if (componentCount > BUNDLE_CUSTOMIZATION_MAX) {
+  if (componentCount > maxProducts) {
     return { message: labels.validationMax, severity: "error" };
   }
 
@@ -68,9 +68,13 @@ export function BundleWizardPage({
   onPreviewRetry,
   onAddToCart,
 }: BundleWizardPageProps) {
+  const minProducts = template.customizationMinProducts;
+  const maxProducts = template.customizationMaxProducts;
   const validation = resolveBundleValidationMessage({
     isValid,
     componentCount: components.length,
+    minProducts,
+    maxProducts,
     labels,
   });
 
@@ -135,6 +139,8 @@ export function BundleWizardPage({
               <WizardComponentList
                 components={components}
                 personCount={template.personCount}
+                minProducts={minProducts}
+                maxProducts={maxProducts}
                 labelsByProductId={labelsByProductId}
                 imagesByProductId={imagesByProductId}
                 unitPricesByProductId={unitPricesByProductId}

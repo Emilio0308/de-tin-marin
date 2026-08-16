@@ -60,7 +60,11 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 
 - `category.service.ts`
 - `product.service.ts` — usa `computeFinalPrice` + `computeProductMargin` (costo admin)
-- `bundle.service.ts` — usa `computeBundleTotal`
+- `bundle.service.ts` — usa `computeBundleTotal`; persiste límites de
+  personalización por sorpresa (`customizationMinProducts` /
+  `customizationMaxProducts`). El rango es `1 ≤ min ≤ max ≤ 100`, con
+  defaults 8/20, y la composición base debe cumplirlo. Create/update
+  validan productos activos, IDs únicos y el rango antes de escribir.
 - `pack.service.ts` — `computePackReference` (dual qty) + `computeFinalPrice` + `computePackAvailableQuantity` / `listPackStockShortages`; ítems `packageQuantity` + `unitQuantity`
 - Tras create/update/soft-delete: `bumpCatalogVersionSafe` → `catalog.bump_catalog_version()` (Broadcast a ecommerce)
 
@@ -93,6 +97,25 @@ Mutaciones de catálogo (y confirmación de pago con deduct en orders) hacen bum
 ## Validaciones (Zod)
 
 `@de-tin-marin/validations/category` · `product` · `bundle` · `pack` · `prices` · **`admin-list`** (paginación/filtros de listados)
+
+### Límites configurables de sorpresa
+
+El formulario bundle expone mínimo y máximo de productos distintos que el
+cliente puede dejar en una sorpresa personalizada. Son datos de la plantilla,
+no ajustes de cada pedido:
+
+- DB: `catalog.bundles.customization_min_products` /
+  `customization_max_products` (migración `00025`; backfill 8/20).
+- Shared: `resolveBundleCustomizationBounds` y
+  `validateBundleCustomization` en
+  `@de-tin-marin/validations/customize-bundle`.
+- Consumidores: wizard ecommerce y preview/create del order-form admin.
+- La UI puede mostrar productos históricos inactivos al editar, pero write
+  rechaza productos inactivos; no habilitar el switch de inactivos como forma
+  de eludir esa validación.
+
+Contrato de negocio: [`docs/business-rules.md`](../../../docs/business-rules.md)
+Reglas 6–7; detalle de orden: [`docs/orders.md`](../../../docs/orders.md).
 
 ## Auth
 

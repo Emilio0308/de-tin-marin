@@ -11,8 +11,6 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
   validateBundleCustomization,
   type BundleWizardTemplate,
   type CustomizeBundleComponent,
@@ -51,6 +49,13 @@ export function BundleWizardPageContainer({
   const router = useRouter();
   const { addBundleLine } = useCart();
   const [, startTransition] = useTransition();
+  const bounds = useMemo(
+    () => ({
+      minProducts: template.customizationMinProducts,
+      maxProducts: template.customizationMaxProducts,
+    }),
+    [template.customizationMaxProducts, template.customizationMinProducts],
+  );
   const [components, setComponents] = useState<CustomizeBundleComponent[]>(
     () => template.initialComponents,
   );
@@ -70,8 +75,8 @@ export function BundleWizardPageContainer({
   }, [components]);
 
   const validation = useMemo(
-    () => validateBundleCustomization(components),
-    [components],
+    () => validateBundleCustomization(components, bounds),
+    [bounds, components],
   );
   const isValid = validation.ok;
 
@@ -137,7 +142,7 @@ export function BundleWizardPageContainer({
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
-    enabled: validateBundleCustomization(debouncedComponents).ok,
+    enabled: validateBundleCustomization(debouncedComponents, bounds).ok,
   });
 
   const unitPricesByProductId = useMemo(() => {
@@ -151,7 +156,7 @@ export function BundleWizardPageContainer({
   }, [previewQuery.data?.line.components]);
 
   const handleRemove = (productId: string) => {
-    setComponents((current) => removeComponent(current, productId));
+    setComponents((current) => removeComponent(current, productId, bounds));
   };
 
   const handleAdd = (product: {
@@ -164,7 +169,7 @@ export function BundleWizardPageContainer({
       ...current,
       [product.id]: product.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
     }));
-    setComponents((current) => addComponent(current, product.id));
+    setComponents((current) => addComponent(current, product.id, bounds));
   };
 
   const handleAddToCart = () => {
@@ -188,8 +193,8 @@ export function BundleWizardPageContainer({
       lineTotal={previewQuery.data?.lineTotal ?? null}
       stockCheck={previewQuery.data?.stockCheck ?? null}
       isValid={isValid}
-      canRemove={canRemoveComponent(components)}
-      canAdd={canAddComponent(components)}
+      canRemove={canRemoveComponent(components, bounds)}
+      canAdd={canAddComponent(components, bounds)}
       isPreviewLoading={previewQuery.isFetching}
       isPreviewError={previewQuery.isError}
       isProductsLoading={isProductsLoading}
@@ -203,8 +208,8 @@ export function BundleWizardPageContainer({
         personCount: t("personCount", { count: template.personCount }),
         addToCart: t("addToCart"),
         addToCartLoading: t("addToCartLoading"),
-        validationMin: t("validation.min", { min: BUNDLE_CUSTOMIZATION_MIN }),
-        validationMax: t("validation.max", { max: BUNDLE_CUSTOMIZATION_MAX }),
+        validationMin: t("validation.min", { min: bounds.minProducts }),
+        validationMax: t("validation.max", { max: bounds.maxProducts }),
         validationDuplicate: t("validation.duplicate"),
         picker: {
           title: t("picker.title"),
@@ -212,7 +217,7 @@ export function BundleWizardPageContainer({
           searchAriaLabel: t("picker.searchAriaLabel"),
           add: t("picker.add"),
           empty: t("picker.empty"),
-          maxReached: t("picker.maxReached", { max: BUNDLE_CUSTOMIZATION_MAX }),
+          maxReached: t("picker.maxReached", { max: bounds.maxProducts }),
           alreadyAdded: t("picker.alreadyAdded"),
           loading: tCommon("loading"),
           loadingMore: t("picker.loadingMore"),

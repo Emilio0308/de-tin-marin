@@ -28,6 +28,11 @@ import {
   validateGuestCheckoutCartInputSchema,
   type ValidateGuestCheckoutCartInput,
 } from "@de-tin-marin/validations/checkout";
+import {
+  resolveBundleCustomizationBounds,
+  validateOrderLinesBundleCustomization,
+  type BundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import {
   getPublicPackByIdRepo,
@@ -55,8 +60,12 @@ import {
 async function resolveBundlesById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
-): Promise<Map<string, OrderBundleSource>> {
+): Promise<{
+  bundlesById: Map<string, OrderBundleSource>;
+  customizationBoundsById: Map<string, BundleCustomizationBounds>;
+}> {
   const bundlesById = new Map<string, OrderBundleSource>();
+  const customizationBoundsById = new Map<string, BundleCustomizationBounds>();
 
   for (const line of lines) {
     if (line.type !== "bundle" || bundlesById.has(line.bundleId)) {
@@ -84,9 +93,16 @@ async function resolveBundlesById(
         prices: containerRow.prices,
       },
     });
+    customizationBoundsById.set(
+      line.bundleId,
+      resolveBundleCustomizationBounds({
+        customizationMinProducts: bundle.customization_min_products,
+        customizationMaxProducts: bundle.customization_max_products,
+      }),
+    );
   }
 
-  return bundlesById;
+  return { bundlesById, customizationBoundsById };
 }
 
 function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
@@ -336,7 +352,8 @@ export async function previewGuestOrderCartService(
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
-        | "INVALID_PURCHASE_QUANTITY";
+        | "INVALID_PURCHASE_QUANTITY"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = previewGuestCartInputSchema.safeParse(raw);
@@ -399,7 +416,25 @@ export async function previewGuestOrderCartService(
     ]),
   ];
   const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
+
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
+
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const cartResult = buildOrderCartWithTotals({
     lines: parsed.data.lines,
@@ -452,7 +487,8 @@ export async function createGuestOrderService(
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
         | "OUT_OF_COVERAGE"
         | "INSUFFICIENT_STOCK"
-        | "INVALID_PURCHASE_QUANTITY";
+        | "INVALID_PURCHASE_QUANTITY"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const scope = "createGuestOrderService";
@@ -531,7 +567,28 @@ export async function createGuestOrderService(
     ]),
   ];
   const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
+
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
+
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    logServerError(scope, {
+      message: "INVALID_BUNDLE_CUSTOMIZATION",
+    });
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const [zones, settings] = await Promise.all([
     listActiveDeliveryZonesRepo(config),
@@ -728,7 +785,8 @@ export async function validateGuestCheckoutCartService(
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
-        | "INVALID_PURCHASE_QUANTITY";
+        | "INVALID_PURCHASE_QUANTITY"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = validateGuestCheckoutCartInputSchema.safeParse(raw);

@@ -184,16 +184,25 @@ Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**
 
 **`catalog.bundles`** (plantilla — sin stock de dulces, sin precio persistido):
 
-| Columna               | Tipo        | Notas                                                      |
-| --------------------- | ----------- | ---------------------------------------------------------- |
-| `name`, `description` | text        |                                                            |
-| `image_url`           | text        | URL CDN / texto (upload admin S0-03 → `bundles/`)          |
-| `container_id`        | uuid        | FK → `catalog.surprise_containers` (S1E)                   |
-| `quantity`            | int         | Nº de personas/porciones a las que apunta el pack (`>= 1`) |
-| `is_active`           | boolean     |                                                            |
-| `deleted_at`          | timestamptz |                                                            |
+| Columna                      | Tipo        | Notas                                                                                        |
+| ---------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `name`, `description`        | text        |                                                                                              |
+| `image_url`                  | text        | URL CDN / texto (upload admin S0-03 → `bundles/`)                                            |
+| `container_id`               | uuid        | FK → `catalog.surprise_containers` (S1E)                                                     |
+| `quantity`                   | int         | Nº de personas/porciones a las que apunta el pack (`>= 1`)                                   |
+| `customization_min_products` | int         | Mín. productos **distintos** al personalizar (default **8**; `not null`; migración `00025`)  |
+| `customization_max_products` | int         | Máx. productos **distintos** al personalizar (default **20**; `not null`; techo app **100**) |
+| `is_active`                  | boolean     |                                                                                              |
+| `deleted_at`                 | timestamptz |                                                                                              |
 
 > ~~`service_fee`~~ eliminado en S1E (`00009`); reemplazado por envase referenciado.
+>
+> `00025_bundle_customization_limits.sql` agrega ambas columnas, hace
+> backfill de filas existentes a `8`/`20` y aplica checks
+> `customization_min_products >= 1`,
+> `customization_max_products >= 1` y `min <= max`. El límite superior de
+> 100 se protege en Zod/app (`BUNDLE_CUSTOMIZATION_ABSOLUTE_MAX`), no con un
+> `CHECK` de base de datos.
 >
 > **Sin columna `prices`.** Precio **dinámico** (DECISIONS #6):
 >

@@ -3,6 +3,8 @@ import type { CustomizeBundleComponent } from "@de-tin-marin/validations/customi
 export type WizardComponentListProps = {
   components: CustomizeBundleComponent[];
   personCount: number;
+  minProducts: number;
+  maxProducts: number;
   labelsByProductId: Record<string, string>;
   imagesByProductId: Record<string, string>;
   unitPricesByProductId: Record<string, number>;

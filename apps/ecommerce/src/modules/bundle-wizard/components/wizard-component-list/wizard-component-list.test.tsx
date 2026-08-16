@@ -37,6 +37,8 @@ describe("WizardComponentList", () => {
       <WizardComponentList
         components={[{ productId: "p1", quantityPerUnit: 1 }]}
         personCount={30}
+        minProducts={1}
+        maxProducts={20}
         labelsByProductId={{ p1: "Gomitas" }}
         imagesByProductId={{ p1: "https://example.com/gomitas.png" }}
         unitPricesByProductId={{ p1: 1.5 }}

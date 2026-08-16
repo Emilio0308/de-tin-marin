@@ -51,6 +51,8 @@ const baseTemplate: BundleWizardTemplate = {
   description: "La combinación perfecta para celebrar.",
   imageUrl: "https://example.com/combo.png",
   personCount: 10,
+  customizationMinProducts: BUNDLE_CUSTOMIZATION_MIN,
+  customizationMaxProducts: 20,
   container: {
     containerId: "22222222-2222-2222-2222-222222222222",
     sku: "CAJA-M",

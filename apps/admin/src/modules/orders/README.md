@@ -83,6 +83,13 @@ Helpers locales: `order-form-product.helpers.ts`.
 
 - Pack: qty de combos; composición BOM dual (`packageQuantity`/`unitQuantity` por componente) desplegable.
 - Bundle: preview fresco; composición por componente; envase congelado (S1E).
+  Los productos distintos deben estar entre
+  `customizationMinProducts` y `customizationMaxProducts` de **esa**
+  plantilla. El order-form recibe ambos límites con el DTO de bundle y los
+  manda al preview; el servicio vuelve a cargar la plantilla y valida con
+  `validateBundleCustomization`. No hay límites globales en órdenes.
+  Cambiar la plantilla no modifica la composición ni los límites efectivos de
+  un `shopping_cart` ya congelado.
 - Bounds pack: `resolveOrderFormPackBounds` — techo = `availableQuantity` (salta min/max catálogo).
 
 ### Totales de cabecera

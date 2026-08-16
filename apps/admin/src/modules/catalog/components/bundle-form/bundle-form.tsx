@@ -211,7 +211,13 @@ export function BundleForm({
   }
 
   const canSubmit =
-    !submitting && values.items.length > 0 && values.containerId.length > 0;
+    !submitting &&
+    values.items.length > 0 &&
+    values.containerId.length > 0 &&
+    values.customizationMinProducts >= 1 &&
+    values.customizationMaxProducts >= values.customizationMinProducts &&
+    values.items.length >= values.customizationMinProducts &&
+    values.items.length <= values.customizationMaxProducts;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -559,6 +565,57 @@ export function BundleForm({
                   />
                 </div>
               </div>
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className={labelClass}
+                  htmlFor="customizationMinProducts"
+                >
+                  {labels.customizationMin}
+                </label>
+                <GranularNumberInput
+                  id="customizationMinProducts"
+                  name="customizationMinProducts"
+                  mode="integer"
+                  min={1}
+                  emptyFallback={1}
+                  required
+                  value={values.customizationMinProducts}
+                  onValueChange={(next) =>
+                    setValues((current) => ({
+                      ...current,
+                      customizationMinProducts: next ?? 1,
+                    }))
+                  }
+                  className={fieldClass}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className={labelClass}
+                  htmlFor="customizationMaxProducts"
+                >
+                  {labels.customizationMax}
+                </label>
+                <GranularNumberInput
+                  id="customizationMaxProducts"
+                  name="customizationMaxProducts"
+                  mode="integer"
+                  min={1}
+                  emptyFallback={1}
+                  required
+                  value={values.customizationMaxProducts}
+                  onValueChange={(next) =>
+                    setValues((current) => ({
+                      ...current,
+                      customizationMaxProducts: next ?? 1,
+                    }))
+                  }
+                  className={fieldClass}
+                />
+              </div>
+              <p className="text-on-surface-variant/70 text-xs sm:col-span-2">
+                {labels.customizationHint}
+              </p>
             </div>
           </section>
 

@@ -24,6 +24,8 @@ export type BundleFormValues = {
   imageUrl: string;
   containerId: string;
   quantity: number;
+  customizationMinProducts: number;
+  customizationMaxProducts: number;
   isActive: boolean;
   items: BundleFormItemValues[];
 };
@@ -63,6 +65,9 @@ export type BundleFormLabels = {
   container: string;
   containerPlaceholder: string;
   persons: string;
+  customizationMin: string;
+  customizationMax: string;
+  customizationHint: string;
   subtotalLabel: string;
   containerLabel: string;
   totalLabel: string;

@@ -10,6 +10,8 @@ import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   customizeBundleInputSchema,
   getBundleForWizardInputSchema,
+  resolveBundleCustomizationBounds,
+  validateBundleCustomization,
   type BundleLinePreview,
   type BundleWizardTemplate,
 } from "@de-tin-marin/validations/customize-bundle";
@@ -45,7 +47,10 @@ function isActiveBundleItem(item: PublicBundleItemRow): boolean {
   return Boolean(product?.is_active && product.deleted_at === null);
 }
 
-function toInitialComponents(items: PublicBundleItemRow[]) {
+function toInitialComponents(
+  items: PublicBundleItemRow[],
+  maxProducts: number,
+) {
   return clampBundleInitialComponents(
     items.filter(isActiveBundleItem).map((item) => ({
       productId: item.product_id,
@@ -53,6 +58,7 @@ function toInitialComponents(items: PublicBundleItemRow[]) {
         ? item.units_per_person
         : 1,
     })),
+    maxProducts,
   );
 }
 
@@ -78,6 +84,10 @@ export async function getBundleForWizardService(
   const { name, netPrice } = getContainerNetPrice(containerRow);
   const items = await listPublicBundleItemsByBundleIdsRepo(config, [row.id]);
   const activeItems = items.filter(isActiveBundleItem);
+  const bounds = resolveBundleCustomizationBounds({
+    customizationMinProducts: row.customization_min_products,
+    customizationMaxProducts: row.customization_max_products,
+  });
 
   return {
     ok: true,
@@ -87,6 +97,8 @@ export async function getBundleForWizardService(
       description: row.description,
       imageUrl: normalizeImageUrl(row.image_url),
       personCount: row.quantity,
+      customizationMinProducts: bounds.minProducts,
+      customizationMaxProducts: bounds.maxProducts,
       container: {
         containerId: containerRow.id,
         sku: containerRow.sku,
@@ -98,9 +110,8 @@ export async function getBundleForWizardService(
         productName: item.products?.name ?? "—",
         imageUrl: normalizeImageUrl(item.products?.image_url),
         unitsPerPerson: item.units_per_person,
-        prices: item.products?.prices,
       })),
-      initialComponents: toInitialComponents(items),
+      initialComponents: toInitialComponents(items, bounds.maxProducts),
     },
   };
 }
@@ -117,7 +128,8 @@ export async function previewBundleLineService(
         | "NOT_FOUND"
         | "PRODUCT_NOT_FOUND"
         | "INACTIVE_PRODUCT"
-        | "DUPLICATE_PRODUCT";
+        | "DUPLICATE_PRODUCT"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = customizeBundleInputSchema.safeParse(raw);
@@ -134,6 +146,18 @@ export async function previewBundleLineService(
   const { bundleId, components } = parsed.data;
   const bundleRow = await getPublicBundleByIdRepo(config, bundleId);
   if (!bundleRow) return { ok: false, error: "NOT_FOUND" };
+
+  const bounds = resolveBundleCustomizationBounds({
+    customizationMinProducts: bundleRow.customization_min_products,
+    customizationMaxProducts: bundleRow.customization_max_products,
+  });
+  const customization = validateBundleCustomization(components, bounds);
+  if (!customization.ok) {
+    if (customization.error === "DUPLICATE_PRODUCT") {
+      return { ok: false, error: "DUPLICATE_PRODUCT" };
+    }
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const containers = await getActiveContainersByIdsRepo(config, [
     bundleRow.container_id,

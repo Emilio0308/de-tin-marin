@@ -17,6 +17,11 @@ import {
   createOrderInputSchema,
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
+import {
+  resolveBundleCustomizationBounds,
+  validateOrderLinesBundleCustomization,
+  type BundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
 import { zodIssuesToFieldErrors } from "../helpers/order-form-validation";
 import {
   adminOrderListQuerySchema,
@@ -46,7 +51,10 @@ import {
 async function resolveBundlesById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
-): Promise<Map<string, OrderBundleSource>> {
+): Promise<{
+  bundlesById: Map<string, OrderBundleSource>;
+  customizationBoundsById: Map<string, BundleCustomizationBounds>;
+}> {
   const bundleIds = [
     ...new Set(
       lines
@@ -60,6 +68,7 @@ async function resolveBundlesById(
   );
 
   const bundlesById = new Map<string, OrderBundleSource>();
+  const customizationBoundsById = new Map<string, BundleCustomizationBounds>();
   for (const bundle of rows) {
     if (!bundle) continue;
     const containerRow = bundle.surprise_containers;
@@ -77,9 +86,16 @@ async function resolveBundlesById(
           }
         : null,
     });
+    customizationBoundsById.set(
+      bundle.id,
+      resolveBundleCustomizationBounds({
+        customizationMinProducts: bundle.customization_min_products,
+        customizationMaxProducts: bundle.customization_max_products,
+      }),
+    );
   }
 
-  return bundlesById;
+  return { bundlesById, customizationBoundsById };
 }
 
 async function resolvePacksById(
@@ -190,7 +206,8 @@ export async function createOrderService(
         | "PRODUCT_NOT_FOUND"
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
-        | "DUPLICATE_PRODUCT_IN_BUNDLE";
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
       fieldErrors?: Record<string, string>;
     }
 > {
@@ -228,7 +245,25 @@ export async function createOrderService(
       .filter((id): id is string => Boolean(id)),
   ];
   const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
+
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
+
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const shippingResult = await resolveDeliveryFeeService(config, {
     method: parsed.data.fulfillment.method,

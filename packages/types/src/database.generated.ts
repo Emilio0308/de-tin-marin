@@ -164,6 +164,8 @@ export type Database = {
         Row: {
           container_id: string
           created_at: string
+          customization_max_products: number
+          customization_min_products: number
           deleted_at: string | null
           description: string | null
           id: string
@@ -176,6 +178,8 @@ export type Database = {
         Insert: {
           container_id: string
           created_at?: string
+          customization_max_products?: number
+          customization_min_products?: number
           deleted_at?: string | null
           description?: string | null
           id?: string
@@ -188,6 +192,8 @@ export type Database = {
         Update: {
           container_id?: string
           created_at?: string
+          customization_max_products?: number
+          customization_min_products?: number
           deleted_at?: string | null
           description?: string | null
           id?: string

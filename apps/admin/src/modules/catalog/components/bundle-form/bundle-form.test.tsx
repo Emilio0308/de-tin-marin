@@ -82,6 +82,9 @@ const labels: BundleFormLabels = {
   container: "Envase de sorpresa",
   containerPlaceholder: "Selecciona un envase",
   persons: "Cantidad de personas",
+  customizationMin: "Mín. dulces",
+  customizationMax: "Máx. dulces",
+  customizationHint: "La composición debe respetar el rango.",
   subtotalLabel: "Subtotal",
   containerLabel: "Subtotal envases",
   totalLabel: "Inversión total estimada",
@@ -155,6 +158,8 @@ describe("BundleForm", () => {
           containerName: "Caja mediana",
           containerNetPrice: 1.5,
           quantity: 1,
+          customizationMinProducts: 1,
+          customizationMaxProducts: 20,
           isActive: true,
           items: [
             {
@@ -217,6 +222,12 @@ describe("BundleForm", () => {
     });
     fireEvent.change(screen.getByLabelText(labels.container), {
       target: { value: "c1" },
+    });
+    fireEvent.change(screen.getByLabelText(labels.customizationMin), {
+      target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText(labels.customizationMax), {
+      target: { value: "5" },
     });
     fireEvent.click(screen.getByRole("button", { name: "pick-p1" }));
 

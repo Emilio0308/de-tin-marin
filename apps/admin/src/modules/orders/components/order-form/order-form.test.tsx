@@ -113,18 +113,21 @@ const labels: OrderFormLabels = {
   productOutOfStock: (min, available) =>
     `Sin stock suficiente (mín. ${min}, disponible ${available}).`,
   customizeTitle: "Personalizar sorpresa",
-  customizeSubtitle: "Plantilla editable",
+  customizeSubtitle: (min, max) =>
+    `Parte de la plantilla. Puedes quitar o agregar dulces (${min}–${max}).`,
   candyCount: "Dulces",
   customizationProgress: "Progreso",
-  minCandiesReached: "Mínimo alcanzado",
-  maxCandiesReached: "Máximo alcanzado",
+  minCandiesReached: (min) => `Mínimo de ${min} dulces.`,
+  maxCandiesReached: (max) => `Máximo de ${max} dulces alcanzado.`,
   removeCandy: "Quitar",
   addCandy: "Agregar dulce",
   selectCandy: "Seleccionar dulce…",
   confirmSurprise: "Agregar al carrito",
   cancelCustomize: "Cancelar",
-  validationMinCandies: "Mínimo 8",
-  validationMaxCandies: "Máximo 20",
+  validationMinCandies: (min) =>
+    `La sorpresa debe tener al menos ${min} dulces.`,
+  validationMaxCandies: (max) =>
+    `La sorpresa no puede tener más de ${max} dulces.`,
   editSurprise: "Editar dulces",
   candiesSubtotal: "Subtotal dulces",
   containerSubtotal: "Subtotal envases",

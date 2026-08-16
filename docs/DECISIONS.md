@@ -44,6 +44,23 @@
 | 35 | Upload imágenes catálogo (presign) | ✅ | Admin: **presigned PUT** diferido al **Guardar** en packs · products · bundles · containers · **hero** (`folder` S3). URL CloudFront en `image_url`. jpeg/png/webp ≤ **10 MiB**. Hero: **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px** (S4-03). Action `createCatalogImageUploadUrlAction`; IAM uploader en CDK. Brief: `docs/stages/S0/03-admin-pack-image-upload.md` · S4-03 · [`infra.md`](infra.md) |
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 
+## Docs sincronizados (2026-08-15 — límites configurables de sorpresa)
+
+- `catalog.bundles.customization_min_products` /
+  `customization_max_products`, migración `00025`: defaults y backfill
+  **8/20**; DB garantiza `1 ≤ min ≤ max`; app/Zod impone techo absoluto
+  **100**.
+- Son límites de productos **distintos** por plantilla, no límites globales ni
+  de compra: la composición base, wizard ecommerce, preview admin y
+  create/preview de orden los validan.
+- Contrato shared:
+  `resolveBundleCustomizationBounds` +
+  `validateBundleCustomization`; IDs únicos y cantidades positivas.
+- Una orden mantiene su snapshot `shopping_cart`; cambios posteriores de
+  plantilla/límites no reescriben el pedido histórico.
+- Docs: `database.md`, Reglas 6–7, `orders.md`, S3A-2, roadmap, READMEs
+  catalog admin / orders admin / bundle-wizard.
+
 ## Docs sincronizados (2026-08-08 — órdenes: dual product + surcharge)
 
 Canónico detallado: [`orders.md`](orders.md) · README [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md).

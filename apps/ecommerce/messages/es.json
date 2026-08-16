@@ -216,6 +216,7 @@
       "outOfCoverage": "No entregamos en esa ubicación.",
       "insufficientStock": "No hay stock suficiente para completar el pedido.",
       "invalidPurchaseQuantity": "Una o más cantidades no cumplen el mínimo o máximo de compra del producto.",
+      "invalidBundleCustomization": "Una o más sorpresas no cumplen el mínimo o máximo de dulces permitidos. Vuelve a personalizarlas.",
       "validation": "Revisa los datos del formulario.",
       "productNotFound": "Uno o más productos del carrito ya no están disponibles.",
       "bundleNotFound": "Una o más sorpresas del carrito ya no están disponibles.",

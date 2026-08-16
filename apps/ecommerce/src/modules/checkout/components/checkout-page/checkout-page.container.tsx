@@ -35,6 +35,7 @@ type GuestOrderErrorCode =
   | "OUT_OF_COVERAGE"
   | "INSUFFICIENT_STOCK"
   | "INVALID_PURCHASE_QUANTITY"
+  | "INVALID_BUNDLE_CUSTOMIZATION"
   | "VALIDATION"
   | "PRODUCT_NOT_FOUND"
   | "BUNDLE_NOT_FOUND"
@@ -192,6 +193,7 @@ export function CheckoutPageContainer() {
         "BUNDLE_NOT_FOUND",
         "PACK_NOT_FOUND",
         "INVALID_PURCHASE_QUANTITY",
+        "INVALID_BUNDLE_CUSTOMIZATION",
         "DUPLICATE_PRODUCT_IN_BUNDLE",
       ]);
       if (redirectErrors.has(validation.error)) {
@@ -270,6 +272,7 @@ export function CheckoutPageContainer() {
       if (
         result.error === "INSUFFICIENT_STOCK" ||
         result.error === "INVALID_PURCHASE_QUANTITY" ||
+        result.error === "INVALID_BUNDLE_CUSTOMIZATION" ||
         result.error === "PRODUCT_NOT_FOUND" ||
         result.error === "BUNDLE_NOT_FOUND" ||
         result.error === "PACK_NOT_FOUND"
@@ -289,6 +292,7 @@ export function CheckoutPageContainer() {
         OUT_OF_COVERAGE: t("errors.outOfCoverage"),
         INSUFFICIENT_STOCK: t("errors.insufficientStock"),
         INVALID_PURCHASE_QUANTITY: t("errors.invalidPurchaseQuantity"),
+        INVALID_BUNDLE_CUSTOMIZATION: t("errors.invalidBundleCustomization"),
         VALIDATION: t("errors.validation"),
         PRODUCT_NOT_FOUND: t("errors.productNotFound"),
         BUNDLE_NOT_FOUND: t("errors.bundleNotFound"),

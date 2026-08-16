@@ -5,6 +5,11 @@ import {
   updateBundleInputSchema,
 } from "@de-tin-marin/validations/bundle";
 import {
+  BUNDLE_CUSTOMIZATION_DEFAULT_MAX,
+  BUNDLE_CUSTOMIZATION_DEFAULT_MIN,
+  resolveBundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
+import {
   adminBundleListQuerySchema,
   type AdminListPage,
 } from "@de-tin-marin/validations/admin-list";
@@ -101,6 +106,8 @@ function toListItem(
     containerName: container?.name ?? "—",
     containerNetPrice,
     quantity: row.quantity,
+    customizationMinProducts: row.customization_min_products,
+    customizationMaxProducts: row.customization_max_products,
     itemCount: items.length,
     total,
     isActive: row.is_active,
@@ -127,6 +134,8 @@ function toFormDTO(
     containerName: container.name,
     containerNetPrice: container.netPrice,
     quantity: row.quantity,
+    customizationMinProducts: row.customization_min_products,
+    customizationMaxProducts: row.customization_max_products,
     isActive: row.is_active,
     items: items.map(toFormItemDTO),
     itemsSubtotal,
@@ -137,6 +146,17 @@ function toFormDTO(
 
 function hasDuplicateProductIds(productIds: string[]): boolean {
   return new Set(productIds).size !== productIds.length;
+}
+
+function validateItemsAgainstCustomizationBounds(
+  itemCount: number,
+  minProducts: number,
+  maxProducts: number,
+): { ok: true } | { ok: false; error: "ITEMS_OUT_OF_CUSTOMIZATION_RANGE" } {
+  if (itemCount < minProducts || itemCount > maxProducts) {
+    return { ok: false, error: "ITEMS_OUT_OF_CUSTOMIZATION_RANGE" };
+  }
+  return { ok: true };
 }
 
 async function validateBundleItems(
@@ -281,6 +301,19 @@ export async function createBundleService(
   }
 
   const data = parsed.data;
+  const bounds = resolveBundleCustomizationBounds({
+    customizationMinProducts: data.customizationMinProducts,
+    customizationMaxProducts: data.customizationMaxProducts,
+  });
+  const itemsRange = validateItemsAgainstCustomizationBounds(
+    data.items.length,
+    bounds.minProducts,
+    bounds.maxProducts,
+  );
+  if (!itemsRange.ok) {
+    return { ok: false as const, error: itemsRange.error };
+  }
+
   const itemsCheck = await validateBundleItems(config, data.items);
   if (!itemsCheck.ok) {
     return { ok: false as const, error: itemsCheck.error };
@@ -297,6 +330,8 @@ export async function createBundleService(
     image_url: normalizeImageUrl(data.imageUrl),
     container_id: data.containerId,
     quantity: data.quantity,
+    customization_min_products: bounds.minProducts,
+    customization_max_products: bounds.maxProducts,
     is_active: data.isActive,
   });
 
@@ -337,10 +372,43 @@ export async function updateBundleService(
     return { ok: false as const, error: "NOT_FOUND" as const };
   }
 
+  const bounds = resolveBundleCustomizationBounds({
+    customizationMinProducts:
+      fields.customizationMinProducts ??
+      existing.customization_min_products ??
+      BUNDLE_CUSTOMIZATION_DEFAULT_MIN,
+    customizationMaxProducts:
+      fields.customizationMaxProducts ??
+      existing.customization_max_products ??
+      BUNDLE_CUSTOMIZATION_DEFAULT_MAX,
+  });
+
   if (fields.items) {
+    const itemsRange = validateItemsAgainstCustomizationBounds(
+      fields.items.length,
+      bounds.minProducts,
+      bounds.maxProducts,
+    );
+    if (!itemsRange.ok) {
+      return { ok: false as const, error: itemsRange.error };
+    }
+
     const itemsCheck = await validateBundleItems(config, fields.items);
     if (!itemsCheck.ok) {
       return { ok: false as const, error: itemsCheck.error };
+    }
+  } else if (
+    fields.customizationMinProducts !== undefined ||
+    fields.customizationMaxProducts !== undefined
+  ) {
+    const existingCount = existing.bundle_items?.length ?? 0;
+    const itemsRange = validateItemsAgainstCustomizationBounds(
+      existingCount,
+      bounds.minProducts,
+      bounds.maxProducts,
+    );
+    if (!itemsRange.ok) {
+      return { ok: false as const, error: itemsRange.error };
     }
   }
 
@@ -361,6 +429,13 @@ export async function updateBundleService(
   if (fields.containerId !== undefined)
     updatePayload.container_id = fields.containerId;
   if (fields.quantity !== undefined) updatePayload.quantity = fields.quantity;
+  if (
+    fields.customizationMinProducts !== undefined ||
+    fields.customizationMaxProducts !== undefined
+  ) {
+    updatePayload.customization_min_products = bounds.minProducts;
+    updatePayload.customization_max_products = bounds.maxProducts;
+  }
   if (fields.isActive !== undefined) updatePayload.is_active = fields.isActive;
 
   if (Object.keys(updatePayload).length > 0) {

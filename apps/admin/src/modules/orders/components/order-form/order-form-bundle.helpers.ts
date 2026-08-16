@@ -1,22 +1,21 @@
 import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
+  type BundleCustomizationBounds,
   type CustomizeBundleComponent,
 } from "@de-tin-marin/validations/customize-bundle";
 import type { OrderFormBundleComponent } from "./order-form.types";
 
-export { BUNDLE_CUSTOMIZATION_MAX, BUNDLE_CUSTOMIZATION_MIN };
-
 export function canRemoveBundleComponent(
   components: CustomizeBundleComponent[],
+  bounds: BundleCustomizationBounds,
 ): boolean {
-  return components.length > BUNDLE_CUSTOMIZATION_MIN;
+  return components.length > bounds.minProducts;
 }
 
 export function canAddBundleComponent(
   components: CustomizeBundleComponent[],
+  bounds: BundleCustomizationBounds,
 ): boolean {
-  return components.length < BUNDLE_CUSTOMIZATION_MAX;
+  return components.length < bounds.maxProducts;
 }
 
 export function bundleHasProduct(
@@ -29,17 +28,19 @@ export function bundleHasProduct(
 export function removeBundleComponent(
   components: CustomizeBundleComponent[],
   productId: string,
+  bounds: BundleCustomizationBounds,
 ): CustomizeBundleComponent[] {
-  if (!canRemoveBundleComponent(components)) return components;
+  if (!canRemoveBundleComponent(components, bounds)) return components;
   return components.filter((component) => component.productId !== productId);
 }
 
 export function addBundleComponent(
   components: CustomizeBundleComponent[],
   productId: string,
+  bounds: BundleCustomizationBounds,
 ): CustomizeBundleComponent[] {
   if (
-    !canAddBundleComponent(components) ||
+    !canAddBundleComponent(components, bounds) ||
     bundleHasProduct(components, productId)
   ) {
     return components;
@@ -48,8 +49,11 @@ export function addBundleComponent(
   return [...components, { productId, quantityPerUnit: 1 }];
 }
 
-export function clampBundleInitialComponents<T>(components: T[]): T[] {
-  return components.slice(0, BUNDLE_CUSTOMIZATION_MAX);
+export function clampBundleInitialComponents<T>(
+  components: T[],
+  maxProducts: number,
+): T[] {
+  return components.slice(0, Math.max(1, Math.floor(maxProducts)));
 }
 
 export function buildInitialBundleComponents(
@@ -58,6 +62,7 @@ export function buildInitialBundleComponents(
     unitsPerPerson: number;
     isActive?: boolean;
   }>,
+  bounds: BundleCustomizationBounds,
 ): OrderFormBundleComponent[] {
   return clampBundleInitialComponents(
     items
@@ -66,6 +71,7 @@ export function buildInitialBundleComponents(
         productId: item.productId,
         quantityPerUnit: 1,
       })),
+    bounds.maxProducts,
   );
 }
 

@@ -23,5 +23,18 @@ Al confirmar, `BundleWizardPageContainer` llama `useCart().addBundleLine()` con 
 
 ## Reglas de composición
 
-- Mínimo / máximo: `BUNDLE_CUSTOMIZATION_MIN` (5) y `BUNDLE_CUSTOMIZATION_MAX` (20) en `@de-tin-marin/validations/customize-bundle`.
-- `getBundleForWizardService` recorta `initialComponents` al máximo permitido si la plantilla admin tiene más dulces activos.
+- Mínimo / máximo **por sorpresa**: `catalog.bundles.customization_min_products` / `customization_max_products` (defaults **8** / **20**; techo **100**).
+- Helpers: `resolveBundleCustomizationBounds` + `validateBundleCustomization(components, bounds)` en `@de-tin-marin/validations/customize-bundle`.
+- `getBundleForWizardService` expone los límites en la plantilla y recorta `initialComponents` al máximo de **esa** sorpresa.
+- La plantilla y el estado del wizard tienen productos por `productId` único;
+  la cardinalidad cuenta productos distintos, no
+  `unitsPerPerson` ni personas de la sorpresa.
+- Preview solo corre para una composición válida. El service vuelve a cargar
+  los límites de la plantilla y valida antes de calcular precio o stock:
+  los límites recibidos en el cliente no son una autorización.
+- El order-form admin usa los mismos límites al personalizar una línea bundle.
+  Crear la orden vuelve a validarlos; el snapshot resultante no cambia si el
+  administrador edita la plantilla después.
+- Persistencia: `00025_bundle_customization_limits.sql` agrega ambas columnas,
+  conserva bundles existentes con 8/20 y aplica `1 ≤ min ≤ max` en DB. El
+  máximo absoluto de 100 se aplica en Zod/app.

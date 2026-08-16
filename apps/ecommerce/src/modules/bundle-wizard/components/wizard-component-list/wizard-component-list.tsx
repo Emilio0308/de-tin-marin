@@ -2,32 +2,31 @@
 
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
-} from "@de-tin-marin/validations/customize-bundle";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolveComponentTotalQuantity } from "./wizard-component-list.helpers";
 import type { WizardComponentListProps } from "./wizard-component-list.types";
 
 function WizardProgressBar({
   current,
+  minProducts,
+  maxProducts,
   label,
 }: {
   current: number;
+  minProducts: number;
+  maxProducts: number;
   label: string;
 }) {
-  const fillPercent = Math.min(100, (current / BUNDLE_CUSTOMIZATION_MAX) * 100);
-  const minMarkerPercent =
-    (BUNDLE_CUSTOMIZATION_MIN / BUNDLE_CUSTOMIZATION_MAX) * 100;
+  const fillPercent = Math.min(100, (current / maxProducts) * 100);
+  const minMarkerPercent = (minProducts / maxProducts) * 100;
 
   return (
     <div className="space-y-2">
       <div
         role="progressbar"
         aria-valuenow={current}
-        aria-valuemin={BUNDLE_CUSTOMIZATION_MIN}
-        aria-valuemax={BUNDLE_CUSTOMIZATION_MAX}
+        aria-valuemin={minProducts}
+        aria-valuemax={maxProducts}
         aria-label={label}
         className="bg-surface-container relative h-2.5 overflow-hidden rounded-full"
       >
@@ -48,6 +47,8 @@ function WizardProgressBar({
 export function WizardComponentList({
   components,
   personCount,
+  minProducts,
+  maxProducts,
   labelsByProductId,
   imagesByProductId,
   unitPricesByProductId,
@@ -57,11 +58,11 @@ export function WizardComponentList({
   const t = useTranslations("catalog.wizard.componentList");
   const count = t("count", {
     current: components.length,
-    max: BUNDLE_CUSTOMIZATION_MAX,
+    max: maxProducts,
   });
   const progressLabel = t("progressLabel", {
     current: components.length,
-    max: BUNDLE_CUSTOMIZATION_MAX,
+    max: maxProducts,
   });
 
   return (
@@ -79,14 +80,19 @@ export function WizardComponentList({
         </p>
       </div>
 
-      <WizardProgressBar current={components.length} label={progressLabel} />
+      <WizardProgressBar
+        current={components.length}
+        minProducts={minProducts}
+        maxProducts={maxProducts}
+        label={progressLabel}
+      />
 
       {!canRemove ? (
         <p
           role="status"
           className="font-body text-body-sm text-on-surface-variant bg-surface-container border-outline-variant/30 rounded-2xl border px-4 py-3"
         >
-          {t("minReached", { min: BUNDLE_CUSTOMIZATION_MIN })}
+          {t("minReached", { min: minProducts })}
         </p>
       ) : null}
 

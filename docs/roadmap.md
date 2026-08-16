@@ -219,7 +219,11 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ### S3A-2 — Wizard personalizar sorpresa
 
-- Mín. 5 / máx. 20 dulces; plantilla editable; personas fijas de plantilla
+- Mín./máx. de productos distintos **configurable por plantilla**:
+  `customization_min_products` / `customization_max_products` (defaults
+  8/20; `1 ≤ min ≤ max ≤ 100`; migración `00025`). La composición inicial,
+  wizard, preview y creación de orden revalidan el rango.
+- Plantilla editable; personas fijas de plantilla
 - `enableUnitsPerPerson=false`; stock warning only
 - Brief: [`docs/stages/S3A/02-bundle-customization-wizard.md`](stages/S3A/02-bundle-customization-wizard.md)
 

@@ -9,8 +9,6 @@ import { ProductSearchPickerContainer } from "@/modules/catalog/components/produ
 import type { ProductSearchPickerItem } from "@/modules/catalog/components/product-search-picker/product-search-picker.types";
 import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
   canAddBundleComponent,
   canRemoveBundleComponent,
   removeBundleComponent,
@@ -56,6 +54,8 @@ export type OrderFormBundleCustomizeProps = {
   containerName: string;
   containerNetPrice: number;
   templateQuantity: number;
+  customizationMinProducts: number;
+  customizationMaxProducts: number;
   components: OrderFormBundleComponent[];
   quantity: number;
   products: ProductOption[];
@@ -101,21 +101,24 @@ export type OrderFormBundleCustomizeProps = {
 
 function CustomizationProgress({
   current,
+  minProducts,
+  maxProducts,
   label,
 }: {
   current: number;
+  minProducts: number;
+  maxProducts: number;
   label: string;
 }) {
-  const fillPercent = Math.min(100, (current / BUNDLE_CUSTOMIZATION_MAX) * 100);
-  const minMarkerPercent =
-    (BUNDLE_CUSTOMIZATION_MIN / BUNDLE_CUSTOMIZATION_MAX) * 100;
+  const fillPercent = Math.min(100, (current / maxProducts) * 100);
+  const minMarkerPercent = (minProducts / maxProducts) * 100;
 
   return (
     <div
       role="progressbar"
       aria-valuenow={current}
-      aria-valuemin={BUNDLE_CUSTOMIZATION_MIN}
-      aria-valuemax={BUNDLE_CUSTOMIZATION_MAX}
+      aria-valuemin={minProducts}
+      aria-valuemax={maxProducts}
       aria-label={label}
       className="bg-surface-container relative h-2.5 overflow-hidden rounded-full"
     >
@@ -168,6 +171,8 @@ export function OrderFormBundleCustomize({
   containerName,
   containerNetPrice,
   templateQuantity,
+  customizationMinProducts,
+  customizationMaxProducts,
   components,
   quantity,
   products,
@@ -183,10 +188,14 @@ export function OrderFormBundleCustomize({
   onCancel,
 }: OrderFormBundleCustomizeProps) {
   const [pickerExpanded, setPickerExpanded] = useState(false);
+  const bounds = {
+    minProducts: customizationMinProducts,
+    maxProducts: customizationMaxProducts,
+  };
 
-  const validation = validateBundleCustomization(components);
-  const canRemove = canRemoveBundleComponent(components);
-  const canAdd = canAddBundleComponent(components);
+  const validation = validateBundleCustomization(components, bounds);
+  const canRemove = canRemoveBundleComponent(components, bounds);
+  const canAdd = canAddBundleComponent(components, bounds);
 
   const productsById = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
@@ -234,11 +243,13 @@ export function OrderFormBundleCustomize({
             {labels.candyCount}
           </p>
           <p className="text-on-surface-variant text-sm" aria-live="polite">
-            {components.length} / {BUNDLE_CUSTOMIZATION_MAX}
+            {components.length} / {customizationMaxProducts}
           </p>
         </div>
         <CustomizationProgress
           current={components.length}
+          minProducts={customizationMinProducts}
+          maxProducts={customizationMaxProducts}
           label={labels.progressLabel}
         />
       </div>
@@ -287,7 +298,11 @@ export function OrderFormBundleCustomize({
                 className="text-primary font-label text-label-bold shrink-0 text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() =>
                   onComponentsChange(
-                    removeBundleComponent(components, component.productId),
+                    removeBundleComponent(
+                      components,
+                      component.productId,
+                      bounds,
+                    ),
                   )
                 }
               >

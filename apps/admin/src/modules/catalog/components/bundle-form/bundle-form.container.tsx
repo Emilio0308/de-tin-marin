@@ -40,6 +40,8 @@ function bundleErrorMessage(
       return t("duplicateProduct");
     case "CONTAINER_NOT_FOUND":
       return t("containerNotFound");
+    case "ITEMS_OUT_OF_CUSTOMIZATION_RANGE":
+      return t("itemsOutOfCustomizationRange");
     case "NOT_FOUND":
       return t("notFound");
     case "UNAUTHORIZED":
@@ -120,6 +122,9 @@ export function BundleFormContainer({
       container: t("container"),
       containerPlaceholder: t("containerPlaceholder"),
       persons: t("persons"),
+      customizationMin: t("customizationMin"),
+      customizationMax: t("customizationMax"),
+      customizationHint: t("customizationHint"),
       subtotalLabel: t("subtotalLabel"),
       containerLabel: t("containerLabel"),
       totalLabel: t("totalLabel"),
