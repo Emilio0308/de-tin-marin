@@ -35,7 +35,7 @@ De Tin Marín es un **ecommerce de dulces y sorpresas** con backoffice administr
 - **Contexto mínimo:** carga solo el dominio relevante — `CLAUDE.md` + el brief de etapa (si existe) + `docs/` del dominio + `docs/rules/*` aplicables. No leas todo el monorepo.
 - **Documentación primero:** si falta una regla de negocio o un contrato DTO, documéntala antes de codear.
 - **Commits:** solo cuando el usuario lo pida. No hacer push a producción sin autorización.
-- **El gate no es el build:** `pnpm check` no sustituye a `pnpm build`. El build detecta fugas client/server que el typecheck no ve.
+- **El gate no es el build:** `pnpm check` no sustituye a `pnpm build`. El build detecta fugas client/server que el typecheck no ve. Tampoco asumas que `readFileSync` de assets sueltos funciona en Vercel — embeber como módulos importables (ver trampas / `coding-guidelines.md`).
 - **Imports en client:** usa `import type { … }` desde módulos server; un import de valor arrastra `import "server-only"` al bundle del cliente.
 - **Secrets:** nunca pegues valores reales de `.env` en el chat. Lee env solo vía `@de-tin-marin/config/env`.
 - **Nombres de tablas:** cópialos de [`docs/database.md`](docs/database.md) § Catálogo — nunca los recuerdes de memoria.
@@ -153,12 +153,13 @@ Detalle: [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md
 
 ## Trampas comunes (triage rápido)
 
-| Síntoma                                 | Causa probable                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------- |
-| `permission denied for table`           | Cliente Supabase incorrecto o RLS sin policy                           |
-| Precio distinto en checkout vs carrito  | Orders recalculando en lugar de usar snapshot de Pricing               |
-| Stock negativo en producción            | Regla 14 no atómica o bundle sin descontar componentes                 |
-| Hydration mismatch                      | Valor no determinístico en render (fecha, random, localStorage)        |
-| Secret en bundle del cliente            | Import de valor desde módulo `server-only` en `'use client'`           |
-| Usuarios deslogueados al azar           | Código entre `createServerClient` y primera llamada auth en middleware |
-| UI genérica + Vercel/terminal sin causa | Action sin `guardAction` o `catch` vacío — ver `@de-tin-marin/logging` |
+| Síntoma                                              | Causa probable                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permission denied for table`                        | Cliente Supabase incorrecto o RLS sin policy                                                                                                                                                                                                                           |
+| Precio distinto en checkout vs carrito               | Orders recalculando en lugar de usar snapshot de Pricing                                                                                                                                                                                                               |
+| Stock negativo en producción                         | Regla 14 no atómica o bundle sin descontar componentes                                                                                                                                                                                                                 |
+| Hydration mismatch                                   | Valor no determinístico en render (fecha, random, localStorage)                                                                                                                                                                                                        |
+| Secret en bundle del cliente                         | Import de valor desde módulo `server-only` en `'use client'`                                                                                                                                                                                                           |
+| Usuarios deslogueados al azar                        | Código entre `createServerClient` y primera llamada auth en middleware                                                                                                                                                                                                 |
+| UI genérica + Vercel/terminal sin causa              | Action sin `guardAction` o `catch` vacío — ver `@de-tin-marin/logging`                                                                                                                                                                                                 |
+| Checkout / route rota en Vercel (`ENOENT` al import) | `readFileSync` u asset suelto fuera del bundle serverless; fallar al **cargar** un package tumba todo el chunk que lo importa (p. ej. plantillas email → distritos) — embeber como `*.template.ts` / módulo importable; ver `coding-guidelines.md` § Assets serverless |

@@ -323,9 +323,11 @@ de la respuesta y de la transacción de creación: una orden válida devuelve
 
 El paquete recibe un `OrderCreatedNotifyInput` allowlist: identificadores,
 totales, contacto, líneas ya congeladas y resumen de fulfillment. Genera
-plantillas HTML y texto plano; el correo cliente incluye enlaces opcionales a
-confirmación/Mis pedidos y el administrativo al detalle de admin. Las URLs se
-construyen solo si las bases server-side están configuradas.
+plantillas HTML (constantes en `*.template.ts`, embebidas en el bundle — **no**
+`readFileSync` de `.html` sueltos) y texto plano; el correo cliente incluye
+enlaces opcionales a confirmación/Mis pedidos y el administrativo al detalle
+de admin. Las URLs se construyen solo si las bases server-side están
+configuradas.
 
 SMTP es configuración exclusivamente server-side (`SMTP_*`); si falta algún
 campo requerido se omite el envío y se registra `SMTP_NOT_CONFIGURED`. Los

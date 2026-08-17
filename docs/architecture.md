@@ -36,22 +36,22 @@ de-tin-marin/
 
 ## Dominios
 
-| Dominio       | Responsabilidad principal                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------------- |
-| Products      | CRUD, SKU, categorías, imágenes, `prices` JSONB (`normal`+`unit`), stock sealed/loose          |
-| Bundles       | Plantillas sorpresa sin stock; composición + envase                                            |
-| Packs         | Combos BOM fija (`package_quantity` + `unit_quantity`); `reference`+`normal`; sin stock propio |
-| Pricing       | `finalPrice` en listado; total línea sorpresa; reference pack                                  |
-| Campaigns     | Campañas %; asignación 1:1 a producto o pack                                                   |
-| Orders        | Ciclo de vida; snapshot product/bundle/pack                                                    |
-| Inventory     | Stock v1 en products; deduct al `paid` (incl. componentes pack)                                |
-| Customers     | Perfiles de cliente (sin VIP v1)                                                               |
-| Payments      | Registro manual; operador confirma                                                             |
-| Shipping      | Envíos, tracking                                                                               |
-| Notifications | Email SMTP server-only al crear orden; best-effort post-respuesta, sin outbox v1 — S4-06       |
-| Reports       | Exportaciones operativas (S4-01: Excel estado catálogo); métricas futuras                      |
-| Users         | Staff del admin, roles                                                                         |
-| Settings      | Configuración global                                                                           |
+| Dominio       | Responsabilidad principal                                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Products      | CRUD, SKU, categorías, imágenes, `prices` JSONB (`normal`+`unit`), stock sealed/loose                                            |
+| Bundles       | Plantillas sorpresa sin stock; composición + envase                                                                              |
+| Packs         | Combos BOM fija (`package_quantity` + `unit_quantity`); `reference`+`normal`; sin stock propio                                   |
+| Pricing       | `finalPrice` en listado; total línea sorpresa; reference pack                                                                    |
+| Campaigns     | Campañas %; asignación 1:1 a producto o pack                                                                                     |
+| Orders        | Ciclo de vida; snapshot product/bundle/pack                                                                                      |
+| Inventory     | Stock v1 en products; deduct al `paid` (incl. componentes pack)                                                                  |
+| Customers     | Perfiles de cliente (sin VIP v1)                                                                                                 |
+| Payments      | Registro manual; operador confirma                                                                                               |
+| Shipping      | Envíos, tracking                                                                                                                 |
+| Notifications | Email SMTP server-only al crear orden; plantillas embebidas (`*.template.ts`); best-effort post-respuesta, sin outbox v1 — S4-06 |
+| Reports       | Exportaciones operativas (S4-01: Excel estado catálogo); métricas futuras                                                        |
+| Users         | Staff del admin, roles                                                                                                           |
+| Settings      | Configuración global                                                                                                             |
 
 ## Estructura de un dominio
 

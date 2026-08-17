@@ -1,9 +1,5 @@
 import "server-only";
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import type { OrderCreatedNotifyInput } from "../types";
 import {
   BRAND,
@@ -12,18 +8,12 @@ import {
   buildLinesText,
   buildLogoHeaderHtml,
 } from "./email-brand";
+import { ORDER_ADMIN_HTML } from "./order-admin.template";
+import { ORDER_CUSTOMER_HTML } from "./order-customer.template";
 import { escapeHtml, formatMoney, renderTemplate } from "./render";
 
-const templatesDir = dirname(fileURLToPath(import.meta.url));
-
-const customerHtmlTemplate = readFileSync(
-  join(templatesDir, "order-customer.html"),
-  "utf8",
-);
-const adminHtmlTemplate = readFileSync(
-  join(templatesDir, "order-admin.html"),
-  "utf8",
-);
+const customerHtmlTemplate = ORDER_CUSTOMER_HTML;
+const adminHtmlTemplate = ORDER_ADMIN_HTML;
 
 export type BuiltEmail = {
   subject: string;

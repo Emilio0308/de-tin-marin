@@ -101,6 +101,34 @@ repositories/→ queries Supabase
 - Zod en cada boundary — ver [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md)
 - `safeParse` en actions; devolver `Result` tipado
 
+## Assets en serverless / Vercel (cuidado)
+
+Los lambdas de Next.js en Vercel **solo** incluyen lo que el bundler traza o lo
+que el JS empaqueta. Un archivo suelto leído en runtime con `fs` suele **no**
+estar en el deploy.
+
+**Incidente (notificaciones):** las plantillas de email se leían con
+`readFileSync` desde `*.html`. En local pasaba; en Vercel → `ENOENT` al
+**importar** el módulo. Ese crash al cargar `@de-tin-marin/notifications`
+rompía el chunk de `/checkout` (distritos y resto del funnel), no solo el
+envío de correo.
+
+**Reglas:**
+
+1. Preferir assets como **módulo importable** (p. ej. `*.template.ts` con el
+   HTML embebido) para que viajen con webpack.
+2. **No** asumir que `readFileSync` / `path.join(__dirname, …)` funciona en
+   prod solo porque funciona en `pnpm dev`.
+3. `outputFileTracingIncludes` es un parche frágil; no es la solución por
+   defecto para plantillas o datos estáticos de packages.
+4. Un fallo en **top-level** de un módulo `server-only` compartido puede tumbar
+   cualquier route que lo importe (aunque el feature “secundario” no se use).
+5. Gate: `pnpm build` local + verificar el path en deploy; el typecheck **no**
+   detecta `ENOENT` de assets faltantes.
+
+Detalle del caso email: [`packages/notifications/README.md`](../packages/notifications/README.md) ·
+[`rules/95-guardrails-lint-ci.md`](rules/95-guardrails-lint-ci.md).
+
 ## Variables de entorno
 
 Al **agregar una variable de entorno nueva**, completar **todos** estos pasos (si falta uno, Vercel/Turbo falla aunque la var exista en el dashboard):
@@ -184,6 +212,7 @@ Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-bound
 
 - [ ] `pnpm check` verde
 - [ ] `pnpm build` verde
+- [ ] Assets runtime de packages: embebidos / importados (no `readFileSync` de archivos sueltos en Vercel)
 - [ ] Variable de entorno nueva → schema `env.ts` + `.env.example` + `turbo.json` `tasks.build.env`
 - [ ] Errores: `guardAction` / `logServer*` (server JSON vía `@de-tin-marin/logging`) o `logClientError` (client admin) — sin `catch` vacío; meta sin PII
 - [ ] Componente nuevo: container + presentational + types + helpers (si aplica) + test de render

@@ -24,7 +24,7 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 
 ## Scope IN
 
-- Paquete `@de-tin-marin/notifications` (`server-only`): SMTP, `notifyOrderCreated`, templates HTML + text, resolución de destinatarios
+- Paquete `@de-tin-marin/notifications` (`server-only`): SMTP, `notifyOrderCreated`, templates HTML **embebidos** en `*.template.ts` + text, resolución de destinatarios
 - Env server (ambas apps): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `ORDER_NOTIFY_EXTRA_EMAILS` (opcional), URLs base opcionales para links
 - Ecommerce: tras insert exitoso → `after()` → cliente + admin(+extras)
 - Admin create: tras insert exitoso → `after()` → solo admin(+extras)
@@ -39,6 +39,9 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 - **NO tablas/migraciones nuevas** → _sin RLS extra_
 - **NO `index.ts` barrels**
 - **NO fallar create order si falta SMTP** — skip + warn → _checkout roto_
+- **NO `readFileSync` de `*.html` sueltos** — en Vercel no van en el bundle
+  serverless (`ENOENT` al import); tumba rutas que importan el package (p. ej.
+  `/checkout`). Embeber en `*.template.ts`.
 
 ## Tablas y RLS
 
@@ -84,4 +87,14 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 
 ## Preguntas abiertas
 
-- Ninguna (SMTP Gmail App Password; extras vía env; templates HTML; usar `after()`).
+- Ninguna (SMTP Gmail App Password; extras vía env; templates HTML embebidos;
+  usar `after()`).
+
+## Notas post-implementación
+
+- **Plantillas:** `order-customer.template.ts` / `order-admin.template.ts`
+  (constantes string). Se eliminó la lectura de `.html` con `readFileSync` y
+  el workaround `outputFileTracingIncludes` en `next.config`.
+- **Lección de build:** un fallo al **cargar** un módulo compartido afecta
+  todas las rutas que lo importan, no solo el envío de correo. Ver
+  [`coding-guidelines.md`](../../coding-guidelines.md) § Assets en serverless.

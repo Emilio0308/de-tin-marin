@@ -18,7 +18,7 @@ Envío SMTP server-only (Nodemailer) para notificaciones de órdenes.
   devuelve `{ ok: false, sent }` y no propaga el error al creador de la orden.
 - Extras: `ORDER_NOTIFY_EXTRA_EMAILS` admite coma, punto y coma o espacios;
   descarta emails inválidos y deduplica sin distinguir mayúsculas.
-- Templates: `src/templates/*.html` + text plano.
+- Templates: HTML embebido en `src/templates/*.template.ts` + text plano.
 
 El caller agenda la operación con `after()` después de persistir la orden. No
 hay cola, reintento, webhook ni registro de entrega en v1; este paquete no
@@ -36,12 +36,28 @@ Las URLs de ecommerce/admin son opcionales y se arman desde bases server-only.
 Los links guest incluyen `orderNumber` y email, necesarios para el lookup sin
 sesión; tratarlos como información personal al reenviar el correo.
 
-## Templates
+## Templates (embebidos en el bundle)
 
-- Cliente: paleta marca (`#b60058` / confectionery), logo desde
-  `{ORDER_ECOMMERCE_APP_BASE_URL}/brand/detinmarin-logo.png`, líneas, totales,
-  fulfillment y CTA a `/pedido/confirmacion` (y link a Mis pedidos).
-- Admin: detalle operativo + CTA absoluto a `/orders/{id}`.
+- Cliente: `order-customer.template.ts` → `ORDER_CUSTOMER_HTML`.
+- Admin: `order-admin.template.ts` → `ORDER_ADMIN_HTML`.
+- `build-emails.ts` importa esas constantes; **no** lee `.html` del disco.
+- Paleta marca (`#b60058`), logo CDN, líneas con componentes de sorpresa/combo,
+  CTA a confirmación / admin.
+
+### Por qué no `readFileSync` + `.html`
+
+En Vercel (Next.js serverless) los `.html` sueltos de un package **no** viajan
+con el bundle. Un `readFileSync` al cargar el módulo falla con `ENOENT`. Ese
+crash al importar `@de-tin-marin/notifications` también tumbaba el chunk de
+`/checkout` (p. ej. no cargaban los distritos), aunque el email no se hubiera
+enviado todavía.
+
+**Regla del paquete:** todo asset runtime (plantillas, strings grandes) debe
+importarse como módulo TypeScript/JS para que webpack lo empaquete. No depender
+de `outputFileTracingIncludes` como fix primario; el tracing es frágil y no
+sustituye embebido. Ver
+[`docs/coding-guidelines.md`](../../docs/coding-guidelines.md) § Assets en
+serverless / Vercel.
 
 ```text
 SMTP_HOST=smtp.gmail.com

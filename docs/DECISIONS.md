@@ -45,7 +45,19 @@
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 | 37 | Logging server (consola) | ✅ | Observabilidad v1 = **solo stdout/stderr** vía **`@de-tin-marin/logging`** (JSON una línea). `createServerErrorHelpers({ app, includeUnexpectedMessage })` en shims de app. `guardAction` / `withOperation` + `logServerError` / `Info` / `Warn` + `safeMeta` (redact PII/secrets). Metadata = resumen (IDs, conteos, códigos); nunca payloads crudos. Admin puede devolver `message` en `UNEXPECTED`; ecommerce no. Detalle: `rules/40-validation-and-boundaries.md` · `packages/logging/README.md` |
 | 38 | Contacto y cobro público dinámico | ✅ | Singleton `core.public_business_settings`: WhatsApp/email + instrucciones Yape/transferencia. Staff actualiza; `SELECT` público deliberado para storefront. Ecommerce usa DTO allowlist validado, no valores hardcodeados. Las instrucciones de órdenes `pending_payment` se leen al visualizarse, no se congelan en `orders` ni confirman pagos. Migración `00026`; Regla 27 |
-| 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only y `after()` para envío best-effort tras persistir una orden. Ecommerce notifica cliente + admin; admin solo admin. Fallo/SMTP ausente no altera la orden. Destinatario admin desde #38 + extras env validados/deduplicados. Sin outbox, reintentos, webhooks ni estado de entrega en v1. Regla 28 / S4-06 |
+| 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only y `after()` para envío best-effort tras persistir una orden. Ecommerce notifica cliente + admin; admin solo admin. Fallo/SMTP ausente no altera la orden. Destinatario admin desde #38 + extras env validados/deduplicados. Plantillas HTML **embebidas** en `*.template.ts` (viajan con el bundle; **no** `readFileSync` de `.html` — ENOENT en Vercel tumbaba imports del package, p. ej. `/checkout`). Sin outbox, reintentos, webhooks ni estado de entrega en v1. Regla 28 / S4-06 |
+
+## Docs sincronizados (2026-08-17 — plantillas email embebidas / build Vercel)
+
+- Causa: `readFileSync` de `order-*.html` al cargar el módulo. En Vercel esos
+  archivos no van en el serverless bundle → `ENOENT`. El crash al importar
+  `@de-tin-marin/notifications` también rompía `/checkout` (distritos).
+- Fix: HTML en `*.template.ts`; se quitó `outputFileTracingIncludes` de
+  `next.config` (parche frágil, no necesario si el asset viaja con webpack).
+- Regla general: assets runtime de packages = módulos importables; no asumir
+  que `fs` + path relativo funciona en prod solo porque funciona en local.
+  Documentado en `coding-guidelines.md`, `rules/95`, trampas `CLAUDE.md`,
+  README del package y brief S4-06.
 
 ## Docs sincronizados (2026-08-16 — notificaciones de orden)
 

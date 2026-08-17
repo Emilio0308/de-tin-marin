@@ -9,6 +9,15 @@ pnpm check   # typecheck + lint + format:check + test
 pnpm build   # obligatorio antes de merge — detecta client/server leaks
 ```
 
+`pnpm check` **no** sustituye a `pnpm build`. El build además revela fugas
+`server-only` → client. Tampoco garantiza assets en disco: un
+`readFileSync` sobre un `.html`/JSON suelto en un package puede pasar
+typecheck/tests locales y fallar en Vercel con `ENOENT` al cargar el módulo
+(ver incidente plantillas email → checkout roto). Preferir assets embebidos
+como módulos TS; no confiar en `outputFileTracingIncludes` como fix primario.
+Detalle: [`coding-guidelines.md`](../coding-guidelines.md) § Assets en
+serverless / Vercel.
+
 ## ESLint (flat config)
 
 - `eslint-config-next` + TypeScript typed rules
@@ -61,6 +70,7 @@ pnpm test:watch  # NODE_OPTIONS=--no-webstorage vitest
 | strict TS                   | Mecánico            |
 | server-only import          | Mecánico (build)    |
 | no-restricted-paths         | Mecánico (lint)     |
+| Assets runtime en bundle    | Convención + review |
 | Ownership check en service  | Convención + review |
 | DTO allowlist completo      | Convención + review |
 | Reglas de negocio correctas | Tests + review      |

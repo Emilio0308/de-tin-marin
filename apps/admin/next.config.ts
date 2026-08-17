@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
     "@de-tin-marin/validations",
     "@de-tin-marin/notifications",
   ],
-  outputFileTracingIncludes: {
-    "/**/*": ["../../packages/notifications/src/templates/**/*"],
-  },
   images: {
     // Catálogo: image_url puede apuntar a cualquier proveedor externo.
     remotePatterns: [
