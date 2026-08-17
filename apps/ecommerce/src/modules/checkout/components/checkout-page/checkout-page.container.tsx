@@ -17,6 +17,7 @@ import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/res
 import { validateGuestCheckoutCartAction } from "@/modules/checkout/actions/validate-guest-checkout-cart";
 import { queryKeys } from "@/shared/query/query-keys";
 import { freshQueryOptions } from "@/shared/query/query-cache";
+import { logClientError } from "@/shared/errors/client-error";
 import type { MapPin } from "@de-tin-marin/validations/checkout";
 import { defaultMapPin } from "../delivery-map/delivery-map.constants";
 import {
@@ -133,7 +134,16 @@ export function CheckoutPageContainer() {
     queryKey: queryKeys.delivery.zones(),
     queryFn: async () => {
       const result = await listCheckoutDeliveryZonesAction();
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        logClientError("listCheckoutDeliveryZonesAction", result.error);
+        throw new Error(result.error);
+      }
+      if (result.data.length === 0) {
+        logClientError(
+          "listCheckoutDeliveryZonesAction",
+          "empty_zones_returned",
+        );
+      }
       return result.data;
     },
   });

@@ -108,15 +108,15 @@ Forma del evento (campos relevantes):
 
 ### Metadata segura (obligatorio)
 
-Loguear **resumen**: IDs, conteos, códigos, status, duración. **Prohibido** loguear:
+Loguear **resumen de request y response** (no dumps crudos):
 
-- payloads `raw` / body / FormData completos
-- PII: `contact`, email, teléfono, dirección, `mapPin`, `fulfillment`
-- secrets / cookies / tokens / URLs firmadas (`uploadUrl`, `signedUrl`)
-- `shopping_cart` completo o issues Zod crudos (`issues`)
+- `guardAction(scope, run, requestMeta?)` escribe en consola:
+  - `started.meta.request` — shape del input (`summarizeActionInput` / allowlist)
+  - `completed.meta.response` — resumen del resultado (`itemCount`, `districts`, ids, códigos)
+- **Prohibido** loguear: payloads `raw` / body completos, PII (`contact`, email, teléfono, dirección, `mapPin`), secrets, cookies, tokens, URLs firmadas (`uploadUrl`, `signedUrl`), `shopping_cart` completo, issues Zod crudos.
 
-`safeMeta` (`@de-tin-marin/logging/redact`) aplica denylist + truncado. Preferir
-pasar solo campos allowlisted a `logServerInfo` / `withOperation`.
+`safeMeta` (`@de-tin-marin/logging/redact`) aplica denylist + truncado. En actions con
+input: pasar `summarizeActionInput(raw)` como 3er argumento de `guardAction`.
 
 ### Reglas
 

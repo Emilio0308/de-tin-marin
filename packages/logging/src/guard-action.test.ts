@@ -52,12 +52,46 @@ describe("guardAction", () => {
       ok: boolean;
       durationMs: number;
       requestId: string;
+      meta: { response: { ok: boolean; id?: string } };
     };
     expect(started.event).toBe("started");
     expect(completed.event).toBe("completed");
     expect(completed.ok).toBe(true);
     expect(completed.requestId).toMatch(/^[0-9a-f]{8}$/i);
     expect(completed.durationMs).toBeGreaterThanOrEqual(0);
+    expect(completed.meta.response).toMatchObject({ ok: true, id: "1" });
+  });
+
+  it("includes request meta and district list on completed zones", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { guardAction } = createServerErrorHelpers({
+      app: "ecommerce",
+      includeUnexpectedMessage: false,
+    });
+
+    await guardAction(
+      "listCheckoutDeliveryZonesAction",
+      () =>
+        Promise.resolve({
+          ok: true as const,
+          data: [{ id: "1", district: "Piura", fee: 8 }],
+        }),
+      { operation: "list_delivery_zones" },
+    );
+
+    const started = JSON.parse(String(info.mock.calls[0]?.[0])) as {
+      meta: { request: { operation: string } };
+    };
+    const completed = JSON.parse(String(info.mock.calls[1]?.[0])) as {
+      meta: {
+        request: { operation: string };
+        response: { itemCount: number; districts: string[] };
+      };
+    };
+    expect(started.meta.request.operation).toBe("list_delivery_zones");
+    expect(completed.meta.request.operation).toBe("list_delivery_zones");
+    expect(completed.meta.response.itemCount).toBe(1);
+    expect(completed.meta.response.districts).toEqual(["Piura"]);
   });
 
   it("emits completed with errorCode for business failures", async () => {

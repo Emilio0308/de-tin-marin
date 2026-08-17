@@ -8,7 +8,8 @@
     "./redact": "./src/redact.ts",
     "./guard-action": "./src/guard-action.ts",
     "./get-error-message": "./src/get-error-message.ts",
-    "./server-error": "./src/server-error.ts"
+    "./server-error": "./src/server-error.ts",
+    "./summarize": "./src/summarize.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

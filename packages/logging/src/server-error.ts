@@ -32,11 +32,12 @@ export type ServerErrorHelpers = {
   guardAction: <T extends { ok: boolean }>(
     scope: string,
     run: () => Promise<T>,
+    requestMeta?: Record<string, unknown>,
   ) => Promise<T | UnexpectedActionError>;
   withOperation: <T extends { ok: boolean }>(
     scope: string,
     run: () => Promise<T>,
-    meta?: Record<string, unknown>,
+    requestMeta?: Record<string, unknown>,
   ) => Promise<T | UnexpectedActionError>;
 };
 
@@ -61,11 +62,11 @@ export function createServerErrorHelpers(options: {
     logServerWarn(scope, message, details) {
       logger.warn(scope, message, details);
     },
-    guardAction(scope, run) {
-      return guardActionCore(guardOptions, scope, run);
+    guardAction(scope, run, requestMeta) {
+      return guardActionCore(guardOptions, scope, run, requestMeta);
     },
-    withOperation(scope, run, meta) {
-      return withOperationCore(guardOptions, scope, run, meta);
+    withOperation(scope, run, requestMeta) {
+      return withOperationCore(guardOptions, scope, run, requestMeta);
     },
   };
 }

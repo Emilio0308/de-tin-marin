@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { getErrorMessage } from "./get-error-message";
 import type { Logger } from "./logger";
+import { summarizeActionResult } from "./summarize";
 
 export type UnexpectedActionError = {
   ok: false;
@@ -35,24 +36,31 @@ export async function withOperation<T extends { ok: boolean }>(
   options: GuardActionOptions,
   scope: string,
   run: () => Promise<T>,
-  meta?: Record<string, unknown>,
+  requestMeta?: Record<string, unknown>,
 ): Promise<T | UnexpectedActionError> {
   const { logger, includeUnexpectedMessage } = options;
   const requestId = createRequestId();
   const startedAt = Date.now();
 
-  logger.operation(scope, "started", { requestId, meta });
+  logger.operation(scope, "started", {
+    requestId,
+    meta: requestMeta ? { request: requestMeta } : undefined,
+  });
 
   try {
     const result = await run();
     const durationMs = Date.now() - startedAt;
     const errorCode = extractErrorCode(result);
+    const response = summarizeActionResult(result);
     logger.operation(scope, "completed", {
       requestId,
       durationMs,
       ok: result.ok,
       errorCode,
-      meta,
+      meta: {
+        ...(requestMeta ? { request: requestMeta } : {}),
+        response,
+      },
     });
     return result;
   } catch (error) {
@@ -64,9 +72,9 @@ export async function withOperation<T extends { ok: boolean }>(
       ok: false,
       errorCode: "UNEXPECTED",
       message,
-      meta,
+      meta: requestMeta ? { request: requestMeta } : undefined,
     });
-    logger.error(scope, error, { requestId, ...meta });
+    logger.error(scope, error, { requestId, ...requestMeta });
 
     if (includeUnexpectedMessage) {
       return { ok: false, error: "UNEXPECTED", message };
@@ -79,6 +87,7 @@ export async function guardAction<T extends { ok: boolean }>(
   options: GuardActionOptions,
   scope: string,
   run: () => Promise<T>,
+  requestMeta?: Record<string, unknown>,
 ): Promise<T | UnexpectedActionError> {
-  return withOperation(options, scope, run);
+  return withOperation(options, scope, run, requestMeta);
 }
