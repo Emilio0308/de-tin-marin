@@ -310,6 +310,31 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ---
 
+## Notificaciones
+
+### Regla 28 — Email de orden creada
+
+- **Trigger:** Una orden se persiste correctamente desde checkout ecommerce o
+  desde admin.
+- **Pasos:**
+  1. El service crea y registra la orden primero; nunca espera el correo para
+     responder.
+  2. `scheduleOrderCreatedNotification` programa el trabajo con `after()` y
+     arma un DTO allowlist desde el snapshot de la orden.
+  3. Ecommerce envía al cliente y a los destinatarios administrativos; admin
+     solo a los destinatarios administrativos.
+  4. El destinatario principal admin es
+     `core.public_business_settings.email`; los extras de
+     `ORDER_NOTIFY_EXTRA_EMAILS` son opcionales, validados y deduplicados.
+  5. Si SMTP está incompleto se omite el envío con warning. Si falla,
+     se registra error seguro sin PII y la orden conserva éxito.
+- **Alcance:** SMTP/Nodemailer server-only, HTML + texto plano. No outbox,
+  reintentos, estado de entrega, webhook ni tablas nuevas en v1.
+- **Fallo:** Un error de notificación no revierte la orden, totales, pago ni
+  stock. El lookup guest sigue siendo el canal de consulta fiable.
+
+---
+
 ## Futuro (v2 — no implementar en v1)
 
 | ID  | Tema                           |
@@ -336,3 +361,4 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
 | 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
 | 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
+| 28    | Notifications      | Email SMTP post-creación, best-effort y sin bloquear la orden      |

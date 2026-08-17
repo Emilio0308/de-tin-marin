@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Nueva orden — De Tin Marín</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #f0eee6;
+      font-family:
+        &quot;Be Vietnam Pro&quot;, &quot;Helvetica Neue&quot;, Helvetica,
+        Arial, sans-serif;
+      color: #1b1c17;
+      -webkit-text-size-adjust: 100%;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      style="background: #f0eee6; padding: 24px 12px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            style="
+              max-width: 600px;
+              background: #ffffff;
+              border-radius: 16px;
+              overflow: hidden;
+              border: 1px solid #e1bec5;
+            "
+          >
+            <tr>
+              <td
+                style="
+                  background: #1b1c17;
+                  padding: 20px 24px;
+                  border-bottom: 4px solid #b60058;
+                "
+              >
+                <p
+                  style="
+                    margin: 0 0 4px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    color: #ffb1c4;
+                  "
+                >
+                  Aviso interno
+                </p>
+                <h1
+                  style="
+                    margin: 0;
+                    font-size: 20px;
+                    font-weight: 800;
+                    color: #ffffff;
+                  "
+                >
+                  Nueva orden {{orderNumber}}
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding: 20px 24px 8px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                >
+                  <tr>
+                    <td style="padding-bottom: 12px">
+                      <span
+                        style="
+                          display: inline-block;
+                          background: #ffd9e0;
+                          color: #8f0043;
+                          font-size: 11px;
+                          font-weight: 700;
+                          letter-spacing: 0.04em;
+                          text-transform: uppercase;
+                          padding: 5px 10px;
+                          border-radius: 999px;
+                          margin-right: 8px;
+                        "
+                        >{{statusLabel}}</span
+                      >
+                      <span
+                        style="
+                          display: inline-block;
+                          background: #95f1ff;
+                          color: #004f57;
+                          font-size: 11px;
+                          font-weight: 700;
+                          letter-spacing: 0.04em;
+                          text-transform: uppercase;
+                          padding: 5px 10px;
+                          border-radius: 999px;
+                        "
+                        >{{sourceLabel}}</span
+                      >
+                    </td>
+                  </tr>
+                </table>
+                <p
+                  style="
+                    margin: 0 0 16px;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    color: #5a4046;
+                  "
+                >
+                  Se registró una orden por
+                  <strong style="color: #b60058">{{totalFormatted}}</strong>.
+                  Revisa el detalle y confirma el pago cuando corresponda.
+                </p>
+                {{primaryCtaHtml}}
+              </td>
+            </tr>
+
+            <!-- Contact -->
+            <tr>
+              <td style="padding: 12px 24px">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: #006874;
+                  "
+                >
+                  Cliente
+                </p>
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="
+                    background: #f5f4ec;
+                    border-radius: 12px;
+                    font-size: 14px;
+                  "
+                >
+                  <tr>
+                    <td
+                      style="
+                        padding: 14px 16px;
+                        line-height: 1.55;
+                        color: #1b1c17;
+                      "
+                    >
+                      <div><strong>{{customerName}}</strong></div>
+                      <div style="color: #5a4046">{{customerEmail}}</div>
+                      <div style="color: #5a4046">Tel. {{customerPhone}}</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Fulfillment -->
+            <tr>
+              <td style="padding: 4px 24px 12px">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: #006874;
+                  "
+                >
+                  {{fulfillmentMethodLabel}}
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    color: #1b1c17;
+                    padding: 12px 16px;
+                    border: 1px solid #e1bec5;
+                    border-radius: 12px;
+                  "
+                >
+                  {{fulfillmentSummary}}
+                </p>
+              </td>
+            </tr>
+
+            <!-- Lines -->
+            <tr>
+              <td style="padding: 8px 24px 8px">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: #006874;
+                  "
+                >
+                  Líneas
+                </p>
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="border-collapse: collapse"
+                >
+                  {{linesRowsHtml}}
+                </table>
+              </td>
+            </tr>
+
+            <!-- Totals -->
+            <tr>
+              <td style="padding: 8px 24px 24px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="background: #1b1c17; border-radius: 12px"
+                >
+                  <tr>
+                    <td style="padding: 16px 18px">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellspacing="0"
+                        cellpadding="0"
+                        style="font-size: 13px; color: #e1bec5"
+                      >
+                        <tr>
+                          <td style="padding: 3px 0">Subtotal</td>
+                          <td style="padding: 3px 0; text-align: right">
+                            {{subtotalFormatted}}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 3px 0">Envío</td>
+                          <td style="padding: 3px 0; text-align: right">
+                            {{shippingFormatted}}
+                          </td>
+                        </tr>
+                        {{discountRowHtml}}
+                        <tr>
+                          <td
+                            style="
+                              padding: 10px 0 0;
+                              border-top: 1px solid #5a4046;
+                              font-size: 15px;
+                              font-weight: 800;
+                              color: #ffffff;
+                            "
+                          >
+                            Total
+                          </td>
+                          <td
+                            style="
+                              padding: 10px 0 0;
+                              border-top: 1px solid #5a4046;
+                              text-align: right;
+                              font-size: 16px;
+                              font-weight: 800;
+                              color: #ffb1c4;
+                            "
+                          >
+                            {{totalFormatted}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+                {{secondaryLinkHtml}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "@de-tin-marin/notifications",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./notify-order-created": "./src/notify-order-created.ts",
+    "./recipients": "./src/recipients.ts",
+    "./types": "./src/types.ts",
+    "./smtp-config": "./src/smtp-config.ts",
+    "./map-order-notify": "./src/map-order-notify.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@de-tin-marin/shared": "workspace:*",
+    "nodemailer": "^6.10.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.8.3"
+  }
+}

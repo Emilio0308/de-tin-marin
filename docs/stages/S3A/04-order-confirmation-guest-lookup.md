@@ -44,7 +44,8 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
 - **NO cancelar pedido desde ecommerce** v1
 - **NO pagar online**
 - **NO listar historial por email solo** (requiere siempre orderNumber + email)
-- **NO notificaciones email** → S4
+- Sin notificaciones dentro de este slice; implementadas después en S4-06
+  como envío SMTP best-effort post-creación.
 - **NO `index.ts` barrels**
 
 ## Tablas y RLS

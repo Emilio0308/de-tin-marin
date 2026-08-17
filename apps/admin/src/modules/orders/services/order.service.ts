@@ -30,7 +30,13 @@ import {
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import { getPackByIdRepo } from "@/modules/catalog/repositories/pack.repository";
 import { listCampaignsByIdsRepo } from "@/modules/catalog/repositories/product.repository";
+import { getBusinessSettingsService } from "@/modules/business-settings/services/business-settings.service";
 import { resolveDeliveryFeeService } from "@/modules/delivery/services/delivery.service";
+import {
+  mapCartLinesToNotifyLines,
+  mapFulfillmentToNotify,
+} from "@de-tin-marin/notifications/map-order-notify";
+import { scheduleOrderCreatedNotification } from "../helpers/schedule-order-created-notification";
 import {
   asJson,
   countOrdersByDatePrefixRepo,
@@ -329,6 +335,30 @@ export async function createOrderService(
     orderId: row.id,
     orderNumber: row.order_number,
     total: totals.total,
+  });
+
+  const settings = await getBusinessSettingsService(config);
+  scheduleOrderCreatedNotification({
+    orderId: row.id,
+    orderNumber: row.order_number,
+    total: totals.total,
+    currencyCode: row.currency_code ?? "PEN",
+    subtotal: totals.subtotal,
+    shippingTotal: totals.shippingTotal,
+    discountTotal: totals.discountTotal,
+    statusLabel: "Pendiente de pago",
+    contact: {
+      name: parsed.data.contact.name,
+      lastName: parsed.data.contact.lastName,
+      email: parsed.data.contact.email,
+      phone: parsed.data.contact.phone,
+    },
+    lines: mapCartLinesToNotifyLines(shoppingCart.lines),
+    fulfillment: mapFulfillmentToNotify({
+      method: parsed.data.fulfillment.method,
+      deliveryAddress: parsed.data.fulfillment.deliveryAddress,
+    }),
+    adminEmail: settings?.email ?? "",
   });
 
   return { ok: true, data: { id: row.id, orderNumber: row.order_number } };

@@ -8,8 +8,9 @@ App Next.js de la tienda pública (`apps/ecommerce`).
 src/modules/
   catalog/    # Listados públicos productos, sorpresas, combos
   cart/       # Carrito cliente (S3A-3)
-  checkout/   # Checkout + mapa (S3A-3)
+  checkout/   # Checkout + mapa + email best-effort (S3A-3 / S4-06)
   orders/     # Confirmación guest (S3A-4)
+  business-settings/ # Contacto e instrucciones públicas
   home/       # Landing y layout compartido
 ```
 
@@ -21,6 +22,15 @@ Cada módulo tiene su propio `README.md` con el alcance de la etapa.
 - `src/shared/query/query-keys.ts` — convención de keys
 - `src/shared/errors/server-error.ts` — shim de `@de-tin-marin/logging`
   (`guardAction`, `logServer*`; `UNEXPECTED` **sin** mensaje interno al cliente)
+
+## Notificación de orden creada
+
+Tras un `createGuestOrder` exitoso, checkout agenda con `after()` un correo
+SMTP best-effort: cliente + correo operativo de
+`core.public_business_settings` (+ extras server-side opcionales). No bloquea
+el checkout, no cambia el estado de la orden ni garantiza entrega. El paquete
+compartido es `@de-tin-marin/notifications`; ver
+[`docs/orders.md`](../../docs/orders.md) y su README.
 
 ## Feature flags
 

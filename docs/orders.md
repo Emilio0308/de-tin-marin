@@ -309,6 +309,35 @@ pendientes ya creadas.
 Ver instrucciones no registra un pago, no altera `payment_status` y no
 sustituye la confirmación manual/admin + RPC atómica de stock.
 
+### Notificación email al crear una orden
+
+Después de persistir una orden se agenda, con `after()`, un envío SMTP
+**best-effort** de `@de-tin-marin/notifications`. El scheduling ocurre fuera
+de la respuesta y de la transacción de creación: una orden válida devuelve
+`{ ok: true }` aunque falte SMTP o falle uno de los envíos.
+
+| Origen de creación | Destinatarios                                                                     |
+| ------------------ | --------------------------------------------------------------------------------- |
+| Ecommerce / guest  | Cliente + correo operativo de `core.public_business_settings` + extras opcionales |
+| Admin              | Correo operativo + extras opcionales; nunca el cliente                            |
+
+El paquete recibe un `OrderCreatedNotifyInput` allowlist: identificadores,
+totales, contacto, líneas ya congeladas y resumen de fulfillment. Genera
+plantillas HTML y texto plano; el correo cliente incluye enlaces opcionales a
+confirmación/Mis pedidos y el administrativo al detalle de admin. Las URLs se
+construyen solo si las bases server-side están configuradas.
+
+SMTP es configuración exclusivamente server-side (`SMTP_*`); si falta algún
+campo requerido se omite el envío y se registra `SMTP_NOT_CONFIGURED`. Los
+destinatarios extra se leen de `ORDER_NOTIFY_EXTRA_EMAILS`, se validan y
+deduplican sin distinguir mayúsculas. Los logs contienen solo
+`orderId`/`orderNumber`, origen, conteo enviado y código de fallo: nunca
+contacto, dirección, carrito ni credenciales SMTP.
+
+No hay outbox, reintentos ni webhook en v1. Por lo tanto la notificación no es
+una garantía de entrega ni un sustituto del lookup guest por número de orden +
+email.
+
 ## DTO de respuesta
 
 ```typescript

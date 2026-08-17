@@ -41,7 +41,8 @@ Un operador staff puede confirmar el pago manual de una orden (`pending_payment`
 - **NO validación de stock pre-pago** → S2A
 - **NO pasarela / webhooks / `external_payment_id`** → DECISIONS #8
 - **NO checkout ecommerce** → S3A
-- **NO notificaciones email** → S4
+- Sin notificaciones dentro de este slice; S4-06 implementa correo SMTP
+  best-effort al crear la orden, independiente de la confirmación de pago.
 - **NO `index.ts` barrels**
 
 ## Tablas y RLS

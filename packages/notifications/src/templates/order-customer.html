@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Pedido recibido — De Tin Marín</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #fbf9f1;
+      font-family:
+        &quot;Be Vietnam Pro&quot;, &quot;Helvetica Neue&quot;, Helvetica,
+        Arial, sans-serif;
+      color: #1b1c17;
+      -webkit-text-size-adjust: 100%;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      style="background: #fbf9f1; padding: 28px 12px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            style="
+              max-width: 600px;
+              background: #ffffff;
+              border-radius: 20px;
+              overflow: hidden;
+              border: 1px solid #e1bec5;
+            "
+          >
+            <!-- Brand header -->
+            <tr>
+              <td
+                style="
+                  background: #0a0a0a;
+                  padding: 28px 28px 20px;
+                  text-align: center;
+                  border-bottom: 4px solid #b60058;
+                "
+              >
+                {{logoHeaderHtml}}
+                <p
+                  style="
+                    margin: 14px 0 0;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.14em;
+                    text-transform: uppercase;
+                    color: #50d8ea;
+                  "
+                >
+                  Dulces y confitería
+                </p>
+              </td>
+            </tr>
+
+            <!-- Intro -->
+            <tr>
+              <td style="padding: 28px 28px 8px">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 13px;
+                    font-weight: 700;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    color: #b60058;
+                  "
+                >
+                  Pedido recibido
+                </p>
+                <h1
+                  style="
+                    margin: 0 0 12px;
+                    font-size: 24px;
+                    line-height: 1.25;
+                    font-weight: 800;
+                    color: #1b1c17;
+                  "
+                >
+                  ¡Gracias, {{customerFirstName}}!
+                </h1>
+                <p
+                  style="
+                    margin: 0 0 16px;
+                    font-size: 15px;
+                    line-height: 1.55;
+                    color: #5a4046;
+                  "
+                >
+                  Ya registramos tu pedido
+                  <strong style="color: #1b1c17">{{orderNumber}}</strong>. Está
+                  <strong style="color: #b60058">{{statusLabel}}</strong>:
+                  cuando confirmemos tu pago, empezamos a prepararlo con cariño.
+                </p>
+                <div
+                  style="
+                    display: inline-block;
+                    background: #ffd9e0;
+                    color: #8f0043;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.04em;
+                    text-transform: uppercase;
+                    padding: 6px 12px;
+                    border-radius: 999px;
+                  "
+                >
+                  {{statusLabel}}
+                </div>
+              </td>
+            </tr>
+
+            <!-- Lines -->
+            <tr>
+              <td style="padding: 20px 28px 8px">
+                <p
+                  style="
+                    margin: 0 0 8px;
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: #1b1c17;
+                  "
+                >
+                  Resumen del pedido
+                </p>
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="border-collapse: collapse"
+                >
+                  {{linesRowsHtml}}
+                </table>
+              </td>
+            </tr>
+
+            <!-- Totals -->
+            <tr>
+              <td style="padding: 8px 28px 20px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="background: #f5f4ec; border-radius: 14px; padding: 0"
+                >
+                  <tr>
+                    <td style="padding: 16px 18px">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellspacing="0"
+                        cellpadding="0"
+                        style="font-size: 14px; color: #5a4046"
+                      >
+                        <tr>
+                          <td style="padding: 4px 0">Subtotal</td>
+                          <td style="padding: 4px 0; text-align: right">
+                            {{subtotalFormatted}}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 4px 0">Envío</td>
+                          <td style="padding: 4px 0; text-align: right">
+                            {{shippingFormatted}}
+                          </td>
+                        </tr>
+                        {{discountRowHtml}}
+                        <tr>
+                          <td
+                            style="
+                              padding: 12px 0 0;
+                              border-top: 1px solid #e1bec5;
+                              font-size: 16px;
+                              font-weight: 800;
+                              color: #1b1c17;
+                            "
+                          >
+                            Total
+                          </td>
+                          <td
+                            style="
+                              padding: 12px 0 0;
+                              border-top: 1px solid #e1bec5;
+                              text-align: right;
+                              font-size: 18px;
+                              font-weight: 800;
+                              color: #b60058;
+                            "
+                          >
+                            {{totalFormatted}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Fulfillment -->
+            <tr>
+              <td style="padding: 0 28px 20px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="border: 1px solid #e1bec5; border-radius: 14px"
+                >
+                  <tr>
+                    <td style="padding: 16px 18px">
+                      <p
+                        style="
+                          margin: 0 0 6px;
+                          font-size: 12px;
+                          font-weight: 700;
+                          letter-spacing: 0.06em;
+                          text-transform: uppercase;
+                          color: #006874;
+                        "
+                      >
+                        {{fulfillmentMethodLabel}}
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 14px;
+                          line-height: 1.5;
+                          color: #1b1c17;
+                        "
+                      >
+                        {{fulfillmentSummary}}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- CTA -->
+            <tr>
+              <td style="padding: 4px 28px 28px; text-align: center">
+                {{primaryCtaHtml}} {{secondaryLinkHtml}}
+                <p
+                  style="
+                    margin: 16px 0 0;
+                    font-size: 12px;
+                    line-height: 1.5;
+                    color: #8d6f76;
+                  "
+                >
+                  Guarda el número
+                  <strong style="color: #1b1c17">{{orderNumber}}</strong> y tu
+                  correo para consultar el estado cuando quieras.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td
+                style="
+                  background: #f0eee6;
+                  padding: 20px 28px;
+                  text-align: center;
+                  border-top: 1px solid #e1bec5;
+                "
+              >
+                <p
+                  style="
+                    margin: 0 0 4px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #b60058;
+                  "
+                >
+                  De Tin Marín
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 12px;
+                    line-height: 1.5;
+                    color: #5a4046;
+                  "
+                >
+                  Dulces y sorpresas hechos para compartir.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -2,7 +2,8 @@
 
 Órdenes manuales con **Order shopping cart** congelado en JSONB.
 
-Canónico: [`docs/orders.md`](../../../docs/orders.md) · reglas 13–18, 21, 24 · DECISIONS #26, #27, #29, #31, #33.
+Canónico: [`docs/orders.md`](../../../docs/orders.md) · reglas 13–18, 21, 24,
+28 · DECISIONS #26, #27, #29, #31, #33, #39.
 
 Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
 
@@ -37,6 +38,11 @@ components/order-form/*.helpers.ts — dual qty, bounds pack/product, add-block
 ## Crear orden (`/orders/new`)
 
 Container: `order-form.container.tsx`.
+
+Tras persistir, `createOrderService` agenda con `after()` una notificación
+SMTP best-effort para el correo operativo configurado y extras opcionales.
+Una creación desde admin **no** envía correo al contacto de la orden. Fallos o
+SMTP ausente se registran sin PII y no revierten la orden.
 
 ### Catálogo (tabs)
 

@@ -50,7 +50,13 @@ import {
 } from "@/modules/bundle-wizard/repositories/wizard-stock.repository";
 import { listWizardCampaignsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
 import { getWizardProductsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
+import { getPublicBusinessSettingsService } from "@/modules/business-settings/services/public-business-settings.service";
 import { logServerError, logServerInfo } from "@/shared/errors/server-error";
+import {
+  mapCartLinesToNotifyLines,
+  mapFulfillmentToNotify,
+} from "@de-tin-marin/notifications/map-order-notify";
+import { scheduleOrderCreatedNotification } from "../helpers/schedule-order-created-notification";
 import { asJson, insertGuestOrderRepo } from "../repositories/order.repository";
 import {
   getDeliverySettingsRepo,
@@ -679,6 +685,36 @@ export async function createGuestOrderService(
     orderId: inserted.id,
     orderNumber: inserted.orderNumber,
     total: totals.total,
+  });
+
+  const settingsResult = await getPublicBusinessSettingsService(config);
+  const adminEmail =
+    settingsResult.ok && settingsResult.data.email
+      ? settingsResult.data.email
+      : "";
+
+  scheduleOrderCreatedNotification({
+    source: "ecommerce",
+    orderId: inserted.id,
+    orderNumber: inserted.orderNumber,
+    total: totals.total,
+    currencyCode: "PEN",
+    subtotal: totals.subtotal,
+    shippingTotal: totals.shippingTotal,
+    discountTotal: totals.discountTotal,
+    statusLabel: "Pendiente de pago",
+    contact: {
+      name: parsed.data.contact.name,
+      lastName: parsed.data.contact.lastName,
+      email: parsed.data.contact.email,
+      phone: parsed.data.contact.phone,
+    },
+    lines: mapCartLinesToNotifyLines(shoppingCart.lines),
+    fulfillment: mapFulfillmentToNotify({
+      method: parsed.data.fulfillment.method,
+      deliveryAddress: parsed.data.fulfillment.deliveryAddress,
+    }),
+    adminEmail,
   });
 
   return {

@@ -15,6 +15,7 @@
     "@de-tin-marin/config": "workspace:*",
     "@de-tin-marin/db": "workspace:*",
     "@de-tin-marin/logging": "workspace:*",
+    "@de-tin-marin/notifications": "workspace:*",
     "@de-tin-marin/shared": "workspace:*",
     "@de-tin-marin/types": "workspace:*",
     "@de-tin-marin/ui": "workspace:*",

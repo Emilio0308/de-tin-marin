@@ -45,6 +45,24 @@
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 | 37 | Logging server (consola) | ✅ | Observabilidad v1 = **solo stdout/stderr** vía **`@de-tin-marin/logging`** (JSON una línea). `createServerErrorHelpers({ app, includeUnexpectedMessage })` en shims de app. `guardAction` / `withOperation` + `logServerError` / `Info` / `Warn` + `safeMeta` (redact PII/secrets). Metadata = resumen (IDs, conteos, códigos); nunca payloads crudos. Admin puede devolver `message` en `UNEXPECTED`; ecommerce no. Detalle: `rules/40-validation-and-boundaries.md` · `packages/logging/README.md` |
 | 38 | Contacto y cobro público dinámico | ✅ | Singleton `core.public_business_settings`: WhatsApp/email + instrucciones Yape/transferencia. Staff actualiza; `SELECT` público deliberado para storefront. Ecommerce usa DTO allowlist validado, no valores hardcodeados. Las instrucciones de órdenes `pending_payment` se leen al visualizarse, no se congelan en `orders` ni confirman pagos. Migración `00026`; Regla 27 |
+| 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only y `after()` para envío best-effort tras persistir una orden. Ecommerce notifica cliente + admin; admin solo admin. Fallo/SMTP ausente no altera la orden. Destinatario admin desde #38 + extras env validados/deduplicados. Sin outbox, reintentos, webhooks ni estado de entrega en v1. Regla 28 / S4-06 |
+
+## Docs sincronizados (2026-08-16 — notificaciones de orden)
+
+- `@de-tin-marin/notifications` concentra configuración SMTP, destinatarios,
+  mapper del snapshot y plantillas HTML/texto. Es server-only; sus secretos
+  viven exclusivamente en `SMTP_*` de cada app.
+- Tras insertar la orden, ecommerce y admin invocan un helper que agenda el
+  trabajo con `after()`. El envío no bloquea la respuesta ni forma parte de la
+  transacción: una falla no revierte la orden.
+- Matriz: ecommerce → contacto + admin/extras; admin → admin/extras, nunca el
+  contacto. Extras se validan y deduplican case-insensitivamente.
+- Logs de scheduling incluyen IDs, origen, conteo y código; excluyen PII,
+  carrito, dirección y credenciales. Links absolutos son opcionales; el link
+  guest contiene `orderNumber` + email y solo se construye con base URL
+  server-side configurada.
+- Docs: `orders.md`, Regla 28, arquitectura, S2C/S3A-04, roadmap, S4-06 y
+  READMEs de checkout/admin orders/paquete.
 
 ## Docs sincronizados (2026-08-16 — contacto y pagos dinámicos)
 

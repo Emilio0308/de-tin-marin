@@ -334,11 +334,23 @@ transferencia; ecommerce la consume sin valores de cobro hardcodeados.
 
 **Depends on:** S2C ✅, S3A-04 ✅
 
+### S4-06 — Notificaciones email al crear orden
+
+**Goal:** Tras crear una orden, enviar correo SMTP best-effort (Nodemailer):
+ecommerce → cliente + admin; admin create → solo admin. Usa `after()`; fallo de
+mail no tumba la orden.
+
+- [x] Package `@de-tin-marin/notifications` + templates HTML/text
+- [x] Env SMTP + `ORDER_NOTIFY_EXTRA_EMAILS` opcional
+- [x] Hooks en `createGuestOrderService` y `createOrderService`
+- Brief: [`docs/stages/S4/06-order-email-notifications.md`](stages/S4/06-order-email-notifications.md)
+
+**Depends on:** S3A-3 ✅, S3A-4 ✅, S4-05 ✅, S2B ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)
 - Users / roles
-- Notifications
 - Más reports (ventas, PDF, métricas)
 - Settings (otros; contacto y pagos dinámicos ya implementados)
 - Inventory v2 (ledger movimientos)

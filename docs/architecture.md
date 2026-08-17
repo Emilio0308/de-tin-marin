@@ -15,6 +15,7 @@ de-tin-marin/
     services/           # Servicios compartidos (si aplica)
     validations/        # Esquemas Zod compartidos
     logging/            # Logger server JSON + guardAction (DECISIONS #37)
+    notifications/      # SMTP server-only + templates de orden (DECISIONS #39)
     config/             # Env validado, presets ESLint/TS
     ai/                 # Contexto y utilidades para desarrollo con IA
   supabase/
@@ -47,7 +48,7 @@ de-tin-marin/
 | Customers     | Perfiles de cliente (sin VIP v1)                                                               |
 | Payments      | Registro manual; operador confirma                                                             |
 | Shipping      | Envíos, tracking                                                                               |
-| Notifications | Email (futuro)                                                                                 |
+| Notifications | Email SMTP server-only al crear orden; best-effort post-respuesta, sin outbox v1 — S4-06       |
 | Reports       | Exportaciones operativas (S4-01: Excel estado catálogo); métricas futuras                      |
 | Users         | Staff del admin, roles                                                                         |
 | Settings      | Configuración global                                                                           |
