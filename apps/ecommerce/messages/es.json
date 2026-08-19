@@ -16,7 +16,16 @@
     "surprises": "Sorpresas",
     "combos": "Combos",
     "myOrders": "Mis pedidos",
-    "about": "Nosotros"
+    "about": "Nosotros",
+    "menuTitle": "Menú",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "cart": "Carrito",
+    "cartWithCount": "Ver carrito ({count})",
+    "sections": {
+      "explore": "Explorar",
+      "account": "Tu cuenta"
+    }
   },
   "catalog": {
     "backHome": "Volver al inicio",
