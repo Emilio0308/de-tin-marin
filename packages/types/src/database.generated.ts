@@ -654,6 +654,27 @@ export type Database = {
   }
   core: {
     Tables: {
+      about_page_settings: {
+        Row: {
+          id: string
+          image_url: string | null
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          image_url?: string | null
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          image_url?: string | null
+          singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string

@@ -80,15 +80,16 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 ### Schema `core`
 
-| Tabla                           | Descripción                                         |
-| ------------------------------- | --------------------------------------------------- |
-| `core.profiles`                 | Perfil extendido de auth.users                      |
-| `core.user_roles`               | Rol staff: `admin` \| `super_admin`                 |
-| `core.settings`                 | Configuración global key-value                      |
-| `core.audit_log`                | Auditoría de acciones sensibles                     |
-| `core.hero_settings`            | Singleton modo hero home (`static` \| `carousel`)   |
-| `core.hero_images`              | Slides del hero (URL, orden, vigencia)              |
-| `core.public_business_settings` | Singleton contacto + instrucciones de pago públicas |
+| Tabla                           | Descripción                                          |
+| ------------------------------- | ---------------------------------------------------- |
+| `core.profiles`                 | Perfil extendido de auth.users                       |
+| `core.user_roles`               | Rol staff: `admin` \| `super_admin`                  |
+| `core.settings`                 | Configuración global key-value                       |
+| `core.audit_log`                | Auditoría de acciones sensibles                      |
+| `core.hero_settings`            | Singleton modo hero home (`static` \| `carousel`)    |
+| `core.hero_images`              | Slides del hero (URL, orden, vigencia)               |
+| `core.about_page_settings`      | Singleton imagen de “Nuestra Historia” (`/nosotros`) |
+| `core.public_business_settings` | Singleton contacto + instrucciones de pago públicas  |
 
 **`core.hero_settings`** (singleton, `singleton_key = 'default'`):
 
@@ -110,6 +111,17 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `deleted_at` | timestamptz | Soft-delete                                 |
 
 Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**, no solo en RLS. Imágenes hero: **aspecto cuadrado 1:1** (±2 %), lado ≥ 600 px (validación admin). Folder S3: `hero/`.
+
+**`core.about_page_settings`** (singleton, `singleton_key = 'default'`;
+migración `00027_about_page_settings.sql`):
+
+| Columna         | Tipo        | Notas                                                    |
+| --------------- | ----------- | -------------------------------------------------------- |
+| `singleton_key` | text unique | Solo `'default'`                                         |
+| `image_url`     | text        | Nullable; `null` = ecommerce usa placeholder de Nosotros |
+| `updated_at`    | timestamptz |                                                          |
+
+Imagen Nosotros: **landscape ~16:9** (`aspect-[1.79]`, ±5 %), ancho ≥ 800 px (validación admin). Folder S3: `about/`.
 
 **`core.public_business_settings`** (singleton, `singleton_key = 'default'`;
 migración `00026_public_business_settings.sql`):
@@ -421,6 +433,7 @@ erDiagram
 | `pricing.delivery_zones`        | Público activos               | Staff                       |
 | `pricing.delivery_settings`     | Público                       | Staff (update)              |
 | `core.hero_settings`            | Público                       | Staff (update)              |
+| `core.about_page_settings`      | Público                       | Staff (update)              |
 | `core.public_business_settings` | Público                       | Staff (update)              |
 | `core.hero_images`              | Público (no deleted)          | Staff                       |
 | `catalog.catalog_cache_meta`    | Público                       | Staff (update / bump RPC)   |

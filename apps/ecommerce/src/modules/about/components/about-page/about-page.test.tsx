@@ -81,5 +81,27 @@ describe("AboutPage", () => {
 
     const email = screen.getByRole("link", { name: "Gmail" });
     expect(email).toHaveAttribute("href", contact.emailHref);
+
+    expect(
+      screen.getByRole("img", {
+        name: "Selección de dulces artesanales de colores",
+      }),
+    ).toHaveAttribute("src", ABOUT_BRAND_CONTENT.storyImageUrl);
+  });
+
+  it("muestra la URL personalizada de Nuestra Historia", () => {
+    const customUrl = "https://cdn.example.com/nosotros.jpg";
+    render(
+      <AboutPage
+        content={{ ...ABOUT_BRAND_CONTENT, storyImageUrl: customUrl }}
+        contact={contact}
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", {
+        name: "Selección de dulces artesanales de colores",
+      }),
+    ).toHaveAttribute("src", customUrl);
   });
 });

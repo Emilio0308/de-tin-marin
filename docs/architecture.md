@@ -51,7 +51,7 @@ de-tin-marin/
 | Notifications | Email SMTP server-only al crear orden; plantillas embebidas (`*.template.ts`); best-effort post-respuesta, sin outbox v1 — S4-06 |
 | Reports       | Exportaciones operativas (S4-01: Excel estado catálogo); métricas futuras                                                        |
 | Users         | Staff del admin, roles                                                                                                           |
-| Settings      | Configuración global                                                                                                             |
+| Settings      | Hero home, imagen Nosotros, contacto/cobro público (`/web-customization`, `/business-settings`)                                  |
 
 ## Estructura de un dominio
 

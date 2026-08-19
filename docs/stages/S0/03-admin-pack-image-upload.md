@@ -17,7 +17,7 @@
 
 ## Objetivo
 
-En create/edit de **packs, productos, bundles y containers**, el staff elige un archivo; al **Guardar**, el admin obtiene URL prefirmada, hace PUT a S3 y guarda la URL CDN en `image_url`.
+En create/edit de **packs, productos, bundles, containers, hero y Nosotros**, el staff elige un archivo; al **Guardar**, el admin obtiene URL prefirmada, hace PUT a S3 y guarda la URL CDN en `image_url` (o `about_page_settings.image_url` para Nosotros).
 
 ## Scope IN
 
@@ -25,12 +25,14 @@ En create/edit de **packs, productos, bundles y containers**, el staff elige un 
 - Env admin: `AWS_*`, `MEDIA_S3_BUCKET`, `NEXT_PUBLIC_MEDIA_CDN_BASE_URL`
 - Módulo `apps/admin/src/modules/media/` (schemas, services, actions)
 - Action genérica `createCatalogImageUploadUrlAction` + `folder`:
-  | Form                       | Folder S3    |
-  | -------------------------- | ------------ |
-  | Combos (`pack-form`)       | `packs`      |
-  | Productos (`product-form`) | `products`   |
-  | Sorpresas (`bundle-form`)  | `bundles`    |
-  | Envases (`container-form`) | `containers` |
+  | Form / pantalla                 | Folder S3    | Validación aspecto (client)       |
+  | ------------------------------- | ------------ | --------------------------------- |
+  | Combos (`pack-form`)            | `packs`      | —                                 |
+  | Productos (`product-form`)      | `products`   | —                                 |
+  | Sorpresas (`bundle-form`)       | `bundles`    | —                                 |
+  | Envases (`container-form`)      | `containers` | —                                 |
+  | Hero (`/web-customization`)     | `hero`       | 1:1 ±2 %, lado ≥600 px (S4-03)    |
+  | Nosotros (`/web-customization`) | `about`      | ~16:9 ±5 %, ancho ≥800 px (S4-07) |
 - Allowlist: jpeg/png/webp · máx **10 MiB**
 - **Upload diferido al Guardar** (preview local con `blob:`; PUT S3 solo si el usuario guarda)
 - Wrapper legacy `createPackImageUploadUrlAction` (delega al genérico)
@@ -48,7 +50,7 @@ En create/edit de **packs, productos, bundles y containers**, el staff elige un 
 
 ## Criterios de aceptación
 
-- [x] Staff sube imagen en packs / products / bundles / containers; al guardar `image_url` es URL CloudFront
+- [x] Staff sube imagen en packs / products / bundles / containers / hero / about; al guardar URL es CloudFront
 - [x] Tipos/tamaño inválidos rechazados en client y server
 - [x] Tests presentational de los cuatro forms (preview + empty + clear)
 - [x] `pnpm --filter @de-tin-marin/admin typecheck` verde (con env o `SKIP_ENV_VALIDATION`)

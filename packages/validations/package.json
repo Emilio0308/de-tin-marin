@@ -20,6 +20,7 @@
     "./checkout": "./src/checkout.ts",
     "./guest-order": "./src/guest-order.ts",
     "./hero": "./src/hero.ts",
+    "./about-page": "./src/about-page.ts",
     "./business-settings": "./src/business-settings.ts",
     "./admin-list": "./src/admin-list.ts"
   },

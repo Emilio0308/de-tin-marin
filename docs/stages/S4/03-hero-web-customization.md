@@ -12,9 +12,11 @@
 ## Contexto
 
 - Hero home ecommerce: imagen hardcodeada en `hero-section.tsx`.
-- Upload catálogo: presign S3 + CloudFront (DECISIONS #34/#35); folders `packs|products|bundles|containers|hero`.
+- Upload catálogo: presign S3 + CloudFront (DECISIONS #34/#35); folders `packs|products|bundles|containers|hero|about`.
 - Sin tablas CMS; `core.settings` existe pero no se usa en app.
 - Dimensiones hero UI: `aspect-square` → validación **aspecto 1:1** (±2 %), min 600 px.
+- **Extensión S4-07:** la misma ruta `/web-customization` incluye pestaña **Nosotros**
+  (singleton `core.about_page_settings`) — ver brief S4-07, no duplicar pantalla.
 
 ## Objetivo
 
@@ -25,7 +27,8 @@ Staff configura modo (`static` \| `carousel`) e imágenes del hero con orden y v
 - Tablas `core.hero_settings` (singleton) + `core.hero_images`
 - Migración `00020_hero_web_customization.sql` + pgTAP
 - Folder S3 `hero` en `createCatalogImageUploadUrlAction`
-- Admin `/web-customization`: modo, CRUD imágenes, orden, fechas, upload cuadrado 1:1
+- Admin `/web-customization`: pestaña **Inicio** — modo, CRUD imágenes, orden, fechas, upload cuadrado 1:1
+- Admin `/web-customization`: pestaña **Nosotros** → S4-07 (imagen landscape singleton)
 - Ecommerce: `getPublicHeroConfigAction` + hero static/carousel + fallback hardcodeado
 - Admin preview del marco hero (estático/carrusel)
 
@@ -81,3 +84,8 @@ Staff configura modo (`static` \| `carousel`) e imágenes del hero con orden y v
 ## Preguntas abiertas
 
 - Ninguna (cerradas en plan: modo explícito, rango por imagen, aspecto cuadrado, tablas `core`).
+
+## Relacionado
+
+- Imagen Nosotros en la misma pantalla: [`07-about-page-image.md`](07-about-page-image.md)
+- README módulo admin: [`apps/admin/src/modules/web-customization/README.md`](../../../apps/admin/src/modules/web-customization/README.md)

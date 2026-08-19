@@ -18,6 +18,9 @@ export type HeroImageDraft = {
 export type WebCustomizationLabels = {
   title: string;
   subtitle: string;
+  tabListLabel: string;
+  tabHome: string;
+  tabAbout: string;
   loading: string;
   loadError: string;
   sectionMode: string;
@@ -54,6 +57,19 @@ export type WebCustomizationLabels = {
   pickImage: string;
   changeImage: string;
   pickImageHint: string;
+  aboutSection: string;
+  aboutRequirements: string;
+  aboutInfoTip: string;
+  aboutPickHint: string;
+  aboutPickImage: string;
+  aboutChangeImage: string;
+  aboutSave: string;
+  aboutSaving: string;
+  aboutRestoreDefault: string;
+  aboutUsingDefault: string;
+  aboutPreviewAlt: string;
+  aboutSaved: string;
+  aboutRestored: string;
 };
 
 export type WebCustomizationPageProps = {
@@ -79,4 +95,13 @@ export type WebCustomizationPageProps = {
   onSaveDraft: () => void;
   onDelete: (id: string) => void;
   onMove: (id: string, direction: "up" | "down") => void;
+  aboutPreviewUrl: string | null;
+  aboutSubmitting: boolean;
+  aboutError: string | null;
+  aboutMessage: string | null;
+  canSaveAbout: boolean;
+  canRestoreAbout: boolean;
+  onAboutPickFile: (file: File | null) => void;
+  onSaveAbout: () => void;
+  onRestoreAbout: () => void;
 };

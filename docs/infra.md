@@ -147,9 +147,9 @@ Igual que cambiar Supabase URL entre preview/production: **mismo código, distin
 
 ## App admin (consumo)
 
-- Módulo: `apps/admin/src/modules/media/` — `createCatalogImageUploadUrlAction` con `folder`: `packs` | `products` | `bundles` | `containers` | `hero`.
-- Validación: `image/jpeg` · `image/png` · `image/webp` · máx. **10 MiB**. Hero (S4-03): **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px**.
-- **Subida diferida:** el archivo se elige en el form (preview local); el PUT a S3 ocurre al **Guardar** (evita objetos huérfanos). Carpetas: `packs/` · `products/` · `bundles/` · `containers/` · `hero/`.
+- Módulo: `apps/admin/src/modules/media/` — `createCatalogImageUploadUrlAction` con `folder`: `packs` | `products` | `bundles` | `containers` | `hero` | `about`.
+- Validación: `image/jpeg` · `image/png` · `image/webp` · máx. **10 MiB**. Hero (S4-03): **aspecto cuadrado 1:1** (±2 %) y lado ≥ **600 px**. Nosotros (S4-07): **landscape ~16:9** (±5 %) y ancho ≥ **800 px**.
+- **Subida diferida:** el archivo se elige en el form (preview local); el PUT a S3 ocurre al **Guardar** (evita objetos huérfanos). Carpetas: `packs/` · `products/` · `bundles/` · `containers/` · `hero/` · `about/`.
 - Config server: `apps/admin/src/config/media.ts` (`server-only`).
 - En Vercel las vars deben existir **y** estar listadas en `turbo.json` → `tasks.build.env` (si no, Turbo no las inyecta al build aunque estén en el dashboard).
 - Catálogo sigue guardando **URL texto** en `image_url`; no hay tabla de assets en v1.

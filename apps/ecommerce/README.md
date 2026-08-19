@@ -10,6 +10,7 @@ src/modules/
   cart/       # Carrito cliente (S3A-3)
   checkout/   # Checkout + mapa + email best-effort (S3A-3 / S4-06)
   orders/     # Confirmación guest (S3A-4)
+  about/      # /nosotros — copy + imagen staff (S4-07)
   business-settings/ # Contacto e instrucciones públicas
   home/       # Landing y layout compartido
 ```

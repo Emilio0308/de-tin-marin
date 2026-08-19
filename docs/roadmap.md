@@ -299,9 +299,9 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 **Depends on:** S1A, S1D, S4-01
 
-### S4-03 — Hero dinámico + Personalización web
+### S4-03 — Hero dinámico + Personalización web ✅
 
-**Goal:** Staff configura imágenes del hero (home ecommerce) con modo estático/carrusel, orden y vigencia; ecommerce las muestra con fallback a la imagen hardcodeada actual.
+**Goal:** Staff configura imágenes del hero (home ecommerce) con modo estático/carrusel, orden y vigencia; ecommerce las muestra con fallback a la imagen hardcodeada actual. La misma pantalla `/web-customization` es el hub de personalización visual (hero + Nosotros vía S4-07).
 
 - [x] Tablas `core.hero_settings` + `core.hero_images` (migración `00020`)
 - [x] Admin `/web-customization` + folder S3 `hero` + validación aspecto cuadrado
@@ -346,6 +346,17 @@ mail no tumba la orden.
 - Brief: [`docs/stages/S4/06-order-email-notifications.md`](stages/S4/06-order-email-notifications.md)
 
 **Depends on:** S3A-3 ✅, S3A-4 ✅, S4-05 ✅, S2B ✅
+
+### S4-07 — Imagen personalizable en Nosotros ✅
+
+**Goal:** Staff configura la foto de “Nuestra Historia” (`/nosotros`) desde Personalización web; ecommerce la muestra en SSR con fallback al placeholder actual.
+
+- [x] Tabla `core.about_page_settings` (migración `00027`)
+- [x] Admin `/web-customization` sección Nosotros + folder S3 `about` + validación landscape
+- [x] Ecommerce SSR + fallback `ABOUT_STORY_IMAGE_URL`
+- Brief: [`docs/stages/S4/07-about-page-image.md`](stages/S4/07-about-page-image.md)
+
+**Depends on:** S0-03 media ✅, S4-03 hero ✅
 
 ### Pendiente S4
 

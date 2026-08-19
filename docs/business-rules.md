@@ -308,6 +308,22 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Fallo:** Rechazar configuración inválida; no renderizar ni fabricar datos
   estáticos si la configuración pública no está disponible.
 
+### Regla 29 — Imagen de Nosotros (personalización web)
+
+- **Trigger:** Staff sube o restaura la foto en `/web-customization` (pestaña
+  Nosotros); ecommerce renderiza `/nosotros`.
+- **Pasos:**
+  1. Fuente única: singleton `core.about_page_settings.image_url` (nullable).
+  2. Staff sube landscape ~16:9 (±5 %), ancho ≥800 px → presign folder `about`
+     → PUT al guardar → URL CDN en DB.
+  3. Restaurar default persiste `image_url = null`.
+  4. Ecommerce SSR lee settings; `resolveAboutStoryImageUrl` usa CDN o
+     `ABOUT_STORY_IMAGE_URL` (placeholder).
+  5. Copy de misión/visión/valores **no** vive en esta tabla — solo la foto.
+- **RLS:** `SELECT` público; `UPDATE` solo staff. Sin `INSERT`/`DELETE` público.
+- **Fallo:** Rechazar archivo inválido en admin; fetch/parse error en ecommerce
+  **no** tumba la página — fallback obligatorio.
+
 ---
 
 ## Notificaciones
@@ -362,3 +378,4 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
 | 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
 | 28    | Notifications      | Email SMTP post-creación, best-effort y sin bloquear la orden      |
+| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)    |

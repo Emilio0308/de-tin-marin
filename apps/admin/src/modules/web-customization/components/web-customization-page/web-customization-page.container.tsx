@@ -4,6 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  getAboutPageSettingsAction,
+  updateAboutPageSettingsAction,
+} from "@/modules/web-customization/actions/about-page.actions";
+import {
   createHeroImageAction,
   deleteHeroImageAction,
   getHeroSettingsAction,
@@ -12,7 +16,9 @@ import {
   updateHeroImageAction,
   updateHeroSettingsAction,
 } from "@/modules/web-customization/actions/hero.actions";
+import { validateAboutImageFile } from "@/modules/web-customization/helpers/about-image-file";
 import { validateHeroImageFile } from "@/modules/web-customization/helpers/hero-image-file";
+import type { AboutPageSettingsDTO } from "@/modules/web-customization/types/about-page.dto";
 import type {
   HeroDisplayMode,
   HeroImageDTO,
@@ -48,6 +54,10 @@ export function WebCustomizationPageContainer() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [draft, setDraft] = useState<HeroImageDraft | null>(null);
+  const [aboutPendingFile, setAboutPendingFile] = useState<File | null>(null);
+  const [aboutPreviewUrl, setAboutPreviewUrl] = useState<string | null>(null);
+  const [aboutError, setAboutError] = useState<string | null>(null);
+  const [aboutMessage, setAboutMessage] = useState<string | null>(null);
 
   const settingsQuery = useQuery({
     queryKey: ["hero-settings"],
@@ -67,6 +77,15 @@ export function WebCustomizationPageContainer() {
     },
   });
 
+  const aboutQuery = useQuery({
+    queryKey: ["about-page-settings"],
+    queryFn: async (): Promise<AboutPageSettingsDTO> => {
+      const result = await getAboutPageSettingsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data ?? { imageUrl: null };
+    },
+  });
+
   useEffect(() => {
     if (settingsQuery.data) {
       setSettingsDraft(settingsQuery.data);
@@ -77,6 +96,9 @@ export function WebCustomizationPageContainer() {
     () => ({
       title: t("title"),
       subtitle: t("subtitle"),
+      tabListLabel: t("tabListLabel"),
+      tabHome: t("tabHome"),
+      tabAbout: t("tabAbout"),
       loading: t("loading"),
       loadError: t("loadError"),
       sectionMode: t("sectionMode"),
@@ -113,6 +135,19 @@ export function WebCustomizationPageContainer() {
       pickImage: t("pickImage"),
       changeImage: t("changeImage"),
       pickImageHint: t("pickImageHint"),
+      aboutSection: t("aboutSection"),
+      aboutRequirements: t("aboutRequirements"),
+      aboutInfoTip: t("aboutInfoTip"),
+      aboutPickHint: t("aboutPickHint"),
+      aboutPickImage: t("aboutPickImage"),
+      aboutChangeImage: t("aboutChangeImage"),
+      aboutSave: t("aboutSave"),
+      aboutSaving: t("aboutSaving"),
+      aboutRestoreDefault: t("aboutRestoreDefault"),
+      aboutUsingDefault: t("aboutUsingDefault"),
+      aboutPreviewAlt: t("aboutPreviewAlt"),
+      aboutSaved: t("aboutSaved"),
+      aboutRestored: t("aboutRestored"),
     }),
     [t],
   );
@@ -221,6 +256,73 @@ export function WebCustomizationPageContainer() {
     },
   });
 
+  const saveAboutMutation = useMutation({
+    mutationFn: async () => {
+      if (!aboutPendingFile) {
+        throw new Error("MISSING_IMAGE");
+      }
+      const file = aboutPendingFile;
+      const uploadUrlResult = await createCatalogImageUploadUrlAction({
+        folder: "about",
+        contentType: file.type as CatalogImageContentType,
+        contentLength: file.size,
+        fileName: file.name,
+      });
+      if (!uploadUrlResult.ok) {
+        throw new Error(uploadUrlResult.error);
+      }
+      const put = await putPresignedCatalogImage(
+        uploadUrlResult.data.uploadUrl,
+        file,
+      );
+      if (!put.ok) {
+        throw new Error("UPLOAD_FAILED");
+      }
+
+      const result = await updateAboutPageSettingsAction({
+        imageUrl: uploadUrlResult.data.publicUrl,
+      });
+      if (!result.ok) throw new Error(result.error);
+    },
+    onSuccess: async () => {
+      setAboutError(null);
+      setAboutMessage(labels.aboutSaved);
+      setAboutPendingFile(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["about-page-settings"],
+      });
+    },
+    onError: (error) => {
+      const code = error instanceof Error ? error.message : "default";
+      if (code !== "MISSING_IMAGE") {
+        logClientError("saveAboutPageImage", error);
+      }
+      setAboutMessage(null);
+      setAboutError(aboutErrorMessage(code, tErrors));
+    },
+  });
+
+  const restoreAboutMutation = useMutation({
+    mutationFn: async () => {
+      const result = await updateAboutPageSettingsAction({ imageUrl: null });
+      if (!result.ok) throw new Error(result.error);
+    },
+    onSuccess: async () => {
+      setAboutError(null);
+      setAboutMessage(labels.aboutRestored);
+      queryClient.setQueryData(["about-page-settings"], { imageUrl: null });
+      await queryClient.invalidateQueries({
+        queryKey: ["about-page-settings"],
+      });
+    },
+    onError: (error) => {
+      logClientError("restoreAboutPageImage", error);
+      setAboutMessage(null);
+      setAboutError(aboutErrorMessage("default", tErrors));
+      void queryClient.invalidateQueries({ queryKey: ["about-page-settings"] });
+    },
+  });
+
   async function handlePickFile(file: File | null) {
     if (!draft) return;
     if (!file) return;
@@ -284,10 +386,73 @@ export function WebCustomizationPageContainer() {
     imageMutation.mutate();
   }
 
-  const loading = settingsQuery.isLoading || imagesQuery.isLoading;
+  useEffect(() => {
+    return () => {
+      if (aboutPreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(aboutPreviewUrl);
+      }
+    };
+  }, [aboutPreviewUrl]);
+
+  async function handleAboutPickFile(file: File | null) {
+    if (!file) return;
+
+    setAboutError(null);
+    setAboutMessage(null);
+    const validation = await validateAboutImageFile(file);
+    if (!validation.ok) {
+      setAboutError(aboutErrorMessage(validation.error, tErrors));
+      return;
+    }
+
+    if (aboutPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(aboutPreviewUrl);
+    }
+
+    setAboutPendingFile(file);
+    setAboutPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleSaveAbout() {
+    if (!aboutPendingFile) {
+      setAboutError(tErrors("missingImage"));
+      return;
+    }
+    setAboutError(null);
+    saveAboutMutation.mutate();
+  }
+
+  function handleRestoreAbout() {
+    if (aboutPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(aboutPreviewUrl);
+    }
+    const hadSavedUrl = Boolean(aboutQuery.data?.imageUrl);
+    setAboutPendingFile(null);
+    setAboutPreviewUrl(null);
+    setAboutError(null);
+    queryClient.setQueryData(["about-page-settings"], { imageUrl: null });
+
+    if (hadSavedUrl) {
+      restoreAboutMutation.mutate();
+      return;
+    }
+    setAboutMessage(labels.aboutRestored);
+  }
+
+  const loading =
+    settingsQuery.isLoading || imagesQuery.isLoading || aboutQuery.isLoading;
   const loadError =
-    settingsQuery.isError || imagesQuery.isError ? labels.loadError : null;
+    settingsQuery.isError || imagesQuery.isError || aboutQuery.isError
+      ? labels.loadError
+      : null;
   const canSaveDraft = draft ? draftHasPersistableImage(draft) : false;
+  const savedAboutImageUrl = aboutQuery.data?.imageUrl ?? null;
+  const aboutDisplayUrl = aboutPreviewUrl ?? savedAboutImageUrl;
+  const canSaveAbout = aboutPendingFile !== null;
+  const canRestoreAbout =
+    aboutPendingFile !== null || savedAboutImageUrl !== null;
+  const aboutSubmitting =
+    saveAboutMutation.isPending || restoreAboutMutation.isPending;
 
   return (
     <WebCustomizationPage
@@ -318,6 +483,17 @@ export function WebCustomizationPageContainer() {
       onSaveDraft={handleSaveDraft}
       onDelete={handleDelete}
       onMove={handleMove}
+      aboutPreviewUrl={aboutDisplayUrl}
+      aboutSubmitting={aboutSubmitting}
+      aboutError={aboutError}
+      aboutMessage={aboutMessage}
+      canSaveAbout={canSaveAbout}
+      canRestoreAbout={canRestoreAbout}
+      onAboutPickFile={(file) => {
+        void handleAboutPickFile(file);
+      }}
+      onSaveAbout={handleSaveAbout}
+      onRestoreAbout={handleRestoreAbout}
     />
   );
 }
@@ -335,6 +511,30 @@ function imageErrorMessage(
       return t("invalidDimensions");
     case "TOO_SMALL":
       return t("tooSmall");
+    case "MISSING_IMAGE":
+      return t("missingImage");
+    case "UPLOAD_FAILED":
+      return t("uploadFailed");
+    case "VALIDATION":
+      return t("validation");
+    default:
+      return t("default");
+  }
+}
+
+function aboutErrorMessage(
+  code: string,
+  t: ReturnType<typeof useTranslations<"webCustomization.errors">>,
+): string {
+  switch (code) {
+    case "INVALID_TYPE":
+      return t("invalidType");
+    case "INVALID_SIZE":
+      return t("invalidSize");
+    case "INVALID_DIMENSIONS":
+      return t("aboutInvalidDimensions");
+    case "TOO_SMALL":
+      return t("aboutTooSmall");
     case "MISSING_IMAGE":
       return t("missingImage");
     case "UPLOAD_FAILED":
