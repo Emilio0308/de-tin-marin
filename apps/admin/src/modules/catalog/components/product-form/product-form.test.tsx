@@ -7,6 +7,7 @@ import type { ProductFormLabels } from "./product-form.types";
 const labels: ProductFormLabels = {
   breadcrumbParent: "Productos",
   breadcrumbCurrent: "Nuevo",
+  back: "Volver a productos",
   title: "Nuevo producto",
   status: "Estado",
   statusActive: "Activo",
@@ -97,6 +98,7 @@ describe("ProductForm", () => {
   it("muestra empty state de imagen sin URL", () => {
     render(
       <ProductForm
+        backHref="/products"
         categories={categories}
         labels={labels}
         onSubmit={vi.fn()}
@@ -113,6 +115,7 @@ describe("ProductForm", () => {
   it("muestra preview cuando hay imageUrl inicial y permite quitarla", () => {
     render(
       <ProductForm
+        backHref="/products"
         initial={{
           id: "prod-1",
           sku: "SKU-1",
@@ -153,6 +156,7 @@ describe("ProductForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <ProductForm
+        backHref="/products"
         initial={{
           id: "prod-1",
           sku: "SKU-1",
@@ -209,6 +213,7 @@ describe("ProductForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <ProductForm
+        backHref="/products"
         categories={categories}
         labels={labels}
         onSubmit={onSubmit}

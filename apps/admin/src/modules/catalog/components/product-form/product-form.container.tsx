@@ -73,6 +73,7 @@ export function ProductFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       status: t("status"),
       statusActive: t("statusActive"),
@@ -273,6 +274,7 @@ export function ProductFormContainer({
         <ProductForm
           initial={initial}
           categories={categoriesQuery.data}
+          backHref="/products"
           labels={labels}
           onSubmit={handleSubmit}
           onCancel={handleCancel}

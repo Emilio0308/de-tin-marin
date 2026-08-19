@@ -8,8 +8,10 @@ import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
 import { adminListPageBounds } from "@de-tin-marin/validations/admin-list";
 import { Button } from "@de-tin-marin/ui/button";
+import type { PackListItem } from "@de-tin-marin/validations/pack";
 import { listPacksPageAction } from "@/modules/catalog/actions/list-packs";
 import { softDeletePackAction } from "@/modules/catalog/actions/soft-delete-pack";
+import { updatePackAction } from "@/modules/catalog/actions/update-pack";
 import {
   buildAdminListSearchParams,
   readAdminPackListQuery,
@@ -100,6 +102,21 @@ export function PackListContainer() {
     },
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: async (pack: PackListItem) => {
+      const result = await updatePackAction({
+        id: pack.id,
+        isActive: !pack.isActive,
+      });
+      if (!result.ok) {
+        throw new Error("message" in result ? result.message : result.error);
+      }
+    },
+    onSuccess: async () => {
+      await invalidateAdminCatalogLists(queryClient, "packs");
+    },
+  });
+
   function pushParams(updates: Record<string, string | undefined>) {
     const params = buildAdminListSearchParams(searchParams, updates);
     startTransition(() => {
@@ -110,6 +127,10 @@ export function PackListContainer() {
   function handleDelete(id: string) {
     if (!window.confirm(t("deleteConfirm"))) return;
     deleteMutation.mutate(id);
+  }
+
+  function handleToggleActive(pack: PackListItem) {
+    toggleMutation.mutate(pack);
   }
 
   const page = packsQuery.data?.page ?? listQuery.page;
@@ -132,6 +153,8 @@ export function PackListContainer() {
       },
       statusActive: t("statusActive"),
       statusDraft: t("statusDraft"),
+      ariaActivate: t("ariaActivate"),
+      ariaDeactivate: t("ariaDeactivate"),
       campaignShort: t("campaignShort"),
       edit: t("edit"),
       empty: t("empty"),
@@ -243,6 +266,12 @@ export function PackListContainer() {
           onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
           deletingId={
             deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
+          }
+          onToggleActive={handleToggleActive}
+          togglingId={
+            toggleMutation.isPending
+              ? (toggleMutation.variables?.id ?? null)
+              : null
           }
         />
       )}

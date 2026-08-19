@@ -116,6 +116,7 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       sectionGeneral: t("sectionGeneral"),
       sectionImage: t("sectionImage"),
@@ -300,6 +301,7 @@ export function PackFormContainer({ mode, initial }: PackFormContainerProps) {
           initial={initial}
           products={products}
           campaigns={campaignsQuery.data ?? []}
+          backHref="/packs"
           labels={labels}
           includeInactiveProducts={includeInactiveProducts}
           onIncludeInactiveProductsChange={setIncludeInactiveProducts}

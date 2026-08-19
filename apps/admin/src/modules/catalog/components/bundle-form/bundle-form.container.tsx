@@ -93,6 +93,7 @@ export function BundleFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       sectionGeneral: t("sectionGeneral"),
       sectionImage: t("sectionImage"),
@@ -282,6 +283,7 @@ export function BundleFormContainer({
             sku: container.sku,
             netPrice: container.netPrice,
           }))}
+          backHref="/bundles"
           labels={labels}
           includeInactiveProducts={includeInactiveProducts}
           onIncludeInactiveProductsChange={setIncludeInactiveProducts}

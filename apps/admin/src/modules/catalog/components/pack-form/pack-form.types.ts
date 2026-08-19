@@ -42,6 +42,7 @@ export type PackImageUploadResult =
 export type PackFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionGeneral: string;
   sectionImage: string;
@@ -96,6 +97,7 @@ export type PackFormProps = {
   initial?: PackFormDTO;
   products: ProductOption[];
   campaigns: CampaignOption[];
+  backHref: string;
   labels: PackFormLabels;
   includeInactiveProducts: boolean;
   onIncludeInactiveProductsChange: (value: boolean) => void;

@@ -62,6 +62,7 @@ const campaigns: never[] = [];
 const labels: PackFormLabels = {
   breadcrumbParent: "Combos",
   breadcrumbCurrent: "Nuevo combo",
+  back: "Volver a combos",
   title: "Crear combo",
   sectionGeneral: "General",
   sectionImage: "Imagen",
@@ -129,6 +130,7 @@ describe("PackForm", () => {
   it("actualiza la referencia al agregar productos con cantidades", () => {
     render(
       <PackForm
+        backHref="/packs"
         products={products}
         campaigns={campaigns}
         labels={labels}
@@ -169,6 +171,7 @@ describe("PackForm", () => {
   it("muestra preview cuando hay imageUrl inicial y permite quitarla", () => {
     render(
       <PackForm
+        backHref="/packs"
         initial={{
           id: "pack-1",
           sku: "COMBO-1",
@@ -216,6 +219,7 @@ describe("PackForm", () => {
   it("muestra empty state de imagen sin URL", () => {
     render(
       <PackForm
+        backHref="/packs"
         products={products}
         campaigns={campaigns}
         labels={labels}
@@ -238,6 +242,7 @@ describe("PackForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <PackForm
+        backHref="/packs"
         products={products}
         campaigns={campaigns}
         labels={labels}

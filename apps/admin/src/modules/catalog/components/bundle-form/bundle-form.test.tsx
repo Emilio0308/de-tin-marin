@@ -53,6 +53,7 @@ const containers = [
 const labels: BundleFormLabels = {
   breadcrumbParent: "Sorpresas",
   breadcrumbCurrent: "Nueva sorpresa",
+  back: "Volver a sorpresas",
   title: "Crear nueva sorpresa",
   sectionGeneral: "Información general",
   sectionImage: "Imagen de portada",
@@ -112,6 +113,7 @@ describe("BundleForm", () => {
   it("actualiza el total al agregar y quitar productos", () => {
     render(
       <BundleForm
+        backHref="/bundles"
         products={products}
         containers={containers}
         labels={labels}
@@ -149,6 +151,7 @@ describe("BundleForm", () => {
   it("muestra preview cuando hay imageUrl inicial y permite quitarla", () => {
     render(
       <BundleForm
+        backHref="/bundles"
         initial={{
           id: "b1",
           name: "Sorpresa",
@@ -203,6 +206,7 @@ describe("BundleForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <BundleForm
+        backHref="/bundles"
         products={products}
         containers={containers}
         labels={labels}

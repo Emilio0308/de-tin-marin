@@ -36,6 +36,7 @@ export type BundleImageUploadResult =
 export type BundleFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionGeneral: string;
   sectionImage: string;
@@ -82,6 +83,7 @@ export type BundleFormProps = {
   initial?: BundleFormDTO;
   products: ProductOption[];
   containers: ContainerOption[];
+  backHref: string;
   labels: BundleFormLabels;
   includeInactiveProducts: boolean;
   onIncludeInactiveProductsChange: (value: boolean) => void;

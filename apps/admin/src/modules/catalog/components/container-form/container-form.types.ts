@@ -16,6 +16,7 @@ export type ContainerImageUploadResult =
 export type ContainerFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionInfo: string;
   sectionImage: string;
@@ -58,6 +59,7 @@ export type ContainerFormLabels = {
 
 export type ContainerFormProps = {
   initial?: SurpriseContainerFormDTO;
+  backHref: string;
   labels: ContainerFormLabels;
   onSubmit: (
     values: ContainerFormValues,

@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import {
   Box,
-  ChevronRight,
   ImageIcon,
   Info,
   Minus,
@@ -16,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { AdminFormPageHeader } from "@/shared/components/admin-form-page-header/admin-form-page-header";
 import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
   buildInitialContainerValues,
@@ -81,6 +81,7 @@ function ImagePreview({
 
 export function ContainerForm({
   initial,
+  backHref,
   labels,
   onSubmit,
   onCancel,
@@ -151,16 +152,13 @@ export function ContainerForm({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <nav className="font-label text-on-surface-variant flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide">
-          <span>{labels.breadcrumbParent}</span>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-          <span className="text-primary">{labels.breadcrumbCurrent}</span>
-        </nav>
-        <h1 className="font-display text-on-surface text-[32px] font-extrabold leading-10 tracking-tight lg:text-[40px]">
-          {labels.title}
-        </h1>
-      </div>
+      <AdminFormPageHeader
+        backHref={backHref}
+        backLabel={labels.back}
+        breadcrumbParent={labels.breadcrumbParent}
+        breadcrumbCurrent={labels.breadcrumbCurrent}
+        title={labels.title}
+      />
 
       <form
         onSubmit={(event) => void handleSubmit(event)}

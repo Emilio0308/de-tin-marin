@@ -50,6 +50,7 @@ export function CategoryFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       sectionGeneral: t("sectionGeneral"),
       sectionConfig: t("sectionConfig"),
@@ -126,6 +127,7 @@ export function CategoryFormContainer({
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-32 lg:p-8 lg:pb-8">
       <CategoryForm
         initial={initial}
+        backHref="/categories"
         labels={labels}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

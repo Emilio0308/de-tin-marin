@@ -57,7 +57,13 @@
     "webCustomization": "Personalización web",
     "orders": "Órdenes",
     "brand": "De Tin Marín",
-    "subtitle": "Admin"
+    "subtitle": "Admin",
+    "sections": {
+      "overview": "General",
+      "catalog": "Catálogo",
+      "operations": "Operaciones",
+      "store": "Tienda"
+    }
   },
   "dashboard": {
     "welcome": "¡Bienvenido de nuevo, Jefe Confectioner! 🍬",
@@ -411,6 +417,7 @@
     "breadcrumbParent": "Productos",
     "breadcrumbNew": "Nuevo producto",
     "breadcrumbEdit": "Editar",
+    "back": "Volver a productos",
     "titleCreate": "Crear nuevo producto",
     "titleEdit": "Editar producto",
     "status": "Estado del producto",
@@ -524,12 +531,15 @@
     "pagination": "Mostrando {from}–{to} de {total} sorpresas",
     "edit": "Editar",
     "ariaEdit": "Editar {name}",
-    "ariaDelete": "Eliminar {name}"
+    "ariaDelete": "Eliminar {name}",
+    "ariaActivate": "Activar sorpresa",
+    "ariaDeactivate": "Desactivar sorpresa"
   },
   "bundleForm": {
     "breadcrumbParent": "Sorpresas",
     "breadcrumbNew": "Nueva sorpresa",
     "breadcrumbEdit": "Editar",
+    "back": "Volver a sorpresas",
     "titleCreate": "Crear nueva sorpresa",
     "titleEdit": "Editar sorpresa",
     "sectionGeneral": "Información general",
@@ -624,12 +634,15 @@
     "pagination": "Mostrando {from}–{to} de {total} combos",
     "edit": "Editar",
     "ariaEdit": "Editar {name}",
-    "ariaDelete": "Eliminar {name}"
+    "ariaDelete": "Eliminar {name}",
+    "ariaActivate": "Activar combo",
+    "ariaDeactivate": "Desactivar combo"
   },
   "packForm": {
     "breadcrumbParent": "Combos",
     "breadcrumbNew": "Nuevo combo",
     "breadcrumbEdit": "Editar",
+    "back": "Volver a combos",
     "titleCreate": "Crear nuevo combo",
     "titleEdit": "Editar combo",
     "sectionGeneral": "Información general",
@@ -741,6 +754,7 @@
     "breadcrumbParent": "Categorías",
     "breadcrumbNew": "Nueva categoría",
     "breadcrumbEdit": "Editar",
+    "back": "Volver a categorías",
     "titleCreate": "Nueva categoría",
     "titleEdit": "Editar categoría",
     "sectionGeneral": "Información general",
@@ -835,6 +849,7 @@
     "breadcrumbParent": "Envases",
     "breadcrumbNew": "Nuevo envase",
     "breadcrumbEdit": "Editar",
+    "back": "Volver a envases",
     "titleCreate": "Nuevo envase",
     "titleEdit": "Editar envase",
     "sectionInfo": "Información del envase",

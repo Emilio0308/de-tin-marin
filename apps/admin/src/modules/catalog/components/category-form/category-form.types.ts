@@ -11,6 +11,7 @@ export type CategoryFormValues = {
 export type CategoryFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionGeneral: string;
   sectionConfig: string;
@@ -48,6 +49,7 @@ export type CategoryFormLabels = {
 
 export type CategoryFormProps = {
   initial?: CategoryFormDTO;
+  backHref: string;
   labels: CategoryFormLabels;
   onSubmit: (values: CategoryFormValues) => Promise<void>;
   onCancel: () => void;

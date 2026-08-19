@@ -10,6 +10,8 @@ export type PackListLabels = {
   };
   statusActive: string;
   statusDraft: string;
+  ariaActivate: string;
+  ariaDeactivate: string;
   campaignShort: string;
   edit: string;
   empty: string;
@@ -35,4 +37,6 @@ export type PackListProps = {
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
   deletingId: string | null;
+  onToggleActive: (pack: PackListItem) => void;
+  togglingId: string | null;
 };

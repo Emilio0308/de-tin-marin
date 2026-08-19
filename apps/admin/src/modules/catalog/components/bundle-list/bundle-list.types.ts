@@ -10,6 +10,8 @@ export type BundleListLabels = {
   };
   statusActive: string;
   statusDraft: string;
+  ariaActivate: string;
+  ariaDeactivate: string;
   containerShort: string;
   edit: string;
   empty: string;
@@ -36,4 +38,6 @@ export type BundleListProps = {
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
   deletingId: string | null;
+  onToggleActive: (bundle: BundleListItem) => void;
+  togglingId: string | null;
 };

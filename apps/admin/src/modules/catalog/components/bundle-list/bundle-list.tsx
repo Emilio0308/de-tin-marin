@@ -6,6 +6,7 @@ import { Gift, Pencil, Trash2, Users } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { BundleListItem } from "@de-tin-marin/validations/bundle";
 import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
+import { AdminCatalogStatusToggle } from "@/shared/components/admin-catalog-status-toggle/admin-catalog-status-toggle";
 import type { BundleListLabels, BundleListProps } from "./bundle-list.types";
 
 function formatPrice(value: number): string {
@@ -44,30 +45,27 @@ function BundleThumb({
   );
 }
 
-function StatusBadge({
-  active,
+function StatusToggle({
+  bundle,
+  disabled,
+  onToggle,
   labels,
 }: {
-  active: boolean;
+  bundle: BundleListItem;
+  disabled: boolean;
+  onToggle: () => void;
   labels: BundleListLabels;
 }) {
   return (
-    <span
-      className={cn(
-        "font-label text-label-bold inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs",
-        active
-          ? "bg-secondary-container text-on-secondary-container"
-          : "bg-surface-container-high text-on-surface-variant",
-      )}
-    >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 rounded-full",
-          active ? "bg-secondary" : "bg-outline",
-        )}
-      />
-      {active ? labels.statusActive : labels.statusDraft}
-    </span>
+    <AdminCatalogStatusToggle
+      active={bundle.isActive}
+      disabled={disabled}
+      onToggle={onToggle}
+      activeLabel={labels.statusActive}
+      inactiveLabel={labels.statusDraft}
+      ariaActivate={labels.ariaActivate}
+      ariaDeactivate={labels.ariaDeactivate}
+    />
   );
 }
 
@@ -130,6 +128,8 @@ export function BundleList({
   onDelete,
   onPageChange,
   deletingId,
+  onToggleActive,
+  togglingId,
 }: BundleListProps) {
   if (bundles.length === 0) {
     return <EmptyState hasBundles={hasActiveFilters} labels={labels} />;
@@ -199,7 +199,12 @@ export function BundleList({
                   </span>
                 </td>
                 <td className="px-6 py-5">
-                  <StatusBadge active={bundle.isActive} labels={labels} />
+                  <StatusToggle
+                    bundle={bundle}
+                    disabled={togglingId === bundle.id}
+                    onToggle={() => onToggleActive(bundle)}
+                    labels={labels}
+                  />
                 </td>
                 <td className="px-6 py-5 text-right">
                   <BundleActions
@@ -239,30 +244,31 @@ export function BundleList({
                 className="h-20 w-20 shrink-0 rounded-xl"
               />
               <div className="flex flex-1 flex-col justify-between">
-                <div className="flex items-start justify-between gap-2">
+                <div>
                   <h3 className="font-display text-body-md text-on-surface font-bold leading-tight">
                     {bundle.name}
                   </h3>
-                  <StatusBadge active={bundle.isActive} labels={labels} />
-                </div>
-                <div className="text-on-surface-variant/70 mt-1 flex items-center gap-3 text-xs">
-                  <span>{labels.formatItemCount(bundle.itemCount)}</span>
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" aria-hidden />
-                    {labels.formatPersons(bundle.quantity)}
+                  <div className="text-on-surface-variant/70 mt-1 flex items-center gap-3 text-xs">
+                    <span>{labels.formatItemCount(bundle.itemCount)}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" aria-hidden />
+                      {labels.formatPersons(bundle.quantity)}
+                    </span>
+                  </div>
+                  <span className="font-display text-primary mt-2 text-[20px] font-extrabold">
+                    {formatPrice(bundle.total)}
                   </span>
                 </div>
-                <span className="font-display text-primary mt-2 text-[20px] font-extrabold">
-                  {formatPrice(bundle.total)}
-                </span>
               </div>
             </div>
             <div className="bg-outline-variant/10 h-px w-full" />
-            <div className="flex items-center justify-between">
-              <span className="text-on-surface-variant/60 font-label text-label-bold text-xs">
-                {labels.containerShort}: {formatPrice(bundle.containerNetPrice)}{" "}
-                · {bundle.containerName}
-              </span>
+            <div className="flex items-center justify-between gap-3">
+              <StatusToggle
+                bundle={bundle}
+                disabled={togglingId === bundle.id}
+                onToggle={() => onToggleActive(bundle)}
+                labels={labels}
+              />
               <div className="flex items-center gap-1">
                 <Link
                   href={`/bundles/${bundle.id}/edit`}

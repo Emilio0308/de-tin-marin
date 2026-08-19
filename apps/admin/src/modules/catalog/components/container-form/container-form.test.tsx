@@ -7,6 +7,7 @@ import type { ContainerFormLabels } from "./container-form.types";
 const labels: ContainerFormLabels = {
   breadcrumbParent: "Envases",
   breadcrumbCurrent: "Nuevo",
+  back: "Volver a envases",
   title: "Nuevo envase",
   sectionInfo: "Información",
   sectionImage: "Imagen",
@@ -64,6 +65,7 @@ describe("ContainerForm", () => {
   it("muestra empty state de imagen sin URL", () => {
     render(
       <ContainerForm
+        backHref="/containers"
         labels={labels}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
@@ -79,6 +81,7 @@ describe("ContainerForm", () => {
   it("muestra preview cuando hay imageUrl inicial y permite quitarla", () => {
     render(
       <ContainerForm
+        backHref="/containers"
         initial={{
           id: "c1",
           sku: "ENV-1",
@@ -106,6 +109,7 @@ describe("ContainerForm", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
       <ContainerForm
+        backHref="/containers"
         initial={{
           id: "c1",
           sku: "ENV-1",

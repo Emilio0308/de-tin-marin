@@ -27,6 +27,7 @@ export type ProductImageUploadResult =
 export type ProductFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   status: string;
   statusActive: string;
@@ -93,6 +94,7 @@ export type ProductFormLabels = {
 export type ProductFormProps = {
   initial?: ProductFormDTO;
   categories: CategoryListItem[];
+  backHref: string;
   labels: ProductFormLabels;
   onSubmit: (
     values: ProductFormValues,

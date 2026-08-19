@@ -62,6 +62,7 @@ export function ContainerFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       sectionInfo: t("sectionInfo"),
       sectionImage: t("sectionImage"),
@@ -210,6 +211,7 @@ export function ContainerFormContainer({
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-32 lg:p-8 lg:pb-8">
       <ContainerForm
         initial={initial}
+        backHref="/containers"
         labels={labels}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

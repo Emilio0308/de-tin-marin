@@ -7,10 +7,10 @@ export const ABOUT_TIKTOK_HREF = "https://www.tiktok.com/@detinmarin.dyc";
 export const ABOUT_STORY_IMAGE_URL = CATALOG_PLACEHOLDER_IMAGE;
 
 /** Contenido de marca — editar aquí para cambiar misión, visión, historia y valores. */
-export const ABOUT_STORY_EYEBROW = "Desde el corazón del Perú";
+export const ABOUT_STORY_EYEBROW = "Marca peruana · Dulces y sorpresas";
 
 export const ABOUT_STORY_BODY =
-  "Todo comenzó con un sueño bañado en azúcar y el deseo de convertir cada regalo en un momento mágico. De Tin Marín nació de la pasión por los detalles artesanales y la alegría de ver sonreír a quienes más queremos. Lo que empezó en una pequeña cocina familiar hoy se ha convertido en el puente de dulzura que une a miles de corazones.";
+  "De Tin Marín nació en el Perú con el deseo de hacer que celebrar sea fácil, bonito y memorable. Más que vender productos, creamos momentos de alegría con dulces de calidad y sorpresas personalizables que fortalecen los vínculos entre las personas. Cada detalle está pensado para sacar una sonrisa y convertir cada ocasión en un recuerdo feliz, con la misma cercanía y entusiasmo que nos define desde el primer día.";
 
 export const ABOUT_MISSION_BODY =
   "Endulzar la vida de nuestros clientes con golosinas de excelente calidad, ofreciendo experiencias que inspiren alegría, creatividad y satisfacción absoluta en cada compra";
