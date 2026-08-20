@@ -11,6 +11,10 @@ vi.mock(
   }),
 );
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 const baseOrder = {
   orderNumber: "TM-20250707-0001",
   status: "pending_payment",

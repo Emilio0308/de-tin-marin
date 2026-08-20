@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   canTransitionOrderStatus,
   ORDER_STATUSES,
@@ -16,6 +17,7 @@ import { getOrderAction } from "@/modules/orders/actions/get-order";
 import { refundPaymentAction } from "@/modules/orders/actions/refund-payment";
 import { transitionOrderStatusAction } from "@/modules/orders/actions/transition-order-status";
 import { upsertShipmentAction } from "@/modules/orders/actions/upsert-shipment";
+import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import { OrderDetailView } from "./order-detail";
 import type { OrderDetailLabels } from "./order-detail.types";
 
@@ -39,6 +41,7 @@ export function OrderDetailContainer() {
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
   const tDashboard = useTranslations("dashboard.orderStatus");
+  const { confirm, dialog } = useConfirmDialog();
 
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
@@ -234,9 +237,18 @@ export function OrderDetailContainer() {
     onSuccess: invalidateOrder,
   });
 
-  function handleCancel() {
-    if (!window.confirm(labels.cancelConfirm)) return;
-    cancelMutation.mutate();
+  async function handleCancel() {
+    const accepted = await confirm({
+      title: tCommon("confirmDialog.cancelOrderTitle"),
+      description: labels.cancelConfirm,
+      confirmLabel: tCommon("confirmDialog.confirm"),
+    });
+    if (!accepted) return;
+    cancelMutation.mutate(undefined, {
+      onSuccess: () =>
+        toast.success(tCommon("confirmDialog.cancelOrderSuccess")),
+      onError: () => toast.error(tCommon("error")),
+    });
   }
 
   if (orderQuery.isLoading) {
@@ -266,34 +278,41 @@ export function OrderDetailContainer() {
   const nextStatuses = buildNextStatuses(order.status as OrderStatus);
 
   return (
-    <div className="p-8">
-      <OrderDetailView
-        order={order}
-        labels={labels}
-        paymentReference={paymentReference}
-        paymentNotes={paymentNotes}
-        onPaymentReferenceChange={setPaymentReference}
-        onPaymentNotesChange={setPaymentNotes}
-        onConfirmPayment={() => confirmPaymentMutation.mutate()}
-        confirmingPayment={confirmPaymentMutation.isPending}
-        onRefundPayment={(paymentId) => refundPaymentMutation.mutate(paymentId)}
-        refundingPaymentId={refundingPaymentId}
-        shipmentStatus={shipmentStatus}
-        shipmentTracking={shipmentTracking}
-        shipmentCarrier={shipmentCarrier}
-        shipmentNotes={shipmentNotes}
-        onShipmentStatusChange={setShipmentStatus}
-        onShipmentTrackingChange={setShipmentTracking}
-        onShipmentCarrierChange={setShipmentCarrier}
-        onShipmentNotesChange={setShipmentNotes}
-        onSaveShipment={() => shipmentMutation.mutate()}
-        savingShipment={shipmentMutation.isPending}
-        nextStatuses={nextStatuses}
-        onTransitionStatus={(status) => transitionMutation.mutate(status)}
-        transitioningTo={transitioningTo}
-        onCancel={handleCancel}
-        cancelling={cancelMutation.isPending}
-      />
-    </div>
+    <>
+      {dialog}
+      <div className="p-8">
+        <OrderDetailView
+          order={order}
+          labels={labels}
+          paymentReference={paymentReference}
+          paymentNotes={paymentNotes}
+          onPaymentReferenceChange={setPaymentReference}
+          onPaymentNotesChange={setPaymentNotes}
+          onConfirmPayment={() => confirmPaymentMutation.mutate()}
+          confirmingPayment={confirmPaymentMutation.isPending}
+          onRefundPayment={(paymentId) =>
+            refundPaymentMutation.mutate(paymentId)
+          }
+          refundingPaymentId={refundingPaymentId}
+          shipmentStatus={shipmentStatus}
+          shipmentTracking={shipmentTracking}
+          shipmentCarrier={shipmentCarrier}
+          shipmentNotes={shipmentNotes}
+          onShipmentStatusChange={setShipmentStatus}
+          onShipmentTrackingChange={setShipmentTracking}
+          onShipmentCarrierChange={setShipmentCarrier}
+          onShipmentNotesChange={setShipmentNotes}
+          onSaveShipment={() => shipmentMutation.mutate()}
+          savingShipment={shipmentMutation.isPending}
+          nextStatuses={nextStatuses}
+          onTransitionStatus={(status) => transitionMutation.mutate(status)}
+          transitioningTo={transitioningTo}
+          onCancel={() => {
+            void handleCancel();
+          }}
+          cancelling={cancelMutation.isPending}
+        />
+      </div>
+    </>
   );
 }

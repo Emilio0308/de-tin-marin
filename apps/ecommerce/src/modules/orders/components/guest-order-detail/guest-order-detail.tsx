@@ -19,6 +19,7 @@ import {
   resolveFulfillmentTitle,
   summarizeGuestOrderLines,
 } from "./guest-order-detail.helpers";
+import { YapeQrImage } from "./yape-qr-image";
 
 const ORDER_PROGRESS = [
   "pending_payment",
@@ -72,13 +73,16 @@ export function PaymentInstructions({ labels }: PaymentInstructionsProps) {
             className="text-primary mt-0.5 h-5 w-5 shrink-0"
             aria-hidden
           />
-          <div className="min-w-0">
-            <p className="font-label text-label-bold text-on-surface">
-              {labels.yapeLabel}
-            </p>
-            <p className="font-body text-body-md text-on-surface-variant">
-              {labels.yape}
-            </p>
+          <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <p className="font-label text-label-bold text-on-surface">
+                {labels.yapeLabel}
+              </p>
+              <p className="font-body text-body-md text-on-surface-variant">
+                {labels.yape}
+              </p>
+            </div>
+            <YapeQrImage />
           </div>
         </div>
 

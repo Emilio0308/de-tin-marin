@@ -27,6 +27,15 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "cancel": "Cancelar",
+    "confirmDialog": {
+      "title": "Confirmar acción",
+      "deleteTitle": "Eliminar",
+      "cancelOrderTitle": "Cancelar orden",
+      "confirm": "Confirmar",
+      "delete": "Eliminar",
+      "deleteSuccess": "Se eliminó correctamente.",
+      "cancelOrderSuccess": "La orden se canceló."
+    },
     "signOut": "Cerrar sesión",
     "viewAll": "Ver todo",
     "pagination": {

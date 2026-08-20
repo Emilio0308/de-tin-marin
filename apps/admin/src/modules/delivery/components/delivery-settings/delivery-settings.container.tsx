@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   deleteDeliveryZoneAction,
   getDeliverySettingsAction,
@@ -10,6 +11,7 @@ import {
   updateDeliverySettingsAction,
   upsertDeliveryZoneAction,
 } from "@/modules/delivery/actions/delivery.actions";
+import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import type { DeliveryZoneDTO } from "@/modules/delivery/types/delivery.dto";
 import { DeliverySettings } from "./delivery-settings";
 import {
@@ -35,6 +37,8 @@ function zoneErrorMessage(
 export function DeliverySettingsContainer() {
   const t = useTranslations("delivery");
   const tErrors = useTranslations("delivery.errors");
+  const tFeedback = useTranslations("common");
+  const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
 
   const [settingsDraft, setSettingsDraft] = useState<DeliverySettingsValues>({
@@ -218,11 +222,17 @@ export function DeliverySettingsContainer() {
     });
   }
 
-  function handleDeleteZone(id: string) {
+  async function handleDeleteZone(id: string) {
     const zone = zones.find((item) => item.id === id);
     if (!zone) return;
-    if (!window.confirm(labels.deleteConfirm)) return;
-    deleteZoneMutation.mutate(id);
+    const accepted = await confirm({
+      description: labels.deleteConfirm,
+    });
+    if (!accepted) return;
+    deleteZoneMutation.mutate(id, {
+      onSuccess: () => toast.success(tFeedback("confirmDialog.deleteSuccess")),
+      onError: () => toast.error(tFeedback("error")),
+    });
   }
 
   if (zonesQuery.isLoading || settingsQuery.isLoading) {
@@ -250,33 +260,38 @@ export function DeliverySettingsContainer() {
   }
 
   return (
-    <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:p-8">
-      <DeliverySettings
-        settings={settingsDraft}
-        zones={zones}
-        zoneDraft={zoneDraft}
-        editingZone={editingZone}
-        labels={labels}
-        settingsSubmitting={saveSettingsMutation.isPending}
-        zoneSubmitting={saveZoneMutation.isPending}
-        deletingZoneId={
-          deleteZoneMutation.isPending
-            ? (deleteZoneMutation.variables ?? null)
-            : null
-        }
-        settingsError={settingsError}
-        zoneError={zoneError}
-        onSettingsChange={setSettingsDraft}
-        onSaveSettings={() => saveSettingsMutation.mutate()}
-        onZoneDraftChange={setZoneDraft}
-        onAddZone={handleAddZone}
-        onStartEditZone={handleStartEditZone}
-        onCancelEditZone={() => setEditingZone(null)}
-        onEditZoneChange={setEditingZone}
-        onSaveEditZone={handleSaveEditZone}
-        onToggleZoneActive={handleToggleZoneActive}
-        onDeleteZone={handleDeleteZone}
-      />
-    </div>
+    <>
+      {dialog}
+      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:p-8">
+        <DeliverySettings
+          settings={settingsDraft}
+          zones={zones}
+          zoneDraft={zoneDraft}
+          editingZone={editingZone}
+          labels={labels}
+          settingsSubmitting={saveSettingsMutation.isPending}
+          zoneSubmitting={saveZoneMutation.isPending}
+          deletingZoneId={
+            deleteZoneMutation.isPending
+              ? (deleteZoneMutation.variables ?? null)
+              : null
+          }
+          settingsError={settingsError}
+          zoneError={zoneError}
+          onSettingsChange={setSettingsDraft}
+          onSaveSettings={() => saveSettingsMutation.mutate()}
+          onZoneDraftChange={setZoneDraft}
+          onAddZone={handleAddZone}
+          onStartEditZone={handleStartEditZone}
+          onCancelEditZone={() => setEditingZone(null)}
+          onEditZoneChange={setEditingZone}
+          onSaveEditZone={handleSaveEditZone}
+          onToggleZoneActive={handleToggleZoneActive}
+          onDeleteZone={(id) => {
+            void handleDeleteZone(id);
+          }}
+        />
+      </div>
+    </>
   );
 }

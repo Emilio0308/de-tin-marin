@@ -324,6 +324,11 @@
       "yapeLabel": "Yape",
       "transferLabel": "Transferencia bancaria",
       "yape": "Yape al número {phone} a nombre de {holder}.",
+      "yapeQrAlt": "Código QR de Yape para escanear y pagar",
+      "yapeQrHint": "Toca para ampliar y escanear",
+      "yapeQrEnlarge": "Ampliar código QR de Yape",
+      "yapeQrDialogTitle": "Código QR de Yape",
+      "yapeQrClose": "Cerrar",
       "transfer": "Transferencia {bank} — cuenta {account} · CCI {cci} ({holder}).",
       "note": "Envía el voucher por WhatsApp indicando tu número de pedido. Confirmaremos tu pago en breve."
     }

@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   deletePickupPointAction,
   listPickupPointsAction,
   upsertPickupPointAction,
 } from "@/modules/delivery/actions/pickup-point.actions";
+import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import type { PickupPointDTO } from "@/modules/delivery/types/delivery.dto";
 import {
   buildDefaultPickupPointDraft,
@@ -32,6 +34,8 @@ function pointErrorMessage(
 export function PickupPointsContainer() {
   const t = useTranslations("delivery.pickupPoints");
   const tErrors = useTranslations("delivery.pickupPoints.errors");
+  const tFeedback = useTranslations("common");
+  const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
 
   const [pointDraft, setPointDraft] = useState<PickupPointDraft>(
@@ -185,11 +189,17 @@ export function PickupPointsContainer() {
     });
   }
 
-  function handleDeletePoint(id: string) {
+  async function handleDeletePoint(id: string) {
     const point = points.find((item) => item.id === id);
     if (!point) return;
-    if (!window.confirm(labels.deleteConfirm)) return;
-    deletePointMutation.mutate(id);
+    const accepted = await confirm({
+      description: labels.deleteConfirm,
+    });
+    if (!accepted) return;
+    deletePointMutation.mutate(id, {
+      onSuccess: () => toast.success(tFeedback("confirmDialog.deleteSuccess")),
+      onError: () => toast.error(tFeedback("error")),
+    });
   }
 
   if (pointsQuery.isLoading) {
@@ -217,35 +227,40 @@ export function PickupPointsContainer() {
   }
 
   return (
-    <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:p-8">
-      <PickupPoints
-        points={points}
-        pointDraft={pointDraft}
-        editingPoint={editingPoint}
-        labels={labels}
-        pointSubmitting={savePointMutation.isPending}
-        deletingPointId={
-          deletePointMutation.isPending
-            ? (deletePointMutation.variables ?? null)
-            : null
-        }
-        pointError={pointError}
-        onPointDraftChange={setPointDraft}
-        onAddPoint={handleAddPoint}
-        onStartEditPoint={handleStartEditPoint}
-        onCancelEditPoint={() => setEditingPoint(null)}
-        onEditPointChange={setEditingPoint}
-        onSaveEditPoint={handleSaveEditPoint}
-        onTogglePointActive={handleTogglePointActive}
-        onDeletePoint={handleDeletePoint}
-        onMapPinChange={(pin) => {
-          if (editingPoint) {
-            setEditingPoint({ ...editingPoint, ...pin });
-          } else {
-            setPointDraft({ ...pointDraft, ...pin });
+    <>
+      {dialog}
+      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:p-8">
+        <PickupPoints
+          points={points}
+          pointDraft={pointDraft}
+          editingPoint={editingPoint}
+          labels={labels}
+          pointSubmitting={savePointMutation.isPending}
+          deletingPointId={
+            deletePointMutation.isPending
+              ? (deletePointMutation.variables ?? null)
+              : null
           }
-        }}
-      />
-    </div>
+          pointError={pointError}
+          onPointDraftChange={setPointDraft}
+          onAddPoint={handleAddPoint}
+          onStartEditPoint={handleStartEditPoint}
+          onCancelEditPoint={() => setEditingPoint(null)}
+          onEditPointChange={setEditingPoint}
+          onSaveEditPoint={handleSaveEditPoint}
+          onTogglePointActive={handleTogglePointActive}
+          onDeletePoint={(id) => {
+            void handleDeletePoint(id);
+          }}
+          onMapPinChange={(pin) => {
+            if (editingPoint) {
+              setEditingPoint({ ...editingPoint, ...pin });
+            } else {
+              setPointDraft({ ...pointDraft, ...pin });
+            }
+          }}
+        />
+      </div>
+    </>
   );
 }

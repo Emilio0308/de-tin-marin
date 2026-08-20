@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   getAboutPageSettingsAction,
   updateAboutPageSettingsAction,
@@ -28,6 +29,7 @@ import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/creat
 import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
 import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
 import { logClientError } from "@/shared/errors/client-error";
+import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import { WebCustomizationPage } from "./web-customization-page";
 import {
   emptyImageDraft,
@@ -46,6 +48,8 @@ const DEFAULT_SETTINGS: HeroSettingsDTO = { displayMode: "static" };
 export function WebCustomizationPageContainer() {
   const t = useTranslations("webCustomization");
   const tErrors = useTranslations("webCustomization.errors");
+  const tFeedback = useTranslations("common");
+  const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
 
   const [settingsDraft, setSettingsDraft] =
@@ -364,9 +368,15 @@ export function WebCustomizationPageContainer() {
     setDraft(toImageDraft(image));
   }
 
-  function handleDelete(id: string) {
-    if (!window.confirm(labels.deleteConfirm)) return;
-    deleteMutation.mutate(id);
+  async function handleDelete(id: string) {
+    const accepted = await confirm({
+      description: labels.deleteConfirm,
+    });
+    if (!accepted) return;
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success(tFeedback("confirmDialog.deleteSuccess")),
+      onError: () => toast.error(tFeedback("error")),
+    });
   }
 
   function handleMove(id: string, direction: "up" | "down") {
@@ -455,46 +465,51 @@ export function WebCustomizationPageContainer() {
     saveAboutMutation.isPending || restoreAboutMutation.isPending;
 
   return (
-    <WebCustomizationPage
-      labels={labels}
-      settings={settingsDraft}
-      images={imagesQuery.data ?? []}
-      loading={loading}
-      loadError={loadError}
-      settingsSubmitting={saveSettingsMutation.isPending}
-      settingsMessage={settingsMessage}
-      settingsError={settingsError}
-      imageError={imageError}
-      draft={draft}
-      imageSubmitting={imageMutation.isPending}
-      canSaveDraft={canSaveDraft}
-      onDisplayModeChange={(mode: HeroDisplayMode) => {
-        setSettingsMessage(null);
-        setSettingsDraft({ displayMode: mode });
-      }}
-      onSaveSettings={() => saveSettingsMutation.mutate(settingsDraft)}
-      onStartAdd={handleStartAdd}
-      onStartEdit={handleStartEdit}
-      onCancelDraft={handleCancelDraft}
-      onDraftChange={setDraft}
-      onPickFile={(file) => {
-        void handlePickFile(file);
-      }}
-      onSaveDraft={handleSaveDraft}
-      onDelete={handleDelete}
-      onMove={handleMove}
-      aboutPreviewUrl={aboutDisplayUrl}
-      aboutSubmitting={aboutSubmitting}
-      aboutError={aboutError}
-      aboutMessage={aboutMessage}
-      canSaveAbout={canSaveAbout}
-      canRestoreAbout={canRestoreAbout}
-      onAboutPickFile={(file) => {
-        void handleAboutPickFile(file);
-      }}
-      onSaveAbout={handleSaveAbout}
-      onRestoreAbout={handleRestoreAbout}
-    />
+    <>
+      {dialog}
+      <WebCustomizationPage
+        labels={labels}
+        settings={settingsDraft}
+        images={imagesQuery.data ?? []}
+        loading={loading}
+        loadError={loadError}
+        settingsSubmitting={saveSettingsMutation.isPending}
+        settingsMessage={settingsMessage}
+        settingsError={settingsError}
+        imageError={imageError}
+        draft={draft}
+        imageSubmitting={imageMutation.isPending}
+        canSaveDraft={canSaveDraft}
+        onDisplayModeChange={(mode: HeroDisplayMode) => {
+          setSettingsMessage(null);
+          setSettingsDraft({ displayMode: mode });
+        }}
+        onSaveSettings={() => saveSettingsMutation.mutate(settingsDraft)}
+        onStartAdd={handleStartAdd}
+        onStartEdit={handleStartEdit}
+        onCancelDraft={handleCancelDraft}
+        onDraftChange={setDraft}
+        onPickFile={(file) => {
+          void handlePickFile(file);
+        }}
+        onSaveDraft={handleSaveDraft}
+        onDelete={(id) => {
+          void handleDelete(id);
+        }}
+        onMove={handleMove}
+        aboutPreviewUrl={aboutDisplayUrl}
+        aboutSubmitting={aboutSubmitting}
+        aboutError={aboutError}
+        aboutMessage={aboutMessage}
+        canSaveAbout={canSaveAbout}
+        canRestoreAbout={canRestoreAbout}
+        onAboutPickFile={(file) => {
+          void handleAboutPickFile(file);
+        }}
+        onSaveAbout={handleSaveAbout}
+        onRestoreAbout={handleRestoreAbout}
+      />
+    </>
   );
 }
 

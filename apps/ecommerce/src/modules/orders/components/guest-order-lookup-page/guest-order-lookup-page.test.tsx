@@ -11,6 +11,10 @@ vi.mock(
   }),
 );
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 describe("GuestOrderLookupPage", () => {
   it("renderiza formulario de búsqueda", () => {
     render(
