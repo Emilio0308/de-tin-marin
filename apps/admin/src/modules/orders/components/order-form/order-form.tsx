@@ -111,6 +111,7 @@ export function OrderForm({
   packs,
   packCompositionsById,
   deliveryDistricts,
+  pickupPoints,
   bundleDraft,
   bundleDraftLoading,
   bundlePriceSummary,
@@ -351,7 +352,7 @@ export function OrderForm({
         <div className={cardClass}>
           <SectionHeader icon={MapPin} title={labels.deliverySection} />
           <div className="mb-4 flex flex-wrap gap-3">
-            {(["delivery", "pickup"] as const).map((method) => (
+            {(["delivery", "pickup", "pickup_point"] as const).map((method) => (
               <label
                 key={method}
                 className={methodPillClass(
@@ -369,7 +370,11 @@ export function OrderForm({
                     })
                   }
                 />
-                {method === "delivery" ? labels.delivery : labels.pickup}
+                {method === "delivery"
+                  ? labels.delivery
+                  : method === "pickup"
+                    ? labels.pickup
+                    : labels.pickupPoint}
               </label>
             ))}
           </div>
@@ -618,6 +623,37 @@ export function OrderForm({
                 </Field>
               </div>
             </div>
+          ) : values.fulfillment.method === "pickup_point" ? (
+            <Field
+              label={labels.pickupPoint}
+              error={fieldErrors["fulfillment.pickupPoint"]}
+            >
+              <select
+                value={values.fulfillment.pickupPointId}
+                className={cn(
+                  "border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary min-h-11 w-full rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2",
+                  fieldErrors["fulfillment.pickupPoint"] && "border-error",
+                )}
+                onChange={(event) =>
+                  onChange({
+                    ...values,
+                    fulfillment: {
+                      ...values.fulfillment,
+                      pickupPointId: event.target.value,
+                    },
+                  })
+                }
+              >
+                <option value="">{labels.selectPickupPoint}</option>
+                {pickupPoints
+                  .filter((point) => point.isActive)
+                  .map((point) => (
+                    <option key={point.id} value={point.id}>
+                      {point.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
           ) : (
             <p className="text-on-surface-variant text-sm">{labels.pickup}</p>
           )}

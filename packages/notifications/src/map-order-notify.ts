@@ -92,7 +92,7 @@ export function mapCartLinesToNotifyLines(
 }
 
 export function mapFulfillmentToNotify(input: {
-  method: "delivery" | "pickup";
+  method: "delivery" | "pickup" | "pickup_point";
   deliveryAddress?: {
     recipientName: string;
     line1: string;
@@ -101,9 +101,27 @@ export function mapFulfillmentToNotify(input: {
     province: string;
     reference?: string | null;
   } | null;
+  pickupPoint?: {
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    fee: number;
+  } | null;
 }): OrderNotifyFulfillment {
   if (input.method === "pickup") {
     return { method: "pickup", summary: "Recojo en tienda" };
+  }
+
+  if (input.method === "pickup_point") {
+    const point = input.pickupPoint;
+    if (!point) {
+      return { method: "pickup_point", summary: null };
+    }
+    return {
+      method: "pickup_point",
+      summary: `Punto de recojo: ${point.name}`,
+    };
   }
 
   const address = input.deliveryAddress;

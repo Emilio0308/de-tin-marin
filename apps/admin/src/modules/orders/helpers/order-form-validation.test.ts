@@ -42,9 +42,8 @@ describe("validateCreateOrderForm", () => {
         email: "ana@example.com",
       },
       fulfillment: {
+        ...emptyOrderFormValues.fulfillment,
         method: "pickup",
-        deliveryAddress: emptyOrderFormValues.fulfillment.deliveryAddress,
-        notes: "",
       },
       lines: [
         {

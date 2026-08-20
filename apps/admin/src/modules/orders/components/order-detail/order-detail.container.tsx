@@ -64,6 +64,7 @@ export function OrderDetailContainer() {
       customer: t("detail.customer"),
       delivery: t("detail.delivery"),
       pickupMethod: t("detail.pickupMethod"),
+      pickupPointMethod: t("detail.pickupPointMethod"),
       deliveryMethod: t("detail.deliveryMethod"),
       mapTitle: t("detail.mapTitle"),
       mapHint: t("detail.mapHint"),

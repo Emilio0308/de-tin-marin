@@ -18,6 +18,8 @@ export type CheckoutFormValues = Record<CheckoutFormField, string>;
 
 export type CheckoutFieldErrors = Partial<Record<CheckoutFormField, string>>;
 
+export type GuestCheckoutFulfillmentMethod = "delivery" | "pickup_point";
+
 export type CheckoutFieldErrorKey =
   "required" | "invalidEmail" | "invalidName" | "invalidPhone" | "tooShort";
 
@@ -78,7 +80,7 @@ function personNameField() {
     .regex(PERSON_NAME_RE, "invalidName");
 }
 
-export const checkoutFormSchema = z.object({
+const checkoutContactSchema = z.object({
   name: personNameField(),
   lastName: personNameField(),
   phone: z
@@ -87,6 +89,9 @@ export const checkoutFormSchema = z.object({
     .min(1, "required")
     .regex(PERU_MOBILE_RE, "invalidPhone"),
   email: z.string().trim().min(1, "required").email("invalidEmail").max(320),
+});
+
+const checkoutDeliveryAddressSchema = z.object({
   line1: z
     .string()
     .trim()
@@ -97,7 +102,33 @@ export const checkoutFormSchema = z.object({
   city: personNameField(),
   province: personNameField(),
   reference: z.string().max(500),
-}) satisfies z.ZodType<CheckoutFormValues>;
+});
+
+export const checkoutFormSchema = checkoutContactSchema
+  .merge(checkoutDeliveryAddressSchema)
+  .strict() satisfies z.ZodType<CheckoutFormValues>;
+
+export function getCheckoutFormSchema(
+  method: GuestCheckoutFulfillmentMethod,
+): z.ZodType<CheckoutFormValues> {
+  if (method === "pickup_point") {
+    return checkoutContactSchema.extend({
+      line1: z.string(),
+      district: z.string(),
+      city: z.string(),
+      province: z.string(),
+      reference: z.string(),
+    }) as z.ZodType<CheckoutFormValues>;
+  }
+  return checkoutFormSchema;
+}
+
+export function getPickupPointErrorKey(
+  pickupPointId: string,
+): "required" | undefined {
+  if (!pickupPointId.trim()) return "required";
+  return undefined;
+}
 
 export function hasCheckoutFieldError(
   errors: CheckoutFieldErrors,
@@ -120,8 +151,9 @@ function toErrorKey(message: string): CheckoutFieldErrorKey {
 
 export function getCheckoutFieldErrorKeys(
   values: CheckoutFormValues,
+  method: GuestCheckoutFulfillmentMethod = "delivery",
 ): Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>> {
-  const result = checkoutFormSchema.safeParse(values);
+  const result = getCheckoutFormSchema(method).safeParse(values);
   if (result.success) return {};
 
   const errors: Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>> = {};
@@ -142,8 +174,9 @@ export function getCheckoutFieldErrorKeys(
 export function getCheckoutFieldErrorKey(
   values: CheckoutFormValues,
   field: CheckoutFormField,
+  method: GuestCheckoutFulfillmentMethod = "delivery",
 ): CheckoutFieldErrorKey | undefined {
-  const errorKeys = getCheckoutFieldErrorKeys(values);
+  const errorKeys = getCheckoutFieldErrorKeys(values, method);
   return errorKeys[field];
 }
 

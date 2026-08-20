@@ -52,9 +52,15 @@ export function formatGuestOrderDate(createdAt: string): string {
 
 export function resolveFulfillmentTitle(
   method: GuestOrderDetail["fulfillment"]["method"],
-  labels: { deliveryTitle: string; pickupTitle: string },
+  labels: {
+    deliveryTitle: string;
+    pickupTitle: string;
+    pickupPointTitle: string;
+  },
 ): string {
-  return method === "pickup" ? labels.pickupTitle : labels.deliveryTitle;
+  if (method === "pickup") return labels.pickupTitle;
+  if (method === "pickup_point") return labels.pickupPointTitle;
+  return labels.deliveryTitle;
 }
 
 export function formatDeliveryAddress(order: GuestOrderDetail): string | null {
@@ -70,4 +76,23 @@ export function formatDeliveryAddress(order: GuestOrderDetail): string | null {
   ].filter(Boolean);
 
   return parts.join(", ");
+}
+
+export function formatPickupPoint(order: GuestOrderDetail): string | null {
+  const point = order.fulfillment.pickupPoint;
+  if (!point) return null;
+  return point.name;
+}
+
+export function resolveFulfillmentDetail(
+  order: GuestOrderDetail,
+  labels: { pickupInStoreNote: string },
+): string | null {
+  if (order.fulfillment.method === "pickup_point") {
+    return formatPickupPoint(order);
+  }
+  if (order.fulfillment.method === "delivery") {
+    return formatDeliveryAddress(order);
+  }
+  return labels.pickupInStoreNote;
 }

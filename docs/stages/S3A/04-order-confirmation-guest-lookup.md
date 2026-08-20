@@ -71,15 +71,15 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
   shippingTotal: number;
   total: number;
   createdAt: string;
-  fulfillment: { method; deliveryAddress? };
+  fulfillment: { method; deliveryAddress?; pickupPoint? };
   shoppingCart: { lines: /* resumen */ };
 }
 ```
 
 ## Rules que aplican
 
-- Reglas **13, 16, 17**
-- DECISIONS **#8, #26**
+- Reglas **13, 16, 17** (fulfillment `pickup_point`: Regla 30 / S4-08)
+- DECISIONS **#8, #26, #40**
 
 ## Orden de implementación
 

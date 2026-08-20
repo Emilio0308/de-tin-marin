@@ -65,6 +65,8 @@ const defaultLabels = {
     paymentStatus: "Pago",
     deliveryTitle: "Entrega",
     pickupTitle: "Recojo",
+    pickupPointTitle: "Punto de recojo",
+    pickupInStoreNote: "Recojo en tienda",
     bundleBadge: "Sorpresa",
     packBadge: "Combo",
     bundleComponents: "dulces",

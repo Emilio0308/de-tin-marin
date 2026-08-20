@@ -46,6 +46,21 @@
 | 37 | Logging server (consola) | ✅ | Observabilidad v1 = **solo stdout/stderr** vía **`@de-tin-marin/logging`** (JSON una línea). `createServerErrorHelpers({ app, includeUnexpectedMessage })` en shims de app. `guardAction` / `withOperation` + `logServerError` / `Info` / `Warn` + `safeMeta` (redact PII/secrets). Metadata = resumen (IDs, conteos, códigos); nunca payloads crudos. Admin puede devolver `message` en `UNEXPECTED`; ecommerce no. Detalle: `rules/40-validation-and-boundaries.md` · `packages/logging/README.md` |
 | 38 | Contacto y cobro público dinámico | ✅ | Singleton `core.public_business_settings`: WhatsApp/email + instrucciones Yape/transferencia. Staff actualiza; `SELECT` público deliberado para storefront. Ecommerce usa DTO allowlist validado, no valores hardcodeados. Las instrucciones de órdenes `pending_payment` se leen al visualizarse, no se congelan en `orders` ni confirman pagos. Migración `00026`; Regla 27 |
 | 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only y `after()` para envío best-effort tras persistir una orden. Ecommerce notifica cliente + admin; admin solo admin. Fallo/SMTP ausente no altera la orden. Destinatario admin desde #38 + extras env validados/deduplicados. Plantillas HTML **embebidas** en `*.template.ts` (viajan con el bundle; **no** `readFileSync` de `.html` — ENOENT en Vercel tumbaba imports del package, p. ej. `/checkout`). Sin outbox, reintentos, webhooks ni estado de entrega en v1. Regla 28 / S4-06 |
+| 40 | Puntos de recojo vs recojo en tienda | ✅ | **`pickup`** = recojo en tienda (admin manual; sin ubicación). **`pickup_point`** = catálogo `pricing.pickup_points` (nombre + coords + fee configurable). Ecommerce guest solo `delivery` \| `pickup_point`. Snapshot `fulfillment.pickupPoint` al crear orden. Migración `00028`. Brief: S4-08 |
+
+## Docs sincronizados (2026-08-19 — puntos de recojo)
+
+- DECISIONS #40 — `pickup` (tienda, admin) ≠ `pickup_point` (catálogo
+  `pricing.pickup_points` con coords + fee). Guest solo `delivery` |
+  `pickup_point`.
+- Migración `00028_pickup_points.sql`: tabla + `pickup_points_enabled` +
+  `insert_guest_order` XOR (dirección vs snapshot; guest no `pickup`).
+- Checkout: lista puntos activos (vacía si kill switch off); create
+  rehidrata snapshot desde DB y exige fee server-side.
+- Admin `/delivery` pestaña Puntos de recojo; order-form los tres métodos.
+- Shared `resolveCheckoutFulfillmentFee` / `resolvePickupPointFee`.
+- Docs: S4-08, Reglas 19/30, `database.md`, `orders.md`, READMEs delivery y
+  checkout.
 
 ## Docs sincronizados (2026-08-18 — imagen Nosotros)
 

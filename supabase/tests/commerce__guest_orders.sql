@@ -149,5 +149,45 @@ select ok(
   'insert_guest_order returns orderNumber'
 );
 
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"pickup@example.com"}'::jsonb,
+       '{"method":"pickup"}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 0, 1,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":0,"total":1}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects in-store pickup method'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"pp-missing@example.com"}'::jsonb,
+       '{"method":"pickup_point"}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 6, 7,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":6,"total":7}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects pickup_point without snapshot'
+);
+
+select lives_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"pp@example.com"}'::jsonb,
+       '{"method":"pickup_point","pickupPoint":{"id":"11111111-1111-4111-8111-111111111111","name":"Mall","lat":-5.19,"lng":-80.63,"fee":6}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 6, 7,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":6,"total":7}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'guest insert accepts pickup_point with snapshot'
+);
+
 select * from finish();
 rollback;

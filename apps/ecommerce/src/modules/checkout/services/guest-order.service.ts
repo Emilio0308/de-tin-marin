@@ -12,7 +12,7 @@ import {
   aggregateStockDemands,
   checkOrderStock,
 } from "@de-tin-marin/shared/check-order-stock";
-import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
+import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import {
   computePackAvailableQuantity as computePackAvailableQuantityShared,
@@ -60,7 +60,9 @@ import { scheduleOrderCreatedNotification } from "../helpers/schedule-order-crea
 import { asJson, insertGuestOrderRepo } from "../repositories/order.repository";
 import {
   getDeliverySettingsRepo,
+  getPickupPointByIdRepo,
   listActiveDeliveryZonesRepo,
+  listActivePickupPointsRepo,
 } from "../repositories/delivery.repository";
 
 async function resolveBundlesById(
@@ -492,6 +494,10 @@ export async function createGuestOrderService(
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
         | "OUT_OF_COVERAGE"
+        | "PICKUP_POINT_NOT_FOUND"
+        | "PICKUP_POINT_INACTIVE"
+        | "PICKUP_POINT_REQUIRED"
+        | "SHIPPING_FEE_MISMATCH"
         | "INSUFFICIENT_STOCK"
         | "INVALID_PURCHASE_QUANTITY"
         | "INVALID_BUNDLE_CUSTOMIZATION";
@@ -509,8 +515,10 @@ export async function createGuestOrderService(
 
   logServerInfo(scope, "start", {
     lineCount: parsed.data.lines.length,
+    method: parsed.data.fulfillment.method,
     hasDistrict: Boolean(parsed.data.fulfillment.deliveryAddress?.district),
     hasMapPin: Boolean(parsed.data.mapPin),
+    pickupPointId: parsed.data.fulfillment.pickupPoint?.id,
   });
 
   const packsById = await resolvePacksById(config, parsed.data.lines);
@@ -593,14 +601,57 @@ export async function createGuestOrderService(
     return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
   }
 
-  const [zones, settings] = await Promise.all([
+  const [zones, settings, points] = await Promise.all([
     listActiveDeliveryZonesRepo(config),
     getDeliverySettingsRepo(config),
+    listActivePickupPointsRepo(config),
   ]);
 
-  const deliveryResult = resolveCheckoutDeliveryFee(
-    parsed.data.fulfillment.method,
-    parsed.data.fulfillment.deliveryAddress?.district,
+  let fulfillmentToPersist = parsed.data.fulfillment;
+
+  if (parsed.data.fulfillment.method === "pickup_point") {
+    const pickupPointId = parsed.data.fulfillment.pickupPoint?.id;
+    if (!pickupPointId) {
+      logServerError(scope, { message: "PICKUP_POINT_REQUIRED" });
+      return { ok: false, error: "PICKUP_POINT_REQUIRED" };
+    }
+
+    const pointRow =
+      points.find((point) => point.id === pickupPointId) ??
+      (await getPickupPointByIdRepo(config, pickupPointId));
+
+    if (!pointRow) {
+      logServerError(scope, {
+        message: "PICKUP_POINT_NOT_FOUND",
+        pickupPointId,
+      });
+      return { ok: false, error: "PICKUP_POINT_NOT_FOUND" };
+    }
+
+    if (!pointRow.is_active) {
+      logServerError(scope, {
+        message: "PICKUP_POINT_INACTIVE",
+        pickupPointId,
+      });
+      return { ok: false, error: "PICKUP_POINT_INACTIVE" };
+    }
+
+    fulfillmentToPersist = {
+      method: "pickup_point",
+      pickupPoint: {
+        id: pointRow.id,
+        name: pointRow.name,
+        lat: Number(pointRow.lat),
+        lng: Number(pointRow.lng),
+        fee: Number(pointRow.fee),
+      },
+      notes: parsed.data.fulfillment.notes ?? null,
+    };
+  }
+
+  const deliveryResult = resolveCheckoutFulfillmentFee(
+    fulfillmentToPersist.method,
+    fulfillmentToPersist.deliveryAddress?.district,
     parsed.data.mapPin,
     zones.map((zone) => ({
       district: zone.district,
@@ -609,18 +660,36 @@ export async function createGuestOrderService(
     })),
     {
       pickupEnabled: settings?.pickup_enabled ?? storeFeatures.pickupEnabled,
+      pickupPointsEnabled: settings?.pickup_points_enabled ?? true,
       deliveryEnabled: settings?.delivery_enabled ?? true,
       fallbackFee: Number(settings?.fallback_fee ?? 0),
     },
+    fulfillmentToPersist.pickupPoint?.id,
+    points.map((point) => ({
+      id: point.id,
+      fee: Number(point.fee),
+      isActive: point.is_active,
+    })),
   );
 
   if (!deliveryResult.covered) {
     logServerError(scope, {
       message: "OUT_OF_COVERAGE",
-      hasDistrict: Boolean(parsed.data.fulfillment.deliveryAddress?.district),
+      method: fulfillmentToPersist.method,
+      hasDistrict: Boolean(fulfillmentToPersist.deliveryAddress?.district),
       hasMapPin: Boolean(parsed.data.mapPin),
+      pickupPointId: fulfillmentToPersist.pickupPoint?.id,
     });
     return { ok: false, error: "OUT_OF_COVERAGE" };
+  }
+
+  if (parsed.data.shippingTotal !== deliveryResult.fee) {
+    logServerError(scope, {
+      message: "SHIPPING_FEE_MISMATCH",
+      clientFee: parsed.data.shippingTotal,
+      serverFee: deliveryResult.fee,
+    });
+    return { ok: false, error: "SHIPPING_FEE_MISMATCH" };
   }
 
   const cartResult = buildOrderCartWithTotals({
@@ -671,14 +740,18 @@ export async function createGuestOrderService(
   const { shoppingCart, totals } = cartResult;
   const inserted = await insertGuestOrderRepo(config, {
     contact: asJson(parsed.data.contact),
-    fulfillment: asJson(parsed.data.fulfillment),
+    fulfillment: asJson(fulfillmentToPersist),
     shoppingCart: asJson(shoppingCart),
     subtotal: totals.subtotal,
     discountTotal: totals.discountTotal,
     shippingTotal: totals.shippingTotal,
     total: totals.total,
     pricingSnapshot: asJson(totals),
-    metadata: asJson({ mapPin: parsed.data.mapPin }),
+    metadata: asJson(
+      fulfillmentToPersist.method === "delivery" && parsed.data.mapPin
+        ? { mapPin: parsed.data.mapPin }
+        : {},
+    ),
   });
 
   logServerInfo(scope, "created", {
@@ -711,8 +784,9 @@ export async function createGuestOrderService(
     },
     lines: mapCartLinesToNotifyLines(shoppingCart.lines),
     fulfillment: mapFulfillmentToNotify({
-      method: parsed.data.fulfillment.method,
-      deliveryAddress: parsed.data.fulfillment.deliveryAddress,
+      method: fulfillmentToPersist.method,
+      deliveryAddress: fulfillmentToPersist.deliveryAddress,
+      pickupPoint: fulfillmentToPersist.pickupPoint,
     }),
     adminEmail,
   });

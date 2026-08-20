@@ -3,7 +3,10 @@ import {
   type CreateOrderInput,
 } from "@de-tin-marin/validations/order";
 import type { ZodIssue } from "zod";
-import { toCreateOrderPayload } from "../components/order-form/order-form.helpers";
+import {
+  toCreateOrderPayload,
+  type PickupPointFormOption,
+} from "../components/order-form/order-form.helpers";
 import type {
   OrderFormFieldErrors,
   OrderFormValues,
@@ -187,14 +190,17 @@ export function mapOrderFormFieldErrorKeys(
   return fieldErrors;
 }
 
-export function validateCreateOrderForm(values: OrderFormValues):
+export function validateCreateOrderForm(
+  values: OrderFormValues,
+  pickupPoints: PickupPointFormOption[] = [],
+):
   | { ok: true; payload: CreateOrderInput }
   | {
       ok: false;
       fieldErrorKeys: OrderFormFieldErrorKeys;
       formErrorKey: "reviewForm";
     } {
-  const payload = toCreateOrderPayload(values);
+  const payload = toCreateOrderPayload(values, pickupPoints);
   const parsed = createOrderInputSchema.safeParse(payload);
 
   if (parsed.success) {

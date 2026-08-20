@@ -47,7 +47,7 @@ de-tin-marin/
 | Inventory     | Stock v1 en products; deduct al `paid` (incl. componentes pack)                                                                  |
 | Customers     | Perfiles de cliente (sin VIP v1)                                                                                                 |
 | Payments      | Registro manual; operador confirma                                                                                               |
-| Shipping      | Envíos, tracking                                                                                                                 |
+| Shipping      | Zonas delivery, puntos de recojo, envíos / tracking                                                                              |
 | Notifications | Email SMTP server-only al crear orden; plantillas embebidas (`*.template.ts`); best-effort post-respuesta, sin outbox v1 — S4-06 |
 | Reports       | Exportaciones operativas (S4-01: Excel estado catálogo); métricas futuras                                                        |
 | Users         | Staff del admin, roles                                                                                                           |

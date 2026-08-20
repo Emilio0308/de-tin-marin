@@ -204,7 +204,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - Módulos `catalog`, `cart`, `checkout`, `orders`
 - TanStack Query, `guardAction`, i18n base
 - Extraer lógica `createOrder` a `@de-tin-marin/shared`
-- Feature flags: `enableUnitsPerPerson`, `pickupEnabled`, `strictStockValidationOnCheckout`
+- Feature flags: `enableUnitsPerPerson`, `pickupEnabled` (tienda, no puntos S4-08), `strictStockValidationOnCheckout`
 - Home sin mocks; CTAs a catálogo
 - Brief: [`docs/stages/S3A/00-ecommerce-foundation.md`](stages/S3A/00-ecommerce-foundation.md)
 
@@ -236,6 +236,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 - Carrito localStorage (`CartRepository` intercambiable)
 - Checkout delivery Piura + mapa OSM; fuera de cobertura = bloqueo
+- Recojo en tienda oculto (`pickupEnabled`). Puntos de recojo: S4-08
 - RLS guest insert órdenes; `createGuestOrder`
 - Brief: [`docs/stages/S3A/03-cart-checkout.md`](stages/S3A/03-cart-checkout.md)
 
@@ -357,6 +358,19 @@ mail no tumba la orden.
 - Brief: [`docs/stages/S4/07-about-page-image.md`](stages/S4/07-about-page-image.md)
 
 **Depends on:** S0-03 media ✅, S4-03 hero ✅
+
+### S4-08 — Puntos de recojo ✅
+
+**Goal:** Staff cataloga puntos de recojo (nombre, mapa, fee); checkout guest
+elige `delivery` o `pickup_point`. El recojo en tienda (`pickup`) sigue
+siendo solo admin.
+
+- [x] Migración `00028_pickup_points.sql` + RPC guest XOR + pgTAP
+- [x] Admin `/delivery` pestaña puntos + kill switch `pickup_points_enabled`
+- [x] Checkout, order-form, detalle/confirmación y emails
+- Brief: [`docs/stages/S4/08-pickup-points.md`](stages/S4/08-pickup-points.md)
+
+**Depends on:** S1E ✅, S2B ✅, S3A-3 ✅
 
 ### Pendiente S4
 

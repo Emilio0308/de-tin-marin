@@ -939,6 +939,7 @@ export type Database = {
           fallback_fee: number
           id: string
           pickup_enabled: boolean
+          pickup_points_enabled: boolean
           singleton_key: string
           updated_at: string
         }
@@ -947,6 +948,7 @@ export type Database = {
           fallback_fee?: number
           id?: string
           pickup_enabled?: boolean
+          pickup_points_enabled?: boolean
           singleton_key?: string
           updated_at?: string
         }
@@ -955,7 +957,44 @@ export type Database = {
           fallback_fee?: number
           id?: string
           pickup_enabled?: boolean
+          pickup_points_enabled?: boolean
           singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pickup_points: {
+        Row: {
+          created_at: string
+          fee: number
+          id: string
+          is_active: boolean
+          lat: number
+          lng: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fee?: number
+          id?: string
+          is_active?: boolean
+          lat: number
+          lng: number
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fee?: number
+          id?: string
+          is_active?: boolean
+          lat?: number
+          lng?: number
+          name?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

@@ -139,12 +139,15 @@ Una fila fija (`id` constante o `singleton_key = 'default'` UNIQUE).
 **Resolución al crear orden:**
 
 ```text
-si fulfillment.method = 'pickup' → shipping_total = 0
-si fulfillment.method = 'delivery':
+si method = 'pickup'        → shipping_total = 0          # tienda; solo admin
+si method = 'pickup_point'  → fee del punto activo        # S4-08; snapshot
+si method = 'delivery':
   fee = delivery_zones.fee WHERE district ILIKE match AND is_active
-     OR delivery_settings.fallback_fee
+     OR (guest: zona o pin en bbox Piura → fallback_fee; si no → OUT_OF_COVERAGE)
 shipping_total congelado en orders.shipping_total
 ```
+
+`pickup` ≠ `pickup_point` (DECISIONS #40). Ecommerce guest no persiste `pickup`.
 
 Match v1: **igualdad case-insensitive** trim en `district` vs `fulfillment.deliveryAddress.district`.
 
@@ -210,14 +213,14 @@ fallback_fee >= 0
 
 ### Delivery
 
-| Boundary                 | Tipo          | Input (Zod)               | Output DTO (allowlist)                            |
-| ------------------------ | ------------- | ------------------------- | ------------------------------------------------- |
-| `listDeliveryZones`      | Server Action | —                         | `{ id, district, fee, isActive, sortOrder }[]`    |
-| `upsertDeliveryZone`     | Server Action | `deliveryZoneInputSchema` | `{ ok, id? }`                                     |
-| `deleteDeliveryZone`     | Server Action | `{ id }`                  | `{ ok }`                                          |
-| `getDeliverySettings`    | Server Action | —                         | `{ pickupEnabled, deliveryEnabled, fallbackFee }` |
-| `updateDeliverySettings` | Server Action | `deliverySettingsSchema`  | `{ ok }`                                          |
-| `resolveDeliveryFee`     | Server Action | `{ district: string }`    | `{ fee: number }` — uso interno order form        |
+| Boundary                 | Tipo          | Input (Zod)               | Output DTO (allowlist)                                                 |
+| ------------------------ | ------------- | ------------------------- | ---------------------------------------------------------------------- |
+| `listDeliveryZones`      | Server Action | —                         | `{ id, district, fee, isActive, sortOrder }[]`                         |
+| `upsertDeliveryZone`     | Server Action | `deliveryZoneInputSchema` | `{ ok, id? }`                                                          |
+| `deleteDeliveryZone`     | Server Action | `{ id }`                  | `{ ok }`                                                               |
+| `getDeliverySettings`    | Server Action | —                         | `{ pickupEnabled, pickupPointsEnabled, deliveryEnabled, fallbackFee }` |
+| `updateDeliverySettings` | Server Action | `deliverySettingsSchema`  | `{ ok }`                                                               |
+| `resolveDeliveryFee`     | Server Action | `{ district: string }`    | `{ fee: number }` — uso interno order form                             |
 
 ### Bundles / órdenes (cambios)
 

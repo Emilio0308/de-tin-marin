@@ -1,9 +1,8 @@
 import "server-only";
 
-import { storeFeatures } from "@de-tin-marin/config/store-features";
-import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
+import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
-import { resolveCheckoutDeliveryFeeInputSchema } from "@de-tin-marin/validations/checkout";
+import { resolveCheckoutFulfillmentFeeInputSchema } from "@de-tin-marin/validations/checkout";
 import {
   logServerError,
   logServerInfo,
@@ -12,17 +11,48 @@ import {
 import {
   getDeliverySettingsRepo,
   listActiveDeliveryZonesRepo,
+  listActivePickupPointsRepo,
 } from "../repositories/delivery.repository";
 
-export async function resolveCheckoutDeliveryFeeService(
+export async function listCheckoutPickupPointsService(config: SupabaseConfig) {
+  const scope = "listCheckoutPickupPointsService";
+  const [settings, points] = await Promise.all([
+    getDeliverySettingsRepo(config),
+    listActivePickupPointsRepo(config),
+  ]);
+
+  if (settings?.pickup_points_enabled === false) {
+    logServerInfo(scope, "disabled", { reason: "pickup_points_enabled=false" });
+    return { ok: true as const, data: [] };
+  }
+
+  const data = points.map((point) => ({
+    id: point.id,
+    name: point.name,
+    lat: Number(point.lat),
+    lng: Number(point.lng),
+    fee: Number(point.fee),
+  }));
+
+  logServerInfo(scope, "ok", { itemCount: data.length });
+  if (data.length === 0) {
+    logServerWarn(scope, "empty_points", {
+      hint: "No active pickup_points — checkout should hide pickup_point option",
+    });
+  }
+
+  return { ok: true as const, data };
+}
+
+export async function resolveCheckoutFulfillmentFeeService(
   config: SupabaseConfig,
   raw: unknown,
 ): Promise<
   | { ok: true; data: { fee: number; covered: boolean } }
   | { ok: false; error: "VALIDATION" }
 > {
-  const scope = "resolveCheckoutDeliveryFeeService";
-  const parsed = resolveCheckoutDeliveryFeeInputSchema.safeParse(raw);
+  const scope = "resolveCheckoutFulfillmentFeeService";
+  const parsed = resolveCheckoutFulfillmentFeeInputSchema.safeParse(raw);
   if (!parsed.success) {
     logServerError(scope, {
       message: "VALIDATION",
@@ -31,13 +61,14 @@ export async function resolveCheckoutDeliveryFeeService(
     return { ok: false, error: "VALIDATION" };
   }
 
-  const [zones, settings] = await Promise.all([
+  const [zones, settings, points] = await Promise.all([
     listActiveDeliveryZonesRepo(config),
     getDeliverySettingsRepo(config),
+    listActivePickupPointsRepo(config),
   ]);
 
-  const result = resolveCheckoutDeliveryFee(
-    storeFeatures.pickupEnabled ? "delivery" : "delivery",
+  const result = resolveCheckoutFulfillmentFee(
+    parsed.data.method,
     parsed.data.district,
     parsed.data.mapPin,
     zones.map((zone) => ({
@@ -46,21 +77,40 @@ export async function resolveCheckoutDeliveryFeeService(
       isActive: zone.is_active,
     })),
     {
-      pickupEnabled: settings?.pickup_enabled ?? storeFeatures.pickupEnabled,
+      pickupEnabled: settings?.pickup_enabled ?? false,
+      pickupPointsEnabled: settings?.pickup_points_enabled ?? true,
       deliveryEnabled: settings?.delivery_enabled ?? true,
       fallbackFee: Number(settings?.fallback_fee ?? 0),
     },
+    parsed.data.pickupPointId,
+    points.map((point) => ({
+      id: point.id,
+      fee: Number(point.fee),
+      isActive: point.is_active,
+    })),
   );
 
   logServerInfo(scope, "resolved", {
+    method: parsed.data.method,
+    pickupPointId: parsed.data.pickupPointId,
     district: parsed.data.district,
     hasMapPin: Boolean(parsed.data.mapPin),
-    zoneCount: zones.length,
     fee: result.fee,
     covered: result.covered,
   });
 
   return { ok: true, data: result };
+}
+
+/** @deprecated Use resolveCheckoutFulfillmentFeeService */
+export async function resolveCheckoutDeliveryFeeService(
+  config: SupabaseConfig,
+  raw: unknown,
+) {
+  return resolveCheckoutFulfillmentFeeService(config, {
+    ...(typeof raw === "object" && raw !== null ? raw : {}),
+    method: "delivery",
+  });
 }
 
 export async function listCheckoutDeliveryZonesService(config: SupabaseConfig) {

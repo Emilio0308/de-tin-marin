@@ -15,7 +15,19 @@ import { StorefrontFunnelSteps } from "@/shared/components/storefront-funnel-ste
 import { StockBannerSection } from "@/shared/components/stock-banner/stock-banner";
 import { DeliveryMap } from "../delivery-map/delivery-map.dynamic";
 import { CheckoutSelectField, CheckoutTextField } from "./checkout-form-field";
-import type { CheckoutPageProps } from "./checkout-page.types";
+import type {
+  CheckoutPageProps,
+  GuestCheckoutFulfillmentMethod,
+} from "./checkout-page.types";
+
+function fulfillmentPillClass(selected: boolean): string {
+  return [
+    "font-label text-label-bold inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border-2 px-5 py-2.5 text-sm transition-colors",
+    selected
+      ? "border-primary bg-primary/5 text-primary"
+      : "border-outline-variant/40 text-on-surface-variant hover:border-secondary/60",
+  ].join(" ");
+}
 
 function CheckoutAtmosphere() {
   return (
@@ -175,6 +187,11 @@ export function CheckoutPage({
   form,
   fieldErrors,
   showValidationSummary,
+  fulfillmentMethod,
+  showPickupPointOption,
+  pickupPointId,
+  pickupPointError,
+  pickupPoints,
   districts,
   mapPin,
   subtotal,
@@ -191,6 +208,9 @@ export function CheckoutPage({
   labels,
   onChange,
   onFieldBlur,
+  onFulfillmentMethodChange,
+  onPickupPointChange,
+  onPickupPointBlur,
   onMapPinChange,
   onSubmit,
 }: CheckoutPageProps) {
@@ -200,6 +220,21 @@ export function CheckoutPage({
     !stockBlocked &&
     !isDeliveryPending &&
     !isStockPending;
+
+  const selectedPickupPoint = pickupPoints.find(
+    (point) => point.id === pickupPointId,
+  );
+  const pickupMapPin = selectedPickupPoint
+    ? { lat: selectedPickupPoint.lat, lng: selectedPickupPoint.lng }
+    : mapPin;
+
+  const fulfillmentOptions: {
+    method: GuestCheckoutFulfillmentMethod;
+    label: string;
+  }[] = [
+    { method: "delivery", label: labels.fulfillmentDelivery },
+    { method: "pickup_point", label: labels.fulfillmentPickupPoint },
+  ];
 
   return (
     <StorefrontLayout>
@@ -335,92 +370,192 @@ export function CheckoutPage({
                 </div>
               </CheckoutFormSection>
 
-              <CheckoutFormSection
-                title={labels.addressTitle}
-                step="2"
-                icon={<Truck className="h-5 w-5" strokeWidth={2} />}
-              >
-                <CheckoutTextField
-                  id="line1"
-                  label={labels.line1}
-                  value={form.line1}
-                  required
-                  error={fieldErrors.line1}
-                  requiredHint={labels.requiredHint}
-                  autoComplete="street-address"
-                  maxLength={300}
-                  onChange={(value) => onChange("line1", value)}
-                  onBlur={() => onFieldBlur("line1", form)}
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <CheckoutSelectField
-                    id="district"
-                    label={labels.district}
-                    value={form.district}
-                    required
-                    error={fieldErrors.district}
-                    requiredHint={labels.requiredHint}
-                    placeholder={labels.districtPlaceholder}
-                    options={districts.map((zone) => ({
-                      value: zone.district,
-                      label: zone.district,
-                    }))}
-                    onChange={(value) => onChange("district", value)}
-                    onBlur={() => onFieldBlur("district", form)}
-                  />
-                  <CheckoutTextField
-                    id="city"
-                    label={labels.city}
-                    value={form.city}
-                    required
-                    error={fieldErrors.city}
-                    requiredHint={labels.requiredHint}
-                    autoComplete="address-level2"
-                    autoCapitalize="words"
-                    spellCheck={false}
-                    maxLength={120}
-                    onChange={(value) => onChange("city", value)}
-                    onBlur={() => onFieldBlur("city", form)}
-                  />
-                  <CheckoutTextField
-                    id="province"
-                    label={labels.province}
-                    value={form.province}
-                    required
-                    error={fieldErrors.province}
-                    requiredHint={labels.requiredHint}
-                    autoComplete="address-level1"
-                    autoCapitalize="words"
-                    spellCheck={false}
-                    maxLength={120}
-                    onChange={(value) => onChange("province", value)}
-                    onBlur={() => onFieldBlur("province", form)}
-                  />
-                  <CheckoutTextField
-                    id="reference"
-                    label={labels.reference}
-                    value={form.reference}
-                    hint={labels.referenceHint}
-                    requiredHint={labels.requiredHint}
-                    autoComplete="off"
-                    maxLength={500}
-                    onChange={(value) => onChange("reference", value)}
-                    onBlur={() => onFieldBlur("reference", form)}
-                  />
-                </div>
-              </CheckoutFormSection>
+              {showPickupPointOption ? (
+                <CheckoutFormSection
+                  title={labels.fulfillmentTitle}
+                  step="2"
+                  icon={<Truck className="h-5 w-5" strokeWidth={2} />}
+                >
+                  <div
+                    role="tablist"
+                    aria-label={labels.fulfillmentTitle}
+                    className="flex flex-wrap gap-3"
+                  >
+                    {fulfillmentOptions.map(({ method, label }) => (
+                      <label
+                        key={method}
+                        className={fulfillmentPillClass(
+                          fulfillmentMethod === method,
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="fulfillmentMethod"
+                          value={method}
+                          checked={fulfillmentMethod === method}
+                          className="sr-only"
+                          onChange={() => onFulfillmentMethodChange(method)}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </CheckoutFormSection>
+              ) : null}
 
-              <CheckoutFormSection
-                title={labels.mapSectionTitle}
-                step="3"
-                icon={<MapPinned className="h-5 w-5" strokeWidth={2} />}
-              >
-                <DeliveryMap
-                  mapPin={mapPin}
-                  onChange={onMapPinChange}
-                  labels={{ title: "", hint: labels.mapHint }}
-                />
-              </CheckoutFormSection>
+              {fulfillmentMethod === "delivery" ? (
+                <>
+                  <CheckoutFormSection
+                    title={labels.addressTitle}
+                    step={showPickupPointOption ? "3" : "2"}
+                    icon={<Truck className="h-5 w-5" strokeWidth={2} />}
+                  >
+                    <CheckoutTextField
+                      id="line1"
+                      label={labels.line1}
+                      value={form.line1}
+                      required
+                      error={fieldErrors.line1}
+                      requiredHint={labels.requiredHint}
+                      autoComplete="street-address"
+                      maxLength={300}
+                      onChange={(value) => onChange("line1", value)}
+                      onBlur={() => onFieldBlur("line1", form)}
+                    />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <CheckoutSelectField
+                        id="district"
+                        label={labels.district}
+                        value={form.district}
+                        required
+                        error={fieldErrors.district}
+                        requiredHint={labels.requiredHint}
+                        placeholder={labels.districtPlaceholder}
+                        options={districts.map((zone) => ({
+                          value: zone.district,
+                          label: zone.district,
+                        }))}
+                        onChange={(value) => onChange("district", value)}
+                        onBlur={() => onFieldBlur("district", form)}
+                      />
+                      <CheckoutTextField
+                        id="city"
+                        label={labels.city}
+                        value={form.city}
+                        required
+                        error={fieldErrors.city}
+                        requiredHint={labels.requiredHint}
+                        autoComplete="address-level2"
+                        autoCapitalize="words"
+                        spellCheck={false}
+                        maxLength={120}
+                        onChange={(value) => onChange("city", value)}
+                        onBlur={() => onFieldBlur("city", form)}
+                      />
+                      <CheckoutTextField
+                        id="province"
+                        label={labels.province}
+                        value={form.province}
+                        required
+                        error={fieldErrors.province}
+                        requiredHint={labels.requiredHint}
+                        autoComplete="address-level1"
+                        autoCapitalize="words"
+                        spellCheck={false}
+                        maxLength={120}
+                        onChange={(value) => onChange("province", value)}
+                        onBlur={() => onFieldBlur("province", form)}
+                      />
+                      <CheckoutTextField
+                        id="reference"
+                        label={labels.reference}
+                        value={form.reference}
+                        hint={labels.referenceHint}
+                        requiredHint={labels.requiredHint}
+                        autoComplete="off"
+                        maxLength={500}
+                        onChange={(value) => onChange("reference", value)}
+                        onBlur={() => onFieldBlur("reference", form)}
+                      />
+                    </div>
+                  </CheckoutFormSection>
+
+                  <CheckoutFormSection
+                    title={labels.mapSectionTitle}
+                    step={showPickupPointOption ? "4" : "3"}
+                    icon={<MapPinned className="h-5 w-5" strokeWidth={2} />}
+                  >
+                    <DeliveryMap
+                      mapPin={mapPin}
+                      onChange={onMapPinChange}
+                      labels={{ title: "", hint: labels.mapHint }}
+                    />
+                  </CheckoutFormSection>
+                </>
+              ) : (
+                <CheckoutFormSection
+                  title={labels.pickupPointTitle}
+                  step="3"
+                  icon={<MapPinned className="h-5 w-5" strokeWidth={2} />}
+                >
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="pickupPointId"
+                      className="font-label text-label-bold text-on-surface block"
+                    >
+                      {labels.pickupPointTitle}
+                      <span className="text-error ml-1" aria-hidden>
+                        *
+                      </span>
+                    </label>
+                    <select
+                      id="pickupPointId"
+                      name="pickupPointId"
+                      value={pickupPointId}
+                      required
+                      aria-invalid={pickupPointError ? "true" : undefined}
+                      aria-describedby={
+                        pickupPointError ? "pickupPointId-error" : undefined
+                      }
+                      className={[
+                        "font-body text-body-md border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary min-h-11 w-full rounded-2xl border px-4 py-2.5 focus-visible:outline-none focus-visible:ring-2",
+                        pickupPointError ? "border-error" : "",
+                      ].join(" ")}
+                      onChange={(event) =>
+                        onPickupPointChange(event.target.value)
+                      }
+                      onBlur={onPickupPointBlur}
+                    >
+                      <option value="">{labels.pickupPointPlaceholder}</option>
+                      {pickupPoints.map((point) => (
+                        <option key={point.id} value={point.id}>
+                          {point.name} · {formatPrice(point.fee)}
+                        </option>
+                      ))}
+                    </select>
+                    {pickupPointError ? (
+                      <p
+                        id="pickupPointId-error"
+                        role="alert"
+                        className="font-body text-body-sm text-error"
+                      >
+                        {pickupPointError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {selectedPickupPoint ? (
+                    <DeliveryMap
+                      mapPin={pickupMapPin}
+                      readOnly
+                      labels={{
+                        title: labels.mapTitle,
+                        hint: labels.pickupMapHint,
+                      }}
+                    />
+                  ) : null}
+                </CheckoutFormSection>
+              )}
 
               <div className="space-y-4 lg:hidden">
                 <StockBannerSection

@@ -8,6 +8,7 @@ export type OrderDetailLabels = {
   customer: string;
   delivery: string;
   pickupMethod: string;
+  pickupPointMethod: string;
   deliveryMethod: string;
   mapTitle: string;
   mapHint: string;

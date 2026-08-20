@@ -1,8 +1,10 @@
 import {
   normalizeDistrict,
+  resolvePickupPointFee,
   type DeliverySettings,
   type DeliveryZone,
   type OrderFulfillmentMethod,
+  type PickupPointFeeSource,
 } from "./delivery-fee";
 import { roundMoney } from "./prices";
 
@@ -18,7 +20,7 @@ export type MapPin = {
   lng: number;
 };
 
-export type CheckoutDeliveryResult = {
+export type CheckoutFulfillmentResult = {
   covered: boolean;
   fee: number;
 };
@@ -32,15 +34,28 @@ export function isWithinPiuraBounds(lat: number, lng: number): boolean {
   );
 }
 
-export function resolveCheckoutDeliveryFee(
+export function resolveCheckoutFulfillmentFee(
   method: OrderFulfillmentMethod,
   district: string | undefined,
-  mapPin: MapPin,
+  mapPin: MapPin | undefined,
   zones: DeliveryZone[],
   settings: DeliverySettings,
-): CheckoutDeliveryResult {
+  pickupPointId?: string,
+  points: PickupPointFeeSource[] = [],
+): CheckoutFulfillmentResult {
   if (method === "pickup") {
     return { covered: true, fee: 0 };
+  }
+
+  if (method === "pickup_point") {
+    if (!settings.pickupPointsEnabled) {
+      return { covered: false, fee: 0 };
+    }
+    const fee = resolvePickupPointFee(pickupPointId, points);
+    if (fee === null) {
+      return { covered: false, fee: 0 };
+    }
+    return { covered: true, fee };
   }
 
   if (!settings.deliveryEnabled) {
@@ -56,9 +71,28 @@ export function resolveCheckoutDeliveryFee(
     return { covered: true, fee: roundMoney(zoneMatch.fee) };
   }
 
-  if (isWithinPiuraBounds(mapPin.lat, mapPin.lng)) {
+  if (mapPin && isWithinPiuraBounds(mapPin.lat, mapPin.lng)) {
     return { covered: true, fee: roundMoney(settings.fallbackFee) };
   }
 
   return { covered: false, fee: 0 };
 }
+
+/** @deprecated Use resolveCheckoutFulfillmentFee */
+export function resolveCheckoutDeliveryFee(
+  method: OrderFulfillmentMethod,
+  district: string | undefined,
+  mapPin: MapPin,
+  zones: DeliveryZone[],
+  settings: DeliverySettings,
+): CheckoutFulfillmentResult {
+  return resolveCheckoutFulfillmentFee(
+    method,
+    district,
+    mapPin,
+    zones,
+    settings,
+  );
+}
+
+export type CheckoutDeliveryResult = CheckoutFulfillmentResult;

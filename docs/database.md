@@ -325,13 +325,30 @@ Seed inicial (Piura): Piura, Castilla, 26 de Octubre, La Unión, Catacaos — mi
 
 **`pricing.delivery_settings`** (singleton, `singleton_key = 'default'`):
 
-| Columna            | Tipo          | Notas                         |
-| ------------------ | ------------- | ----------------------------- |
-| `pickup_enabled`   | boolean       | Recojo en tienda              |
-| `delivery_enabled` | boolean       | Delivery habilitado           |
-| `fallback_fee`     | numeric(12,2) | Tarifa si distrito no listado |
+| Columna                 | Tipo          | Notas                           |
+| ----------------------- | ------------- | ------------------------------- |
+| `pickup_enabled`        | boolean       | Recojo en tienda (admin manual) |
+| `pickup_points_enabled` | boolean       | Puntos de recojo en ecommerce   |
+| `delivery_enabled`      | boolean       | Delivery habilitado             |
+| `fallback_fee`          | numeric(12,2) | Tarifa si distrito no listado   |
 
-Resolución al crear orden: `pickup` → `shipping_total = 0`; `delivery` → fee de zona o `fallback_fee` (Regla 19).
+Resolución al crear orden: `pickup` → `shipping_total = 0`; `pickup_point` → fee del punto activo congelado en snapshot; `delivery` → fee de zona o `fallback_fee` (Regla 19).
+
+**`pricing.pickup_points`** (S4-08):
+
+| Columna      | Tipo          | Notas                                     |
+| ------------ | ------------- | ----------------------------------------- |
+| `name`       | text unique   | Nombre del punto (mall, centro comercial) |
+| `lat`, `lng` | numeric       | Coordenadas centrales; bounds en check    |
+| `fee`        | numeric(12,2) | Tarifa configurable `>= 0`                |
+| `is_active`  | boolean       | Kill switch por punto                     |
+| `sort_order` | int           | Orden en UI admin / checkout              |
+
+Lectura pública: solo `is_active = true`. Staff ve y edita inactivos.
+Delete físico: las órdenes históricas conservan el JSONB snapshot.
+
+**`pricing.delivery_settings`** — `pickup_points_enabled` (default `true`) es
+el kill switch global de ecommerce. Off → listado público vacío.
 
 ### Schema `commerce`
 
@@ -348,7 +365,7 @@ Resolución al crear orden: `pickup` → `shipping_total = 0`; `delivery` → fe
 | `order_number`                                                             | Código legible (`TM-YYYYMMDD-NNNN`)                                                                                                                                                     |
 | `customer_id`                                                              | → `crm.customers` nullable (guest v1)                                                                                                                                                   |
 | `contact`                                                                  | jsonb — snapshot `name`, `lastName`, `phone`, `email`                                                                                                                                   |
-| `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `notes`                                                                                                                                            |
+| `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `pickupPoint`, `notes`                                                                                                                             |
 | `shopping_cart`                                                            | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)): product dual `packageQuantity`/`unitQuantity`; pack BOM; bundle components. Migración dual histórica: `00024` |
 | `payment_methods`                                                          | jsonb — array flexible; detalle interno → S2C                                                                                                                                           |
 | `status`                                                                   | Ver [`orders.md`](orders.md)                                                                                                                                                            |
@@ -431,6 +448,7 @@ erDiagram
 | `catalog.packs` / `pack_items`  | Público activos               | Staff                       |
 | `pricing.campaigns`             | Público (SELECT)              | Staff                       |
 | `pricing.delivery_zones`        | Público activos               | Staff                       |
+| `pricing.pickup_points`         | Público activos               | Staff (CRUD)                |
 | `pricing.delivery_settings`     | Público                       | Staff (update)              |
 | `core.hero_settings`            | Público                       | Staff (update)              |
 | `core.about_page_settings`      | Público                       | Staff (update)              |
@@ -452,6 +470,7 @@ erDiagram
 | `catalog.list_public_packs(...)`            | S3A-1-R — page/sort/count público de packs (`finalPrice` con campaña activa)                        |
 | `catalog.bump_catalog_version()`            | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                 |
 | `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
+| `commerce.insert_guest_order(...)`          | Guest create: `delivery` XOR `pickup_point`; no `pickup` (S4-08 / `00028`)                          |
 
 ---
 

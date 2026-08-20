@@ -124,4 +124,22 @@ describe("mapFulfillmentToNotify", () => {
       summary: "Recojo en tienda",
     });
   });
+
+  it("pickup_point con nombre", () => {
+    expect(
+      mapFulfillmentToNotify({
+        method: "pickup_point",
+        pickupPoint: {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Real Plaza",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+      }),
+    ).toEqual({
+      method: "pickup_point",
+      summary: "Punto de recojo: Real Plaza",
+    });
+  });
 });

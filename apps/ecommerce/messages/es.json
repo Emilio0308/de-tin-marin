@@ -205,7 +205,13 @@
     "summaryTitle": "Tu pedido",
     "secureNote": "Revisamos stock y cobertura antes de confirmar.",
     "contactTitle": "Datos de contacto",
+    "fulfillmentTitle": "Método de entrega",
+    "fulfillmentDelivery": "Delivery",
+    "fulfillmentPickupPoint": "Punto de recojo",
     "addressTitle": "Dirección de entrega",
+    "pickupPointTitle": "Punto de recojo",
+    "pickupPointPlaceholder": "Selecciona un punto de recojo",
+    "pickupMapHint": "Ubicación del punto seleccionado (solo lectura).",
     "mapSectionTitle": "Ubicación",
     "steps": {
       "label": "Progreso del pedido",
@@ -259,6 +265,10 @@
       "bundleNotFound": "Una o más sorpresas del carrito ya no están disponibles.",
       "packNotFound": "Uno o más combos del carrito ya no están disponibles.",
       "duplicateProductInBundle": "Hay productos duplicados en una sorpresa. Vuelve a personalizarla.",
+      "pickupPointNotFound": "El punto de recojo ya no está disponible.",
+      "pickupPointInactive": "El punto de recojo seleccionado está desactivado.",
+      "pickupPointRequired": "Selecciona un punto de recojo.",
+      "shippingFeeMismatch": "El costo de envío cambió. Vuelve a revisar tu pedido.",
       "unexpected": "No pudimos crear el pedido. Intenta de nuevo en unos minutos."
     }
   },
@@ -278,6 +288,8 @@
       "paymentStatus": "Pago",
       "deliveryTitle": "Entrega",
       "pickupTitle": "Recojo en tienda",
+      "pickupPointTitle": "Punto de recojo",
+      "pickupInStoreNote": "Recojo en tienda De Tin Marín",
       "bundleBadge": "Sorpresa",
       "packBadge": "Combo",
       "bundleComponents": "dulces",

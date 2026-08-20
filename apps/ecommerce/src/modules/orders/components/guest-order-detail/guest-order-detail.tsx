@@ -14,8 +14,8 @@ import type {
   PaymentInstructionsProps,
 } from "./guest-order-detail.types";
 import {
-  formatDeliveryAddress,
   formatGuestOrderDate,
+  resolveFulfillmentDetail,
   resolveFulfillmentTitle,
   summarizeGuestOrderLines,
 } from "./guest-order-detail.helpers";
@@ -190,7 +190,11 @@ export function GuestOrderDetailView({ order, labels }: GuestOrderDetailProps) {
     packComponents: labels.packComponents,
     formatBundlePersons: labels.formatBundlePersons,
   });
-  const deliveryAddress = formatDeliveryAddress(order);
+  const fulfillmentDetail = resolveFulfillmentDetail(order, labels);
+  const fulfillmentTitle = resolveFulfillmentTitle(
+    order.fulfillment.method,
+    labels,
+  );
 
   return (
     <div className="space-y-5">
@@ -247,13 +251,10 @@ export function GuestOrderDetailView({ order, labels }: GuestOrderDetailProps) {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="space-y-5">
-          {deliveryAddress ? (
-            <OrderDetailCard
-              title={resolveFulfillmentTitle(order.fulfillment.method, labels)}
-              icon={MapPin}
-            >
+          {fulfillmentDetail ? (
+            <OrderDetailCard title={fulfillmentTitle} icon={MapPin}>
               <p className="font-body text-body-md text-on-surface-variant leading-relaxed">
-                {deliveryAddress}
+                {fulfillmentDetail}
               </p>
             </OrderDetailCard>
           ) : null}

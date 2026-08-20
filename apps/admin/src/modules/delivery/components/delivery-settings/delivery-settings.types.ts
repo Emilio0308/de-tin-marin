@@ -26,6 +26,8 @@ export type DeliverySettingsLabels = {
   sectionGlobal: string;
   pickupEnabled: string;
   pickupHint: string;
+  pickupPointsEnabled: string;
+  pickupPointsHint: string;
   deliveryEnabled: string;
   deliveryHint: string;
   fallbackFee: string;

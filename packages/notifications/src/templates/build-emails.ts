@@ -30,15 +30,19 @@ function customerDisplayName(
 function fulfillmentMethodLabel(
   method: OrderCreatedNotifyInput["fulfillment"]["method"],
 ): string {
-  return method === "pickup" ? "Recojo" : "Entrega a domicilio";
+  if (method === "pickup") return "Recojo en tienda";
+  if (method === "pickup_point") return "Punto de recojo";
+  return "Entrega a domicilio";
 }
 
 function fulfillmentSummaryText(input: OrderCreatedNotifyInput): string {
   const summary = input.fulfillment.summary?.trim();
   if (summary) return summary;
-  return input.fulfillment.method === "pickup"
-    ? "Recojo en tienda"
-    : "Dirección no indicada";
+  if (input.fulfillment.method === "pickup") return "Recojo en tienda";
+  if (input.fulfillment.method === "pickup_point") {
+    return "Punto de recojo no indicado";
+  }
+  return "Dirección no indicada";
 }
 
 function discountRowHtml(

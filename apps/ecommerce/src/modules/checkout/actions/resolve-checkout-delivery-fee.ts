@@ -5,13 +5,13 @@ import {
   guardAction,
   summarizeActionInput,
 } from "@/shared/errors/server-error";
-import { resolveCheckoutDeliveryFeeService } from "../services/checkout-delivery.service";
+import { resolveCheckoutFulfillmentFeeService } from "../services/checkout-delivery.service";
 
 export async function resolveCheckoutDeliveryFeeAction(raw: unknown) {
   return guardAction(
     "resolveCheckoutDeliveryFeeAction",
     async () => {
-      const result = await resolveCheckoutDeliveryFeeService(
+      const result = await resolveCheckoutFulfillmentFeeService(
         supabaseConfig,
         raw,
       );

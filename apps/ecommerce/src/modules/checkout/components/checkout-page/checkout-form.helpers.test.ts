@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getCheckoutFieldErrorKey,
   getCheckoutFieldErrorKeys,
+  getPickupPointErrorKey,
   mapCheckoutFieldErrors,
   sanitizeCheckoutField,
   sanitizePersonName,
@@ -115,5 +116,23 @@ describe("checkout form validation", () => {
     expect(messages.phone).toBe("Celular inválido");
     expect(messages.lastName).toBe("Solo letras");
     expect(messages.line1).toBe("Muy corto");
+  });
+
+  it("no exige dirección en pickup_point", () => {
+    expect(
+      getCheckoutFieldErrorKeys(
+        {
+          ...validForm,
+          line1: "",
+          district: "",
+        },
+        "pickup_point",
+      ),
+    ).toEqual({});
+  });
+
+  it("marca punto de recojo requerido", () => {
+    expect(getPickupPointErrorKey("")).toBe("required");
+    expect(getPickupPointErrorKey("abc")).toBeUndefined();
   });
 });

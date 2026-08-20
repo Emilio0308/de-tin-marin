@@ -8,6 +8,17 @@ export type DeliveryZoneDTO = {
 
 export type DeliverySettingsDTO = {
   pickupEnabled: boolean;
+  pickupPointsEnabled: boolean;
   deliveryEnabled: boolean;
   fallbackFee: number;
+};
+
+export type PickupPointDTO = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  fee: number;
+  isActive: boolean;
+  sortOrder: number;
 };

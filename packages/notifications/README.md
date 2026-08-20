@@ -27,10 +27,11 @@ puede garantizar que un destinatario reciba el correo.
 ## Datos y privacidad
 
 `OrderCreatedNotifyInput` es un DTO explícito, no una fila cruda. Incluye
-identificadores/totales, contacto, resumen de fulfillment y líneas congeladas
-de producto/pack/bundle. El correo administrativo puede mostrar ese detalle
-operativo; no registrarlo en logs. Los helpers de app solo loguean
-`orderId`, `orderNumber`, origen, `sent` y código de fallo.
+identificadores/totales, contacto, resumen de fulfillment (`delivery` /
+`pickup` / `pickup_point`) y líneas congeladas de producto/pack/bundle. El
+correo administrativo puede mostrar ese detalle operativo; no registrarlo en
+logs. Los helpers de app solo loguean `orderId`, `orderNumber`, origen,
+`sent` y código de fallo.
 
 Las URLs de ecommerce/admin son opcionales y se arman desde bases server-only.
 Los links guest incluyen `orderNumber` y email, necesarios para el lookup sin

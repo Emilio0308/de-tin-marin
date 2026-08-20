@@ -4,7 +4,11 @@ import {
   BUNDLE_LINE_QUANTITY_MIN,
 } from "./customize-bundle";
 import {
-  createOrderInputObjectSchema,
+  guestOrderFulfillmentSchema,
+  orderContactSchema,
+  orderProductLineInputSchema,
+  orderBundleLineInputSchema,
+  orderPackLineInputSchema,
   orderShoppingCartBundleLineSchema,
   orderShoppingCartPackLineSchema,
   orderShoppingCartProductLineSchema,
@@ -16,9 +20,26 @@ export const mapPinSchema = z.object({
   lng: z.number().min(-180).max(180),
 });
 
-export const createGuestOrderInputSchema = createOrderInputObjectSchema
+const guestOrderInputObjectSchema = z.object({
+  contact: orderContactSchema,
+  fulfillment: guestOrderFulfillmentSchema,
+  lines: z
+    .array(
+      z.discriminatedUnion("type", [
+        orderProductLineInputSchema,
+        orderBundleLineInputSchema,
+        orderPackLineInputSchema,
+      ]),
+    )
+    .min(1),
+  shippingTotal: z.number().nonnegative().default(0),
+  discountTotal: z.number().nonnegative().default(0),
+  surchargeTotal: z.number().nonnegative().default(0),
+});
+
+export const createGuestOrderInputSchema = guestOrderInputObjectSchema
   .extend({
-    mapPin: mapPinSchema,
+    mapPin: mapPinSchema.optional(),
   })
   .superRefine((value, ctx) => {
     if (value.fulfillment.method === "delivery") {
@@ -27,6 +48,23 @@ export const createGuestOrderInputSchema = createOrderInputObjectSchema
           code: z.ZodIssueCode.custom,
           message: "deliveryAddress is required for delivery",
           path: ["fulfillment", "deliveryAddress"],
+        });
+      }
+      if (!value.mapPin) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mapPin is required for delivery",
+          path: ["mapPin"],
+        });
+      }
+    }
+
+    if (value.fulfillment.method === "pickup_point") {
+      if (!value.fulfillment.pickupPoint) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "pickupPoint is required for pickup_point",
+          path: ["fulfillment", "pickupPoint"],
         });
       }
     }
@@ -64,10 +102,43 @@ export const createGuestOrderInputSchema = createOrderInputObjectSchema
     });
   });
 
-export const resolveCheckoutDeliveryFeeInputSchema = z.object({
-  district: z.string().min(1).max(120),
-  mapPin: mapPinSchema,
-});
+export const resolveCheckoutFulfillmentFeeInputSchema = z
+  .object({
+    method: z.enum(["delivery", "pickup_point"]),
+    district: z.string().max(120).optional(),
+    mapPin: mapPinSchema.optional(),
+    pickupPointId: z.string().uuid().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.method === "delivery") {
+      if (!value.district?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "district is required for delivery",
+          path: ["district"],
+        });
+      }
+      if (!value.mapPin) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mapPin is required for delivery",
+          path: ["mapPin"],
+        });
+      }
+    }
+
+    if (value.method === "pickup_point" && !value.pickupPointId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPointId is required for pickup_point",
+        path: ["pickupPointId"],
+      });
+    }
+  });
+
+/** @deprecated Use resolveCheckoutFulfillmentFeeInputSchema */
+export const resolveCheckoutDeliveryFeeInputSchema =
+  resolveCheckoutFulfillmentFeeInputSchema;
 
 export const checkCartStockInputSchema = z.object({
   lines: z.array(
@@ -94,9 +165,11 @@ export const validateGuestCheckoutCartInputSchema = z.object({
 });
 
 export type CreateGuestOrderInput = z.infer<typeof createGuestOrderInputSchema>;
-export type ResolveCheckoutDeliveryFeeInput = z.infer<
-  typeof resolveCheckoutDeliveryFeeInputSchema
+export type ResolveCheckoutFulfillmentFeeInput = z.infer<
+  typeof resolveCheckoutFulfillmentFeeInputSchema
 >;
+export type ResolveCheckoutDeliveryFeeInput =
+  ResolveCheckoutFulfillmentFeeInput;
 export type CheckCartStockInput = z.infer<typeof checkCartStockInputSchema>;
 export type PreviewGuestCartInput = z.infer<typeof previewGuestCartInputSchema>;
 export type ValidateGuestCheckoutCartInput = z.infer<

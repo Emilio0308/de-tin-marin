@@ -51,6 +51,36 @@ describe("createGuestOrderInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("acepta pickup_point con snapshot sin mapPin", () => {
+    const pickupPointId = "22222222-2222-4222-8222-222222222222";
+    const result = createGuestOrderInputSchema.safeParse({
+      contact: baseGuestOrder.contact,
+      fulfillment: {
+        method: "pickup_point",
+        pickupPoint: {
+          id: pickupPointId,
+          name: "Mall Aventura",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+        notes: null,
+      },
+      lines: baseGuestOrder.lines,
+      shippingTotal: 6,
+      discountTotal: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rechaza pickup in-store en guest checkout", () => {
+    const result = createGuestOrderInputSchema.safeParse({
+      ...baseGuestOrder,
+      fulfillment: { method: "pickup" },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("acepta línea bundle con componentes", () => {
     const result = createGuestOrderInputSchema.safeParse({
       ...baseGuestOrder,

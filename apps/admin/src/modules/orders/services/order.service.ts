@@ -284,6 +284,7 @@ export async function createOrderService(
   const shippingResult = await resolveDeliveryFeeService(config, {
     method: parsed.data.fulfillment.method,
     district: parsed.data.fulfillment.deliveryAddress?.district,
+    pickupPointId: parsed.data.fulfillment.pickupPoint?.id,
   });
   const shippingTotal =
     shippingResult.ok === true ? shippingResult.fee : parsed.data.shippingTotal;
@@ -357,6 +358,7 @@ export async function createOrderService(
     fulfillment: mapFulfillmentToNotify({
       method: parsed.data.fulfillment.method,
       deliveryAddress: parsed.data.fulfillment.deliveryAddress,
+      pickupPoint: parsed.data.fulfillment.pickupPoint,
     }),
     adminEmail: settings?.email ?? "",
   });

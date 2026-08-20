@@ -36,7 +36,7 @@ El app `ecommerce` tiene infraestructura de módulos, TanStack Query, i18n, flag
 ```typescript
 export const storeFeatures = {
   enableUnitsPerPerson: false, // S3A-2 wizard
-  pickupEnabled: false, // S3A-3 checkout
+  pickupEnabled: false, // recojo en tienda; puntos de recojo = S4-08
   strictStockValidationOnCheckout: false, // S3A-3: false = warning; true = rechazar
 } as const;
 ```

@@ -199,13 +199,23 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ### Regla 19 — Delivery configurable
 
-- **Trigger:** Crear orden con `fulfillment.method = delivery`.
+- **Trigger:** Crear orden (`fulfillment.method` = `delivery` \| `pickup` \|
+  `pickup_point`).
 - **Pasos:**
-  1. Resolver tarifa desde `pricing.delivery_zones` donde `district` coincide (case-insensitive, trim) y `is_active`.
-  2. Si no hay match → `pricing.delivery_settings.fallback_fee`.
-  3. Si `method = pickup` → `shipping_total = 0`.
-  4. Congelar `shipping_total` en `orders.shipping_total` al crear la orden.
-- **Fallo:** Rechazar delivery si `delivery_enabled = false` (cuando se aplique validación operativa).
+  1. `delivery`: tarifa desde `pricing.delivery_zones` (`district`
+     case-insensitive, `is_active`). Sin match: guest exige cobertura
+     (zona **o** pin dentro del bbox Piura) y usa `fallback_fee`; fuera de
+     cobertura → no crear orden.
+  2. `pickup` → `shipping_total = 0` (recojo **en tienda**; **solo admin**).
+  3. `pickup_point` → fee del punto **activo** (Regla 30); congelar snapshot
+     en `fulfillment.pickupPoint`. XOR: no mezclar con `deliveryAddress`.
+  4. Congelar `shipping_total` al crear. Guest revalida el fee enviado
+     (`SHIPPING_FEE_MISMATCH` si no coincide).
+- **Guest ecommerce:** solo `delivery` o `pickup_point`. Flag
+  `storeFeatures.pickupEnabled` oculta recojo en tienda; **no** controla
+  puntos de recojo (`pickup_points_enabled` en DB).
+- **Fallo:** `delivery_enabled = false` o pin/distrito fuera de Piura →
+  `OUT_OF_COVERAGE`. Kill switch de puntos → `covered: false`.
 
 ### Regla 20 — Stock de envases
 
@@ -351,6 +361,28 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ---
 
+## Fulfillment — puntos de recojo
+
+### Regla 30 — Catálogo de puntos de recojo
+
+- **Trigger:** Staff CRUD en `/delivery`; checkout lista puntos; create
+  orden `pickup_point`.
+- **Pasos:**
+  1. Fuente: `pricing.pickup_points` (`name` único, coords, `fee >= 0`,
+     `is_active`, `sort_order`).
+  2. Kill switch global: `delivery_settings.pickup_points_enabled`. Off →
+     listado público vacío y checkout sin opción.
+  3. Ecommerce lista solo activos. Create **rehidrata** `{ id, name, lat,
+lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
+     inactivo → error, no orden.
+  4. El snapshot vive en `orders.fulfillment`; cambios posteriores del
+     catálogo no reescriben órdenes históricas.
+- **RLS:** SELECT público de filas `is_active`; staff SELECT/CRUD completo.
+- **Fallo:** Guest no puede persistir `pickup` ni fulfillment XOR inválido
+  (`insert_guest_order`).
+
+---
+
 ## Futuro (v2 — no implementar en v1)
 
 | ID  | Tema                           |
@@ -372,10 +404,11 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 | 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
 | 13–16 | Orders             | Snapshot, estados, stock al pagar, no recalcular                   |
 | 17–18 | Payments           | Manual confirm / refund                                            |
-| 19–20 | Delivery / Envases | Tarifa por distrito; stock envase 1:1 sorpresa                     |
+| 19–20 | Delivery / Envases | Tarifa distrito / pickup / pickup_point; stock envase 1:1          |
 | 21    | Products           | Min/max compra por presentación (default 10/100)                   |
 | 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
 | 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
 | 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
 | 28    | Notifications      | Email SMTP post-creación, best-effort y sin bloquear la orden      |
 | 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)    |
+| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda    |

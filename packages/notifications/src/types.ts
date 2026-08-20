@@ -26,8 +26,8 @@ export type OrderNotifyLine = {
 };
 
 export type OrderNotifyFulfillment = {
-  method: "delivery" | "pickup";
-  /** Resumen legible (dirección o “Recojo en tienda”). */
+  method: "delivery" | "pickup" | "pickup_point";
+  /** Resumen legible (dirección, punto de recojo o recojo en tienda). */
   summary: string | null;
 };
 

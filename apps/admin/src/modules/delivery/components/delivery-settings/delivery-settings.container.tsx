@@ -39,6 +39,7 @@ export function DeliverySettingsContainer() {
 
   const [settingsDraft, setSettingsDraft] = useState<DeliverySettingsValues>({
     pickupEnabled: true,
+    pickupPointsEnabled: true,
     deliveryEnabled: true,
     fallbackFee: 20,
   });
@@ -127,6 +128,8 @@ export function DeliverySettingsContainer() {
       sectionGlobal: t("sectionGlobal"),
       pickupEnabled: t("pickupEnabled"),
       pickupHint: t("pickupHint"),
+      pickupPointsEnabled: t("pickupPointsEnabled"),
+      pickupPointsHint: t("pickupPointsHint"),
       deliveryEnabled: t("deliveryEnabled"),
       deliveryHint: t("deliveryHint"),
       fallbackFee: t("fallbackFee"),

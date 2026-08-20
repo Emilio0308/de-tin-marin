@@ -297,6 +297,14 @@ export function DeliverySettings({
             }
           />
           <SettingsToggle
+            title={labels.pickupPointsEnabled}
+            hint={labels.pickupPointsHint}
+            checked={settings.pickupPointsEnabled}
+            onChange={(pickupPointsEnabled) =>
+              onSettingsChange({ ...settings, pickupPointsEnabled })
+            }
+          />
+          <SettingsToggle
             title={labels.deliveryEnabled}
             hint={labels.deliveryHint}
             checked={settings.deliveryEnabled}

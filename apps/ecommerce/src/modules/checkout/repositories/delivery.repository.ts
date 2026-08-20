@@ -8,6 +8,7 @@ import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 type DeliveryZoneRow = Database["pricing"]["Tables"]["delivery_zones"]["Row"];
 type DeliverySettingsRow =
   Database["pricing"]["Tables"]["delivery_settings"]["Row"];
+type PickupPointRow = Database["pricing"]["Tables"]["pickup_points"]["Row"];
 
 export async function listActiveDeliveryZonesRepo(
   config: SupabaseConfig,
@@ -77,6 +78,66 @@ export async function getDeliverySettingsRepo(
       (result.data as DeliverySettingsRow | null)?.delivery_enabled ?? null,
     pickupEnabled:
       (result.data as DeliverySettingsRow | null)?.pickup_enabled ?? null,
+    pickupPointsEnabled:
+      (result.data as DeliverySettingsRow | null)?.pickup_points_enabled ??
+      null,
   });
   return result.data as DeliverySettingsRow | null;
+}
+
+export async function listActivePickupPointsRepo(
+  config: SupabaseConfig,
+): Promise<PickupPointRow[]> {
+  const scope = "listActivePickupPointsRepo";
+  logServerInfo(scope, "query.start", {
+    schema: "pricing",
+    table: "pickup_points",
+    filter: "is_active=true",
+  });
+
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("pricing")
+    .from("pickup_points")
+    .select("id, name, lat, lng, fee, is_active, sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) {
+    logServerError(scope, {
+      message: error.message,
+      code: error.code,
+    });
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as PickupPointRow[];
+  logServerInfo(scope, "query.ok", { rowCount: rows.length });
+  return rows;
+}
+
+export async function getPickupPointByIdRepo(
+  config: SupabaseConfig,
+  id: string,
+): Promise<PickupPointRow | null> {
+  const scope = "getPickupPointByIdRepo";
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("pricing")
+    .from("pickup_points")
+    .select("id, name, lat, lng, fee, is_active, sort_order")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    logServerError(scope, {
+      message: error.message,
+      code: error.code,
+      pickupPointId: id,
+    });
+    throw new Error(error.message);
+  }
+
+  return data as PickupPointRow | null;
 }

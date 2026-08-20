@@ -137,6 +137,8 @@ export function OrderConfirmationPageContainer() {
           paymentStatus: t("summary.paymentStatus"),
           deliveryTitle: t("summary.deliveryTitle"),
           pickupTitle: t("summary.pickupTitle"),
+          pickupPointTitle: t("summary.pickupPointTitle"),
+          pickupInStoreNote: t("summary.pickupInStoreNote"),
           bundleBadge: t("summary.bundleBadge"),
           packBadge: t("summary.packBadge"),
           bundleComponents: t("summary.bundleComponents"),

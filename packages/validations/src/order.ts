@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { paymentSummarySchema } from "./payment";
+import { pickupPointSnapshotSchema } from "./pickup-point";
 import { shipmentDtoSchema } from "./shipment";
+
+export const orderFulfillmentMethodSchema = z.enum([
+  "delivery",
+  "pickup",
+  "pickup_point",
+]);
 
 export const orderContactSchema = z.object({
   name: z
@@ -55,21 +62,83 @@ export const deliveryAddressSchema = z.object({
     .regex(/^9\d{8}$/),
 });
 
-export const orderFulfillmentSchema = z
-  .object({
-    method: z.enum(["delivery", "pickup"]),
-    deliveryAddress: deliveryAddressSchema.optional(),
-    notes: z.string().max(1000).optional().nullable(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.method === "delivery" && !value.deliveryAddress) {
+function refineOrderFulfillment(
+  value: {
+    method: z.infer<typeof orderFulfillmentMethodSchema>;
+    deliveryAddress?: z.infer<typeof deliveryAddressSchema>;
+    pickupPoint?: z.infer<typeof pickupPointSnapshotSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.method === "delivery") {
+    if (!value.deliveryAddress) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "deliveryAddress is required for delivery",
         path: ["deliveryAddress"],
       });
     }
-  });
+    if (value.pickupPoint) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPoint is not allowed for delivery",
+        path: ["pickupPoint"],
+      });
+    }
+    return;
+  }
+
+  if (value.method === "pickup_point") {
+    if (!value.pickupPoint) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPoint is required for pickup_point",
+        path: ["pickupPoint"],
+      });
+    }
+    if (value.deliveryAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "deliveryAddress is not allowed for pickup_point",
+        path: ["deliveryAddress"],
+      });
+    }
+    return;
+  }
+
+  if (value.deliveryAddress) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "deliveryAddress is not allowed for pickup",
+      path: ["deliveryAddress"],
+    });
+  }
+  if (value.pickupPoint) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "pickupPoint is not allowed for pickup",
+      path: ["pickupPoint"],
+    });
+  }
+}
+
+export const orderFulfillmentSchema = z
+  .object({
+    method: orderFulfillmentMethodSchema,
+    deliveryAddress: deliveryAddressSchema.optional(),
+    pickupPoint: pickupPointSnapshotSchema.optional(),
+    notes: z.string().max(1000).optional().nullable(),
+  })
+  .superRefine(refineOrderFulfillment);
+
+export const guestOrderFulfillmentSchema = z
+  .object({
+    method: z.enum(["delivery", "pickup_point"]),
+    deliveryAddress: deliveryAddressSchema.optional(),
+    pickupPoint: pickupPointSnapshotSchema.optional(),
+    notes: z.string().max(1000).optional().nullable(),
+  })
+  .superRefine(refineOrderFulfillment);
 
 export const orderProductLineInputSchema = z.object({
   type: z.literal("product"),

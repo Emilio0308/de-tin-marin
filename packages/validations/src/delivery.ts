@@ -10,13 +10,15 @@ export const deliveryZoneInputSchema = z.object({
 
 export const deliverySettingsSchema = z.object({
   pickupEnabled: z.boolean(),
+  pickupPointsEnabled: z.boolean(),
   deliveryEnabled: z.boolean(),
   fallbackFee: z.number().nonnegative(),
 });
 
 export const resolveDeliveryFeeInputSchema = z.object({
-  method: z.enum(["delivery", "pickup"]),
+  method: z.enum(["delivery", "pickup", "pickup_point"]),
   district: z.string().max(120).optional(),
+  pickupPointId: z.string().uuid().optional(),
 });
 
 export type DeliveryZoneInput = z.infer<typeof deliveryZoneInputSchema>;

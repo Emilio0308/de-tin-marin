@@ -211,21 +211,31 @@ Los ajustes **no** mutan `packagePrice` / `unitPrice` / `lineTotal` de las líne
 
 ```json
 {
-  "method": "delivery",
-  "deliveryAddress": {
-    "recipientName": "María García",
-    "line1": "Av. ... 123",
-    "district": "Miraflores",
-    "city": "Lima",
-    "province": "Lima",
-    "reference": "Edificio azul, dpto 4",
-    "phone": "999888777"
+  "method": "pickup_point",
+  "pickupPoint": {
+    "id": "uuid",
+    "name": "Real Plaza Piura",
+    "lat": -5.19,
+    "lng": -80.63,
+    "fee": 6.0
   },
   "notes": ""
 }
 ```
 
-`method`: `"delivery"` \| `"pickup"`.
+`method`: `"delivery"` \| `"pickup"` \| `"pickup_point"`.
+
+- **`pickup`** — recojo en tienda (admin manual; sin dirección ni punto;
+  `shipping_total = 0`).
+- **`pickup_point`** — punto de recojo externo. Snapshot
+  `{ id, name, lat, lng, fee }` congelado al crear (Regla 30). Guest no
+  envía `deliveryAddress` ni `mapPin`. El fee se rehidrata desde
+  `pricing.pickup_points` (activo); mismatch → no se crea la orden.
+- **`delivery`** — dirección + `metadata.mapPin` (guest). Sin `pickupPoint`.
+
+Checkout ecommerce muestra `pickup_point` solo si
+`listCheckoutPickupPointsAction` devuelve puntos (kill switch on y hay
+activos). Recojo en tienda sigue oculto (`storeFeatures.pickupEnabled`).
 
 ## Estados
 
@@ -374,6 +384,7 @@ type OrderDTO = {
 - Detalle: composición pack/bundle desde `shopping_cart`; muestra `surchargeTotal`
 - **Crear orden (`/orders/new`):**
   - Tabs catálogo: productos (picker + dual qty), combos, sorpresas
+  - Fulfillment: `delivery` \| `pickup` \| `pickup_point` (selector de puntos)
   - Líneas product: steppers presentación + unidad (si `product_type = package`); clamp `needBase ≤ availableBase`
   - Líneas pack/bundle: composición desplegable (`viewComponents`)
   - Totales: tabs Precio final (XOR) y Descuento/recargo; ver § Totales de cabecera
@@ -386,8 +397,10 @@ Detalle de módulo: [`apps/admin/src/modules/orders/README.md`](../apps/admin/sr
 ## Ecommerce
 
 - Carrito localStorage: líneas product siempre `unitQuantity: 0`; cantidad = `packageQuantity`
-- Checkout guest: `surchargeTotal = 0`; input Zod dual con `unitQuantity: 0`
-- Confirmación / lookup guest: DTO incluye `surchargeTotal` (0)
+- Checkout guest: `surchargeTotal = 0`; `method` = `delivery` \| `pickup_point`;
+  input Zod dual con `unitQuantity: 0`
+- Confirmación / lookup guest: DTO incluye `surchargeTotal` (0) y snapshot
+  `fulfillment.pickupPoint` si aplica
 
 ## Módulo
 

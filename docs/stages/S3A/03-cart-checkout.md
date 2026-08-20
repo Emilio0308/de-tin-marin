@@ -13,7 +13,10 @@
 
 - Carrito v1: **localStorage** con interfaz `CartRepository` intercambiable (futuro `customer_id` / sesión S4).
 - Checkout crea orden `pending_payment` — DECISIONS #8 sin pasarela.
-- **Regla 19** — delivery: tarifa por distrito Piura o `fallback_fee`; pickup desactivado v1 (`pickupEnabled=false`).
+- **Regla 19** — delivery: tarifa por distrito Piura o cobertura bbox +
+  `fallback_fee`. Recojo en tienda (`pickup`) desactivado en storefront
+  (`pickupEnabled=false`). **Puntos de recojo** (`pickup_point`) → S4-08
+  (catálogo + kill switch DB; no usar el flag `pickupEnabled`).
 - **Regla 15** — stock: `strictStockValidationOnCheckout=false` → warnings; `true` → rechazar submit.
 - Hoy `commerce.orders` RLS = **solo staff** → migración con **política guest INSERT** (+ SELECT limitado o RPC lookup en S3A-4).
 - Mapa: proveedor **gratuito** (recomendado **Leaflet + OpenStreetMap**); pin guarda `lat`/`lng` + texto referencia en `fulfillment` / `metadata` — **no** geocoding de pago por ahora.
@@ -52,7 +55,9 @@ interface CartRepository {
 ### Checkout (`/checkout`)
 
 - Formulario: nombre, apellido, teléfono, email (Zod `orderContactSchema`)
-- Delivery único v1 (`method: 'delivery'`); pickup oculto si `pickupEnabled=false`
+- Delivery único en el brief original (`method: 'delivery'`); pickup **en
+  tienda** oculto si `pickupEnabled=false`. **S4-08** añade `pickup_point`
+  (puntos externos) independiente de ese flag.
 - Dirección: línea, distrito (select zonas Piura seed S1E), ciudad, provincia, referencia
 - **Mapa Leaflet/OSM:** pin arrastrable; guardar `{ lat, lng }` en `fulfillment.metadata` o `deliveryAddress`
 - Validación cobertura:
@@ -76,17 +81,18 @@ interface CartRepository {
 
 ### Feature flags (recap)
 
-| Flag                              | v1      | Efecto               |
-| --------------------------------- | ------- | -------------------- |
-| `pickupEnabled`                   | `false` | Oculta opción recojo |
-| `strictStockValidationOnCheckout` | `false` | Solo warnings        |
-| `enableUnitsPerPerson`            | `false` | (wizard)             |
+| Flag                              | v1      | Efecto                                                         |
+| --------------------------------- | ------- | -------------------------------------------------------------- |
+| `pickupEnabled`                   | `false` | Oculta recojo **en tienda** (`pickup`); no afecta puntos S4-08 |
+| `strictStockValidationOnCheckout` | `false` | Solo warnings                                                  |
+| `enableUnitsPerPerson`            | `false` | (wizard)                                                       |
 
 ## Scope OUT (traps)
 
 - **NO pasarela / cobro online** → operador confirma S2C
 - **NO login** → S4
-- **NO pickup UI** si flag false
+- **NO pickup UI de tienda** si `pickupEnabled` false. Puntos de recojo
+  (`pickup_point`) se documentan en S4-08.
 - **NO fallback_fee fuera de Piura** — bloqueo total
 - **NO Google Maps de pago** — solo OSM gratis
 - **NO reserva de stock** al crear orden

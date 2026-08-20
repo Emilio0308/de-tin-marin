@@ -77,7 +77,8 @@ export type OrderFormValues = {
     email: string;
   };
   fulfillment: {
-    method: "delivery" | "pickup";
+    method: "delivery" | "pickup" | "pickup_point";
+    pickupPointId: string;
     deliveryAddress: {
       recipientName: string;
       line1: string;
@@ -104,6 +105,7 @@ export const emptyOrderFormValues: OrderFormValues = {
   },
   fulfillment: {
     method: "delivery",
+    pickupPointId: "",
     deliveryAddress: {
       recipientName: "",
       line1: "",
@@ -152,6 +154,8 @@ export type OrderFormLabels = {
   email: string;
   delivery: string;
   pickup: string;
+  pickupPoint: string;
+  selectPickupPoint: string;
   recipientName: string;
   address: string;
   district: string;
@@ -248,6 +252,14 @@ export type OrderFormProps = {
     Array<{ productId: string; productName: string; quantityLabel: string }>
   >;
   deliveryDistricts: string[];
+  pickupPoints: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    fee: number;
+    isActive: boolean;
+  }>;
   bundleDraft: OrderFormBundleDraft | null;
   bundleDraftLoading: boolean;
   bundlePriceSummary: OrderFormBundlePriceSummary | null;

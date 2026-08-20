@@ -62,6 +62,8 @@ const labels: OrderFormLabels = {
   email: "Correo",
   delivery: "Delivery",
   pickup: "Recojo",
+  pickupPoint: "Punto de recojo",
+  selectPickupPoint: "Seleccionar punto…",
   recipientName: "Destinatario",
   address: "Dirección",
   district: "Distrito",
@@ -176,6 +178,7 @@ function renderForm(overrides?: Partial<Parameters<typeof OrderForm>[0]>) {
       packs={[]}
       packCompositionsById={new Map()}
       deliveryDistricts={[]}
+      pickupPoints={[]}
       bundleDraft={null}
       bundleDraftLoading={false}
       bundlePriceSummary={null}

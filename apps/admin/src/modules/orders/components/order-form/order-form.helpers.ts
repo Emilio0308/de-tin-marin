@@ -221,7 +221,25 @@ export function previewOrderTotals(
   }
 }
 
-export function toCreateOrderPayload(values: OrderFormValues) {
+export type PickupPointFormOption = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  fee: number;
+};
+
+export function toCreateOrderPayload(
+  values: OrderFormValues,
+  pickupPoints: PickupPointFormOption[] = [],
+) {
+  const selectedPickupPoint =
+    values.fulfillment.method === "pickup_point"
+      ? pickupPoints.find(
+          (point) => point.id === values.fulfillment.pickupPointId,
+        )
+      : undefined;
+
   return {
     contact: values.contact,
     fulfillment: {
@@ -231,6 +249,16 @@ export function toCreateOrderPayload(values: OrderFormValues) {
           ? {
               ...values.fulfillment.deliveryAddress,
               reference: values.fulfillment.deliveryAddress.reference || null,
+            }
+          : undefined,
+      pickupPoint:
+        values.fulfillment.method === "pickup_point" && selectedPickupPoint
+          ? {
+              id: selectedPickupPoint.id,
+              name: selectedPickupPoint.name,
+              lat: selectedPickupPoint.lat,
+              lng: selectedPickupPoint.lng,
+              fee: selectedPickupPoint.fee,
             }
           : undefined,
       notes: values.fulfillment.notes || null,

@@ -13,6 +13,7 @@ import { useCartPricingPreview } from "@/modules/cart/hooks/use-cart-pricing-pre
 import { StorefrontLayout } from "@/modules/home/components/storefront-layout/storefront-layout";
 import { createGuestOrderAction } from "@/modules/checkout/actions/create-guest-order";
 import { listCheckoutDeliveryZonesAction } from "@/modules/checkout/actions/list-checkout-delivery-zones";
+import { listCheckoutPickupPointsAction } from "@/modules/checkout/actions/list-checkout-pickup-points";
 import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/resolve-checkout-delivery-fee";
 import { validateGuestCheckoutCartAction } from "@/modules/checkout/actions/validate-guest-checkout-cart";
 import { queryKeys } from "@/shared/query/query-keys";
@@ -23,6 +24,7 @@ import { defaultMapPin } from "../delivery-map/delivery-map.constants";
 import {
   getCheckoutFieldErrorKey,
   getCheckoutFieldErrorKeys,
+  getPickupPointErrorKey,
   hasCheckoutFieldError,
   mapCheckoutFieldError,
   mapCheckoutFieldErrors,
@@ -30,6 +32,7 @@ import {
   type CheckoutFieldErrors,
   type CheckoutFormField,
   type CheckoutFormValues,
+  type GuestCheckoutFulfillmentMethod,
 } from "./checkout-form.helpers";
 import { CheckoutPage } from "./checkout-page";
 
@@ -43,6 +46,10 @@ type GuestOrderErrorCode =
   | "BUNDLE_NOT_FOUND"
   | "PACK_NOT_FOUND"
   | "DUPLICATE_PRODUCT_IN_BUNDLE"
+  | "PICKUP_POINT_NOT_FOUND"
+  | "PICKUP_POINT_INACTIVE"
+  | "PICKUP_POINT_REQUIRED"
+  | "SHIPPING_FEE_MISMATCH"
   | "UNEXPECTED";
 
 const initialForm: CheckoutFormValues = {
@@ -68,6 +75,11 @@ export function CheckoutPageContainer() {
   } = useCartPricingPreview(lines);
   const subtotal = previewSubtotal ?? totals.subtotal ?? 0;
   const [form, setForm] = useState(initialForm);
+  const [fulfillmentMethod, setFulfillmentMethod] =
+    useState<GuestCheckoutFulfillmentMethod>("delivery");
+  const [pickupPointId, setPickupPointId] = useState("");
+  const [pickupPointError, setPickupPointError] = useState<string | null>(null);
+  const [pickupPointTouched, setPickupPointTouched] = useState(false);
   const [mapPin, setMapPin] = useState<MapPin>(defaultMapPin);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const orderPlacedRef = useRef(false);
@@ -99,21 +111,37 @@ export function CheckoutPageContainer() {
     [fieldErrors, hasAttemptedSubmit, touchedFields],
   );
 
-  const validateForm = useCallback(
-    (values: CheckoutFormValues) => {
-      const errorKeys = getCheckoutFieldErrorKeys(values);
-      const mappedErrors = mapCheckoutFieldErrors(errorKeys, validationLabels);
-      setFieldErrors(mappedErrors);
-      const isValid = Object.keys(mappedErrors).length === 0;
-      setShowValidationSummary(!isValid);
-      return isValid;
+  const validatePickupPoint = useCallback(
+    (value: string) => {
+      const errorKey = getPickupPointErrorKey(value);
+      const message = errorKey ? validationLabels[errorKey] : null;
+      setPickupPointError(message);
+      return !errorKey;
     },
     [validationLabels],
   );
 
+  const validateForm = useCallback(
+    (values: CheckoutFormValues, method: GuestCheckoutFulfillmentMethod) => {
+      const errorKeys = getCheckoutFieldErrorKeys(values, method);
+      const mappedErrors = mapCheckoutFieldErrors(errorKeys, validationLabels);
+      setFieldErrors(mappedErrors);
+      const pickupValid =
+        method === "delivery" ? true : validatePickupPoint(pickupPointId);
+      const isValid = Object.keys(mappedErrors).length === 0 && pickupValid;
+      setShowValidationSummary(!isValid);
+      return isValid;
+    },
+    [pickupPointId, validationLabels, validatePickupPoint],
+  );
+
   const validateField = useCallback(
-    (field: CheckoutFormField, values: CheckoutFormValues) => {
-      const errorKey = getCheckoutFieldErrorKey(values, field);
+    (
+      field: CheckoutFormField,
+      values: CheckoutFormValues,
+      method: GuestCheckoutFulfillmentMethod,
+    ) => {
+      const errorKey = getCheckoutFieldErrorKey(values, field, method);
       const message = mapCheckoutFieldError(field, errorKey, validationLabels);
 
       setFieldErrors((current) => {
@@ -123,7 +151,7 @@ export function CheckoutPageContainer() {
         return next;
       });
 
-      if (Object.keys(getCheckoutFieldErrorKeys(values)).length === 0) {
+      if (Object.keys(getCheckoutFieldErrorKeys(values, method)).length === 0) {
         setShowValidationSummary(false);
       }
     },
@@ -148,18 +176,48 @@ export function CheckoutPageContainer() {
     },
   });
 
-  const deliveryQuery = useQuery({
-    ...freshQueryOptions,
-    queryKey: queryKeys.checkout.deliveryFee(form.district, mapPin),
+  const pickupPointsQuery = useQuery({
+    queryKey: queryKeys.checkout.pickupPoints(),
     queryFn: async () => {
-      const result = await resolveCheckoutDeliveryFeeAction({
-        district: form.district,
-        mapPin,
-      });
+      const result = await listCheckoutPickupPointsAction();
+      if (!result.ok) {
+        logClientError("listCheckoutPickupPointsAction", result.error);
+        throw new Error(result.error);
+      }
+      return result.data;
+    },
+  });
+
+  const pickupPoints = pickupPointsQuery.data ?? [];
+  const showPickupPointOption = pickupPoints.length > 0;
+
+  const feeQueryInput = useMemo(
+    () =>
+      fulfillmentMethod === "pickup_point"
+        ? {
+            method: "pickup_point" as const,
+            pickupPointId: pickupPointId || undefined,
+          }
+        : {
+            method: "delivery" as const,
+            district: form.district,
+            mapPin,
+          },
+    [form.district, fulfillmentMethod, mapPin, pickupPointId],
+  );
+
+  const feeQuery = useQuery({
+    ...freshQueryOptions,
+    queryKey: queryKeys.checkout.fulfillmentFee(feeQueryInput),
+    queryFn: async () => {
+      const result = await resolveCheckoutDeliveryFeeAction(feeQueryInput);
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
-    enabled: Boolean(form.district),
+    enabled:
+      fulfillmentMethod === "pickup_point"
+        ? Boolean(pickupPointId)
+        : Boolean(form.district),
   });
 
   useEffect(() => {
@@ -169,12 +227,20 @@ export function CheckoutPageContainer() {
     }
   }, [isReady, lines.length, orderPlaced, router]);
 
-  const shippingTotal = deliveryQuery.data?.fee ?? 0;
-  const covered = deliveryQuery.data?.covered ?? false;
+  useEffect(() => {
+    if (!showPickupPointOption && fulfillmentMethod === "pickup_point") {
+      setFulfillmentMethod("delivery");
+    }
+  }, [fulfillmentMethod, showPickupPointOption]);
+
+  const shippingTotal = feeQuery.data?.fee ?? 0;
+  const covered = feeQuery.data?.covered ?? false;
   const total = subtotal + shippingTotal - totals.discountTotal;
   const isDeliveryPending =
-    Boolean(form.district) &&
-    (deliveryQuery.isLoading || deliveryQuery.isFetching);
+    (fulfillmentMethod === "delivery" && Boolean(form.district)) ||
+    (fulfillmentMethod === "pickup_point" && Boolean(pickupPointId))
+      ? feeQuery.isLoading || feeQuery.isFetching
+      : false;
 
   const pricingBlocked = isPricingPending || isPricingError;
   const checkoutBlocked = pricingBlocked;
@@ -197,7 +263,7 @@ export function CheckoutPageContainer() {
 
   const handleSubmit = async () => {
     setHasAttemptedSubmit(true);
-    if (!validateForm(form)) return;
+    if (!validateForm(form, fulfillmentMethod)) return;
 
     if (!covered || lines.length === 0 || checkoutBlocked) {
       return;
@@ -265,31 +331,61 @@ export function CheckoutPageContainer() {
       return;
     }
 
-    const result = await createGuestOrderAction({
-      contact: {
-        name: form.name.trim(),
-        lastName: form.lastName.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-      },
-      fulfillment: {
-        method: "delivery",
-        deliveryAddress: {
-          recipientName: `${form.name.trim()} ${form.lastName.trim()}`.trim(),
-          line1: form.line1.trim(),
-          district: form.district.trim(),
-          city: form.city.trim(),
-          province: form.province.trim(),
-          reference: form.reference.trim() || null,
-          phone: form.phone.trim(),
-        },
-        notes: null,
-      },
-      lines: cartLinesToOrderInput(lines),
-      shippingTotal,
-      discountTotal: 0,
-      mapPin,
-    });
+    const selectedPickupPoint = pickupPoints.find(
+      (point) => point.id === pickupPointId,
+    );
+
+    const result = await createGuestOrderAction(
+      fulfillmentMethod === "pickup_point" && selectedPickupPoint
+        ? {
+            contact: {
+              name: form.name.trim(),
+              lastName: form.lastName.trim(),
+              phone: form.phone.trim(),
+              email: form.email.trim(),
+            },
+            fulfillment: {
+              method: "pickup_point",
+              pickupPoint: {
+                id: selectedPickupPoint.id,
+                name: selectedPickupPoint.name,
+                lat: selectedPickupPoint.lat,
+                lng: selectedPickupPoint.lng,
+                fee: selectedPickupPoint.fee,
+              },
+              notes: null,
+            },
+            lines: cartLinesToOrderInput(lines),
+            shippingTotal,
+            discountTotal: 0,
+          }
+        : {
+            contact: {
+              name: form.name.trim(),
+              lastName: form.lastName.trim(),
+              phone: form.phone.trim(),
+              email: form.email.trim(),
+            },
+            fulfillment: {
+              method: "delivery",
+              deliveryAddress: {
+                recipientName:
+                  `${form.name.trim()} ${form.lastName.trim()}`.trim(),
+                line1: form.line1.trim(),
+                district: form.district.trim(),
+                city: form.city.trim(),
+                province: form.province.trim(),
+                reference: form.reference.trim() || null,
+                phone: form.phone.trim(),
+              },
+              notes: null,
+            },
+            lines: cartLinesToOrderInput(lines),
+            shippingTotal,
+            discountTotal: 0,
+            mapPin,
+          },
+    );
 
     setIsSubmitting(false);
 
@@ -323,6 +419,10 @@ export function CheckoutPageContainer() {
         BUNDLE_NOT_FOUND: t("errors.bundleNotFound"),
         PACK_NOT_FOUND: t("errors.packNotFound"),
         DUPLICATE_PRODUCT_IN_BUNDLE: t("errors.duplicateProductInBundle"),
+        PICKUP_POINT_NOT_FOUND: t("errors.pickupPointNotFound"),
+        PICKUP_POINT_INACTIVE: t("errors.pickupPointInactive"),
+        PICKUP_POINT_REQUIRED: t("errors.pickupPointRequired"),
+        SHIPPING_FEE_MISMATCH: t("errors.shippingFeeMismatch"),
         UNEXPECTED: t("errors.unexpected"),
       };
       const errorCode = result.error;
@@ -343,6 +443,11 @@ export function CheckoutPageContainer() {
       form={form}
       fieldErrors={fieldErrors}
       showValidationSummary={showValidationSummary}
+      fulfillmentMethod={fulfillmentMethod}
+      showPickupPointOption={showPickupPointOption}
+      pickupPointId={pickupPointId}
+      pickupPointError={pickupPointError}
+      pickupPoints={pickupPoints}
       districts={zonesQuery.data ?? []}
       mapPin={mapPin}
       subtotal={subtotal}
@@ -363,8 +468,14 @@ export function CheckoutPageContainer() {
         summaryTitle: t("summaryTitle"),
         secureNote: t("secureNote"),
         contactTitle: t("contactTitle"),
+        fulfillmentTitle: t("fulfillmentTitle"),
+        fulfillmentDelivery: t("fulfillmentDelivery"),
+        fulfillmentPickupPoint: t("fulfillmentPickupPoint"),
         addressTitle: t("addressTitle"),
+        pickupPointTitle: t("pickupPointTitle"),
+        pickupPointPlaceholder: t("pickupPointPlaceholder"),
         mapSectionTitle: t("mapSectionTitle"),
+        pickupMapHint: t("pickupMapHint"),
         name: t("name"),
         lastName: t("lastName"),
         phone: t("phone"),
@@ -408,7 +519,7 @@ export function CheckoutPageContainer() {
         setForm((current) => {
           const next = { ...current, [field]: sanitized };
           if (shouldValidateLive(field)) {
-            validateField(field, next);
+            validateField(field, next, fulfillmentMethod);
           }
           return next;
         });
@@ -424,7 +535,25 @@ export function CheckoutPageContainer() {
           setForm(next);
         }
         setTouchedFields((current) => ({ ...current, [field]: true }));
-        validateField(field, next);
+        validateField(field, next, fulfillmentMethod);
+      }}
+      onFulfillmentMethodChange={(method) => {
+        setFulfillmentMethod(method);
+        setFieldErrors({});
+        setPickupPointError(null);
+        setShowValidationSummary(false);
+        if (errorMessage) setErrorMessage(null);
+      }}
+      onPickupPointChange={(value) => {
+        setPickupPointId(value);
+        if (hasAttemptedSubmit || pickupPointTouched || pickupPointError) {
+          validatePickupPoint(value);
+        }
+        if (errorMessage) setErrorMessage(null);
+      }}
+      onPickupPointBlur={() => {
+        setPickupPointTouched(true);
+        validatePickupPoint(pickupPointId);
       }}
       onMapPinChange={setMapPin}
       onSubmit={() => {

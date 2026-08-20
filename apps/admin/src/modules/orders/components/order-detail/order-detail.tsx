@@ -168,7 +168,14 @@ export function OrderDetailView({
   const confirmedPayment = order.payments.find(
     (payment) => payment.status === "confirmed",
   );
-  const mapPin = parseOrderMapPin(order.metadata);
+  const mapPin =
+    parseOrderMapPin(order.metadata) ??
+    (order.fulfillment.pickupPoint
+      ? {
+          lat: order.fulfillment.pickupPoint.lat,
+          lng: order.fulfillment.pickupPoint.lng,
+        }
+      : null);
 
   return (
     <div className="flex flex-col gap-8">
@@ -269,8 +276,15 @@ export function OrderDetailView({
               <p className="font-label text-label-bold text-on-surface text-sm">
                 {order.fulfillment.method === "pickup"
                   ? labels.pickupMethod
-                  : labels.deliveryMethod}
+                  : order.fulfillment.method === "pickup_point"
+                    ? labels.pickupPointMethod
+                    : labels.deliveryMethod}
               </p>
+              {order.fulfillment.pickupPoint ? (
+                <p className="text-on-surface-variant mt-2 text-sm">
+                  {order.fulfillment.pickupPoint.name}
+                </p>
+              ) : null}
               {order.fulfillment.deliveryAddress ? (
                 <div className="text-on-surface-variant mt-2 space-y-1 text-sm">
                   <p>{order.fulfillment.deliveryAddress.recipientName}</p>

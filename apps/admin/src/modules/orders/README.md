@@ -44,6 +44,9 @@ SMTP best-effort para el correo operativo configurado y extras opcionales.
 Una creación desde admin **no** envía correo al contacto de la orden. Fallos o
 SMTP ausente se registran sin PII y no revierten la orden.
 
+Fulfillment: `delivery` \| `pickup` (tienda) \| `pickup_point` (catálogo
+S4-08). El detalle muestra nombre y mapa del snapshot `pickupPoint`.
+
 ### Catálogo (tabs)
 
 | Uso                                 | Cómo                                                                                                                                                       |

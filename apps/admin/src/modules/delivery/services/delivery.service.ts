@@ -14,6 +14,7 @@ import {
   updateDeliverySettingsRepo,
   upsertDeliveryZoneRepo,
 } from "../repositories/delivery.repository";
+import { listActivePickupPointsRepo } from "../repositories/pickup-point.repository";
 import type {
   DeliverySettingsDTO,
   DeliveryZoneDTO,
@@ -36,6 +37,7 @@ function toSettingsDTO(
 ): DeliverySettingsDTO {
   return {
     pickupEnabled: row.pickup_enabled,
+    pickupPointsEnabled: row.pickup_points_enabled,
     deliveryEnabled: row.delivery_enabled,
     fallbackFee: Number(row.fallback_fee),
   };
@@ -104,6 +106,7 @@ export async function updateDeliverySettingsService(
 
   await updateDeliverySettingsRepo(config, {
     pickup_enabled: parsed.data.pickupEnabled,
+    pickup_points_enabled: parsed.data.pickupPointsEnabled,
     delivery_enabled: parsed.data.deliveryEnabled,
     fallback_fee: parsed.data.fallbackFee,
   });
@@ -124,9 +127,10 @@ export async function resolveDeliveryFeeService(
     };
   }
 
-  const [zones, settings] = await Promise.all([
+  const [zones, settings, points] = await Promise.all([
     listDeliveryZonesRepo(config),
     getDeliverySettingsRepo(config),
+    listActivePickupPointsRepo(config),
   ]);
 
   const fee = resolveDeliveryFee(
@@ -139,9 +143,16 @@ export async function resolveDeliveryFeeService(
     })),
     {
       pickupEnabled: settings?.pickup_enabled ?? true,
+      pickupPointsEnabled: settings?.pickup_points_enabled ?? true,
       deliveryEnabled: settings?.delivery_enabled ?? true,
       fallbackFee: Number(settings?.fallback_fee ?? 0),
     },
+    parsed.data.pickupPointId,
+    points.map((point) => ({
+      id: point.id,
+      fee: Number(point.fee),
+      isActive: point.is_active,
+    })),
   );
 
   return { ok: true as const, fee };

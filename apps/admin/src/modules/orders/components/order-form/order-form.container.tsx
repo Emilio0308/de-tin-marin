@@ -14,6 +14,7 @@ import {
   listDeliveryZonesAction,
   resolveDeliveryFeeAction,
 } from "@/modules/delivery/actions/delivery.actions";
+import { listPickupPointsAction } from "@/modules/delivery/actions/pickup-point.actions";
 import { createOrderAction } from "@/modules/orders/actions/create-order";
 import { previewAdminBundleLineAction } from "@/modules/orders/actions/preview-admin-bundle-line";
 import { previewOrderCartAction } from "@/modules/orders/actions/preview-order-cart";
@@ -178,6 +179,8 @@ export function OrderFormContainer() {
       email: t("form.email"),
       delivery: t("form.delivery"),
       pickup: t("form.pickup"),
+      pickupPoint: t("form.pickupPoint"),
+      selectPickupPoint: t("form.selectPickupPoint"),
       recipientName: t("form.recipientName"),
       address: t("form.address"),
       district: t("form.district"),
@@ -321,6 +324,28 @@ export function OrderFormContainer() {
     },
   });
 
+  const pickupPointsQuery = useQuery({
+    queryKey: ["pickup-points"],
+    queryFn: async () => {
+      const result = await listPickupPointsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  const pickupPointOptions = useMemo(
+    () =>
+      (pickupPointsQuery.data ?? []).map((point) => ({
+        id: point.id,
+        name: point.name,
+        lat: point.lat,
+        lng: point.lng,
+        fee: point.fee,
+        isActive: point.isActive,
+      })),
+    [pickupPointsQuery.data],
+  );
+
   const productOptions = pickedProducts;
 
   function handleEnsureProductOption(product: ProductOption) {
@@ -408,6 +433,10 @@ export function OrderFormContainer() {
       const result = await resolveDeliveryFeeAction({
         method: values.fulfillment.method,
         district: values.fulfillment.deliveryAddress.district,
+        pickupPointId:
+          values.fulfillment.method === "pickup_point"
+            ? values.fulfillment.pickupPointId || undefined
+            : undefined,
       });
       if (!result.ok) return;
       setValues((current) =>
@@ -416,7 +445,11 @@ export function OrderFormContainer() {
           : { ...current, shippingTotal: result.fee },
       );
     })();
-  }, [values.fulfillment.method, values.fulfillment.deliveryAddress.district]);
+  }, [
+    values.fulfillment.method,
+    values.fulfillment.deliveryAddress.district,
+    values.fulfillment.pickupPointId,
+  ]);
 
   useEffect(() => {
     if (!bundleDraft) {
@@ -864,7 +897,7 @@ export function OrderFormContainer() {
   }
 
   function handleSubmit() {
-    const validation = validateCreateOrderForm(values);
+    const validation = validateCreateOrderForm(values, pickupPointOptions);
     if (!validation.ok) {
       setFieldErrors(translateFieldErrors(validation.fieldErrorKeys));
       setError(translateValidation(validation.formErrorKey));
@@ -987,6 +1020,7 @@ export function OrderFormContainer() {
         deliveryDistricts={(deliveryZonesQuery.data ?? [])
           .filter((zone) => zone.isActive)
           .map((zone) => zone.district)}
+        pickupPoints={pickupPointOptions}
         bundleDraft={bundleDraft}
         bundleDraftLoading={bundleDraftLoading}
         bundlePriceSummary={bundlePriceSummary}

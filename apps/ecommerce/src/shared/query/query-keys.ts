@@ -60,8 +60,20 @@ export const queryKeys = {
   },
   checkout: {
     all: ["checkout"] as const,
+    pickupPoints: () => [...queryKeys.checkout.all, "pickup-points"] as const,
+    fulfillmentFee: (input: {
+      method: "delivery" | "pickup_point";
+      district?: string;
+      mapPin?: { lat: number; lng: number };
+      pickupPointId?: string;
+    }) => [...queryKeys.checkout.all, "fulfillment-fee", input] as const,
+    /** @deprecated Use fulfillmentFee */
     deliveryFee: (district: string, mapPin: { lat: number; lng: number }) =>
-      [...queryKeys.checkout.all, "delivery-fee", district, mapPin] as const,
+      [
+        ...queryKeys.checkout.all,
+        "fulfillment-fee",
+        { method: "delivery" as const, district, mapPin },
+      ] as const,
     stock: (lines: unknown) =>
       [...queryKeys.checkout.all, "stock", lines] as const,
   },

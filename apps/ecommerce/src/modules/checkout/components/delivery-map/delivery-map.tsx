@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapPin } from "@de-tin-marin/validations/checkout";
 import { defaultMapPin as defaultCenter } from "./delivery-map.constants";
+import type { DeliveryMapProps } from "./delivery-map.types";
 
 const markerIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -44,9 +45,24 @@ function DraggableMarker({
   );
 }
 
-import type { DeliveryMapProps } from "./delivery-map.types";
+function StaticMarker({ position }: { position: MapPin }) {
+  return (
+    <Marker
+      draggable={false}
+      position={[position.lat, position.lng]}
+      icon={markerIcon}
+    />
+  );
+}
 
-export function DeliveryMap({ mapPin, onChange, labels }: DeliveryMapProps) {
+export function DeliveryMap({
+  mapPin,
+  onChange,
+  readOnly = false,
+  labels,
+}: DeliveryMapProps) {
+  const isInteractive = !readOnly && typeof onChange === "function";
+
   return (
     <div className="space-y-2">
       {labels.title ? (
@@ -61,14 +77,18 @@ export function DeliveryMap({ mapPin, onChange, labels }: DeliveryMapProps) {
         <MapContainer
           center={[mapPin.lat, mapPin.lng]}
           zoom={13}
-          scrollWheelZoom
+          scrollWheelZoom={!readOnly}
           className="h-full w-full"
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <DraggableMarker position={mapPin} onChange={onChange} />
+          {isInteractive ? (
+            <DraggableMarker position={mapPin} onChange={onChange} />
+          ) : (
+            <StaticMarker position={mapPin} />
+          )}
         </MapContainer>
       </div>
     </div>

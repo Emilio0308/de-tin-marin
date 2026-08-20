@@ -26,7 +26,13 @@ const defaultLabels: CheckoutPageLabels = {
   summaryTitle: "Tu pedido",
   secureNote: "Revisamos stock y cobertura antes de confirmar.",
   contactTitle: "Datos de contacto",
+  fulfillmentTitle: "Método de entrega",
+  fulfillmentDelivery: "Delivery",
+  fulfillmentPickupPoint: "Punto de recojo",
   addressTitle: "Dirección de entrega",
+  pickupPointTitle: "Punto de recojo",
+  pickupPointPlaceholder: "Selecciona un punto de recojo",
+  pickupMapHint: "Ubicación del punto seleccionado.",
   mapSectionTitle: "Ubicación",
   name: "Nombre",
   lastName: "Apellido",
@@ -86,6 +92,11 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
       form={defaultForm}
       fieldErrors={{}}
       showValidationSummary={false}
+      fulfillmentMethod="delivery"
+      showPickupPointOption={false}
+      pickupPointId=""
+      pickupPointError={null}
+      pickupPoints={[]}
       districts={[{ id: "1", district: "Piura", fee: 8 }]}
       mapPin={{ lat: -5.1783, lng: -80.6328 }}
       subtotal={89.9}
@@ -102,6 +113,9 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
       labels={defaultLabels}
       onChange={vi.fn()}
       onFieldBlur={vi.fn()}
+      onFulfillmentMethodChange={vi.fn()}
+      onPickupPointChange={vi.fn()}
+      onPickupPointBlur={vi.fn()}
       onMapPinChange={vi.fn()}
       onSubmit={onSubmit}
       {...overrides}
@@ -186,5 +200,44 @@ describe("CheckoutPage", () => {
     });
     fireEvent.click(submitButtons[0]!);
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("muestra selector de método cuando hay puntos de recojo", () => {
+    renderCheckout({
+      showPickupPointOption: true,
+      pickupPoints: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Real Plaza",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+      ],
+    });
+
+    expect(screen.getByText("Método de entrega")).toBeInTheDocument();
+    expect(screen.getByText("Punto de recojo")).toBeInTheDocument();
+  });
+
+  it("muestra selector de punto en rama pickup_point", () => {
+    renderCheckout({
+      fulfillmentMethod: "pickup_point",
+      showPickupPointOption: true,
+      pickupPoints: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Real Plaza",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: /Punto de recojo/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Dirección de entrega")).not.toBeInTheDocument();
   });
 });

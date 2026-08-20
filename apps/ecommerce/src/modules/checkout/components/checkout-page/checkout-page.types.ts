@@ -3,9 +3,14 @@ import type {
   CheckoutFieldErrors,
   CheckoutFormField,
   CheckoutFormValues,
+  GuestCheckoutFulfillmentMethod,
 } from "./checkout-form.helpers";
 
-export type { CheckoutFormField, CheckoutFormValues };
+export type {
+  CheckoutFormField,
+  CheckoutFormValues,
+  GuestCheckoutFulfillmentMethod,
+};
 
 export type CheckoutPageLabels = {
   title: string;
@@ -14,8 +19,14 @@ export type CheckoutPageLabels = {
   summaryTitle: string;
   secureNote: string;
   contactTitle: string;
+  fulfillmentTitle: string;
+  fulfillmentDelivery: string;
+  fulfillmentPickupPoint: string;
   addressTitle: string;
+  pickupPointTitle: string;
+  pickupPointPlaceholder: string;
   mapSectionTitle: string;
+  pickupMapHint: string;
   name: string;
   lastName: string;
   phone: string;
@@ -61,10 +72,23 @@ export type CheckoutDistrictOption = {
   fee: number;
 };
 
+export type CheckoutPickupPointOption = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  fee: number;
+};
+
 export type CheckoutPageProps = {
   form: CheckoutFormValues;
   fieldErrors: CheckoutFieldErrors;
   showValidationSummary: boolean;
+  fulfillmentMethod: GuestCheckoutFulfillmentMethod;
+  showPickupPointOption: boolean;
+  pickupPointId: string;
+  pickupPointError: string | null;
+  pickupPoints: CheckoutPickupPointOption[];
   districts: CheckoutDistrictOption[];
   mapPin: MapPin;
   subtotal: number;
@@ -81,6 +105,9 @@ export type CheckoutPageProps = {
   labels: CheckoutPageLabels;
   onChange: (field: CheckoutFormField, value: string) => void;
   onFieldBlur: (field: CheckoutFormField, values: CheckoutFormValues) => void;
+  onFulfillmentMethodChange: (method: GuestCheckoutFulfillmentMethod) => void;
+  onPickupPointChange: (pickupPointId: string) => void;
+  onPickupPointBlur: () => void;
   onMapPinChange: (pin: MapPin) => void;
   onSubmit: () => void;
 };
