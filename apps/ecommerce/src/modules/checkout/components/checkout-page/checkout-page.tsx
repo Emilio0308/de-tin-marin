@@ -488,7 +488,15 @@ export function CheckoutPage({
                     <DeliveryMap
                       mapPin={mapPin}
                       onChange={onMapPinChange}
-                      labels={{ title: "", hint: labels.mapHint }}
+                      labels={{
+                        title: "",
+                        hint: labels.mapHint,
+                        search: {
+                          searchLabel: labels.mapSearchLabel,
+                          searchPlaceholder: labels.mapSearchPlaceholder,
+                          searchNoResults: labels.mapSearchNoResults,
+                        },
+                      }}
                     />
                   </CheckoutFormSection>
                 </>

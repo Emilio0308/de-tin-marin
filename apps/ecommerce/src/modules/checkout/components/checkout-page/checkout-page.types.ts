@@ -41,6 +41,9 @@ export type CheckoutPageLabels = {
   requiredHint: string;
   mapTitle: string;
   mapHint: string;
+  mapSearchLabel: string;
+  mapSearchPlaceholder: string;
+  mapSearchNoResults: string;
   phoneHint: string;
   subtotal: string;
   shipping: string;
