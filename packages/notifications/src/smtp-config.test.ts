@@ -7,7 +7,7 @@ describe("resolveSmtpConfig", () => {
     expect(
       resolveSmtpConfig({
         host: "smtp.gmail.com",
-        port: 465,
+        port: 587,
         user: "u",
         pass: undefined,
         from: "De Tin <u@g.com>",
@@ -19,14 +19,14 @@ describe("resolveSmtpConfig", () => {
     expect(
       resolveSmtpConfig({
         host: "smtp.gmail.com",
-        port: 465,
+        port: 587,
         user: "u@g.com",
         pass: "app-pass",
         from: "De Tin Marín <u@g.com>",
       }),
     ).toEqual({
       host: "smtp.gmail.com",
-      port: 465,
+      port: 587,
       user: "u@g.com",
       pass: "app-pass",
       from: "De Tin Marín <u@g.com>",
@@ -37,7 +37,7 @@ describe("resolveSmtpConfig", () => {
     expect(
       resolveSmtpConfig({
         host: "smtp.gmail.com",
-        port: 465,
+        port: 587,
         user: "u@g.com",
         pass: "app-pass",
         from: "De Tin Marín <u@g.com>",
@@ -45,7 +45,7 @@ describe("resolveSmtpConfig", () => {
       }),
     ).toEqual({
       host: "smtp.gmail.com",
-      port: 465,
+      port: 587,
       user: "u@g.com",
       pass: "app-pass",
       from: "De Tin Marín <u@g.com>",

@@ -5,7 +5,7 @@ import type { OrderCreatedNotifyInput, SmtpConfig } from "./types";
 
 const smtp: SmtpConfig = {
   host: "smtp.gmail.com",
-  port: 465,
+  port: 587,
   user: "u@g.com",
   pass: "secret",
   from: "De Tin <u@g.com>",

@@ -18,27 +18,22 @@ export type SendMailFn = (
 ) => Promise<void>;
 
 /**
- * Gmail (y varios SMTP en Vercel) a menudo cuelgan el handshake cuando Node
- * resuelve IPv6: el TCP abre pero el banner `220` nunca llega →
- * "Greeting never received". Forzar IPv4 + timeouts cortos evita ese stall.
- *
- * `family` es runtime de Nodemailer/Node net; @types/nodemailer no lo declara.
+ * Gmail en Vercel: preferir puerto 587 + STARTTLS (`secure: false`).
+ * `family: 4` evita stalls IPv6 ("Greeting never received").
  */
 type SmtpTransportOptions = SMTPTransport.Options & {
   family?: 4 | 6;
 };
 
-const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
-const SMTP_GREETING_TIMEOUT_MS = 10_000;
-const SMTP_SOCKET_TIMEOUT_MS = 30_000;
+const SMTP_CONNECTION_TIMEOUT_MS = 30000;
+const SMTP_GREETING_TIMEOUT_MS = 30000;
+const SMTP_SOCKET_TIMEOUT_MS = 30000;
 
 export const sendMail: SendMailFn = async (smtp, mail) => {
   const options: SmtpTransportOptions = {
     host: smtp.host,
-    port: smtp.port,
-    secure: smtp.port === 465,
-    // Prefer STARTTLS on submission port (587); 465 uses implicit TLS above.
-    requireTLS: smtp.port === 587,
+    port: 587,
+    secure: false,
     family: 4,
     connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
     greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
