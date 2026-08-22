@@ -39,8 +39,8 @@ components/order-form/*.helpers.ts — dual qty, bounds pack/product, add-block
 
 Container: `order-form.container.tsx`.
 
-Tras persistir, `createOrderService` agenda con `after()` una notificación
-SMTP best-effort para el correo operativo configurado y extras opcionales.
+Tras persistir, `createOrderService` **await** una notificación SMTP
+best-effort para el correo operativo configurado y extras opcionales.
 Una creación desde admin **no** envía correo al contacto de la orden. Fallos o
 SMTP ausente se registran sin PII y no revierten la orden.
 

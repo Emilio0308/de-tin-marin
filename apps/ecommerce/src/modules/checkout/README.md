@@ -39,3 +39,9 @@ No hay polling de stock en checkout. Al confirmar:
 
 Fee de fulfillment sigue con `freshQueryOptions`. Zonas y puntos usan query
 keys propias.
+
+## Email al crear orden
+
+Tras el insert, `createGuestOrderService` **await**
+`scheduleOrderCreatedNotification` (SMTP best-effort; Regla 28 / DECISIONS
+#39). Fallo de correo no revierte la orden.

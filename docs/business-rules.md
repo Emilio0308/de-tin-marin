@@ -343,19 +343,20 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Trigger:** Una orden se persiste correctamente desde checkout ecommerce o
   desde admin.
 - **Pasos:**
-  1. El service crea y registra la orden primero; nunca espera el correo para
-     responder.
-  2. `scheduleOrderCreatedNotification` programa el trabajo con `after()` y
-     arma un DTO allowlist desde el snapshot de la orden.
+  1. El service persiste la orden primero.
+  2. Luego **await** `scheduleOrderCreatedNotification` (sin `after()`): arma
+     un DTO allowlist desde el snapshot y envía SMTP en el mismo request.
   3. Ecommerce envía al cliente y a los destinatarios administrativos; admin
      solo a los destinatarios administrativos.
   4. El destinatario principal admin es
      `core.public_business_settings.email`; los extras de
      `ORDER_NOTIFY_EXTRA_EMAILS` son opcionales, validados y deduplicados.
   5. Si SMTP está incompleto se omite el envío con warning. Si falla,
-     se registra error seguro sin PII y la orden conserva éxito.
-- **Alcance:** SMTP/Nodemailer server-only, HTML + texto plano. No outbox,
-  reintentos, estado de entrega, webhook ni tablas nuevas en v1.
+     se registra error seguro sin PII (`notify_start` / `NOTIFY_FAILED` /
+     `notified`) y la orden conserva éxito.
+- **Alcance:** SMTP/Nodemailer server-only (puerto 587, `secure: false`),
+  HTML + texto plano. No outbox, reintentos, estado de entrega, webhook ni
+  tablas nuevas en v1. El await puede alargar la latencia de create order.
 - **Fallo:** Un error de notificación no revierte la orden, totales, pago ni
   stock. El lookup guest sigue siendo el canal de consulta fiable.
 
@@ -409,6 +410,6 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 | 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
 | 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
 | 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
-| 28    | Notifications      | Email SMTP post-creación, best-effort y sin bloquear la orden      |
+| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)    |
 | 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)    |
 | 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda    |

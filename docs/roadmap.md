@@ -338,8 +338,8 @@ transferencia; ecommerce la consume sin valores de cobro hardcodeados.
 ### S4-06 — Notificaciones email al crear orden
 
 **Goal:** Tras crear una orden, enviar correo SMTP best-effort (Nodemailer):
-ecommerce → cliente + admin; admin create → solo admin. Usa `after()`; fallo de
-mail no tumba la orden.
+ecommerce → cliente + admin; admin create → solo admin. Create-order **await**
+el envío (sin `after()`); fallo de mail no tumba la orden.
 
 - [x] Package `@de-tin-marin/notifications` + templates HTML/text
 - [x] Env SMTP + `ORDER_NOTIFY_EXTRA_EMAILS` opcional

@@ -16,7 +16,8 @@
 - Contacto guest/admin incluye `email` en `orders.contact` (jsonb).
 - Email administrativo operativo = `core.public_business_settings.email` (DECISIONS #38).
 - Briefs previos marcaron **NO notificaciones email** → este slice las introduce (best-effort).
-- Next.js 15.3+ ofrece `after()` para trabajo post-respuesta sin bloquear el cliente.
+- El envío se hace con **await** en create-order (sin `after()`): puede alargar
+  latencia; el fallo SMTP no revierte la orden.
 
 ## Objetivo
 
@@ -26,9 +27,10 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 
 - Paquete `@de-tin-marin/notifications` (`server-only`): SMTP, `notifyOrderCreated`, templates HTML **embebidos** en `*.template.ts` + text, resolución de destinatarios
 - Env server (ambas apps): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `ORDER_NOTIFY_EXTRA_EMAILS` (opcional), URLs base opcionales para links
-- Ecommerce: tras insert exitoso → `after()` → cliente + admin(+extras)
-- Admin create: tras insert exitoso → `after()` → solo admin(+extras)
+- Ecommerce: tras insert exitoso → **await** `scheduleOrderCreatedNotification` → cliente + admin(+extras)
+- Admin create: tras insert exitoso → **await** → solo admin(+extras)
 - Fallo SMTP → log server (sin PII) ; orden sigue `{ ok: true }`
+- Transporte: puerto **587**, `secure: false`, timeouts 60s
 - Vitest: recipients, templates, matriz source
 
 ## Scope OUT (traps)
@@ -75,7 +77,7 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 1. Brief + roadmap
 2. Package notifications + templates + tests
 3. Env ambas apps + `.env.example` + turbo env
-4. Hooks `after()` en services create
+4. Await `scheduleOrderCreatedNotification` en services create (sin `after()`)
 5. `pnpm check` + `pnpm build`
 
 ## Criterios de aceptación
@@ -88,7 +90,7 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 ## Preguntas abiertas
 
 - Ninguna (SMTP Gmail App Password; extras vía env; templates HTML embebidos;
-  usar `after()`).
+  await en create-order, puerto 587).
 
 ## Notas post-implementación
 
@@ -98,3 +100,7 @@ Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Passw
 - **Lección de build:** un fallo al **cargar** un módulo compartido afecta
   todas las rutas que lo importan, no solo el envío de correo. Ver
   [`coding-guidelines.md`](../../coding-guidelines.md) § Assets en serverless.
+- **Delta runtime (2026-08-22):** se retiró `after()` porque en Vercel el
+  trabajo post-respuesta podía cortarse sin log. Create-order awaita el SMTP;
+  transporte fijo en 587 / `secure: false` / `family: 4` / timeouts 60s.
+  Cross-ref DECISIONS #39 · Regla 28.

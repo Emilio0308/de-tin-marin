@@ -26,11 +26,11 @@ Cada módulo tiene su propio `README.md` con el alcance de la etapa.
 
 ## Notificación de orden creada
 
-Tras un `createGuestOrder` exitoso, checkout agenda con `after()` un correo
-SMTP best-effort: cliente + correo operativo de
-`core.public_business_settings` (+ extras server-side opcionales). No bloquea
-el checkout, no cambia el estado de la orden ni garantiza entrega. El paquete
-compartido es `@de-tin-marin/notifications`; ver
+Tras un `createGuestOrder` exitoso, checkout **await** un correo SMTP
+best-effort: cliente + correo operativo de `core.public_business_settings`
+(+ extras server-side opcionales). Puede alargar la latencia del checkout;
+no cambia el estado de la orden ni garantiza entrega. El paquete compartido
+es `@de-tin-marin/notifications`; ver
 [`docs/orders.md`](../../docs/orders.md) y su README.
 
 ## Feature flags

@@ -20,3 +20,4 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 11. **Media CDN:** S3 + CloudFront vía CDK — [`docs/infra.md`](docs/infra.md) · DECISIONS #34/#35.
 12. **Logging server:** `@de-tin-marin/logging` (JSON consola); shim `shared/errors/server-error.ts` — DECISIONS #37 · [`rules/40`](docs/rules/40-validation-and-boundaries.md).
 13. **Assets en Vercel:** no `readFileSync` de archivos sueltos en packages; embeber como módulos (p. ej. `*.template.ts`) — un `ENOENT` al import tumba el chunk entero — [`coding-guidelines.md`](docs/coding-guidelines.md) § Assets serverless.
+14. **Documentar / sync docs:** antes de editar docs, leer y seguir [`docs/DOC-WORKFLOW.md`](docs/DOC-WORKFLOW.md) (regla `.cursor/rules/doc-workflow.mdc`).

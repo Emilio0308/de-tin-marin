@@ -34,6 +34,7 @@ De Tin Marín es un **ecommerce de dulces y sorpresas** con backoffice administr
 
 - **Contexto mínimo:** carga solo el dominio relevante — `CLAUDE.md` + el brief de etapa (si existe) + `docs/` del dominio + `docs/rules/*` aplicables. No leas todo el monorepo.
 - **Documentación primero:** si falta una regla de negocio o un contrato DTO, documéntala antes de codear.
+- **Al documentar / sync docs:** leer y seguir [`docs/DOC-WORKFLOW.md`](docs/DOC-WORKFLOW.md) **antes** de editar (checklist DECISIONS, Reglas, `database.md`, briefs, READMEs). Regla Cursor: `.cursor/rules/doc-workflow.mdc`.
 - **Commits:** solo cuando el usuario lo pida. No hacer push a producción sin autorización.
 - **El gate no es el build:** `pnpm check` no sustituye a `pnpm build`. El build detecta fugas client/server que el typecheck no ve. Tampoco asumas que `readFileSync` de assets sueltos funciona en Vercel — embeber como módulos importables (ver trampas / `coding-guidelines.md`).
 - **Imports en client:** usa `import type { … }` desde módulos server; un import de valor arrastra `import "server-only"` al bundle del cliente.

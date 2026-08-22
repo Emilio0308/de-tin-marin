@@ -21,7 +21,9 @@ Envío SMTP server-only (Nodemailer) para notificaciones de órdenes.
 - Templates: HTML embebido en `src/templates/*.template.ts` + text plano.
 
 El caller awaita el envío tras persistir la orden (sin `after()`). El fallo de
-correo no revierte la orden. No hay cola, reintento ni webhook en v1.
+correo no revierte la orden (sí puede alargar la latencia del create). No hay
+cola, reintento ni webhook en v1. Helpers loguean `notify_start` /
+`notified` / `NOTIFY_FAILED` sin PII.
 
 ## Datos y privacidad
 
@@ -71,7 +73,8 @@ ORDER_ECOMMERCE_APP_BASE_URL=  # opcional links Mis pedidos
 ORDER_ADMIN_APP_BASE_URL=      # opcional links admin
 ```
 
-Transporter: puerto **587**, `secure: false`, `family: 4`, timeouts 60s.
+Transporter: puerto **587** fijo en `mailer` (y helpers pasan `port: 587` a
+`resolveSmtpConfig`), `secure: false`, `family: 4`, timeouts 60s.
 
 Respuestas del cliente: si `SMTP_REPLY_TO` está definido, Nodemailer envía
 `Reply-To` a esa dirección (el From puede seguir siendo la cuenta SMTP de

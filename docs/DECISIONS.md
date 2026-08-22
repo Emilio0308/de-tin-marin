@@ -45,8 +45,27 @@
 | 36 | Costo de venta producto | ✅ | Columna **`catalog.products.cost_net_price`** (nullable, `>= 0`). Margen y % **derivados** (no persistidos): `margin = prices.normal.netPrice − cost`; `marginPct = margin / cost` si `cost > 0`. Solo admin + Excel; no ecommerce/Orders. Brief: `docs/stages/S4/02-product-cost-margin.md` |
 | 37 | Logging server (consola) | ✅ | Observabilidad v1 = **solo stdout/stderr** vía **`@de-tin-marin/logging`** (JSON una línea). `createServerErrorHelpers({ app, includeUnexpectedMessage })` en shims de app. `guardAction` / `withOperation` + `logServerError` / `Info` / `Warn` + `safeMeta` (redact PII/secrets). Metadata = resumen (IDs, conteos, códigos); nunca payloads crudos. Admin puede devolver `message` en `UNEXPECTED`; ecommerce no. Detalle: `rules/40-validation-and-boundaries.md` · `packages/logging/README.md` |
 | 38 | Contacto y cobro público dinámico | ✅ | Singleton `core.public_business_settings`: WhatsApp/email + instrucciones Yape/transferencia. Staff actualiza; `SELECT` público deliberado para storefront. Ecommerce usa DTO allowlist validado, no valores hardcodeados. Las instrucciones de órdenes `pending_payment` se leen al visualizarse, no se congelan en `orders` ni confirman pagos. Migración `00026`; Regla 27 |
-| 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only y `after()` para envío best-effort tras persistir una orden. Ecommerce notifica cliente + admin; admin solo admin. Fallo/SMTP ausente no altera la orden. Destinatario admin desde #38 + extras env validados/deduplicados. Plantillas HTML **embebidas** en `*.template.ts` (viajan con el bundle; **no** `readFileSync` de `.html` — ENOENT en Vercel tumbaba imports del package, p. ej. `/checkout`). Sin outbox, reintentos, webhooks ni estado de entrega en v1. Regla 28 / S4-06 |
+| 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only. Tras persistir, create-order **await** `scheduleOrderCreatedNotification` (sin `after()`): el request espera el envío; fallo/SMTP ausente **no** altera la orden. Puerto de transporte **587**, `secure: false`, `family: 4`, timeouts 60s. Ecommerce → cliente + admin; admin → solo admin. Admin desde #38 + extras env. Plantillas HTML embebidas en `*.template.ts` (no `readFileSync`). Sin outbox/reintentos/webhooks v1. Regla 28 / S4-06 |
 | 40 | Puntos de recojo vs recojo en tienda | ✅ | **`pickup`** = recojo en tienda (admin manual; sin ubicación). **`pickup_point`** = catálogo `pricing.pickup_points` (nombre + coords + fee configurable). Ecommerce guest solo `delivery` \| `pickup_point`. Snapshot `fulfillment.pickupPoint` al crear orden. Migración `00028`. Brief: S4-08 |
+
+## Docs sincronizados (2026-08-22 — SMTP await / puerto 587)
+
+- DECISIONS #39 — se retira `after()`: create-order **await** el envío SMTP
+  best-effort; fallo no revierte la orden (puede alargar latencia del
+  checkout/create admin).
+- Transporte: puerto **587** fijo en mailer/helpers, `secure: false`,
+  `family: 4`, timeouts 60s; log `notify_start` al iniciar.
+- Docs: Regla 28, `orders.md`, roadmap S4-06, brief S4-06 (notas post),
+  `architecture.md`, `rules/40`, READMEs package / ecommerce / checkout /
+  admin orders.
+
+## Docs sincronizados (2026-08-22 — flujo de documentación)
+
+- Guía canónica [`docs/DOC-WORKFLOW.md`](DOC-WORKFLOW.md): capas, precedencia,
+  checklist al documentar features, anatomía de Regla / brief / sync.
+- Regla Cursor siempre activa: `.cursor/rules/doc-workflow.mdc` — al pedir
+  documentar, leer DOC-WORKFLOW antes de editar.
+- Enlaces en `docs/README.md`, `AGENTS.md` §14, `CLAUDE.md` convenciones.
 
 ## Docs sincronizados (2026-08-19 — puntos de recojo)
 

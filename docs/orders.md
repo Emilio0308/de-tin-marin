@@ -321,10 +321,10 @@ sustituye la confirmación manual/admin + RPC atómica de stock.
 
 ### Notificación email al crear una orden
 
-Después de persistir una orden se agenda, con `after()`, un envío SMTP
-**best-effort** de `@de-tin-marin/notifications`. El scheduling ocurre fuera
-de la respuesta y de la transacción de creación: una orden válida devuelve
-`{ ok: true }` aunque falte SMTP o falle uno de los envíos.
+Tras persistir una orden, create-order **await** un envío SMTP **best-effort**
+vía `@de-tin-marin/notifications` (sin `after()`). El correo ocurre en el
+mismo request y puede alargar la latencia; la orden ya guardada sigue
+devolviendo `{ ok: true }` aunque falte SMTP o falle uno de los envíos.
 
 | Origen de creación | Destinatarios                                                                     |
 | ------------------ | --------------------------------------------------------------------------------- |
@@ -339,12 +339,13 @@ enlaces opcionales a confirmación/Mis pedidos y el administrativo al detalle
 de admin. Las URLs se construyen solo si las bases server-side están
 configuradas.
 
-SMTP es configuración exclusivamente server-side (`SMTP_*`); si falta algún
-campo requerido se omite el envío y se registra `SMTP_NOT_CONFIGURED`. Los
-destinatarios extra se leen de `ORDER_NOTIFY_EXTRA_EMAILS`, se validan y
-deduplican sin distinguir mayúsculas. Los logs contienen solo
-`orderId`/`orderNumber`, origen, conteo enviado y código de fallo: nunca
-contacto, dirección, carrito ni credenciales SMTP.
+SMTP es configuración exclusivamente server-side (`SMTP_*`); el transporte usa
+puerto **587** y `secure: false`. Si falta host/user/pass/from se omite el
+envío y se registra `SMTP_NOT_CONFIGURED`. Los destinatarios extra se leen de
+`ORDER_NOTIFY_EXTRA_EMAILS`, se validan y deduplican sin distinguir
+mayúsculas. Los logs contienen `notify_start` / `notified` /
+`NOTIFY_FAILED` con solo `orderId`/`orderNumber`, origen, conteo enviado y
+código de fallo: nunca contacto, dirección, carrito ni credenciales SMTP.
 
 No hay outbox, reintentos ni webhook en v1. Por lo tanto la notificación no es
 una garantía de entrega ni un sustituto del lookup guest por número de orden +

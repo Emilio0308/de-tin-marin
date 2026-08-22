@@ -133,10 +133,11 @@ input: pasar `summarizeActionInput(raw)` como 3er argumento de `guardAction`.
    ecommerce **no** expone mensaje interno de Supabase/stack.
 6. **PUT a S3 desde el browser** (presign) no genera logs en Vercel si falla por CORS —
    solo en la consola del cliente (`putPresignedCatalogImage`).
-7. **Notificaciones SMTP:** al ejecutar trabajo best-effort post-respuesta,
-   loguear solo `orderId`, `orderNumber`, origen, conteo `sent` y código de
-   fallo. Nunca el input de correo (contacto, líneas, dirección, URLs guest),
-   destinatarios ni valores `SMTP_*`.
+7. **Notificaciones SMTP:** al awaitar el envío best-effort tras persistir,
+   loguear `notify_start` / resultado con solo `orderId`, `orderNumber`,
+   origen, conteo `sent` y código de fallo. Nunca el input de correo
+   (contacto, líneas, dirección, URLs guest), destinatarios ni valores
+   `SMTP_*`.
 
 ```typescript
 export async function createCategoryAction(raw: unknown) {

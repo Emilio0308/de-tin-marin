@@ -2,23 +2,27 @@
 
 Documentación canónica del proyecto. La IA y los devs deben leer **solo lo relevante** para la tarea actual.
 
+> **Al documentar / sync docs:** leer primero [`DOC-WORKFLOW.md`](DOC-WORKFLOW.md) (regla Cursor `doc-workflow`).
+
 ## Orden de lectura recomendado
 
-| #   | Documento                                                    | Qué responde                                |
-| --- | ------------------------------------------------------------ | ------------------------------------------- |
-| 1   | [vision.md](vision.md)                                       | Por qué existe el proyecto                  |
-| 2   | [architecture.md](architecture.md)                           | Cómo está organizado el monorepo            |
-| 2b  | [infra.md](infra.md)                                         | Media CDN: S3 + CloudFront, reglas y deploy |
-| 3   | [database.md](database.md)                                   | Tablas, relaciones, RLS (catálogo canónico) |
-| 4   | [business-rules.md](business-rules.md)                       | Reglas de negocio numeradas                 |
-| 5   | Dominio específico                                           | pricing · campaigns · orders · inventory    |
-| 6   | [coding-guidelines.md](coding-guidelines.md)                 | Convenciones de código                      |
-| 7   | [rules/](rules/)                                             | Reglas técnicas detalladas                  |
-| 8   | [rules/88-ui-design-i18n.md](rules/88-ui-design-i18n.md)     | Responsive, i18n, paleta, datos reales      |
-| 9   | [rules/85-react-components.md](rules/85-react-components.md) | Container/presentational, tests de render   |
+| #   | Documento                                                    | Qué responde                                     |
+| --- | ------------------------------------------------------------ | ------------------------------------------------ |
+| 0   | [DOC-WORKFLOW.md](DOC-WORKFLOW.md)                           | Cómo actualizar docs (obligatorio al documentar) |
+| 1   | [vision.md](vision.md)                                       | Por qué existe el proyecto                       |
+| 2   | [architecture.md](architecture.md)                           | Cómo está organizado el monorepo                 |
+| 2b  | [infra.md](infra.md)                                         | Media CDN: S3 + CloudFront, reglas y deploy      |
+| 3   | [database.md](database.md)                                   | Tablas, relaciones, RLS (catálogo canónico)      |
+| 4   | [business-rules.md](business-rules.md)                       | Reglas de negocio numeradas                      |
+| 5   | Dominio específico                                           | pricing · campaigns · orders · inventory         |
+| 6   | [coding-guidelines.md](coding-guidelines.md)                 | Convenciones de código                           |
+| 7   | [rules/](rules/)                                             | Reglas técnicas detalladas                       |
+| 8   | [rules/88-ui-design-i18n.md](rules/88-ui-design-i18n.md)     | Responsive, i18n, paleta, datos reales           |
+| 9   | [rules/85-react-components.md](rules/85-react-components.md) | Container/presentational, tests de render        |
 
 ## Decisiones y planificación
 
+- [DOC-WORKFLOW.md](DOC-WORKFLOW.md) — flujo para documentar features (**leer antes de sync docs**)
 - [DECISIONS.md](DECISIONS.md) — ledger de decisiones firmadas (**gana sobre otros docs**)
 - [infra.md](infra.md) — media CDN (S3 + CloudFront), entornos staging/prod, guía de deploy
 - [roadmap.md](roadmap.md) — etapas S0→S4
