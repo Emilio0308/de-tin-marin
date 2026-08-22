@@ -72,6 +72,11 @@ ORDER_ECOMMERCE_APP_BASE_URL=  # opcional links Mis pedidos
 ORDER_ADMIN_APP_BASE_URL=      # opcional links admin
 ```
 
+El transporter fuerza **IPv4** (`family: 4`) y timeouts de conexión/greeting:
+en Vercel, resolver `smtp.gmail.com` por IPv6 suele abrir TCP y nunca recibir
+el banner SMTP (`Greeting never received`). Puerto `465` = TLS implícito;
+`587` = STARTTLS (`requireTLS`).
+
 Respuestas del cliente: si `SMTP_REPLY_TO` está definido, Nodemailer envía `Reply-To` a esa dirección (el From puede seguir siendo la cuenta SMTP de soporte).
 
 No copiar secretos reales a `.env.example`, documentación, commits ni logs.
