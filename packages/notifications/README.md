@@ -20,9 +20,8 @@ Envío SMTP server-only (Nodemailer) para notificaciones de órdenes.
   descarta emails inválidos y deduplica sin distinguir mayúsculas.
 - Templates: HTML embebido en `src/templates/*.template.ts` + text plano.
 
-El caller agenda la operación con `after()` después de persistir la orden. No
-hay cola, reintento, webhook ni registro de entrega en v1; este paquete no
-puede garantizar que un destinatario reciba el correo.
+El caller awaita el envío tras persistir la orden (sin `after()`). El fallo de
+correo no revierte la orden. No hay cola, reintento ni webhook en v1.
 
 ## Datos y privacidad
 
@@ -72,8 +71,7 @@ ORDER_ECOMMERCE_APP_BASE_URL=  # opcional links Mis pedidos
 ORDER_ADMIN_APP_BASE_URL=      # opcional links admin
 ```
 
-Transporter: `secure: false` + `requireTLS` (STARTTLS en 587), `family: 4`
-(IPv4) y timeouts de conexión/greeting.
+Transporter: puerto **587**, `secure: false`, `family: 4`, timeouts 60s.
 
 Respuestas del cliente: si `SMTP_REPLY_TO` está definido, Nodemailer envía
 `Reply-To` a esa dirección (el From puede seguir siendo la cuenta SMTP de

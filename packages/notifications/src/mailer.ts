@@ -17,17 +17,13 @@ export type SendMailFn = (
   mail: SendMailInput,
 ) => Promise<void>;
 
-/**
- * Gmail en Vercel: preferir puerto 587 + STARTTLS (`secure: false`).
- * `family: 4` evita stalls IPv6 ("Greeting never received").
- */
 type SmtpTransportOptions = SMTPTransport.Options & {
   family?: 4 | 6;
 };
 
-const SMTP_CONNECTION_TIMEOUT_MS = 30000;
-const SMTP_GREETING_TIMEOUT_MS = 30000;
-const SMTP_SOCKET_TIMEOUT_MS = 30000;
+const SMTP_CONNECTION_TIMEOUT_MS = 60000;
+const SMTP_GREETING_TIMEOUT_MS = 60000;
+const SMTP_SOCKET_TIMEOUT_MS = 60000;
 
 export const sendMail: SendMailFn = async (smtp, mail) => {
   const options: SmtpTransportOptions = {

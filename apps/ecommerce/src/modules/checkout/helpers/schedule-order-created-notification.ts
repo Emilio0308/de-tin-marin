@@ -1,7 +1,5 @@
 import "server-only";
 
-import { after } from "next/server";
-
 import { DEFAULT_BRAND_LOGO_URL } from "@de-tin-marin/notifications/types";
 import { notifyOrderCreated } from "@de-tin-marin/notifications/notify-order-created";
 import { parseExtraEmails } from "@de-tin-marin/notifications/recipients";
@@ -18,7 +16,7 @@ import {
 function buildSmtpFromEnv() {
   return resolveSmtpConfig({
     host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
+    port: 587,
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
     from: env.SMTP_FROM,
@@ -57,9 +55,10 @@ function buildAdminOrderUrl(orderId: string): string | null {
 }
 
 /**
- * Programa el envío post-respuesta. Nunca bloquea ni falla create order.
+ * Envía la notificación en el request (sin `after()`).
+ * Nunca lanza: el create order sigue ok aunque falle el correo.
  */
-export function scheduleOrderCreatedNotification(
+export async function scheduleOrderCreatedNotification(
   input: Omit<
     OrderCreatedNotifyInput,
     | "extraAdminEmails"
@@ -70,7 +69,7 @@ export function scheduleOrderCreatedNotification(
   > & {
     adminEmail: string;
   },
-): void {
+): Promise<void> {
   const payload: OrderCreatedNotifyInput = {
     ...input,
     extraAdminEmails: parseExtraEmails(env.ORDER_NOTIFY_EXTRA_EMAILS),
@@ -86,49 +85,49 @@ export function scheduleOrderCreatedNotification(
     adminOrderUrl: buildAdminOrderUrl(input.orderId),
   };
 
-  after(() => {
-    void (async () => {
-      const smtp = buildSmtpFromEnv();
-      if (!smtp) {
-        logServerWarn(
-          "scheduleOrderCreatedNotification",
-          "SMTP_NOT_CONFIGURED",
-          {
-            orderId: payload.orderId,
-            orderNumber: payload.orderNumber,
-            source: payload.source,
-          },
-        );
-      }
+  try {
+    logServerInfo("scheduleOrderCreatedNotification", "notify_start", {
+      orderId: payload.orderId,
+      orderNumber: payload.orderNumber,
+      source: payload.source,
+    });
 
-      const result = await notifyOrderCreated(smtp, payload);
-      if (!result.ok) {
-        logServerError("scheduleOrderCreatedNotification", {
-          message: "NOTIFY_FAILED",
-          orderId: payload.orderId,
-          orderNumber: payload.orderNumber,
-          source: payload.source,
-          sent: result.sent,
-          error: result.error,
-        });
-        return;
-      }
+    const smtp = buildSmtpFromEnv();
+    if (!smtp) {
+      logServerWarn("scheduleOrderCreatedNotification", "SMTP_NOT_CONFIGURED", {
+        orderId: payload.orderId,
+        orderNumber: payload.orderNumber,
+        source: payload.source,
+      });
+    }
 
-      logServerInfo("scheduleOrderCreatedNotification", "notified", {
+    const result = await notifyOrderCreated(smtp, payload);
+    if (!result.ok) {
+      logServerError("scheduleOrderCreatedNotification", {
+        message: "NOTIFY_FAILED",
         orderId: payload.orderId,
         orderNumber: payload.orderNumber,
         source: payload.source,
         sent: result.sent,
-        skipped: result.skipped,
+        error: result.error,
       });
-    })().catch((error: unknown) => {
-      logServerError("scheduleOrderCreatedNotification", {
-        message: "NOTIFY_UNEXPECTED",
-        orderId: payload.orderId,
-        orderNumber: payload.orderNumber,
-        source: payload.source,
-        error: error instanceof Error ? error.message : "unknown",
-      });
+      return;
+    }
+
+    logServerInfo("scheduleOrderCreatedNotification", "notified", {
+      orderId: payload.orderId,
+      orderNumber: payload.orderNumber,
+      source: payload.source,
+      sent: result.sent,
+      skipped: result.skipped,
     });
-  });
+  } catch (error: unknown) {
+    logServerError("scheduleOrderCreatedNotification", {
+      message: "NOTIFY_UNEXPECTED",
+      orderId: payload.orderId,
+      orderNumber: payload.orderNumber,
+      source: payload.source,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
 }

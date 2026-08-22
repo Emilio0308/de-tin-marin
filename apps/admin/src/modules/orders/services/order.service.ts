@@ -339,7 +339,7 @@ export async function createOrderService(
   });
 
   const settings = await getBusinessSettingsService(config);
-  scheduleOrderCreatedNotification({
+  await scheduleOrderCreatedNotification({
     orderId: row.id,
     orderNumber: row.order_number,
     total: totals.total,

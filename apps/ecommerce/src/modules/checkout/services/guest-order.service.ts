@@ -766,7 +766,7 @@ export async function createGuestOrderService(
       ? settingsResult.data.email
       : "";
 
-  scheduleOrderCreatedNotification({
+  await scheduleOrderCreatedNotification({
     source: "ecommerce",
     orderId: inserted.id,
     orderNumber: inserted.orderNumber,
