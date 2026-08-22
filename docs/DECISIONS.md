@@ -48,6 +48,18 @@
 | 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only. Tras persistir, create-order **await** `scheduleOrderCreatedNotification` (sin `after()`): el request espera el envío; fallo/SMTP ausente **no** altera la orden. Puerto de transporte **587**, `secure: false`, `family: 4`, timeouts 60s. Ecommerce → cliente + admin; admin → solo admin. Admin desde #38 + extras env. Plantillas HTML embebidas en `*.template.ts` (no `readFileSync`). Sin outbox/reintentos/webhooks v1. Regla 28 / S4-06 |
 | 40 | Puntos de recojo vs recojo en tienda | ✅ | **`pickup`** = recojo en tienda (admin manual; sin ubicación). **`pickup_point`** = catálogo `pricing.pickup_points` (nombre + coords + fee configurable). Ecommerce guest solo `delivery` \| `pickup_point`. Snapshot `fulfillment.pickupPoint` al crear orden. Migración `00028`. Brief: S4-08 |
 
+## Docs sincronizados (2026-08-22 — checkout UX validación form)
+
+- Sin decisión #N nueva: polish UX del checkout guest (no cambia contrato
+  de create-order ni cobertura).
+- Form: validación **on blur** por campo (ya existía); botón “Confirmar
+  pedido” solo se deshabilita en `isSubmitting` (no por `covered` /
+  fee loading / pricing).
+- Al submit inválido: schema Zod → scroll/focus al primer campo + toast
+  Sonner con campo y sección; fuera de cobertura / pendientes → toast.
+- Docs: README `apps/ecommerce/.../checkout`, brief S3A-3 (quita “submit
+  disabled”), bullet roadmap S3A-3.
+
 ## Docs sincronizados (2026-08-22 — SMTP await / puerto 587)
 
 - DECISIONS #39 — se retira `after()`: create-order **await** el envío SMTP

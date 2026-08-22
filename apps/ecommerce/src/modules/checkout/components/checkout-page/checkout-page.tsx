@@ -78,7 +78,6 @@ function CheckoutSummaryPanel({
   covered,
   isDeliveryPending,
   isSubmitting,
-  canSubmit,
   labels,
   showSubmitButton = true,
   compact = false,
@@ -89,7 +88,6 @@ function CheckoutSummaryPanel({
   covered: boolean;
   isDeliveryPending: boolean;
   isSubmitting: boolean;
-  canSubmit: boolean;
   labels: CheckoutPageProps["labels"];
   showSubmitButton?: boolean;
   compact?: boolean;
@@ -166,7 +164,7 @@ function CheckoutSummaryPanel({
         {showSubmitButton ? (
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={isSubmitting}
             className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary hover:bg-primary-container focus-visible:ring-primary hidden min-h-12 w-full cursor-pointer items-center justify-center rounded-full px-6 py-3 transition-[transform,background-color,opacity] duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 lg:flex"
           >
             {isSubmitting ? labels.submitting : labels.submit}
@@ -201,7 +199,6 @@ export function CheckoutPage({
   isDeliveryPending,
   isSubmitting,
   errorMessage,
-  stockBlocked,
   isStockPending,
   stockWarning,
   stockMessages,
@@ -214,13 +211,6 @@ export function CheckoutPage({
   onMapPinChange,
   onSubmit,
 }: CheckoutPageProps) {
-  const canSubmit =
-    covered &&
-    !isSubmitting &&
-    !stockBlocked &&
-    !isDeliveryPending &&
-    !isStockPending;
-
   const selectedPickupPoint = pickupPoints.find(
     (point) => point.id === pickupPointId,
   );
@@ -592,7 +582,6 @@ export function CheckoutPage({
                   covered={covered}
                   isDeliveryPending={isDeliveryPending}
                   isSubmitting={isSubmitting}
-                  canSubmit={canSubmit}
                   labels={labels}
                 />
               </div>
@@ -610,14 +599,13 @@ export function CheckoutPage({
             covered={covered}
             isDeliveryPending={isDeliveryPending}
             isSubmitting={isSubmitting}
-            canSubmit={canSubmit}
             labels={labels}
             compact
           />
           <button
             type="submit"
             form="checkout-form"
-            disabled={!canSubmit}
+            disabled={isSubmitting}
             className="press-down soft-glow-pink bg-primary font-label text-label-bold text-on-primary focus-visible:ring-primary mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full px-6 py-3 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? labels.submitting : labels.submit}

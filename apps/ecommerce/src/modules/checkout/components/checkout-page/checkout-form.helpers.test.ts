@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   getCheckoutFieldErrorKey,
   getCheckoutFieldErrorKeys,
+  getCheckoutFieldSection,
+  getFirstInvalidCheckoutField,
   getPickupPointErrorKey,
   mapCheckoutFieldErrors,
   sanitizeCheckoutField,
@@ -134,5 +136,20 @@ describe("checkout form validation", () => {
   it("marca punto de recojo requerido", () => {
     expect(getPickupPointErrorKey("")).toBe("required");
     expect(getPickupPointErrorKey("abc")).toBeUndefined();
+  });
+
+  it("devuelve el primer campo inválido en orden DOM", () => {
+    expect(
+      getFirstInvalidCheckoutField({
+        email: "required",
+        name: "required",
+        district: "required",
+      }),
+    ).toBe("name");
+  });
+
+  it("mapea campos a sección de contacto o dirección", () => {
+    expect(getCheckoutFieldSection("email")).toBe("contact");
+    expect(getCheckoutFieldSection("district")).toBe("address");
   });
 });

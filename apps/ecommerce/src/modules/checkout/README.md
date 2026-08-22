@@ -29,9 +29,21 @@ coords, fee). Errores: `PICKUP_POINT_REQUIRED` / `NOT_FOUND` / `INACTIVE`,
 `OUT_OF_COVERAGE`, `SHIPPING_FEE_MISMATCH`. El RPC
 `insert_guest_order` rechaza `pickup` y XOR inválido.
 
-## Validación al submit
+## Validación del formulario (cliente)
 
-No hay polling de stock en checkout. Al confirmar:
+- **On blur:** cada campo valida solo ese input (Zod en
+  `checkout-form.helpers`) y muestra error inline.
+- **Botón “Confirmar pedido”:** queda habilitado salvo mientras
+  `isSubmitting`. No se deshabilita por cobertura pendiente, fee loading ni
+  pricing preview.
+- **Al submit:** revalida el schema completo; si falta o es inválido un
+  campo → scroll/focus al primero + toast Sonner
+  (`Completa/Revisa el campo "…" en la sección de …`). Sin cobertura /
+  fee o precios aún pendientes → toast (no create silencioso).
+
+## Validación de carrito al submit
+
+No hay polling de stock en checkout. Tras pasar el schema del form:
 
 1. `validateGuestCheckoutCartAction` — precios vigentes + stock en una ida.
 2. Si hay drift (`priceChanged` / `!stockOk`) → `dtm-cart-sync` + redirect `/carrito?sync=1`.

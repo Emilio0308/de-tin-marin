@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { storeFeatures } from "@/config/store";
 import { cartLinesToOrderInput } from "@/modules/cart/helpers/cart-to-order-input";
 import { toShoppingCartLines } from "@/modules/cart/helpers/cart-lines";
@@ -24,11 +25,15 @@ import { defaultMapPin } from "../delivery-map/delivery-map.constants";
 import {
   getCheckoutFieldErrorKey,
   getCheckoutFieldErrorKeys,
+  getCheckoutFieldSection,
+  getFirstInvalidCheckoutField,
   getPickupPointErrorKey,
   hasCheckoutFieldError,
   mapCheckoutFieldError,
   mapCheckoutFieldErrors,
   sanitizeCheckoutField,
+  scrollToCheckoutField,
+  type CheckoutFieldErrorKey,
   type CheckoutFieldErrors,
   type CheckoutFormField,
   type CheckoutFormValues,
@@ -121,18 +126,72 @@ export function CheckoutPageContainer() {
     [validationLabels],
   );
 
+  const fieldSectionLabel = useCallback(
+    (field: CheckoutFormField | "pickupPointId") => {
+      if (field === "pickupPointId") {
+        return t("validation.pickupSection");
+      }
+      return getCheckoutFieldSection(field) === "contact"
+        ? t("validation.contactSection")
+        : t("validation.addressSection");
+    },
+    [t],
+  );
+
+  const fieldDisplayLabel = useCallback(
+    (field: CheckoutFormField | "pickupPointId") => {
+      if (field === "pickupPointId") return t("pickupPointTitle");
+      return t(field);
+    },
+    [t],
+  );
+
+  const toastForFieldIssue = useCallback(
+    (
+      field: CheckoutFormField | "pickupPointId",
+      errorKey: CheckoutFieldErrorKey | "required",
+    ) => {
+      const params = {
+        field: fieldDisplayLabel(field),
+        section: fieldSectionLabel(field),
+      };
+      const message =
+        errorKey === "required"
+          ? t("validation.missingFieldToast", params)
+          : t("validation.invalidFieldToast", params);
+      toast.error(message);
+      scrollToCheckoutField(field);
+    },
+    [fieldDisplayLabel, fieldSectionLabel, t],
+  );
+
   const validateForm = useCallback(
     (values: CheckoutFormValues, method: GuestCheckoutFulfillmentMethod) => {
       const errorKeys = getCheckoutFieldErrorKeys(values, method);
       const mappedErrors = mapCheckoutFieldErrors(errorKeys, validationLabels);
       setFieldErrors(mappedErrors);
-      const pickupValid =
-        method === "delivery" ? true : validatePickupPoint(pickupPointId);
-      const isValid = Object.keys(mappedErrors).length === 0 && pickupValid;
-      setShowValidationSummary(!isValid);
-      return isValid;
+
+      const firstInvalid = getFirstInvalidCheckoutField(errorKeys);
+      if (firstInvalid) {
+        setShowValidationSummary(true);
+        toastForFieldIssue(firstInvalid, errorKeys[firstInvalid] ?? "required");
+        return false;
+      }
+
+      if (method === "pickup_point") {
+        const pickupKey = getPickupPointErrorKey(pickupPointId);
+        validatePickupPoint(pickupPointId);
+        if (pickupKey) {
+          setShowValidationSummary(true);
+          toastForFieldIssue("pickupPointId", pickupKey);
+          return false;
+        }
+      }
+
+      setShowValidationSummary(false);
+      return true;
     },
-    [pickupPointId, validationLabels, validatePickupPoint],
+    [pickupPointId, toastForFieldIssue, validationLabels, validatePickupPoint],
   );
 
   const validateField = useCallback(
@@ -242,9 +301,6 @@ export function CheckoutPageContainer() {
       ? feeQuery.isLoading || feeQuery.isFetching
       : false;
 
-  const pricingBlocked = isPricingPending || isPricingError;
-  const checkoutBlocked = pricingBlocked;
-
   if (!isReady) {
     return null;
   }
@@ -265,7 +321,28 @@ export function CheckoutPageContainer() {
     setHasAttemptedSubmit(true);
     if (!validateForm(form, fulfillmentMethod)) return;
 
-    if (!covered || lines.length === 0 || checkoutBlocked) {
+    if (lines.length === 0) {
+      toast.error(t("emptyCart"));
+      return;
+    }
+
+    if (isPricingPending) {
+      toast.error(t("validation.pricingPendingToast"));
+      return;
+    }
+
+    if (isPricingError) {
+      toast.error(t("validation.pricingErrorToast"));
+      return;
+    }
+
+    if (isDeliveryPending) {
+      toast.error(t("validation.deliveryPendingToast"));
+      return;
+    }
+
+    if (!covered) {
+      toast.error(t("outOfCoverage"));
       return;
     }
 
@@ -457,7 +534,6 @@ export function CheckoutPageContainer() {
       isDeliveryPending={isDeliveryPending}
       isSubmitting={isSubmitting}
       errorMessage={errorMessage}
-      stockBlocked={checkoutBlocked}
       isStockPending={false}
       stockWarning={false}
       stockMessages={[]}

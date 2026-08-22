@@ -235,7 +235,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 ### S3A-3 — Carrito + checkout
 
 - Carrito localStorage (`CartRepository` intercambiable)
-- Checkout delivery Piura + mapa OSM; fuera de cobertura = bloqueo
+- Checkout delivery Piura + mapa OSM; fuera de cobertura = no crea orden
+  (toast al submit; no deshabilitar el botón por cobertura)
 - Recojo en tienda oculto (`pickupEnabled`). Puntos de recojo: S4-08
 - RLS guest insert órdenes; `createGuestOrder`
 - Brief: [`docs/stages/S3A/03-cart-checkout.md`](stages/S3A/03-cart-checkout.md)

@@ -250,7 +250,15 @@
       "invalidEmail": "Ingresa un correo electrónico válido",
       "invalidName": "Solo letras (puedes usar tildes, espacios o guion)",
       "invalidPhone": "Ingresa un celular de 9 dígitos que empiece con 9",
-      "tooShort": "Escribe un poco más de detalle"
+      "tooShort": "Escribe un poco más de detalle",
+      "missingFieldToast": "Completa el campo \"{field}\" en la sección de {section}.",
+      "invalidFieldToast": "Revisa el campo \"{field}\" en la sección de {section}.",
+      "contactSection": "contacto",
+      "addressSection": "dirección",
+      "pickupSection": "punto de recojo",
+      "deliveryPendingToast": "Espera un momento: estamos calculando el costo de envío.",
+      "pricingPendingToast": "Espera un momento: estamos actualizando los precios del carrito.",
+      "pricingErrorToast": "No pudimos verificar los precios. Revisa el carrito e intenta de nuevo."
     },
     "phoneHint": "9 dígitos, sin espacios ni letras",
     "stockTitle": "Stock limitado",

@@ -202,6 +202,62 @@ export function mapCheckoutFieldError(
   return labels[key];
 }
 
+/** Orden DOM del formulario: primer error = primer campo inválido visible. */
+export const checkoutFieldDomOrder: readonly CheckoutFormField[] = [
+  "name",
+  "lastName",
+  "phone",
+  "email",
+  "line1",
+  "district",
+  "city",
+  "province",
+  "reference",
+] as const;
+
+export type CheckoutFieldSection = "contact" | "address";
+
+export function getCheckoutFieldSection(
+  field: CheckoutFormField,
+): CheckoutFieldSection {
+  switch (field) {
+    case "name":
+    case "lastName":
+    case "phone":
+    case "email":
+      return "contact";
+    default:
+      return "address";
+  }
+}
+
+export function getFirstInvalidCheckoutField(
+  errorKeys: Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>>,
+): CheckoutFormField | undefined {
+  return checkoutFieldDomOrder.find((field) => Boolean(errorKeys[field]));
+}
+
+/** Id del control a enfocar (incluye pickup fuera del schema de campos). */
+export function getCheckoutFocusTargetId(
+  field: CheckoutFormField | "pickupPointId",
+): string {
+  return field;
+}
+
+export function scrollToCheckoutField(
+  field: CheckoutFormField | "pickupPointId",
+): void {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById(getCheckoutFocusTargetId(field));
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.setTimeout(() => {
+    if (el instanceof HTMLElement) {
+      el.focus({ preventScroll: true });
+    }
+  }, 280);
+}
+
 function isCheckoutFormField(value: string): value is CheckoutFormField {
   return checkoutFormFields.includes(value as CheckoutFormField);
 }

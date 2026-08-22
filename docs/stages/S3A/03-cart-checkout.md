@@ -62,7 +62,9 @@ interface CartRepository {
 - **Mapa Leaflet/OSM:** pin arrastrable; guardar `{ lat, lng }` en `fulfillment.metadata` o `deliveryAddress`
 - Validación cobertura:
   - Distrito debe existir en `pricing.delivery_zones` activas **o** estar dentro de bounding box Piura acordado
-  - Si fuera → mensaje “sin cobertura”, **botón submit disabled**
+  - Si fuera → mensaje “sin cobertura”; **no se crea la orden** (el botón
+    submit **no** se deshabilita por cobertura/fee/pricing: al click, toast +
+    bloqueo lógico; ver nota UX abajo)
 - `shipping_total` = `resolveDeliveryFee(district)` (mismo helper S1E)
 - Stock: banner warnings; si `strictStockValidationOnCheckout` → service retorna `INSUFFICIENT_STOCK` y no crea orden
 - Server Action `createGuestOrder` — reutiliza lógica extraída S3A-0 (mismo path que admin `createOrderService`)
@@ -137,13 +139,21 @@ Errores: `VALIDATION`, `PRODUCT_NOT_FOUND`, `BUNDLE_NOT_FOUND`, `OUT_OF_COVERAGE
 
 - [ ] Agregar producto y sorpresa personalizada al carrito persiste en refresh
 - [ ] Checkout con distrito Piura válido → `shipping_total` correcto
-- [ ] Pin/distrito fuera de cobertura → no se puede enviar
+- [ ] Pin/distrito fuera de cobertura → no se crea la orden (toast; botón
+      sigue clicable salvo `isSubmitting`)
 - [ ] Orden creada en DB: `pending_payment`, `shopping_cart` congelado, `customer_id` null
 - [ ] Admin ve la orden en listado
 - [ ] `strictStockValidationOnCheckout=false` permite crear con warning
 - [ ] `pickupEnabled=false` → sin opción pickup
 - [ ] Playwright — happy path carrito → checkout → confirmación URL
 - [ ] `pnpm check` + `pnpm build` verdes
+
+## Nota UX (2026-08-22 — validación formulario)
+
+Delta post-brief: validación **on blur** por campo; submit siempre habilitado
+(salvo enviando). Fallo de schema → scroll al input + toast con campo/sección.
+Cobertura / fee / pricing pendientes → toast al click, no botón gris. Canónico
+operativo: [`apps/ecommerce/src/modules/checkout/README.md`](../../../apps/ecommerce/src/modules/checkout/README.md).
 
 ## Preguntas abiertas
 

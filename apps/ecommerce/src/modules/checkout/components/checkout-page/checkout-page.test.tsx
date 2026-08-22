@@ -109,7 +109,6 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
       isDeliveryPending={false}
       isSubmitting={false}
       errorMessage={null}
-      stockBlocked={false}
       isStockPending={false}
       stockWarning={false}
       stockMessages={[]}
@@ -203,6 +202,28 @@ describe("CheckoutPage", () => {
     });
     fireEvent.click(submitButtons[0]!);
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantiene el botón confirmar habilitado aunque no haya cobertura", () => {
+    renderCheckout({ covered: false, isDeliveryPending: false });
+
+    const submitButtons = screen.getAllByRole("button", {
+      name: "Confirmar pedido",
+    });
+    for (const button of submitButtons) {
+      expect(button).toBeEnabled();
+    }
+  });
+
+  it("deshabilita confirmar solo mientras envía", () => {
+    renderCheckout({ isSubmitting: true });
+
+    const submitButtons = screen.getAllByRole("button", {
+      name: "Creando pedido…",
+    });
+    for (const button of submitButtons) {
+      expect(button).toBeDisabled();
+    }
   });
 
   it("muestra selector de método cuando hay puntos de recojo", () => {

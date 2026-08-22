@@ -101,7 +101,6 @@ export type CheckoutPageProps = {
   isDeliveryPending: boolean;
   isSubmitting: boolean;
   errorMessage: string | null;
-  stockBlocked: boolean;
   isStockPending: boolean;
   stockWarning: boolean;
   stockMessages: string[];
