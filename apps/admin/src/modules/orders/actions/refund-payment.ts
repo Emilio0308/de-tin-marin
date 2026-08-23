@@ -12,7 +12,7 @@ export async function refundPaymentAction(raw: unknown) {
     const auth = await requireStaff(supabaseConfig);
     if (!auth.ok) return { ok: false as const, error: auth.error };
 
-    const result = await refundPaymentService(supabaseConfig, raw);
+    const result = refundPaymentService(supabaseConfig, raw);
 
     if (result.ok) {
       const payment = await getPaymentByIdRepo(

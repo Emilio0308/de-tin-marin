@@ -22,8 +22,8 @@ vi.mock("@/shared/errors/server-error", () => ({
 import { refundPaymentService } from "./payment.service";
 
 describe("refundPaymentService", () => {
-  it("rejects standalone refunds in favor of cancel order", async () => {
-    const result = await refundPaymentService({} as never, {
+  it("rejects standalone refunds in favor of cancel order", () => {
+    const result = refundPaymentService({} as never, {
       paymentId: "00000000-0000-0000-0000-000000000001",
     });
 
