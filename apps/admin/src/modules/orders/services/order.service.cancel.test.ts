@@ -18,12 +18,12 @@ vi.mock("../helpers/schedule-order-created-notification", () => ({
 }));
 
 vi.mock("../repositories/payment.repository", () => ({
-  cancelOrderWithRestockRepo: (...args: unknown[]) =>
+  cancelOrderWithRestockRepo: (...args: unknown[]): unknown =>
     cancelOrderWithRestockRepo(...args),
 }));
 
 vi.mock("@/modules/catalog/repositories/catalog-cache-meta.repository", () => ({
-  bumpCatalogVersionSafe: (...args: unknown[]) =>
+  bumpCatalogVersionSafe: (...args: unknown[]): unknown =>
     bumpCatalogVersionSafe(...args),
 }));
 

@@ -109,10 +109,10 @@ export async function confirmPaymentService(
 }
 
 /** @deprecated Use cancelOrderService — refund+restock are atomic with cancel. */
-export async function refundPaymentService(
+export function refundPaymentService(
   _config: SupabaseConfig,
   raw: unknown,
-): Promise<
+):
   | { ok: true; data: { paymentId: string; status: "refunded" } }
   | {
       ok: false;
@@ -122,8 +122,7 @@ export async function refundPaymentService(
         | "NOT_CONFIRMED"
         | "ALREADY_REFUNDED"
         | "USE_CANCEL_ORDER";
-    }
-> {
+    } {
   const parsed = refundPaymentInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
