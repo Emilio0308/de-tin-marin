@@ -67,11 +67,10 @@ export type OrderDetailLabels = {
   shipmentStatusLabels: Record<string, string>;
   stepperLabels: Record<string, string>;
   stockWarningTitle: string;
-  formatStockWarningItem: (params: {
-    sku: string;
-    required: number;
-    available: number;
-  }) => string;
+  stockWarningColName: string;
+  stockWarningColSku: string;
+  stockWarningColRequired: string;
+  stockWarningColAvailable: string;
   insufficientStockError: string;
 };
 

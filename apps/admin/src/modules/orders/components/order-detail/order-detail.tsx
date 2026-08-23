@@ -626,23 +626,73 @@ export function OrderDetailView({
               <SectionHeader icon={Receipt} title={labels.paymentPanelTitle} />
               {order.stockCheck && !order.stockCheck.ok ? (
                 <div
-                  className="border-error/30 bg-error-container/40 text-on-error-container mb-4 rounded-lg border p-3 text-sm"
+                  className="border-error/30 bg-error-container/40 text-on-error-container mb-4 rounded-lg border p-3"
                   role="alert"
+                  tabIndex={-1}
+                  aria-labelledby="order-stock-warning-title"
                 >
-                  <p className="font-label text-label-bold">
+                  <p
+                    id="order-stock-warning-title"
+                    className="font-label text-label-bold text-sm"
+                  >
                     {labels.stockWarningTitle}
                   </p>
-                  <ul className="mt-2 list-disc pl-5">
-                    {order.stockCheck.shortages.map((shortage) => (
-                      <li key={`${shortage.kind}-${shortage.id}`}>
-                        {labels.formatStockWarningItem({
-                          sku: shortage.sku,
-                          required: shortage.required,
-                          available: shortage.available,
-                        })}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
+                      <caption className="sr-only">
+                        {labels.stockWarningTitle}
+                      </caption>
+                      <thead>
+                        <tr className="border-error/20 border-b">
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 pr-3"
+                          >
+                            {labels.stockWarningColName}
+                          </th>
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 pr-3"
+                          >
+                            {labels.stockWarningColSku}
+                          </th>
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 pr-3 text-right"
+                          >
+                            {labels.stockWarningColRequired}
+                          </th>
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 text-right"
+                          >
+                            {labels.stockWarningColAvailable}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.stockCheck.shortages.map((shortage) => (
+                          <tr
+                            key={`${shortage.kind}-${shortage.id}`}
+                            className="border-error/15 border-b last:border-b-0"
+                          >
+                            <td className="max-w-[10rem] truncate px-2 py-1.5 pr-3 font-medium">
+                              {shortage.name?.trim() || "—"}
+                            </td>
+                            <td className="px-2 py-1.5 pr-3 font-mono text-xs">
+                              {shortage.sku}
+                            </td>
+                            <td className="px-2 py-1.5 pr-3 text-right tabular-nums">
+                              {shortage.required}
+                            </td>
+                            <td className="px-2 py-1.5 text-right tabular-nums">
+                              {shortage.available}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : null}
               <div className="space-y-4">
@@ -668,7 +718,10 @@ export function OrderDetailView({
                 </Field>
                 <Button
                   variant="secondary"
-                  disabled={confirmingPayment}
+                  disabled={
+                    confirmingPayment ||
+                    Boolean(order.stockCheck && !order.stockCheck.ok)
+                  }
                   className="w-full"
                   onClick={onConfirmPayment}
                 >

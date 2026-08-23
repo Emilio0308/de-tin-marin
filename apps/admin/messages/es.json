@@ -370,8 +370,12 @@
       "referencePrefix": "Ref",
       "paymentReferencePlaceholder": "Ej: OP-987654",
       "stockWarningTitle": "Stock insuficiente para confirmar el pago",
-      "stockWarningItem": "{sku}: se requieren {required} u., hay {available} disponibles",
+      "stockWarningColName": "Nombre",
+      "stockWarningColSku": "SKU",
+      "stockWarningColRequired": "Items requeridos",
+      "stockWarningColAvailable": "Items disponibles",
       "insufficientStockError": "No hay stock suficiente para confirmar el pago",
+      "stockWarningItem": "{sku}: se requieren {required} u., hay {available} disponibles",
       "stepper": {
         "pending_payment": "Pendiente de pago",
         "paid": "Pagado",

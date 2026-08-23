@@ -145,7 +145,10 @@ export function OrderDetailContainer() {
         completed: t("detail.stepper.completed"),
       },
       stockWarningTitle: t("detail.stockWarningTitle"),
-      formatStockWarningItem: (params) => t("detail.stockWarningItem", params),
+      stockWarningColName: t("detail.stockWarningColName"),
+      stockWarningColSku: t("detail.stockWarningColSku"),
+      stockWarningColRequired: t("detail.stockWarningColRequired"),
+      stockWarningColAvailable: t("detail.stockWarningColAvailable"),
       insufficientStockError: t("detail.insufficientStockError"),
     };
   }, [t, tDashboard]);

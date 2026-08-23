@@ -100,8 +100,10 @@ const labels: OrderDetailLabels = {
     completed: "Completado",
   },
   stockWarningTitle: "Stock insuficiente",
-  formatStockWarningItem: ({ sku, required, available }) =>
-    `${sku}: ${required} / ${available}`,
+  stockWarningColName: "Nombre",
+  stockWarningColSku: "SKU",
+  stockWarningColRequired: "Items requeridos",
+  stockWarningColAvailable: "Items disponibles",
   insufficientStockError: "Stock insuficiente",
 };
 
@@ -152,6 +154,7 @@ function renderDetail(
     nextStatuses?: OrderStatus[];
     onTransitionStatus?: (status: OrderStatus) => void;
     onCancel?: () => void;
+    onConfirmPayment?: () => void;
   },
 ) {
   return render(
@@ -162,7 +165,7 @@ function renderDetail(
       paymentNotes=""
       onPaymentReferenceChange={vi.fn()}
       onPaymentNotesChange={vi.fn()}
-      onConfirmPayment={vi.fn()}
+      onConfirmPayment={options?.onConfirmPayment ?? vi.fn()}
       shipmentStatus="pending"
       shipmentTracking=""
       shipmentCarrier=""
@@ -183,6 +186,51 @@ describe("OrderDetailView", () => {
     renderDetail(baseOrder);
     expect(screen.getByText("Confirmar pago")).toBeInTheDocument();
     expect(screen.getByText("TM-20260703-0001")).toBeInTheDocument();
+  });
+
+  it("shows stock shortage as a table and disables confirm", () => {
+    renderDetail(
+      {
+        ...baseOrder,
+        stockCheck: {
+          ok: false,
+          shortages: [
+            {
+              kind: "product",
+              id: "00000000-0000-0000-0000-000000000002",
+              sku: "SKU-1",
+              name: "Gomitas",
+              required: 20,
+              available: 5,
+            },
+          ],
+        },
+      },
+      { onConfirmPayment: vi.fn() },
+    );
+
+    expect(
+      screen.getByRole("alert", { name: "Stock insuficiente" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Nombre" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "SKU" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Items requeridos" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Items disponibles" }),
+    ).toBeInTheDocument();
+    const shortageRow = screen.getByRole("row", { name: /Gomitas/ });
+    expect(shortageRow).toHaveTextContent("SKU-1");
+    expect(shortageRow).toHaveTextContent("20");
+    expect(shortageRow).toHaveTextContent("5");
+    expect(
+      screen.getByRole("button", { name: "Confirmar pago" }),
+    ).toBeDisabled();
   });
 
   it("does not render map for pickup orders", () => {
