@@ -8,6 +8,8 @@ const ORDER_STATUS_BADGE_CLASS: Record<OrderStatus, string> = {
   paid: "bg-secondary-container text-on-secondary-container",
   preparing: "bg-secondary-container text-on-secondary-container",
   ready: "bg-tertiary-fixed text-on-tertiary-fixed-variant",
+  awaiting_pickup: "bg-tertiary-fixed text-on-tertiary-fixed-variant",
+  in_transit: "bg-sky-100 text-sky-900",
   delivered: "bg-emerald-100 text-emerald-900",
   completed: "bg-emerald-100 text-emerald-900",
   cancelled: "bg-surface-container-high text-on-surface-variant",

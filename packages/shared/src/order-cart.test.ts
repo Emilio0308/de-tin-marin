@@ -6,6 +6,7 @@ import {
   deriveAdjustmentsFromFinalPrice,
   formatOrderNumber,
   getBundleLineContainerUnitPrice,
+  nextLogisticStatus,
   normalizeProductLineQuantities,
 } from "./order-cart";
 
@@ -255,6 +256,48 @@ describe("canTransitionOrderStatus", () => {
 
   it("rejects ready to paid", () => {
     expect(canTransitionOrderStatus("ready", "paid")).toBe(false);
+  });
+
+  it("routes ready by fulfillment method", () => {
+    expect(canTransitionOrderStatus("ready", "awaiting_pickup", "pickup")).toBe(
+      true,
+    );
+    expect(canTransitionOrderStatus("ready", "in_transit", "pickup")).toBe(
+      false,
+    );
+    expect(canTransitionOrderStatus("ready", "in_transit", "delivery")).toBe(
+      true,
+    );
+    expect(
+      canTransitionOrderStatus("ready", "in_transit", "pickup_point"),
+    ).toBe(true);
+    expect(
+      canTransitionOrderStatus("ready", "awaiting_pickup", "delivery"),
+    ).toBe(false);
+    expect(canTransitionOrderStatus("ready", "delivered", "delivery")).toBe(
+      false,
+    );
+  });
+
+  it("allows logistic statuses to delivered or cancelled", () => {
+    expect(
+      canTransitionOrderStatus("awaiting_pickup", "delivered", "pickup"),
+    ).toBe(true);
+    expect(
+      canTransitionOrderStatus("in_transit", "delivered", "delivery"),
+    ).toBe(true);
+    expect(
+      canTransitionOrderStatus("awaiting_pickup", "cancelled", "pickup"),
+    ).toBe(true);
+    expect(
+      canTransitionOrderStatus("in_transit", "cancelled", "delivery"),
+    ).toBe(true);
+  });
+
+  it("nextLogisticStatus maps method", () => {
+    expect(nextLogisticStatus("pickup")).toBe("awaiting_pickup");
+    expect(nextLogisticStatus("delivery")).toBe("in_transit");
+    expect(nextLogisticStatus("pickup_point")).toBe("in_transit");
   });
 });
 

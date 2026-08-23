@@ -29,10 +29,12 @@ import {
   statusBadgeClassName,
 } from "../order-status-badge/order-status-badge.helpers";
 import {
-  ORDER_STEPPER_STATUSES,
+  buildOrderStepperStatuses,
+  showShipmentPanel,
   SHIPMENT_STATUSES,
   type OrderDetailViewProps,
 } from "./order-detail.types";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col rounded-xl border p-5 shadow-sm md:p-6";
@@ -72,29 +74,32 @@ function SectionHeader({
   );
 }
 
-function stepperIndex(status: OrderStatus): number {
+function stepperIndex(status: OrderStatus, steps: OrderStatus[]): number {
   if (status === "cancelled") return -1;
-  const index = ORDER_STEPPER_STATUSES.indexOf(status);
+  const index = steps.indexOf(status);
   return index >= 0 ? index : 0;
 }
 
 function OrderStatusStepper({
   currentStatus,
+  method,
   labels,
 }: {
   currentStatus: OrderStatus;
+  method: OrderFulfillmentMethod;
   labels: Record<string, string>;
 }) {
   if (currentStatus === "cancelled") return null;
 
-  const activeIndex = stepperIndex(currentStatus);
+  const steps = buildOrderStepperStatuses(method);
+  const activeIndex = stepperIndex(currentStatus, steps);
 
   return (
     <ol className="flex flex-wrap items-center gap-2 md:gap-0">
-      {ORDER_STEPPER_STATUSES.map((status, index) => {
+      {steps.map((status, index) => {
         const isActive = index === activeIndex;
         const isComplete = index < activeIndex;
-        const isLast = index === ORDER_STEPPER_STATUSES.length - 1;
+        const isLast = index === steps.length - 1;
 
         return (
           <li
@@ -150,8 +155,6 @@ export function OrderDetailView({
   onPaymentNotesChange,
   onConfirmPayment,
   confirmingPayment,
-  onRefundPayment,
-  refundingPaymentId,
   shipmentStatus,
   shipmentTracking,
   shipmentCarrier,
@@ -168,10 +171,14 @@ export function OrderDetailView({
   onCancel,
   cancelling,
 }: OrderDetailViewProps) {
-  const canCancel = canTransitionOrderStatus(
-    order.status as OrderStatus,
-    "cancelled",
-  );
+  const status = order.status as OrderStatus;
+  const method = order.fulfillment.method;
+  const canCancel = canTransitionOrderStatus(status, "cancelled", method);
+  const shipmentVisible = showShipmentPanel(status, method);
+  const requiresShipmentForTransit =
+    status === "ready" && (method === "delivery" || method === "pickup_point");
+  const shipmentReady =
+    shipmentCarrier.trim().length > 0 && shipmentTracking.trim().length > 0;
   const mapPin =
     parseOrderMapPin(order.metadata) ??
     (order.fulfillment.pickupPoint
@@ -235,7 +242,8 @@ export function OrderDetailView({
           {order.status !== "cancelled" ? (
             <section className={cardClass}>
               <OrderStatusStepper
-                currentStatus={order.status as OrderStatus}
+                currentStatus={status}
+                method={method}
                 labels={labels.stepperLabels}
               />
             </section>
@@ -246,18 +254,71 @@ export function OrderDetailView({
               <h2 className="font-display text-on-surface mb-4 text-lg font-bold">
                 {labels.statusActionsTitle}
               </h2>
+              {requiresShipmentForTransit ? (
+                <div className="mb-4 space-y-4">
+                  <p className="text-on-surface-variant text-sm">
+                    {labels.shipmentRequiredHint}
+                  </p>
+                  <Field label={labels.shipmentCarrier}>
+                    <input
+                      className={fieldClass}
+                      value={shipmentCarrier}
+                      onChange={(event) =>
+                        onShipmentCarrierChange(event.target.value)
+                      }
+                      required
+                    />
+                  </Field>
+                  <Field label={labels.shipmentTracking}>
+                    <input
+                      className={fieldClass}
+                      value={shipmentTracking}
+                      onChange={(event) =>
+                        onShipmentTrackingChange(event.target.value)
+                      }
+                      required
+                    />
+                  </Field>
+                  <Field label={labels.shipmentNotes}>
+                    <textarea
+                      className={cn(fieldClass, "min-h-[4.5rem] resize-none")}
+                      rows={2}
+                      value={shipmentNotes}
+                      onChange={(event) =>
+                        onShipmentNotesChange(event.target.value)
+                      }
+                    />
+                  </Field>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-2">
-                {nextStatuses.map((status) => (
-                  <Button
-                    key={status}
-                    disabled={transitioningTo === status}
-                    onClick={() => onTransitionStatus(status)}
-                  >
-                    {transitioningTo === status
-                      ? "…"
-                      : (labels.statusLabels[status] ?? status)}
-                  </Button>
-                ))}
+                {nextStatuses.map((nextStatus) => {
+                  const needsShipment = nextStatus === "in_transit";
+                  const disabled =
+                    transitioningTo === nextStatus ||
+                    (needsShipment && !shipmentReady);
+                  return (
+                    <Button
+                      key={nextStatus}
+                      disabled={disabled}
+                      onClick={() => {
+                        if (needsShipment) {
+                          onTransitionStatus(nextStatus, {
+                            carrier: shipmentCarrier.trim(),
+                            trackingNumber: shipmentTracking.trim(),
+                            notes: shipmentNotes.trim() || null,
+                          });
+                          return;
+                        }
+                        onTransitionStatus(nextStatus);
+                      }}
+                    >
+                      {transitioningTo === nextStatus
+                        ? "…"
+                        : (labels.statusLabels[nextStatus] ?? nextStatus)}
+                    </Button>
+                  );
+                })}
               </div>
             </section>
           ) : null}
@@ -652,7 +713,6 @@ export function OrderDetailView({
                       <p className="font-label text-label-bold text-secondary text-sm">
                         S/ {payment.amount.toFixed(2)}
                       </p>
-
                     </div>
                   </li>
                 ))}
@@ -660,28 +720,33 @@ export function OrderDetailView({
             )}
           </section>
 
-          {order.status !== "pending_payment" &&
-          order.status !== "cancelled" ? (
+          {shipmentVisible ? (
             <section className={cardClass}>
               <SectionHeader icon={Truck} title={labels.shipmentPanelTitle} />
               <div className="space-y-4">
-                <Field label={labels.shipmentStatus}>
-                  <select
-                    className={fieldClass}
-                    value={shipmentStatus}
-                    onChange={(event) =>
-                      onShipmentStatusChange(
-                        event.target.value as typeof shipmentStatus,
-                      )
-                    }
-                  >
-                    {SHIPMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {labels.shipmentStatusLabels[status] ?? status}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                {status === "in_transit" ? (
+                  <Field label={labels.shipmentStatus}>
+                    <select
+                      className={fieldClass}
+                      value={shipmentStatus}
+                      onChange={(event) =>
+                        onShipmentStatusChange(
+                          event.target.value as typeof shipmentStatus,
+                        )
+                      }
+                    >
+                      {SHIPMENT_STATUSES.map((shipmentStatusOption) => (
+                        <option
+                          key={shipmentStatusOption}
+                          value={shipmentStatusOption}
+                        >
+                          {labels.shipmentStatusLabels[shipmentStatusOption] ??
+                            shipmentStatusOption}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
                 <Field label={labels.shipmentCarrier}>
                   <input
                     className={fieldClass}
@@ -710,7 +775,7 @@ export function OrderDetailView({
                     }
                   />
                 </Field>
-                {onSaveShipment ? (
+                {status === "in_transit" && onSaveShipment ? (
                   <Button
                     variant="secondary"
                     disabled={savingShipment}

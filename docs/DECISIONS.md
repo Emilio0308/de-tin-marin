@@ -47,7 +47,23 @@
 | 38 | Contacto y cobro público dinámico | ✅ | Singleton `core.public_business_settings`: WhatsApp/email + instrucciones Yape/transferencia. Staff actualiza; `SELECT` público deliberado para storefront. Ecommerce usa DTO allowlist validado, no valores hardcodeados. Las instrucciones de órdenes `pending_payment` se leen al visualizarse, no se congelan en `orders` ni confirman pagos. Migración `00026`; Regla 27 |
 | 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only. Tras persistir, create-order **await** `scheduleOrderCreatedNotification` (sin `after()`): el request espera el envío; fallo/SMTP ausente **no** altera la orden. Puerto de transporte **587**, `secure: false`, `family: 4`, timeouts 60s. Ecommerce → cliente + admin; admin → solo admin. Admin desde #38 + extras env. Plantillas HTML embebidas en `*.template.ts` (no `readFileSync`). Sin outbox/reintentos/webhooks v1. Regla 28 / S4-06 |
 | 40 | Puntos de recojo vs recojo en tienda | ✅ | **`pickup`** = recojo en tienda (admin manual; sin ubicación). **`pickup_point`** = catálogo `pricing.pickup_points` (nombre + coords + fee configurable). Ecommerce guest solo `delivery` \| `pickup_point`. Snapshot `fulfillment.pickupPoint` al crear orden. Migración `00028`. Brief: S4-08 |
-| 41  | Cancelación atómica (refund + restock) | ✅     | Cancelar orden es el único punto de entrada. `pending_payment` → solo `cancelled`. Post-pago (`paid`/`preparing`/`ready`): RPC `commerce.cancel_order_with_restock` atómica (payments → `refunded` + `restock_stock_for_order` + `cancelled`). Idempotente si ya `cancelled`. Sin reembolso suelto de payment. Migración `00029`. Regla 18. Brief: S4-09 |
+| 41 | Cancelación atómica (refund + restock) | ✅ | Cancelar orden es el único punto de entrada. `pending_payment` → solo `cancelled`. Post-pago (`paid`/`preparing`/`ready`/`awaiting_pickup`/`in_transit`): RPC `commerce.cancel_order_with_restock` atómica (payments → `refunded` + `restock_stock_for_order` + `cancelled`). Idempotente si ya `cancelled`. Sin reembolso suelto de payment. Migración `00029` (+ `00030` amplía cancelables). Regla 18. Brief: S4-09 |
+| 42 | Estados logísticos por fulfillment | ✅ | Tras `ready`: `pickup` → `awaiting_pickup` → `delivered`; `delivery`/`pickup_point` → `in_transit` (exige carrier+tracking en `commerce.shipments`) → `delivered`. `delivered` = cliente ya tiene el producto. Sin estado “en el punto”. `canTransitionOrderStatus(from, to, method)`. Migración `00030`. Regla 14 + cancel Regla 18 ampliada. Brief: S4-10 |
+
+## Docs sincronizados (2026-08-23 — estados in_transit / awaiting_pickup)
+
+- DECISIONS **#42** — transición logística según `fulfillment.method`; shipment
+  obligatorio al pasar a `in_transit`
+- Migración `00030_order_status_in_transit_awaiting_pickup.sql` — CHECK status +
+  cancel RPC acepta `awaiting_pickup` / `in_transit`
+- Shared: `ORDER_STATUSES`, `nextLogisticStatus`, `canTransitionOrderStatus(..., method)`
+- Admin: transition + upsert shipment fail-fast; panel envío solo en `in_transit`
+  (form inline en `ready`→`in_transit`); labels/stepper
+- Ecommerce: labels “En camino” / “Listo para recojo” + progress guest
+- Regla **14** ampliada (method-aware); Regla 18 cancel ya listaba nuevos status
+- Brief [`stages/S4/10-order-status-in-transit-awaiting-pickup.md`](stages/S4/10-order-status-in-transit-awaiting-pickup.md)
+  - roadmap S4-10 ✅
+- Docs: `orders.md`, `database.md`, README admin orders
 
 ## Docs sincronizados (2026-08-22 — cancelación atómica)
 
@@ -58,7 +74,7 @@
 - Regla **18** reescrita (ya no restock manual)
 - Docs: `inventory.md`, `orders.md`, `database.md` RPCs, README admin orders
 - Brief [`stages/S4/09-cancel-atomic-restock.md`](stages/S4/09-cancel-atomic-restock.md)
-  + roadmap S4-09 ✅
+  - roadmap S4-09 ✅
 - Cross-refs S2A / S2B / S2C (Regla 18 histórica → ver #41)
 
 ## Docs sincronizados (2026-08-22 — checkout UX validación form)
@@ -438,7 +454,6 @@ Canónico detallado: [`orders.md`](orders.md) · README [`apps/admin/src/modules
   en service además del wrapper de action
 - Docs: `rules/40-validation-and-boundaries.md`, `coding-guidelines.md`,
   `architecture.md`, `packages/logging/README.md`, READMEs ecommerce / S3A-0
-
 
 ## Cómo añadir una decisión
 

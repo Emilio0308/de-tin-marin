@@ -24,6 +24,8 @@ export async function DashboardPageContainer() {
     paid: t("orderStatus.paid"),
     preparing: t("orderStatus.preparing"),
     ready: t("orderStatus.ready"),
+    awaiting_pickup: t("orderStatus.awaiting_pickup"),
+    in_transit: t("orderStatus.in_transit"),
     delivered: t("orderStatus.delivered"),
     completed: t("orderStatus.completed"),
     cancelled: t("orderStatus.cancelled"),

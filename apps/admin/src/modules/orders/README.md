@@ -3,9 +3,10 @@
 Órdenes manuales con **Order shopping cart** congelado en JSONB.
 
 Canónico: [`docs/orders.md`](../../../docs/orders.md) · reglas 13–18, 21, 24,
-28 · DECISIONS #26, #27, #29, #31, #33, #39, **#41** (cancel atómico).
+28 · DECISIONS #26, #27, #29, #31, #33, #39, **#41** (cancel atómico),
+**#42** (estados `in_transit` / `awaiting_pickup`).
 
-Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S4-09 cancel](../../../docs/stages/S4/09-cancel-atomic-restock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
+Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S4-09 cancel](../../../docs/stages/S4/09-cancel-atomic-restock.md) · [S4-10 logística](../../../docs/stages/S4/10-order-status-in-transit-awaiting-pickup.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
 
 ## Capas
 
@@ -22,18 +23,18 @@ components/order-form/*.helpers.ts — dual qty, bounds pack/product, add-block
 
 ## Server Actions
 
-| Action                         | Service                         | Descripción                                                        |
-| ------------------------------ | ------------------------------- | ------------------------------------------------------------------ |
-| `listOrdersPageAction`         | `listOrdersPageService`         | Listado paginado (SQL `count` + `range`); dashboard usa pageSize 5 |
-| `getOrderAction`               | `getOrderService`               | Detalle + pagos + envío                                            |
-| `createOrderAction`            | `createOrderService`            | Crear → `pending_payment`                                          |
-| `cancelOrderAction`            | `cancelOrderService`            | Cancel atómico (`pending_payment` o post-pago + restock) — #41     |
-| `confirmPaymentAction`         | `confirmPaymentService`         | Pago manual → `paid` (S2C)                                         |
-| `refundPaymentAction`          | `refundPaymentService`          | **Deprecado** → `USE_CANCEL_ORDER` (usar cancel)                   |
-| `transitionOrderStatusAction`  | `transitionOrderStatusService`  | Avance logístico; `cancelled` delega a cancel RPC                  |
-| `upsertShipmentAction`         | `upsertShipmentService`         | Envío 1:1 por orden (S2C)                                          |
-| `previewAdminBundleLineAction` | `previewAdminBundleLineService` | Preview línea sorpresa (mismo motor que create)                    |
-| `previewOrderCartAction`       | `previewOrderCartService`       | Preview carrito / totales                                          |
+| Action                         | Service                         | Descripción                                                                          |
+| ------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------ |
+| `listOrdersPageAction`         | `listOrdersPageService`         | Listado paginado (SQL `count` + `range`); dashboard usa pageSize 5                   |
+| `getOrderAction`               | `getOrderService`               | Detalle + pagos + envío                                                              |
+| `createOrderAction`            | `createOrderService`            | Crear → `pending_payment`                                                            |
+| `cancelOrderAction`            | `cancelOrderService`            | Cancel atómico (`pending_payment` o post-pago + restock) — #41                       |
+| `confirmPaymentAction`         | `confirmPaymentService`         | Pago manual → `paid` (S2C)                                                           |
+| `refundPaymentAction`          | `refundPaymentService`          | **Deprecado** → `USE_CANCEL_ORDER` (usar cancel)                                     |
+| `transitionOrderStatusAction`  | `transitionOrderStatusService`  | Avance logístico según method; `in_transit` exige shipment; `cancelled` → cancel RPC |
+| `upsertShipmentAction`         | `upsertShipmentService`         | Envío 1:1 por orden (S2C)                                                            |
+| `previewAdminBundleLineAction` | `previewAdminBundleLineService` | Preview línea sorpresa (mismo motor que create)                                      |
+| `previewOrderCartAction`       | `previewOrderCartService`       | Preview carrito / totales                                                            |
 
 ## Crear orden (`/orders/new`)
 
@@ -165,7 +166,13 @@ Demandas:
 
 Tras confirmación de pago con deduct exitoso: `bumpCatalogVersionSafe` (stock cambió → invalidar listados tienda).
 
-Cancel post-pago (`cancel_order_with_restock`): refund + restock + `cancelled` en una transacción; si `restocked` → `bumpCatalogVersionSafe`.
+Cancel post-pago (`cancel_order_with_restock`): refund + restock + `cancelled` en una transacción desde `paid`/`preparing`/`ready`/`awaiting_pickup`/`in_transit`; si `restocked` → `bumpCatalogVersionSafe`.
+
+Detalle admin (`ready`):
+
+- `pickup` → botón a `awaiting_pickup` (sin form envío).
+- `delivery` / `pickup_point` → form carrier+tracking en la misma mutation a `in_transit`.
+- Panel **Envío** editable solo en `in_transit` (no en `paid`/`preparing`).
 
 ## Repositories
 

@@ -368,7 +368,7 @@ el kill switch global de ecommerce. Off → listado público vacío.
 | `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `pickupPoint`, `notes`                                                                                                                             |
 | `shopping_cart`                                                            | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)): product dual `packageQuantity`/`unitQuantity`; pack BOM; bundle components. Migración dual histórica: `00024` |
 | `payment_methods`                                                          | jsonb — array flexible; detalle interno → S2C                                                                                                                                           |
-| `status`                                                                   | Ver [`orders.md`](orders.md)                                                                                                                                                            |
+| `status`                                                                   | `pending_payment` \| `paid` \| `preparing` \| `ready` \| `awaiting_pickup` \| `in_transit` \| `delivered` \| `completed` \| `cancelled` — ver [`orders.md`](orders.md) · `00030` / #42  |
 | `payment_status`                                                           | `pending` \| `confirmed` \| `refunded`                                                                                                                                                  |
 | `subtotal`, `discount_total`, `surcharge_total`, `shipping_total`, `total` | Snapshots: `total = subtotal − discount + shipping + surcharge` (`00023`; surcharge admin-only)                                                                                         |
 | `pricing_snapshot`                                                         | jsonb — desglose al confirmar                                                                                                                                                           |
@@ -402,6 +402,8 @@ Sin pasarela en v1 — sin `external_payment_id` obligatorio.
 | `notes`           | text        | Opcional                              |
 
 Dirección de entrega: snapshot en `orders.fulfillment` — no duplicar en shipments.
+Al pasar `ready → in_transit` (`delivery` \| `pickup_point`), carrier + tracking
+son obligatorios (DECISIONS #42).
 
 ### Schema `crm`
 
@@ -463,17 +465,17 @@ erDiagram
 
 ## Queries planificadas
 
-| Query / RPC                                 | Uso                                                                                                 |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                             |
-| `catalog.list_public_bundles(...)`          | S3A-1-R — page/sort/count público de sorpresas (`list_total` alineado a `computeBundleTotal`)       |
-| `catalog.list_public_packs(...)`            | S3A-1-R — page/sort/count público de packs (`finalPrice` con campaña activa)                        |
-| `catalog.bump_catalog_version()`            | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                 |
-| `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
-| `commerce.confirm_payment_with_stock_deduct(...)` | S2A/S2C — confirm pago manual + deduct atómico → `paid` |
-| `commerce.restock_stock_for_order(order_id)` | Inverso del deduct (cancel post-pago) — `00029` / S4-09 |
-| `commerce.cancel_order_with_restock(...)` | Cancel atómico: refund payments + restock + `cancelled` — `00029` / DECISIONS #41 / S4-09 |
-| `commerce.insert_guest_order(...)`          | Guest create: `delivery` XOR `pickup_point`; no `pickup` (S4-08 / `00028`)                          |
+| Query / RPC                                       | Uso                                                                                                   |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `catalog.list_products_with_final_price()`        | Listado con campaña y `finalPrice` calculado en backend                                               |
+| `catalog.list_public_bundles(...)`                | S3A-1-R — page/sort/count público de sorpresas (`list_total` alineado a `computeBundleTotal`)         |
+| `catalog.list_public_packs(...)`                  | S3A-1-R — page/sort/count público de packs (`finalPrice` con campaña activa)                          |
+| `catalog.bump_catalog_version()`                  | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                   |
+| `commerce.deduct_stock_for_order(order_id)`       | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid`   |
+| `commerce.confirm_payment_with_stock_deduct(...)` | S2A/S2C — confirm pago manual + deduct atómico → `paid`                                               |
+| `commerce.restock_stock_for_order(order_id)`      | Inverso del deduct (cancel post-pago) — `00029` / S4-09                                               |
+| `commerce.cancel_order_with_restock(...)`         | Cancel atómico: refund payments + restock + `cancelled` — `00029`/`00030` / DECISIONS #41–#42 / S4-09 |
+| `commerce.insert_guest_order(...)`                | Guest create: `delivery` XOR `pickup_point`; no `pickup` (S4-08 / `00028`)                            |
 
 ---
 

@@ -1,3 +1,4 @@
+import type { OrderFulfillmentMethod } from "./delivery-fee";
 import { roundMoney } from "./prices";
 
 export const ORDER_STATUSES = [
@@ -5,6 +6,8 @@ export const ORDER_STATUSES = [
   "paid",
   "preparing",
   "ready",
+  "awaiting_pickup",
+  "in_transit",
   "delivered",
   "completed",
   "cancelled",
@@ -165,18 +168,34 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending_payment: ["paid", "cancelled"],
   paid: ["preparing", "cancelled"],
   preparing: ["ready", "cancelled"],
-  ready: ["delivered", "cancelled"],
+  ready: ["awaiting_pickup", "in_transit", "cancelled"],
+  awaiting_pickup: ["delivered", "cancelled"],
+  in_transit: ["delivered", "cancelled"],
   delivered: ["completed"],
   completed: [],
   cancelled: [],
 };
 
+export function nextLogisticStatus(
+  method: OrderFulfillmentMethod,
+): Extract<OrderStatus, "awaiting_pickup" | "in_transit"> {
+  return method === "pickup" ? "awaiting_pickup" : "in_transit";
+}
+
 export function canTransitionOrderStatus(
   from: OrderStatus,
   to: OrderStatus,
+  method?: OrderFulfillmentMethod,
 ): boolean {
   if (from === to) return false;
-  return ALLOWED_TRANSITIONS[from].includes(to);
+  if (!ALLOWED_TRANSITIONS[from].includes(to)) return false;
+
+  if (from === "ready" && (to === "awaiting_pickup" || to === "in_transit")) {
+    if (!method) return false;
+    return nextLogisticStatus(method) === to;
+  }
+
+  return true;
 }
 
 export function getBundleLineContainerUnitPrice(

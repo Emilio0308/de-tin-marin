@@ -242,21 +242,32 @@ activos). Recojo en tienda sigue oculto (`storeFeatures.pickupEnabled`).
 Toda orden se crea en **`pending_payment`**. Sin estado `draft`.
 
 ```text
-pending_payment → paid → preparing → ready → delivered → completed
-                    ↘ cancelled
+pending_payment → paid → preparing → ready
+                                      ├─ pickup        → awaiting_pickup → delivered → completed
+                                      ├─ pickup_point  → in_transit      → delivered → completed
+                                      └─ delivery      → in_transit      → delivered → completed
+                    ↘ cancelled (hasta in_transit / awaiting_pickup inclusive)
 ```
+
+- **`awaiting_pickup`:** solo `fulfillment.method = pickup` (recojo en tienda). Sin panel de envío.
+- **`in_transit`:** `delivery` o `pickup_point`. Al pasar desde `ready` exige carrier + tracking en `commerce.shipments` (`status: shipped`).
+- **`delivered`:** el cliente **ya tiene** el producto (ambos canales).
 
 ## Transiciones permitidas
 
-| Desde             | Hacia                    |
-| ----------------- | ------------------------ |
-| `pending_payment` | `paid`, `cancelled`      |
-| `paid`            | `preparing`, `cancelled` |
-| `preparing`       | `ready`, `cancelled`     |
-| `ready`           | `delivered`, `cancelled` |
-| `delivered`       | `completed`              |
+| Desde             | Hacia                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `pending_payment` | `paid`, `cancelled`                                                                              |
+| `paid`            | `preparing`, `cancelled`                                                                         |
+| `preparing`       | `ready`, `cancelled`                                                                             |
+| `ready`           | `awaiting_pickup` (solo pickup), `in_transit` (delivery \| pickup_point + shipment), `cancelled` |
+| `awaiting_pickup` | `delivered`, `cancelled`                                                                         |
+| `in_transit`      | `delivered`, `cancelled`                                                                         |
+| `delivered`       | `completed`                                                                                      |
 
-Cancelación post-pago: refund + restock **atómicos** (Regla 18 / DECISIONS #41 / [S4-09](stages/S4/09-cancel-atomic-restock.md)).
+Cancelación post-pago: refund + restock **atómicos** (Regla 18 / DECISIONS #41–#42 / [S4-09](stages/S4/09-cancel-atomic-restock.md)).
+
+Migración estados logísticos: `00030` · DECISIONS **#42** · brief [S4-10](stages/S4/10-order-status-in-transit-awaiting-pickup.md).
 
 ## Flujo de creación
 
@@ -301,11 +312,11 @@ Ver Reglas 17–18. Cancelación post-pago: refund + restock atómicos vía `com
 
 Punto de entrada único: **Cancelar** en admin (`cancelOrderAction`).
 
-| Estado origen | Efecto |
-| --- | --- |
-| `pending_payment` | Solo `status = cancelled` |
-| `paid` / `preparing` / `ready` | RPC atómica: payments → `refunded` + restock + `cancelled` |
-| `delivered` / `completed` | Rechazado (`INVALID_TRANSITION`) |
+| Estado origen                                                     | Efecto                                                     |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- |
+| `pending_payment`                                                 | Solo `status = cancelled`                                  |
+| `paid` / `preparing` / `ready` / `awaiting_pickup` / `in_transit` | RPC atómica: payments → `refunded` + restock + `cancelled` |
+| `delivered` / `completed`                                         | Rechazado (`INVALID_TRANSITION`)                           |
 
 Reintento sobre orden ya `cancelled`: OK idempotente, sin segundo restock.
 
@@ -404,7 +415,7 @@ type OrderDTO = {
   - Validación cliente: `helpers/order-form-validation.ts` → `createOrderInputSchema` + mensajes de campo
 - Confirmar pago
 - Cancelar (`pending_payment` \| `paid` \| `preparing` \| `ready`): post-pago = refund + restock atómicos
-- Avanzar estados: preparing → ready → delivered → completed
+- Avanzar estados: preparing → ready → (awaiting_pickup \| in_transit) → delivered → completed
 
 Detalle de módulo: [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md).
 

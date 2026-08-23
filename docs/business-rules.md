@@ -139,9 +139,20 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 ### Regla 14 — Transiciones de estado válidas
 
-- **Trigger:** Cambiar `orders.status`.
-- **Pasos:** Solo transiciones de [`orders.md`](orders.md).
-- **Fallo:** Rechazar ilegal.
+- **Trigger:** Cambiar `orders.status` (admin transition).
+- **Pasos:**
+  1. Solo aristas de [`orders.md`](orders.md) /
+     `canTransitionOrderStatus(from, to, method)` (shared).
+  2. Tras `ready`, el destino logístico **depende de**
+     `fulfillment.method` (DECISIONS **#42** / S4-10):
+     - `pickup` → `awaiting_pickup` (sin shipment)
+     - `delivery` \| `pickup_point` → `in_transit` (**exige** carrier +
+       tracking en `commerce.shipments` en la misma mutation; si falla el
+       upsert, la orden no cambia)
+  3. `delivered` = el cliente **ya tiene** el producto (solo desde
+     `awaiting_pickup` \| `in_transit`).
+  4. Cancel: Regla 18 (incluye `awaiting_pickup` / `in_transit`).
+- **Fallo:** rechazar transición ilegal o `in_transit` sin shipment.
 
 ### Regla 15 — Descuento de stock al pagar (v1)
 
@@ -194,7 +205,8 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 - **Pasos:**
   1. Si `status = cancelled` → no-op idempotente (sin segundo restock).
   2. Si `pending_payment` → solo `status = cancelled` (no hubo deduct).
-  3. Si `paid` \| `preparing` \| `ready` (ya hubo deduct al pagar): en **una**
+  3. Si `paid` \| `preparing` \| `ready` \| `awaiting_pickup` \| `in_transit`
+     (ya hubo deduct al pagar): en **una**
      transacción:
      - payments `confirmed` → `refunded`
      - `payment_status = refunded`
@@ -420,7 +432,7 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 | 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package) |
 | 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio      |
 | 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
-| 13–16 | Orders             | Snapshot, estados, stock al pagar, no recalcular                   |
+| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular |
 | 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)   |
 | 19–20 | Delivery / Envases | Tarifa distrito / pickup / pickup_point; stock envase 1:1          |
 | 21    | Products           | Min/max compra por presentación (default 10/100)                   |

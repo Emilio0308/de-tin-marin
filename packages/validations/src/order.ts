@@ -221,18 +221,37 @@ export const previewOrderCartInputSchema = createOrderInputObjectSchema
   })
   .superRefine(refineProductLineDualQuantities);
 
-export const transitionOrderStatusInputSchema = z.object({
-  id: z.string().uuid(),
-  status: z.enum([
-    "pending_payment",
-    "paid",
-    "preparing",
-    "ready",
-    "delivered",
-    "completed",
-    "cancelled",
-  ]),
-});
+export const transitionOrderStatusInputSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.enum([
+      "pending_payment",
+      "paid",
+      "preparing",
+      "ready",
+      "awaiting_pickup",
+      "in_transit",
+      "delivered",
+      "completed",
+      "cancelled",
+    ]),
+    shipment: z
+      .object({
+        carrier: z.string().trim().min(1).max(200),
+        trackingNumber: z.string().trim().min(1).max(200),
+        notes: z.string().max(1000).optional().nullable(),
+      })
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.status === "in_transit" && !value.shipment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "SHIPMENT_REQUIRED",
+        path: ["shipment"],
+      });
+    }
+  });
 
 export const orderListItemSchema = z.object({
   id: z.string().uuid(),

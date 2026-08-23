@@ -34,6 +34,7 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 - [stages/S4/04-pack-dual-quantities.md](stages/S4/04-pack-dual-quantities.md) — brief BOM pack package+unit ✅
 - [stages/S4/08-pickup-points.md](stages/S4/08-pickup-points.md) — brief puntos de recojo ✅
 - [stages/S4/09-cancel-atomic-restock.md](stages/S4/09-cancel-atomic-restock.md) — brief cancel atómico (refund + restock) ✅
+- [stages/S4/10-order-status-in-transit-awaiting-pickup.md](stages/S4/10-order-status-in-transit-awaiting-pickup.md) — brief estados `in_transit` / `awaiting_pickup` ✅
 - [stages/S3A/01-remediation-catalog-pagination-sql.md](stages/S3A/01-remediation-catalog-pagination-sql.md) — remediación paginación catálogo público ✅
 - [stages/S3B/01-admin-list-pagination.md](stages/S3B/01-admin-list-pagination.md) — paginación listados admin ✅
 - [stages/STAGE-BRIEF-TEMPLATE.md](stages/STAGE-BRIEF-TEMPLATE.md) — plantilla de briefs

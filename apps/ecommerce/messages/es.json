@@ -318,6 +318,8 @@
       "paid": "Pagado",
       "preparing": "En preparación",
       "ready": "Listo",
+      "awaiting_pickup": "Listo para recojo",
+      "in_transit": "En camino",
       "delivered": "Entregado",
       "completed": "Completado",
       "cancelled": "Cancelado"

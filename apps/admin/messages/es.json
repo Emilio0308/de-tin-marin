@@ -95,6 +95,8 @@
       "paid": "Pagada",
       "preparing": "Preparando",
       "ready": "Lista",
+      "awaiting_pickup": "Listo para recojo",
+      "in_transit": "En camino",
       "delivered": "Entregada",
       "completed": "Completada",
       "cancelled": "Cancelada"
@@ -359,6 +361,7 @@
       "shipmentNotes": "Notas de envío",
       "saveShipment": "Guardar envío",
       "savingShipment": "Guardando…",
+      "shipmentRequiredHint": "Indica transportista y seguimiento para marcar el pedido en camino.",
       "statusActionsTitle": "Avanzar estado",
       "cancelOrder": "Cancelar orden",
       "cancelling": "Cancelando…",
@@ -374,6 +377,8 @@
         "paid": "Pagado",
         "preparing": "Preparando",
         "ready": "Listo",
+        "awaiting_pickup": "Listo para recojo",
+        "in_transit": "En camino",
         "delivered": "Entregado",
         "completed": "Completado"
       }

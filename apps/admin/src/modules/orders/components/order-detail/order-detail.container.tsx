@@ -10,6 +10,7 @@ import {
   ORDER_STATUSES,
   type OrderStatus,
 } from "@de-tin-marin/shared/order-cart";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { ShipmentStatus } from "@de-tin-marin/validations/shipment";
 import { cancelOrderAction } from "@/modules/orders/actions/cancel-order";
 import { confirmPaymentAction } from "@/modules/orders/actions/confirm-payment";
@@ -18,18 +19,26 @@ import { transitionOrderStatusAction } from "@/modules/orders/actions/transition
 import { upsertShipmentAction } from "@/modules/orders/actions/upsert-shipment";
 import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import { OrderDetailView } from "./order-detail";
-import type { OrderDetailLabels } from "./order-detail.types";
+import type {
+  OrderDetailLabels,
+  TransitionShipmentInput,
+} from "./order-detail.types";
 
 const LOGISTIC_STATUSES: OrderStatus[] = [
   "preparing",
   "ready",
+  "awaiting_pickup",
+  "in_transit",
   "delivered",
   "completed",
 ];
 
-function buildNextStatuses(current: OrderStatus): OrderStatus[] {
+function buildNextStatuses(
+  current: OrderStatus,
+  method: OrderFulfillmentMethod,
+): OrderStatus[] {
   return LOGISTIC_STATUSES.filter((status) =>
-    canTransitionOrderStatus(current, status),
+    canTransitionOrderStatus(current, status, method),
   );
 }
 
@@ -106,6 +115,7 @@ export function OrderDetailContainer() {
       shipmentNotes: t("detail.shipmentNotes"),
       saveShipment: t("detail.saveShipment"),
       savingShipment: t("detail.savingShipment"),
+      shipmentRequiredHint: t("detail.shipmentRequiredHint"),
       statusActionsTitle: t("detail.statusActionsTitle"),
       cancelOrder: t("detail.cancelOrder"),
       cancelling: t("detail.cancelling"),
@@ -129,6 +139,8 @@ export function OrderDetailContainer() {
         paid: t("detail.stepper.paid"),
         preparing: t("detail.stepper.preparing"),
         ready: t("detail.stepper.ready"),
+        awaiting_pickup: t("detail.stepper.awaiting_pickup"),
+        in_transit: t("detail.stepper.in_transit"),
         delivered: t("detail.stepper.delivered"),
         completed: t("detail.stepper.completed"),
       },
@@ -197,13 +209,19 @@ export function OrderDetailContainer() {
     },
   });
 
-
   const transitionMutation = useMutation({
-    mutationFn: async (status: OrderStatus) => {
+    mutationFn: async ({
+      status,
+      shipment,
+    }: {
+      status: OrderStatus;
+      shipment?: TransitionShipmentInput;
+    }) => {
       setTransitioningTo(status);
       const result = await transitionOrderStatusAction({
         id: params.id,
         status,
+        ...(shipment ? { shipment } : {}),
       });
       if (!result.ok) throw new Error(result.error);
     },
@@ -228,7 +246,11 @@ export function OrderDetailContainer() {
   async function handleCancel() {
     const status = orderQuery.data?.status;
     const paidLike =
-      status === "paid" || status === "preparing" || status === "ready";
+      status === "paid" ||
+      status === "preparing" ||
+      status === "ready" ||
+      status === "awaiting_pickup" ||
+      status === "in_transit";
     const accepted = await confirm({
       title: tCommon("confirmDialog.cancelOrderTitle"),
       description: paidLike ? labels.cancelConfirmPaid : labels.cancelConfirm,
@@ -266,7 +288,10 @@ export function OrderDetailContainer() {
   }
 
   const order = orderQuery.data;
-  const nextStatuses = buildNextStatuses(order.status as OrderStatus);
+  const nextStatuses = buildNextStatuses(
+    order.status as OrderStatus,
+    order.fulfillment.method,
+  );
 
   return (
     <>
@@ -292,7 +317,9 @@ export function OrderDetailContainer() {
           onSaveShipment={() => shipmentMutation.mutate()}
           savingShipment={shipmentMutation.isPending}
           nextStatuses={nextStatuses}
-          onTransitionStatus={(status) => transitionMutation.mutate(status)}
+          onTransitionStatus={(status, shipment) =>
+            transitionMutation.mutate({ status, shipment })
+          }
           transitioningTo={transitioningTo}
           onCancel={() => {
             void handleCancel();

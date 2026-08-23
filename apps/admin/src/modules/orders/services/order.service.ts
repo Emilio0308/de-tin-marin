@@ -12,6 +12,7 @@ import {
   canTransitionOrderStatus,
   type OrderStatus,
 } from "@de-tin-marin/shared/order-cart";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   createOrderInputSchema,
@@ -49,6 +50,10 @@ import {
   type OrderRow,
 } from "../repositories/order.repository";
 import {
+  getShipmentByOrderIdRepo,
+  upsertShipmentRepo,
+} from "../repositories/shipment.repository";
+import {
   parseOrderDetailWithRelations,
   type OrderDetail,
   type OrderListItem,
@@ -56,6 +61,27 @@ import {
 import { cancelOrderWithRestockRepo } from "../repositories/payment.repository";
 import { bumpCatalogVersionSafe } from "@/modules/catalog/repositories/catalog-cache-meta.repository";
 import { logServerError, logServerInfo } from "@/shared/errors/server-error";
+
+function readFulfillmentMethod(
+  fulfillment: OrderRow["fulfillment"],
+): OrderFulfillmentMethod | undefined {
+  if (
+    !fulfillment ||
+    typeof fulfillment !== "object" ||
+    Array.isArray(fulfillment)
+  ) {
+    return undefined;
+  }
+  const method = (fulfillment as { method?: unknown }).method;
+  if (
+    method === "delivery" ||
+    method === "pickup" ||
+    method === "pickup_point"
+  ) {
+    return method;
+  }
+  return undefined;
+}
 
 async function resolveBundlesById(
   config: SupabaseConfig,
@@ -396,6 +422,7 @@ export async function transitionOrderStatusService(
 
   const from = row.status as OrderStatus;
   const to = parsed.data.status;
+  const method = readFulfillmentMethod(row.fulfillment);
 
   if (to === "paid") {
     logServerError("transitionOrderStatusService", {
@@ -407,14 +434,32 @@ export async function transitionOrderStatusService(
     return { ok: false, error: "PAYMENT_CONFIRMATION_REQUIRED" };
   }
 
-  if (!canTransitionOrderStatus(from, to)) {
+  if (!canTransitionOrderStatus(from, to, method)) {
     logServerError("transitionOrderStatusService", {
       message: "INVALID_TRANSITION",
       orderId: parsed.data.id,
       from,
       to,
+      method,
     });
     return { ok: false, error: "INVALID_TRANSITION" };
+  }
+
+  if (to === "in_transit") {
+    const shipment = parsed.data.shipment;
+    if (!shipment) return { ok: false, error: "VALIDATION" };
+
+    const existing = await getShipmentByOrderIdRepo(config, parsed.data.id);
+    const now = new Date().toISOString();
+    await upsertShipmentRepo(config, {
+      order_id: parsed.data.id,
+      status: "shipped",
+      carrier: shipment.carrier,
+      tracking_number: shipment.trackingNumber,
+      notes: shipment.notes ?? null,
+      shipped_at: existing?.shipped_at ?? now,
+      delivered_at: existing?.delivered_at ?? null,
+    });
   }
 
   const updated = await updateOrderStatusRepo(config, parsed.data.id, to);

@@ -68,6 +68,7 @@ const labels: OrderDetailLabels = {
   shipmentNotes: "Notas envío",
   saveShipment: "Guardar",
   savingShipment: "Guardando…",
+  shipmentRequiredHint: "Indica transportista y seguimiento",
   statusActionsTitle: "Avanzar estado",
   cancelOrder: "Cancelar",
   cancelling: "Cancelando…",
@@ -80,6 +81,11 @@ const labels: OrderDetailLabels = {
     paid: "Pagado",
     preparing: "Preparando",
     ready: "Listo",
+    awaiting_pickup: "Listo para recojo",
+    in_transit: "En camino",
+    delivered: "Entregada",
+    completed: "Completada",
+    cancelled: "Cancelada",
   },
   paymentStatusLabels: { pending: "Pendiente" },
   shipmentStatusLabels: { pending: "Pendiente" },
@@ -88,6 +94,8 @@ const labels: OrderDetailLabels = {
     paid: "Pagado",
     preparing: "Preparando",
     ready: "Listo",
+    awaiting_pickup: "Listo para recojo",
+    in_transit: "En camino",
     delivered: "Entregado",
     completed: "Completado",
   },
@@ -263,7 +271,43 @@ describe("OrderDetailView", () => {
       { ...baseOrder, status: "paid", paymentStatus: "confirmed" },
       { onCancel: vi.fn() },
     );
-    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Cancelar" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show shipment panel on paid orders", () => {
+    renderDetail({
+      ...baseOrder,
+      status: "paid",
+      paymentStatus: "confirmed",
+      fulfillment: { method: "delivery" },
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Envío" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Transportista")).not.toBeInTheDocument();
+  });
+
+  it("requires shipment fields before in_transit transition", () => {
+    const onTransitionStatus = vi.fn();
+    renderDetail(
+      {
+        ...baseOrder,
+        status: "ready",
+        paymentStatus: "confirmed",
+        fulfillment: { method: "delivery" },
+      },
+      {
+        nextStatuses: ["in_transit"],
+        onTransitionStatus,
+      },
+    );
+
+    expect(
+      screen.getByText("Indica transportista y seguimiento"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "En camino" })).toBeDisabled();
   });
 
   it("does not show refund action on confirmed payments", () => {

@@ -1,6 +1,13 @@
 import type { OrderStatus } from "@de-tin-marin/shared/order-cart";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { OrderDetail } from "@de-tin-marin/validations/order";
 import type { ShipmentStatus } from "@de-tin-marin/validations/shipment";
+
+export type TransitionShipmentInput = {
+  carrier: string;
+  trackingNumber: string;
+  notes?: string | null;
+};
 
 export type OrderDetailLabels = {
   title: string;
@@ -47,6 +54,7 @@ export type OrderDetailLabels = {
   shipmentNotes: string;
   saveShipment: string;
   savingShipment: string;
+  shipmentRequiredHint: string;
   statusActionsTitle: string;
   cancelOrder: string;
   cancelling: string;
@@ -89,7 +97,10 @@ export type OrderDetailViewProps = {
   onSaveShipment?: () => void;
   savingShipment?: boolean;
   nextStatuses: OrderStatus[];
-  onTransitionStatus?: (status: OrderStatus) => void;
+  onTransitionStatus?: (
+    status: OrderStatus,
+    shipment?: TransitionShipmentInput,
+  ) => void;
   transitioningTo?: OrderStatus | null;
   onCancel?: () => void;
   cancelling?: boolean;
@@ -101,11 +112,32 @@ export const SHIPMENT_STATUSES: ShipmentStatus[] = [
   "delivered",
 ];
 
-export const ORDER_STEPPER_STATUSES: OrderStatus[] = [
-  "pending_payment",
-  "paid",
-  "preparing",
-  "ready",
-  "delivered",
-  "completed",
-];
+export function buildOrderStepperStatuses(
+  method: OrderFulfillmentMethod,
+): OrderStatus[] {
+  const logistic: OrderStatus =
+    method === "pickup" ? "awaiting_pickup" : "in_transit";
+  return [
+    "pending_payment",
+    "paid",
+    "preparing",
+    "ready",
+    logistic,
+    "delivered",
+    "completed",
+  ];
+}
+
+export function orderNeedsShipmentForTransit(
+  method: OrderFulfillmentMethod,
+): boolean {
+  return method === "delivery" || method === "pickup_point";
+}
+
+export function showShipmentPanel(
+  status: OrderStatus,
+  method: OrderFulfillmentMethod,
+): boolean {
+  if (!orderNeedsShipmentForTransit(method)) return false;
+  return status === "in_transit";
+}

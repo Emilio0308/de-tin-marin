@@ -386,6 +386,19 @@ Sin reembolso suelto de payment.
 
 **Depends on:** S2A ✅, S2B ✅, S2C ✅
 
+### S4-10 — Estados `in_transit` / `awaiting_pickup` ✅
+
+**Goal:** Tras `ready`, el siguiente estado depende del método de fulfillment;
+`in_transit` exige carrier+tracking; `delivered` = cliente ya tiene el producto.
+
+- [x] Migración `00030_order_status_in_transit_awaiting_pickup.sql`
+- [x] Shared `canTransitionOrderStatus(..., method)` + Zod shipment
+- [x] Admin transition+shipment UI; ecommerce labels
+- DECISIONS **#42**
+- Brief: [`docs/stages/S4/10-order-status-in-transit-awaiting-pickup.md`](stages/S4/10-order-status-in-transit-awaiting-pickup.md)
+
+**Depends on:** S4-09 ✅, S2C ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

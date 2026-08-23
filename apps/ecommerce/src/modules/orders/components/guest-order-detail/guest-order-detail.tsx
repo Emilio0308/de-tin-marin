@@ -21,13 +21,21 @@ import {
 } from "./guest-order-detail.helpers";
 import { YapeQrImage } from "./yape-qr-image";
 
-const ORDER_PROGRESS = [
+const ORDER_PROGRESS_BASE = [
   "pending_payment",
   "paid",
   "preparing",
   "ready",
-  "delivered",
 ] as const;
+
+const ORDER_PROGRESS_TAIL = ["delivered"] as const;
+
+function buildOrderProgress(
+  method: GuestOrderDetailProps["order"]["fulfillment"]["method"],
+): string[] {
+  const logistic = method === "pickup" ? "awaiting_pickup" : "in_transit";
+  return [...ORDER_PROGRESS_BASE, logistic, ...ORDER_PROGRESS_TAIL];
+}
 
 function OrderDetailCard({
   title,
@@ -109,19 +117,23 @@ export function PaymentInstructions({ labels }: PaymentInstructionsProps) {
   );
 }
 
-function resolveProgressIndex(status: string): number {
-  if (status === "completed") return ORDER_PROGRESS.length - 1;
-  return ORDER_PROGRESS.indexOf(status as (typeof ORDER_PROGRESS)[number]);
+function resolveProgressIndex(status: string, steps: string[]): number {
+  if (status === "completed") return steps.length - 1;
+  const index = steps.indexOf(status);
+  return index >= 0 ? index : 0;
 }
 
 function OrderProgress({
   status,
+  method,
   labels,
 }: {
   status: string;
+  method: GuestOrderDetailProps["order"]["fulfillment"]["method"];
   labels: GuestOrderDetailProps["labels"];
 }) {
-  const progressIndex = resolveProgressIndex(status);
+  const steps = buildOrderProgress(method);
+  const progressIndex = resolveProgressIndex(status, steps);
 
   if (status === "cancelled") {
     return (
@@ -138,8 +150,8 @@ function OrderProgress({
       <p className="font-label text-label-bold text-on-surface mb-4">
         {labels.progressTitle}
       </p>
-      <ol className="grid grid-cols-5 gap-1">
-        {ORDER_PROGRESS.map((step, index) => {
+      <ol className="grid grid-cols-3 gap-1 sm:grid-cols-6">
+        {steps.map((step, index) => {
           const isComplete = progressIndex >= index;
           const isCurrent = progressIndex === index;
 
@@ -160,7 +172,7 @@ function OrderProgress({
                     <Clock3 className="h-4 w-4" aria-hidden />
                   )}
                 </span>
-                {index < ORDER_PROGRESS.length - 1 ? (
+                {index < steps.length - 1 ? (
                   <span
                     aria-hidden
                     className={
@@ -225,7 +237,11 @@ export function GuestOrderDetailView({ order, labels }: GuestOrderDetailProps) {
             </div>
           </div>
 
-          <OrderProgress status={order.status} labels={labels} />
+          <OrderProgress
+            status={order.status}
+            method={order.fulfillment.method}
+            labels={labels}
+          />
 
           <div className="border-outline-variant/20 grid gap-3 border-t pt-4 sm:grid-cols-2">
             <div className="space-y-1">
