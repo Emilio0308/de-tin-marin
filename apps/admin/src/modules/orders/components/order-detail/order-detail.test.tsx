@@ -72,6 +72,7 @@ const labels: OrderDetailLabels = {
   cancelOrder: "Cancelar",
   cancelling: "Cancelando…",
   cancelConfirm: "¿Cancelar?",
+  cancelConfirmPaid: "¿Cancelar pagada?",
   referencePrefix: "Ref",
   paymentReferencePlaceholder: "Yape…",
   statusLabels: {
@@ -142,6 +143,7 @@ function renderDetail(
   options?: {
     nextStatuses?: OrderStatus[];
     onTransitionStatus?: (status: OrderStatus) => void;
+    onCancel?: () => void;
   },
 ) {
   return render(
@@ -163,6 +165,7 @@ function renderDetail(
       onShipmentNotesChange={vi.fn()}
       nextStatuses={options?.nextStatuses ?? []}
       onTransitionStatus={options?.onTransitionStatus}
+      onCancel={options?.onCancel}
     />,
   );
 }
@@ -253,5 +256,33 @@ describe("OrderDetailView", () => {
     expect(screen.getByText("GOM-01").closest("li")?.textContent).toContain(
       "2",
     );
+  });
+
+  it("shows cancel for paid orders when onCancel is provided", () => {
+    renderDetail(
+      { ...baseOrder, status: "paid", paymentStatus: "confirmed" },
+      { onCancel: vi.fn() },
+    );
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+  });
+
+  it("does not show refund action on confirmed payments", () => {
+    renderDetail({
+      ...baseOrder,
+      status: "paid",
+      paymentStatus: "confirmed",
+      payments: [
+        {
+          id: "00000000-0000-0000-0000-000000000099",
+          amount: 10,
+          status: "confirmed",
+          method: "internal",
+          notes: "Yape",
+          confirmedAt: "2026-07-03T01:00:00.000Z",
+          confirmedBy: null,
+        },
+      ],
+    });
+    expect(screen.queryByText("Reembolsar")).not.toBeInTheDocument();
   });
 });

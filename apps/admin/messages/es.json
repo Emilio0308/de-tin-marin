@@ -363,6 +363,7 @@
       "cancelOrder": "Cancelar orden",
       "cancelling": "Cancelando…",
       "cancelConfirm": "¿Cancelar esta orden?",
+      "cancelConfirmPaid": "¿Cancelar esta orden? Se marcará el pago como reembolsado y se reintegrará el stock.",
       "referencePrefix": "Ref",
       "paymentReferencePlaceholder": "Ej: OP-987654",
       "stockWarningTitle": "Stock insuficiente para confirmar el pago",

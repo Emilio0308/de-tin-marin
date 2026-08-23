@@ -187,11 +187,28 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
   fila `payments`, no confirma el pago ni reserva stock.
 - **Fallo:** No confirmar `paid` sin registro en `payments`.
 
-### Regla 18 — Reembolso manual
+### Regla 18 — Cancelación atómica (refund + restock)
 
-- **Trigger:** Operador marca reembolso.
-- **Pasos:** `payments.status = refunded`; cambiar estado de orden según política; **reversión de stock manual** por operador en v1 (ajuste `stock_sealed_packages` / `stock_loose_base_units` en productos y `stock_quantity` en envases).
-- **Fallo:** Auditar en `audit_log`.
+- **Trigger:** Operador cancela una orden (`cancelOrder` / RPC
+  `commerce.cancel_order_with_restock`). Brief: S4-09 / DECISIONS #41.
+- **Pasos:**
+  1. Si `status = cancelled` → no-op idempotente (sin segundo restock).
+  2. Si `pending_payment` → solo `status = cancelled` (no hubo deduct).
+  3. Si `paid` \| `preparing` \| `ready` (ya hubo deduct al pagar): en **una**
+     transacción:
+     - payments `confirmed` → `refunded`
+     - `payment_status = refunded`
+     - `commerce.restock_stock_for_order` (inverso del deduct; v1 → loose +
+       normalize)
+     - `status = cancelled`
+  4. No desde `delivered` / `completed`.
+- **Admin:** único control «Cancelar». `refundPayment` responde
+  `USE_CANCEL_ORDER` (no reembolso suelto).
+- **Post-éxito:** si hubo restock, bump de versión de catálogo (mismo patrón
+  que confirm pago).
+- **NO** reembolso suelto de pago: evita payment `refunded` con orden abierta
+  o restock doble.
+- **Fallo:** cualquier error revierte toda la transacción.
 
 ---
 
@@ -404,7 +421,7 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 | 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio      |
 | 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
 | 13–16 | Orders             | Snapshot, estados, stock al pagar, no recalcular                   |
-| 17–18 | Payments           | Manual confirm / refund                                            |
+| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)   |
 | 19–20 | Delivery / Envases | Tarifa distrito / pickup / pickup_point; stock envase 1:1          |
 | 21    | Products           | Min/max compra por presentación (default 10/100)                   |
 | 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |

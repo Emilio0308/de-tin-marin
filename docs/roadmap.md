@@ -373,6 +373,19 @@ siendo solo admin.
 
 **Depends on:** S1E ✅, S2B ✅, S3A-3 ✅
 
+### S4-09 — Cancelación atómica (refund + restock) ✅
+
+**Goal:** Un solo control admin «Cancelar»: sin deduct → solo `cancelled`;
+post-pago → RPC atómica (payments `refunded` + restock + `cancelled`).
+Sin reembolso suelto de payment.
+
+- [x] Migración `00029_cancel_order_with_restock.sql` + pgTAP
+- [x] `cancelOrderService` → RPC; transition a `cancelled` delega; bump catálogo
+- [x] UI: Cancelar en paid/preparing/ready; quitar Reembolsar (`USE_CANCEL_ORDER`)
+- Brief: [`docs/stages/S4/09-cancel-atomic-restock.md`](stages/S4/09-cancel-atomic-restock.md)
+
+**Depends on:** S2A ✅, S2B ✅, S2C ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

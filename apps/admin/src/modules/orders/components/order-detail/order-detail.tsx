@@ -16,7 +16,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
-import type { OrderStatus } from "@de-tin-marin/shared/order-cart";
+import {
+  canTransitionOrderStatus,
+  type OrderStatus,
+} from "@de-tin-marin/shared/order-cart";
 import { Button } from "@de-tin-marin/ui/button";
 import { OrderLocationMap } from "../order-location-map/order-location-map.dynamic";
 import { parseOrderMapPin } from "../order-location-map/order-location-map.helpers";
@@ -165,8 +168,9 @@ export function OrderDetailView({
   onCancel,
   cancelling,
 }: OrderDetailViewProps) {
-  const confirmedPayment = order.payments.find(
-    (payment) => payment.status === "confirmed",
+  const canCancel = canTransitionOrderStatus(
+    order.status as OrderStatus,
+    "cancelled",
   );
   const mapPin =
     parseOrderMapPin(order.metadata) ??
@@ -213,7 +217,7 @@ export function OrderDetailView({
               {labels.back}
             </Button>
           </Link>
-          {order.status === "pending_payment" && onCancel ? (
+          {canCancel && onCancel ? (
             <Button
               variant="secondary"
               disabled={cancelling}
@@ -648,20 +652,7 @@ export function OrderDetailView({
                       <p className="font-label text-label-bold text-secondary text-sm">
                         S/ {payment.amount.toFixed(2)}
                       </p>
-                      {payment.status === "confirmed" &&
-                      onRefundPayment &&
-                      confirmedPayment?.id === payment.id ? (
-                        <button
-                          type="button"
-                          className="text-primary mt-1 text-xs font-bold hover:underline disabled:opacity-50"
-                          disabled={refundingPaymentId === payment.id}
-                          onClick={() => onRefundPayment(payment.id)}
-                        >
-                          {refundingPaymentId === payment.id
-                            ? labels.refundingPayment
-                            : labels.refundPayment}
-                        </button>
-                      ) : null}
+
                     </div>
                   </li>
                 ))}

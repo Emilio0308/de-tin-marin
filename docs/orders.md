@@ -256,7 +256,7 @@ pending_payment → paid → preparing → ready → delivered → completed
 | `ready`           | `delivered`, `cancelled` |
 | `delivered`       | `completed`              |
 
-Cancelación post-pago y reembolso: **manual por operador** en v1 (Regla 18).
+Cancelación post-pago: refund + restock **atómicos** (Regla 18 / DECISIONS #41 / [S4-09](stages/S4/09-cancel-atomic-restock.md)).
 
 ## Flujo de creación
 
@@ -295,7 +295,19 @@ Sin pasarela. El operador en admin:
 3. Se ejecuta `commerce.confirm_payment_with_stock_deduct` (deduct atómico + `paid`).
 4. Si falta stock de producto o envase → orden permanece `pending_payment`.
 
-Ver Reglas 17–18. Reversión de stock en reembolso: manual (Regla 18).
+Ver Reglas 17–18. Cancelación post-pago: refund + restock atómicos vía `commerce.cancel_order_with_restock` (Regla 18 / DECISIONS #41 / [S4-09](stages/S4/09-cancel-atomic-restock.md)).
+
+### Cancelación atómica (v1)
+
+Punto de entrada único: **Cancelar** en admin (`cancelOrderAction`).
+
+| Estado origen | Efecto |
+| --- | --- |
+| `pending_payment` | Solo `status = cancelled` |
+| `paid` / `preparing` / `ready` | RPC atómica: payments → `refunded` + restock + `cancelled` |
+| `delivered` / `completed` | Rechazado (`INVALID_TRANSITION`) |
+
+Reintento sobre orden ya `cancelled`: OK idempotente, sin segundo restock.
 
 ### Instrucciones de pago dinámicas (ecommerce)
 
@@ -390,7 +402,8 @@ type OrderDTO = {
   - Líneas pack/bundle: composición desplegable (`viewComponents`)
   - Totales: tabs Precio final (XOR) y Descuento/recargo; ver § Totales de cabecera
   - Validación cliente: `helpers/order-form-validation.ts` → `createOrderInputSchema` + mensajes de campo
-- Confirmar pago / marcar reembolso
+- Confirmar pago
+- Cancelar (`pending_payment` \| `paid` \| `preparing` \| `ready`): post-pago = refund + restock atómicos
 - Avanzar estados: preparing → ready → delivered → completed
 
 Detalle de módulo: [`apps/admin/src/modules/orders/README.md`](../apps/admin/src/modules/orders/README.md).

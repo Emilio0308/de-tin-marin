@@ -53,6 +53,8 @@ import {
   type OrderDetail,
   type OrderListItem,
 } from "../types/order.dto";
+import { cancelOrderWithRestockRepo } from "../repositories/payment.repository";
+import { bumpCatalogVersionSafe } from "@/modules/catalog/repositories/catalog-cache-meta.repository";
 import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 
 async function resolveBundlesById(
@@ -368,6 +370,7 @@ export async function createOrderService(
 
 export async function transitionOrderStatusService(
   config: SupabaseConfig,
+  staffUserId: string,
   raw: unknown,
 ): Promise<
   | { ok: true; data: { id: string; status: OrderStatus } }
@@ -377,11 +380,16 @@ export async function transitionOrderStatusService(
         | "VALIDATION"
         | "NOT_FOUND"
         | "INVALID_TRANSITION"
-        | "PAYMENT_CONFIRMATION_REQUIRED";
+        | "PAYMENT_CONFIRMATION_REQUIRED"
+        | "FORBIDDEN";
     }
 > {
   const parsed = transitionOrderStatusInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  if (parsed.data.status === "cancelled") {
+    return cancelOrderService(config, staffUserId, parsed.data.id);
+  }
 
   const row = await getOrderByIdRepo(config, parsed.data.id);
   if (!row) return { ok: false, error: "NOT_FOUND" };
@@ -418,6 +426,57 @@ export async function transitionOrderStatusService(
   return { ok: true, data: { id: updated.id, status: to } };
 }
 
-export async function cancelOrderService(config: SupabaseConfig, id: string) {
-  return transitionOrderStatusService(config, { id, status: "cancelled" });
+export async function cancelOrderService(
+  config: SupabaseConfig,
+  staffUserId: string,
+  id: string,
+  notes?: string | null,
+): Promise<
+  | { ok: true; data: { id: string; status: OrderStatus } }
+  | {
+      ok: false;
+      error:
+        | "VALIDATION"
+        | "NOT_FOUND"
+        | "INVALID_TRANSITION"
+        | "PAYMENT_CONFIRMATION_REQUIRED"
+        | "FORBIDDEN";
+    }
+> {
+  try {
+    const data = await cancelOrderWithRestockRepo(config, {
+      orderId: id,
+      staffUserId,
+      notes: notes ?? null,
+    });
+
+    if (data.restocked) {
+      await bumpCatalogVersionSafe(config);
+    }
+
+    logServerInfo("cancelOrderService", "cancelled", {
+      orderId: data.orderId,
+      restocked: data.restocked,
+      idempotent: data.idempotent,
+    });
+
+    return {
+      ok: true,
+      data: { id: data.orderId, status: "cancelled" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logServerError("cancelOrderService", error, { orderId: id });
+
+    if (message.includes("NOT_FOUND")) {
+      return { ok: false, error: "NOT_FOUND" };
+    }
+    if (message.includes("FORBIDDEN")) {
+      return { ok: false, error: "FORBIDDEN" };
+    }
+    if (message.includes("INVALID_TRANSITION")) {
+      return { ok: false, error: "INVALID_TRANSITION" };
+    }
+    return { ok: false, error: "INVALID_TRANSITION" };
+  }
 }

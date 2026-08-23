@@ -5,12 +5,7 @@ import {
   refundPaymentInputSchema,
 } from "@de-tin-marin/validations/payment";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
-import {
-  getPaymentByIdRepo,
-  confirmPaymentWithStockDeductRepo,
-  updatePaymentRepo,
-} from "../repositories/payment.repository";
-import { updateOrderPaymentStatusRepo } from "../repositories/order.repository";
+import { confirmPaymentWithStockDeductRepo } from "../repositories/payment.repository";
 import { bumpCatalogVersionSafe } from "@/modules/catalog/repositories/catalog-cache-meta.repository";
 import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 
@@ -113,43 +108,28 @@ export async function confirmPaymentService(
   }
 }
 
+/** @deprecated Use cancelOrderService — refund+restock are atomic with cancel. */
 export async function refundPaymentService(
-  config: SupabaseConfig,
+  _config: SupabaseConfig,
   raw: unknown,
 ): Promise<
   | { ok: true; data: { paymentId: string; status: "refunded" } }
   | {
       ok: false;
-      error: "VALIDATION" | "NOT_FOUND" | "NOT_CONFIRMED" | "ALREADY_REFUNDED";
+      error:
+        | "VALIDATION"
+        | "NOT_FOUND"
+        | "NOT_CONFIRMED"
+        | "ALREADY_REFUNDED"
+        | "USE_CANCEL_ORDER";
     }
 > {
   const parsed = refundPaymentInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
-  const payment = await getPaymentByIdRepo(config, parsed.data.paymentId);
-  if (!payment) return { ok: false, error: "NOT_FOUND" };
-
-  if (payment.status === "refunded") {
-    return { ok: false, error: "ALREADY_REFUNDED" };
-  }
-
-  if (payment.status !== "confirmed") {
-    return { ok: false, error: "NOT_CONFIRMED" };
-  }
-
-  const notes =
-    parsed.data.notes !== undefined ? parsed.data.notes : payment.notes;
-
-  await updatePaymentRepo(config, payment.id, {
-    status: "refunded",
-    notes,
+  logServerError("refundPaymentService", {
+    message: "USE_CANCEL_ORDER",
+    paymentId: parsed.data.paymentId,
   });
-
-  // v1: marcar payment_status en la orden; el operador cancela o gestiona stock manualmente.
-  await updateOrderPaymentStatusRepo(config, payment.order_id, "refunded");
-
-  return {
-    ok: true,
-    data: { paymentId: payment.id, status: "refunded" },
-  };
+  return { ok: false, error: "USE_CANCEL_ORDER" };
 }

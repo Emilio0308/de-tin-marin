@@ -14,7 +14,6 @@ import type { ShipmentStatus } from "@de-tin-marin/validations/shipment";
 import { cancelOrderAction } from "@/modules/orders/actions/cancel-order";
 import { confirmPaymentAction } from "@/modules/orders/actions/confirm-payment";
 import { getOrderAction } from "@/modules/orders/actions/get-order";
-import { refundPaymentAction } from "@/modules/orders/actions/refund-payment";
 import { transitionOrderStatusAction } from "@/modules/orders/actions/transition-order-status";
 import { upsertShipmentAction } from "@/modules/orders/actions/upsert-shipment";
 import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
@@ -51,9 +50,6 @@ export function OrderDetailContainer() {
   const [shipmentCarrier, setShipmentCarrier] = useState("");
   const [shipmentNotes, setShipmentNotes] = useState("");
   const [transitioningTo, setTransitioningTo] = useState<OrderStatus | null>(
-    null,
-  );
-  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(
     null,
   );
 
@@ -114,6 +110,7 @@ export function OrderDetailContainer() {
       cancelOrder: t("detail.cancelOrder"),
       cancelling: t("detail.cancelling"),
       cancelConfirm: t("detail.cancelConfirm"),
+      cancelConfirmPaid: t("detail.cancelConfirmPaid"),
       referencePrefix: t("detail.referencePrefix"),
       paymentReferencePlaceholder: t("detail.paymentReferencePlaceholder"),
       statusLabels,
@@ -200,15 +197,6 @@ export function OrderDetailContainer() {
     },
   });
 
-  const refundPaymentMutation = useMutation({
-    mutationFn: async (paymentId: string) => {
-      setRefundingPaymentId(paymentId);
-      const result = await refundPaymentAction({ paymentId });
-      if (!result.ok) throw new Error(result.error);
-    },
-    onSettled: () => setRefundingPaymentId(null),
-    onSuccess: invalidateOrder,
-  });
 
   const transitionMutation = useMutation({
     mutationFn: async (status: OrderStatus) => {
@@ -238,9 +226,12 @@ export function OrderDetailContainer() {
   });
 
   async function handleCancel() {
+    const status = orderQuery.data?.status;
+    const paidLike =
+      status === "paid" || status === "preparing" || status === "ready";
     const accepted = await confirm({
       title: tCommon("confirmDialog.cancelOrderTitle"),
-      description: labels.cancelConfirm,
+      description: paidLike ? labels.cancelConfirmPaid : labels.cancelConfirm,
       confirmLabel: tCommon("confirmDialog.confirm"),
     });
     if (!accepted) return;
@@ -290,10 +281,6 @@ export function OrderDetailContainer() {
           onPaymentNotesChange={setPaymentNotes}
           onConfirmPayment={() => confirmPaymentMutation.mutate()}
           confirmingPayment={confirmPaymentMutation.isPending}
-          onRefundPayment={(paymentId) =>
-            refundPaymentMutation.mutate(paymentId)
-          }
-          refundingPaymentId={refundingPaymentId}
           shipmentStatus={shipmentStatus}
           shipmentTracking={shipmentTracking}
           shipmentCarrier={shipmentCarrier}

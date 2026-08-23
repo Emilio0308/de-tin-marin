@@ -22,6 +22,11 @@
 
 Un operador staff puede crear órdenes manuales en admin con productos y sorpresas personalizadas, ver listado/detalle, y cancelar órdenes en `pending_payment`; el carrito queda congelado en JSONB.
 
+> **Nota posterior (S4-09 / DECISIONS #41):** cancel post-pago es atómico
+> (refund + restock). Ver [`S4/09-cancel-atomic-restock.md`](../S4/09-cancel-atomic-restock.md).
+
+> **Nota posterior (S4-09 / DECISIONS #41):** cancel post-pago (`paid`/`preparing`/`ready`) es atómico (refund + restock). Ver [`S4/09-cancel-atomic-restock.md`](../S4/09-cancel-atomic-restock.md). El alcance original de S2B queda abajo.
+
 ## Scope IN
 
 - Migración `00006_commerce_orders.sql` + pgTAP RLS staff

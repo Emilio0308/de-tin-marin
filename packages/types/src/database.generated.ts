@@ -613,6 +613,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_order_with_restock: {
+        Args: {
+          p_notes?: string
+          p_order_id: string
+          p_staff_user_id: string
+        }
+        Returns: Json
+      }
       confirm_payment_with_stock_deduct: {
         Args: {
           p_notes?: string
@@ -623,6 +631,10 @@ export type Database = {
         Returns: Json
       }
       deduct_stock_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      restock_stock_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
       }

@@ -150,7 +150,7 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 
 ## Reembolso / cancelación (v1)
 
-Reversión de stock **manual** por operador — incrementar sealed/loose en admin. Ledger automático → v2.
+Cancelación post-pago: **`commerce.cancel_order_with_restock`** restaura stock atómicamente con el refund del payment (Regla 18 / DECISIONS #41 / [S4-09](stages/S4/09-cancel-atomic-restock.md)). Restock usa la misma agregación de demanda que el deduct y devuelve unidades base a loose (+ normalize). Ledger de movimientos → v2.
 
 ## Migración desde `stock_quantity`
 

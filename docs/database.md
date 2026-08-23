@@ -470,6 +470,9 @@ erDiagram
 | `catalog.list_public_packs(...)`            | S3A-1-R — page/sort/count público de packs (`finalPrice` con campaña activa)                        |
 | `catalog.bump_catalog_version()`            | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                 |
 | `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
+| `commerce.confirm_payment_with_stock_deduct(...)` | S2A/S2C — confirm pago manual + deduct atómico → `paid` |
+| `commerce.restock_stock_for_order(order_id)` | Inverso del deduct (cancel post-pago) — `00029` / S4-09 |
+| `commerce.cancel_order_with_restock(...)` | Cancel atómico: refund payments + restock + `cancelled` — `00029` / DECISIONS #41 / S4-09 |
 | `commerce.insert_guest_order(...)`          | Guest create: `delivery` XOR `pickup_point`; no `pickup` (S4-08 / `00028`)                          |
 
 ---

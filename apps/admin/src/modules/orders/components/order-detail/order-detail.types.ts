@@ -51,6 +51,7 @@ export type OrderDetailLabels = {
   cancelOrder: string;
   cancelling: string;
   cancelConfirm: string;
+  cancelConfirmPaid: string;
   referencePrefix: string;
   paymentReferencePlaceholder: string;
   statusLabels: Record<string, string>;

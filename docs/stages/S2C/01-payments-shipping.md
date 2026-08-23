@@ -13,7 +13,7 @@
 
 - S2B ✅ — `commerce.orders` con `shopping_cart` congelado; admin crea/lista/detalle/cancela; transición a `paid` **bloqueada** (`PAYMENT_CONFIRMATION_REQUIRED`).
 - **Regla 17** — confirmar pago manual: insertar `commerce.payments` (`confirmed`) → orden `paid` + `payment_status = confirmed`. **No** `paid` sin fila en `payments`.
-- **Regla 18** — reembolso manual: `payments.status = refunded`; reversión de stock **manual** en admin (v1).
+- **Regla 18** (scope histórico de este brief) — `refundPayment` suelto + restock manual. **Superseded** por DECISIONS **#41** / [S4-09](../S4/09-cancel-atomic-restock.md): cancel post-pago atómico; `refundPayment` → `USE_CANCEL_ORDER`.
 - **DECISIONS #8** — sin pasarela v1; `method = internal`.
 - **DECISIONS #25** — deduct stock al `paid` → **S2A**, no enganchar en S2C.
 - Estados post-pago: `paid → preparing → ready → delivered → completed` ([`orders.md`](../../orders.md)).
@@ -28,8 +28,8 @@ Un operador staff puede confirmar el pago manual de una orden (`pending_payment`
 - `@de-tin-marin/validations`: `confirmPaymentInputSchema`, `refundPaymentInputSchema`, `shipmentInputSchema`, DTOs allowlist
 - Admin actions/services/repositories:
   - `confirmPayment` — Regla 17
-  - `refundPayment` — Regla 18 (v1 básico)
-  - `transitionOrderStatus` — habilitar `paid`, `preparing`, `ready`, `delivered`, `completed` (vía `confirmPayment` para `paid`)
+  - `refundPayment` — (histórico S2C) hoy deprecado → usar cancel S4-09 / #41
+  - `transitionOrderStatus` — habilitar `paid`, `preparing`, `ready`, `delivered`, `completed` (vía `confirmPayment` para `paid`); `cancelled` delega a cancel atómico
   - `getShipment` / `upsertShipment` — 1 envío por orden
 - UI detalle orden `/orders/[id]`: panel pago, panel envío, acciones de estado
 - i18n admin (`messages/es.json`) + tokens design system ([`rules/88-ui-design-i18n.md`](../../rules/88-ui-design-i18n.md))
@@ -107,7 +107,7 @@ Grants: `GRANT SELECT, INSERT, UPDATE ON commerce.payments, commerce.shipments T
 | Boundary                | Tipo          | Input (Zod)                  | Output DTO (allowlist)                                       |
 | ----------------------- | ------------- | ---------------------------- | ------------------------------------------------------------ |
 | `confirmPayment`        | Server Action | `confirmPaymentInputSchema`  | `{ orderId, paymentId, status: 'paid' }`                     |
-| `refundPayment`         | Server Action | `refundPaymentInputSchema`   | `{ paymentId, status: 'refunded' }`                          |
+| `refundPayment`         | Server Action | `refundPaymentInputSchema`   | **Deprecado** → `USE_CANCEL_ORDER` (S4-09 / #41)             |
 | `transitionOrderStatus` | Server Action | `transitionOrderStatusInput` | `{ id, status }` — **sin** `paid` directo (solo vía confirm) |
 | `getShipment`           | Server Action | `orderId` uuid               | `ShipmentDTO \| null`                                        |
 | `upsertShipment`        | Server Action | `upsertShipmentInputSchema`  | `ShipmentDTO`                                                |

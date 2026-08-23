@@ -102,3 +102,31 @@ export async function confirmPaymentWithStockDeductRepo(
   if (result.error) throw new Error(result.error.message);
   return result.data as ConfirmPaymentRpcResult;
 }
+
+export type CancelOrderWithRestockRpcResult = {
+  orderId: string;
+  status: "cancelled";
+  restocked: boolean;
+  idempotent: boolean;
+};
+
+export async function cancelOrderWithRestockRepo(
+  config: SupabaseConfig,
+  input: {
+    orderId: string;
+    staffUserId: string;
+    notes?: string | null;
+  },
+): Promise<CancelOrderWithRestockRpcResult> {
+  const supabase = await createSupabaseServerClient(config);
+  const result = await supabase
+    .schema("commerce")
+    .rpc("cancel_order_with_restock", {
+      p_order_id: input.orderId,
+      p_staff_user_id: input.staffUserId,
+      p_notes: input.notes ?? null,
+    });
+
+  if (result.error) throw new Error(result.error.message);
+  return result.data as CancelOrderWithRestockRpcResult;
+}
