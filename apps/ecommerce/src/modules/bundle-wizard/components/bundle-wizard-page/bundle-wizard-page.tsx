@@ -116,6 +116,7 @@ export function BundleWizardPage({
   isValid,
   canRemove,
   canAdd,
+  enableUnitsPerPerson,
   isPreviewLoading,
   isPreviewError,
   isProductsLoading,
@@ -126,6 +127,7 @@ export function BundleWizardPage({
   labels,
   onRemove,
   onAdd,
+  onQuantityPerUnitChange,
   onQuantityChange,
   onSearchChange,
   onSearchSubmit,
@@ -219,7 +221,9 @@ export function BundleWizardPage({
                 imagesByProductId={imagesByProductId}
                 unitPricesByProductId={unitPricesByProductId}
                 canRemove={canRemove}
+                enableUnitsPerPerson={enableUnitsPerPerson}
                 onRemove={onRemove}
+                onQuantityPerUnitChange={onQuantityPerUnitChange}
               />
 
               <WizardProductPicker

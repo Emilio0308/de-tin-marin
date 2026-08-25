@@ -56,6 +56,21 @@ export function addComponent(
   ];
 }
 
+export function setComponentQuantityPerUnit(
+  components: CustomizeBundleComponent[],
+  productId: string,
+  quantityPerUnit: number,
+): CustomizeBundleComponent[] {
+  if (!storeFeatures.enableUnitsPerPerson) return components;
+
+  const next = Math.max(1, Math.floor(quantityPerUnit));
+  return components.map((component) =>
+    component.productId === productId
+      ? { ...component, quantityPerUnit: next }
+      : component,
+  );
+}
+
 export function buildComponentLabels(
   templateItems: Array<{ productId: string; productName: string }>,
   pickerLabels: Record<string, string>,

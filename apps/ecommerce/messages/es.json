@@ -134,7 +134,9 @@
         "minReached": "Necesitas al menos {min} dulces en tu sorpresa.",
         "count": "{current} de {max} dulces",
         "progressLabel": "{current} de {max} dulces seleccionados",
-        "quantityBreakdown": "{perPerson} × {surprises} = {total} unidades - S/ {price}"
+        "quantityBreakdown": "{perPerson} × {surprises} = {total} unidades - S/ {price}",
+        "decreaseUnits": "Disminuir unidades de {name} por sorpresa",
+        "increaseUnits": "Aumentar unidades de {name} por sorpresa"
       },
       "picker": {
         "title": "Agregar dulce",

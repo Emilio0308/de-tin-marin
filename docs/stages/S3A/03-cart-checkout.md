@@ -86,8 +86,8 @@ interface CartRepository {
 | Flag                              | v1      | Efecto                                                         |
 | --------------------------------- | ------- | -------------------------------------------------------------- |
 | `pickupEnabled`                   | `false` | Oculta recojo **en tienda** (`pickup`); no afecta puntos S4-08 |
-| `strictStockValidationOnCheckout` | `false` | Solo warnings                                                  |
-| `enableUnitsPerPerson`            | `false` | (wizard)                                                       |
+| `strictStockValidationOnCheckout` | `false` | Solo warnings (código puede forzar `true`)                     |
+| `enableUnitsPerPerson`            | `true`  | Wizard: editar unidades base **por sorpresa** por dulce (#22)  |
 
 ## Scope OUT (traps)
 

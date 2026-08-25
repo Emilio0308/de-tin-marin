@@ -24,6 +24,19 @@ UI: si `template.description` no es `null`, se muestra bajo el encabezado de la 
 - Admin order-form: `quantity >= 1` sin tope ecommerce.
 - Guest checkout revalida el rango 15–100 en `createGuestOrderInputSchema`.
 
+## Unidades por sorpresa (`enableUnitsPerPerson`)
+
+Con `storeFeatures.enableUnitsPerPerson = true` (activo):
+
+- Cada dulce muestra un stepper de `quantityPerUnit` (≥ 1).
+- Init: `bundle_items.units_per_person` de la plantilla.
+- Helper: `setComponentQuantityPerUnit` (no-op si el flag está off).
+- Al congelar: `totalQuantity = quantityPerUnit × line.quantity`.
+
+Flag off → UI sin stepper; `quantityPerUnit` forzado a 1 al agregar.
+
+Canónico: DECISIONS #22 · Regla 7 · brief S3A-2.
+
 ## Integración con carrito
 
 Al confirmar, `BundleWizardPageContainer` llama `useCart().addBundleLine()` con la línea congelada (`OrderShoppingCartBundleLine`) y redirige a `/carrito`.
@@ -37,7 +50,7 @@ Al confirmar, `BundleWizardPageContainer` llama `useCart().addBundleLine()` con 
 - `getBundleForWizardService` expone los límites en la plantilla y recorta `initialComponents` al máximo de **esa** sorpresa.
 - La plantilla y el estado del wizard tienen productos por `productId` único;
   la cardinalidad cuenta productos distintos, no
-  `unitsPerPerson` ni la cantidad de sorpresas.
+  `quantityPerUnit` ni la cantidad de sorpresas.
 - Preview solo corre para una composición válida **y** `quantity` en 15–100. El service
   vuelve a cargar los límites de la plantilla y valida antes de calcular precio o stock:
   los límites recibidos en el cliente no son una autorización.

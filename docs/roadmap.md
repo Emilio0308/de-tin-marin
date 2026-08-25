@@ -227,7 +227,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
   ecommerce/guest `line.quantity` editable (**15–100**), init =
   `clamp(bundles.quantity, 15, 100)`, preview + revalidación en checkout
   (admin no usa ese rango)
-- `enableUnitsPerPerson=false`; stock warning only
+- `enableUnitsPerPerson=true` (unidades por sorpresa editables en wizard);
+  stock warning only
 - Brief: [`docs/stages/S3A/02-bundle-customization-wizard.md`](stages/S3A/02-bundle-customization-wizard.md)
 
 **Depends on:** S3A-1

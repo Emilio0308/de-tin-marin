@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolveComponentTotalQuantity } from "./wizard-component-list.helpers";
@@ -44,6 +45,49 @@ function WizardProgressBar({
   );
 }
 
+function UnitsPerPersonStepper({
+  value,
+  productName,
+  onDecrease,
+  onIncrease,
+}: {
+  value: number;
+  productName: string;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
+  const t = useTranslations("catalog.wizard.componentList");
+
+  return (
+    <div className="border-outline-variant bg-surface flex shrink-0 items-center rounded-full border px-0.5">
+      <button
+        type="button"
+        onClick={onDecrease}
+        disabled={value <= 1}
+        aria-label={t("decreaseUnits", { name: productName })}
+        className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+      >
+        <Minus className="h-4 w-4" aria-hidden />
+      </button>
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="font-label text-label-bold text-on-surface min-w-6 text-center text-sm"
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={onIncrease}
+        aria-label={t("increaseUnits", { name: productName })}
+        className="text-primary hover:bg-primary-container flex h-9 w-9 items-center justify-center rounded-full transition-colors"
+      >
+        <Plus className="h-4 w-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 export function WizardComponentList({
   components,
   personCount,
@@ -53,7 +97,9 @@ export function WizardComponentList({
   imagesByProductId,
   unitPricesByProductId,
   canRemove,
+  enableUnitsPerPerson,
   onRemove,
+  onQuantityPerUnitChange,
 }: WizardComponentListProps) {
   const t = useTranslations("catalog.wizard.componentList");
   const count = t("count", {
@@ -134,6 +180,18 @@ export function WizardComponentList({
                   })}
                 </p>
               </div>
+              {enableUnitsPerPerson ? (
+                <UnitsPerPersonStepper
+                  value={perPerson}
+                  productName={name}
+                  onDecrease={() =>
+                    onQuantityPerUnitChange(component.productId, perPerson - 1)
+                  }
+                  onIncrease={() =>
+                    onQuantityPerUnitChange(component.productId, perPerson + 1)
+                  }
+                />
+              ) : null}
               <button
                 type="button"
                 disabled={!canRemove}

@@ -256,7 +256,11 @@ ni credenciales bancarias fuera de los datos que se muestran al cliente.
 >
 > Con campaña activa en preview: usar `finalUnitPrice` por componente.
 
-**`catalog.bundle_items`**: `bundle_id`, `product_id`, `units_per_person` (unidades **base** de ese producto por sorpresa/persona; **v1 fija en 1**). Unique `(bundle_id, product_id)`.
+**`catalog.bundle_items`**: `bundle_id`, `product_id`, `units_per_person`
+(unidades **base** de ese producto por sorpresa; default de plantilla ≥ 1;
+admin editable). En wizard ecommerce, con `enableUnitsPerPerson`, el cliente
+puede cambiar `quantityPerUnit` al personalizar (DECISIONS #22 / Regla 7).
+Unique `(bundle_id, product_id)`.
 
 **`catalog.packs`** (combo — sin stock propio; precio persistido):
 

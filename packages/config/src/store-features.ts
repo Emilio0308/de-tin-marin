@@ -1,5 +1,5 @@
 export const storeFeatures = {
-  enableUnitsPerPerson: false,
+  enableUnitsPerPerson: true,
   pickupEnabled: false,
   strictStockValidationOnCheckout: true,
 } as const;

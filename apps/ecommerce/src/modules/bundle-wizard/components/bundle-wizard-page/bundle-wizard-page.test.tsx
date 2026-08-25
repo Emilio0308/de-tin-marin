@@ -36,6 +36,8 @@ vi.mock("next-intl", () => ({
         progressLabel: "{current} de {max} dulces seleccionados",
         quantityBreakdown:
           "{perPerson} × {surprises} = {total} unidades - S/ {price}",
+        decreaseUnits: "Disminuir unidades de {name} por sorpresa",
+        increaseUnits: "Aumentar unidades de {name} por sorpresa",
       };
       let result = templates[key] ?? key;
       if (values) {
@@ -170,6 +172,7 @@ const defaultProps = {
   isValid: true,
   canRemove: true,
   canAdd: true,
+  enableUnitsPerPerson: true,
   isPreviewLoading: false,
   isPreviewError: false,
   isProductsLoading: false,
@@ -180,6 +183,7 @@ const defaultProps = {
   labels: defaultLabels,
   onRemove: vi.fn(),
   onAdd: vi.fn(),
+  onQuantityPerUnitChange: vi.fn(),
   onQuantityChange: vi.fn(),
   onSearchChange: vi.fn(),
   onSearchSubmit: vi.fn(),

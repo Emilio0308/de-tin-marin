@@ -27,10 +27,12 @@ import {
   canAddComponent,
   canRemoveComponent,
   removeComponent,
+  setComponentQuantityPerUnit,
 } from "@/modules/bundle-wizard/helpers/wizard-state";
 import { clearPendingCartLines } from "@/modules/bundle-wizard/helpers/pending-cart";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { useCart } from "@/modules/cart/hooks/use-cart";
+import { storeFeatures } from "@/config/store";
 import { queryKeys } from "@/shared/query/query-keys";
 import { freshQueryOptions } from "@/shared/query/query-cache";
 import { WIZARD_PRODUCT_PICKER_PAGE_SIZE } from "../wizard-product-picker/wizard-product-picker.constants";
@@ -200,6 +202,16 @@ export function BundleWizardPageContainer({
     setComponents((current) => addComponent(current, product.id, bounds));
   };
 
+  const handleQuantityPerUnitChange = (
+    productId: string,
+    quantityPerUnit: number,
+  ) => {
+    if (!storeFeatures.enableUnitsPerPerson) return;
+    setComponents((current) =>
+      setComponentQuantityPerUnit(current, productId, quantityPerUnit),
+    );
+  };
+
   const handleQuantityChange = (next: number) => {
     setQuantity(clampBundleLineQuantity(next));
   };
@@ -230,6 +242,7 @@ export function BundleWizardPageContainer({
       isValid={isValid}
       canRemove={canRemoveComponent(components, bounds)}
       canAdd={canAddComponent(components, bounds)}
+      enableUnitsPerPerson={storeFeatures.enableUnitsPerPerson}
       isPreviewLoading={previewQuery.isFetching}
       isPreviewError={previewQuery.isError}
       isProductsLoading={isProductsLoading}
@@ -284,6 +297,7 @@ export function BundleWizardPageContainer({
       }}
       onRemove={handleRemove}
       onAdd={handleAdd}
+      onQuantityPerUnitChange={handleQuantityPerUnitChange}
       onQuantityChange={handleQuantityChange}
       onSearchChange={setSearchDraft}
       onSearchSubmit={() => {

@@ -65,8 +65,26 @@
 ### Regla 7 — Personalización en la orden
 
 - **Trigger:** Cliente crea/edita una sorpresa en el pedido.
-- **Pasos:** Partir de plantilla `bundle_items`; permitir agregar, quitar o **reemplazar** productos respetando los límites **de esa plantilla** (`customization_min_products` / `customization_max_products`). `bundles.quantity` = cantidad de **sorpresas** de la plantilla. En ecommerce / guest, `line.quantity` (sorpresas pedidas) es editable con **15 ≤ quantity ≤ 100** (init = `clamp(bundles.quantity, 15, 100)`). Admin order-form permite `quantity >= 1` sin ese tope. Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`, independiente de la plantilla). Revalidar min/max de componentes y cantidad (ecommerce) en preview y al crear la orden.
-- **Fallo:** Rechazar productos inactivos, cantidades <= 0, cardinalidad de componentes fuera del rango de la plantilla, o (ecommerce/guest) `quantity` fuera de 15–100.
+- **Pasos:**
+  1. Partir de plantilla `bundle_items`; permitir agregar, quitar o
+     **reemplazar** productos respetando los límites **de esa plantilla**
+     (`customization_min_products` / `customization_max_products`).
+  2. `bundles.quantity` = cantidad de **sorpresas** de la plantilla. En
+     ecommerce / guest, `line.quantity` (sorpresas pedidas) es editable con
+     **15 ≤ quantity ≤ 100** (init = `clamp(bundles.quantity, 15, 100)`).
+     Admin order-form permite `quantity >= 1` sin ese tope.
+  3. Unidades por dulce **por sorpresa**:
+     `bundle_items.units_per_person` = default de plantilla (admin ≥ 1).
+     Con `storeFeatures.enableUnitsPerPerson = true`, el wizard ecommerce
+     edita `quantityPerUnit` (≥ 1; init desde plantilla). Flag off →
+     `quantityPerUnit = 1`. Congelar
+     `totalQuantity = quantityPerUnit × line.quantity` en el snapshot.
+  4. Persistir snapshot en `orders.shopping_cart` (línea `type: bundle`,
+     independiente de la plantilla). Revalidar min/max de componentes y
+     cantidad (ecommerce) en preview y al crear la orden.
+- **Fallo:** Rechazar productos inactivos, `quantityPerUnit <= 0`,
+  cardinalidad de componentes fuera del rango de la plantilla, o
+  (ecommerce/guest) `quantity` fuera de 15–100.
 
 ### Regla 8 — Precio de sorpresa en orden
 

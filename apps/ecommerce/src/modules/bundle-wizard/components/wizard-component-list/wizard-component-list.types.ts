@@ -9,5 +9,7 @@ export type WizardComponentListProps = {
   imagesByProductId: Record<string, string>;
   unitPricesByProductId: Record<string, number>;
   canRemove: boolean;
+  enableUnitsPerPerson: boolean;
   onRemove: (productId: string) => void;
+  onQuantityPerUnitChange: (productId: string, quantityPerUnit: number) => void;
 };

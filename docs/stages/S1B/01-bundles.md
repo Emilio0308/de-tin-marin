@@ -15,7 +15,10 @@
 - Modelo base en [database.md](../../database.md) § catalog.
 - **DECISIONS #5** — bundles **no tienen stock**; son plantillas por demanda. Solo `products` tiene `stock_quantity`.
 - **DECISIONS #6** — precio del bundle **dinámico, NO persistido**; se recalcula en cada consulta desde componentes vivos.
-- **DECISIONS #22** — bundle = plantilla con `quantity` (**sorpresas**; docs antiguos decían “personas”) + `service_fee` (luego `container_id` en S1E); `bundle_items` con `units_per_person` (v1 = 1; unidades por sorpresa).
+- **DECISIONS #22** — bundle = plantilla con `quantity` (**sorpresas**) +
+  `container_id` (S1E); `bundle_items.units_per_person` = unidades por
+  sorpresa (admin editable; wizard ecommerce editable si
+  `enableUnitsPerPerson`). Ver sync 2026-08-25.
 - **Invariante 9/11** — pricing se calcula en backend; el bundle es plantilla y su precio se **congela** recién al crear la orden (`orders.shopping_cart`, S2B) — no aquí.
 - Los componentes referencian **solo `catalog.products`** (sin bundles anidados).
 - Grants: cada tabla nueva en schema propio necesita `GRANT` para `anon`/`authenticated` (lección S1A, ver `00003_api_grants.sql`).
@@ -61,7 +64,10 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 - **NO campañas ni `finalPrice` con descuento** — el total usa `products.prices.unit.netPrice` (post-S1D); precio final campaña-aware es S1C → _pricing boundary violation_
 - **NO bundles anidados** — `bundle_items.product_id` solo apunta a `products` → _ciclos / complejidad_
 - **NO personalización ni snapshot de orden** — eso va en `shopping_cart` (S2B) → _invariante 11_
-- **NO `units_per_person` editable en UI v1** — se fija en `1`; el campo existe en tabla para v2 → _scope creep_
+- **NO `units_per_person` = 1 obligatorio forever** — el campo siempre existió
+  (≥ 1). Admin edita el default de plantilla; wizard ecommerce edita al
+  personalizar si `enableUnitsPerPerson` (DECISIONS #22 sync 2026-08-25).
+  Scope original S1B fijaba UI storefront en 1.
 - **NO ecommerce UI** → S3A
 - **NO Supabase Storage** — `image_url` es URL texto; upload admin vía S3/CDN (S0-03), no Storage de Supabase → _scope creep_
 - **NO `index.ts` barrels**

@@ -153,8 +153,10 @@ Plantilla: productos 1–5, `bundles.quantity = 25` sorpresas. Cliente modifica
 composición → productos 1,2,3,5,6,8 y deja cantidad 30.
 
 Línea `type: "bundle"` con `quantity: 30`, `container` congelado y 6
-`components`; con `quantityPerUnit: 1`, cada componente tiene
-`totalQuantity: 30` y el `unitPrice` final del momento del preview.
+`components`. Si cada dulce queda en `quantityPerUnit: 1`,
+`totalQuantity: 30` por componente; si el cliente sube un dulce a
+`quantityPerUnit: 2` (flag `enableUnitsPerPerson`), ese componente congela
+`totalQuantity: 60`. `unitPrice` = final del momento del preview.
 
 ## Cabecera de la orden
 

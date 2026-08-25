@@ -43,7 +43,7 @@ import { storeFeatures } from "@/config/store";
 
 | Flag                              | Default | Etapa          |
 | --------------------------------- | ------- | -------------- |
-| `enableUnitsPerPerson`            | `false` | S3A-2 wizard   |
+| `enableUnitsPerPerson`            | `true`  | S3A-2 wizard   |
 | `pickupEnabled`                   | `false` | S3A-3 checkout |
 | `strictStockValidationOnCheckout` | `false` | S3A-3 checkout |
 
