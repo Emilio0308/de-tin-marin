@@ -816,6 +816,45 @@ export type Database = {
         }
         Relationships: []
       }
+      storefront_settings: {
+        Row: {
+          announcement_enabled: boolean
+          announcement_message: string | null
+          free_delivery: boolean
+          free_fulfillment_ends_at: string | null
+          free_fulfillment_starts_at: string | null
+          free_pickup_point: boolean
+          id: string
+          min_order_subtotal: number
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_enabled?: boolean
+          announcement_message?: string | null
+          free_delivery?: boolean
+          free_fulfillment_ends_at?: string | null
+          free_fulfillment_starts_at?: string | null
+          free_pickup_point?: boolean
+          id?: string
+          min_order_subtotal?: number
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_enabled?: boolean
+          announcement_message?: string | null
+          free_delivery?: boolean
+          free_fulfillment_ends_at?: string | null
+          free_fulfillment_starts_at?: string | null
+          free_pickup_point?: boolean
+          id?: string
+          min_order_subtotal?: number
+          singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

@@ -62,6 +62,7 @@
     "bundles": "Sorpresas",
     "packs": "Combos",
     "delivery": "Delivery",
+    "storefrontSettings": "Configuración de tienda",
     "businessSettings": "Contacto y pagos",
     "webCustomization": "Personalización web",
     "orders": "Órdenes",
@@ -1158,6 +1159,36 @@
     "errors": {
       "validation": "Revisa los campos del formulario",
       "default": "No se pudo guardar la configuración"
+    }
+  },
+  "storefrontSettings": {
+    "title": "Configuración de tienda",
+    "subtitle": "Reglas generales del ecommerce: promos de envío, pedido mínimo y avisos",
+    "loading": "Cargando configuración de tienda…",
+    "loadError": "No pudimos cargar la configuración de tienda.",
+    "sectionPromo": "Promo de envío",
+    "sectionMinOrder": "Pedido mínimo",
+    "sectionAnnouncement": "Aviso importante",
+    "freeDelivery": "Delivery gratis (Piura)",
+    "freeDeliveryHint": "Cobra S/ 0 en delivery local sin cambiar tarifas por distrito",
+    "freePickupPoint": "Punto de recojo gratis",
+    "freePickupPointHint": "Cobra S/ 0 en puntos de recojo sin cambiar el fee de cada punto",
+    "freeWindowStart": "Inicio de la promo",
+    "freeWindowEnd": "Fin de la promo",
+    "freeWindowHint": "Opcional. Si dejas ambas vacías, los toggles aplican de inmediato hasta que los apagues.",
+    "minOrderSubtotal": "Monto mínimo de compra (subtotal)",
+    "minOrderHint": "0 = desactivado. Se compara con el subtotal del carrito (antes del envío). Solo ecommerce.",
+    "announcementEnabled": "Mostrar aviso en checkout",
+    "announcementEnabledHint": "Banner visible para el cliente al pagar",
+    "announcementMessage": "Mensaje del aviso",
+    "announcementMessageHint": "Hasta 500 caracteres. Obligatorio si el aviso está activo.",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Configuración de tienda guardada",
+    "infoTip": "Estas reglas no sustituyen las tarifas de /delivery ni los datos de contacto y pagos.",
+    "errors": {
+      "validation": "Revisa los campos del formulario",
+      "default": "No se pudo guardar la configuración de tienda"
     }
   }
 }

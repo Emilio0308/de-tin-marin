@@ -60,7 +60,11 @@ export type CheckoutPageLabels = {
   phoneHint: string;
   subtotal: string;
   shipping: string;
+  shippingFree: string;
   shippingPending: string;
+  shippingPromoNote: string;
+  announcementLabel: string;
+  minOrderHint: string;
   total: string;
   submit: string;
   submitting: string;
@@ -121,6 +125,9 @@ export type CheckoutPageProps = {
   mapPin: MapPin;
   subtotal: number;
   shippingTotal: number;
+  shippingIsPromotional: boolean;
+  announcementMessage: string | null;
+  minOrderSubtotal: number;
   total: number;
   covered: boolean;
   isDeliveryPending: boolean;

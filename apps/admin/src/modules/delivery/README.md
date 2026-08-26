@@ -62,10 +62,17 @@ activos con ≥1 provincia `enabled`; `[]` si `courier_enabled = false`.
 ## Fee
 
 `resolveDeliveryFeeService` usa `@de-tin-marin/shared/delivery-fee` +
-`resolveCourierCoverage`:
+`resolveCourierCoverage`, y luego
+`applyStorefrontShippingFee` (Regla 32 / `core.storefront_settings`):
 
 - `pickup` → 0
-- `courier` → 0 (cobertura vía dept/provincia)
+- `courier` → 0 (cobertura vía dept/provincia; la promo storefront **no**
+  aplica a courier)
 - `pickup_point` → fee del punto **activo** (si no hay match → 0 en helper
-  admin; checkout usa `covered: false`)
-- `delivery` → zona o `fallback_fee`
+  admin; checkout usa `covered: false`); overlay puede → 0 si
+  `free_pickup_point` + ventana vigente
+- `delivery` → zona o `fallback_fee`; overlay puede → 0 si `free_delivery` +
+  ventana vigente
+
+El overlay **no** muta fees en `delivery_zones` / `pickup_points`. Pedido
+mínimo (`min_order_subtotal`) **no** se aplica en admin order-form.

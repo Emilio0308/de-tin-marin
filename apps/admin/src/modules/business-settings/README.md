@@ -7,6 +7,9 @@ Canónico: [`docs/database.md`](../../../../../docs/database.md) §
 `core.public_business_settings` · Regla 27 en
 [`business-rules.md`](../../../../../docs/business-rules.md).
 
+**≠** [`storefront-settings`](../storefront-settings/README.md) (promo envío /
+pedido mínimo / aviso — Regla 32 / DECISIONS #44).
+
 ## Ruta y autorización
 
 - Ruta: `/business-settings` (nav admin).

@@ -6,7 +6,7 @@ Canónico: [`docs/orders.md`](../../../docs/orders.md) · reglas 13–18, 21, 24
 28 · DECISIONS #26, #27, #29, #31, #33, #39, **#41** (cancel atómico),
 **#42** (estados `in_transit` / `awaiting_pickup`) · **#43** (courier).
 
-Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S4-09 cancel](../../../docs/stages/S4/09-cancel-atomic-restock.md) · [S4-10 logística](../../../docs/stages/S4/10-order-status-in-transit-awaiting-pickup.md) · [S4-11 courier](../../../docs/stages/S4/11-courier-shipping.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
+Briefs: [S2B](../../../docs/stages/S2B/01-orders.md) · [S2C](../../../docs/stages/S2C/01-payments-shipping.md) · [S4-09 cancel](../../../docs/stages/S4/09-cancel-atomic-restock.md) · [S4-10 logística](../../../docs/stages/S4/10-order-status-in-transit-awaiting-pickup.md) · [S4-11 courier](../../../docs/stages/S4/11-courier-shipping.md) · [S4-12 storefront](../../../docs/stages/S4/12-storefront-settings.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md)
 
 ## Capas
 
@@ -47,7 +47,9 @@ SMTP ausente se registran sin PII y no revierten la orden.
 
 Fulfillment: `delivery` \| `pickup` (tienda) \| `pickup_point` (S4-08) \|
 `courier` (S4-11, fee 0). Detalle: mapa/`pickupPoint` o resumen
-`fulfillment.courier` (destino + destinatario).
+`fulfillment.courier` (destino + destinatario). Fee vía
+`resolveDeliveryFeeService` (incluye overlay Regla 32). **No** bloquea por
+`min_order_subtotal` (solo guest).
 
 ### Catálogo (tabs)
 

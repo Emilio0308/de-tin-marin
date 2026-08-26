@@ -64,7 +64,11 @@ const defaultLabels: CheckoutPageLabels = {
   phoneHint: "9 dígitos, sin espacios ni letras",
   subtotal: "Subtotal",
   shipping: "Envío",
+  shippingFree: "Gratis",
   shippingPending: "Calculando…",
+  shippingPromoNote: "Envío gratis por promoción",
+  announcementLabel: "Aviso importante",
+  minOrderHint: "Pedido mínimo: S/ 50.00",
   total: "Total",
   submit: "Confirmar pedido",
   submitting: "Creando pedido…",
@@ -128,6 +132,9 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
       mapPin={{ lat: -5.1783, lng: -80.6328 }}
       subtotal={89.9}
       shippingTotal={8}
+      shippingIsPromotional={false}
+      announcementMessage={null}
+      minOrderSubtotal={0}
       total={97.9}
       covered
       isDeliveryPending={false}
@@ -228,6 +235,25 @@ describe("CheckoutPage", () => {
     });
     fireEvent.click(submitButtons[0]!);
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("muestra aviso y nota de envío gratis por promoción", () => {
+    renderCheckout({
+      shippingTotal: 0,
+      shippingIsPromotional: true,
+      announcementMessage: "Horario especial esta semana",
+      minOrderSubtotal: 50,
+      total: 89.9,
+    });
+
+    expect(screen.getByText("Aviso importante")).toBeInTheDocument();
+    expect(
+      screen.getByText("Horario especial esta semana"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Envío gratis por promoción").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Pedido mínimo:/).length).toBeGreaterThan(0);
   });
 
   it("mantiene el botón confirmar habilitado aunque no haya cobertura", () => {

@@ -27,6 +27,10 @@ export const queryKeys = {
     all: ["business-settings"] as const,
     public: () => [...queryKeys.businessSettings.all, "public"] as const,
   },
+  storefrontSettings: {
+    all: ["storefront-settings"] as const,
+    public: () => [...queryKeys.storefrontSettings.all, "public"] as const,
+  },
   cart: {
     all: ["cart"] as const,
     current: () => [...queryKeys.cart.all, "current"] as const,

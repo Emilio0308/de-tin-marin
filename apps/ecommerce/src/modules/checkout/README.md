@@ -1,17 +1,19 @@
 # Módulo `checkout`
 
 Formulario de checkout, mapa de entrega y creación de orden `pending_payment`
-(S3A-3 + S4-08 + S4-11).
+(S3A-3 + S4-08 + S4-11 + S4-12).
 
 Lee flags desde `@/config/store` (`storeFeatures`). El recojo **en tienda**
 sigue oculto (`pickupEnabled: false`). Los **puntos de recojo** dependen de
 `pricing.delivery_settings.pickup_points_enabled`. **Courier** depende de
-`courier_enabled` y destinos activos.
+`courier_enabled` y destinos activos. **Reglas de tienda** (promo envío,
+mínimo, aviso) → `core.storefront_settings` (Regla 32).
 
 Reglas de fetching: [`docs/rules/50-data-fetching-cache-ssr.md`](../../../../docs/rules/50-data-fetching-cache-ssr.md) · DECISIONS #32.
-Canónico fulfillment: Reglas 19/30/31 · DECISIONS #40, #43 ·
+Canónico fulfillment: Reglas 19/30/31/32 · DECISIONS #40, #43, #44 ·
 [`docs/stages/S4/08-pickup-points.md`](../../../../docs/stages/S4/08-pickup-points.md) ·
-[`docs/stages/S4/11-courier-shipping.md`](../../../../docs/stages/S4/11-courier-shipping.md).
+[`docs/stages/S4/11-courier-shipping.md`](../../../../docs/stages/S4/11-courier-shipping.md) ·
+[`docs/stages/S4/12-storefront-settings.md`](../../../../docs/stages/S4/12-storefront-settings.md).
 
 ## Fulfillment guest
 
@@ -25,12 +27,19 @@ Canónico fulfillment: Reglas 19/30/31 · DECISIONS #40, #43 ·
 activos → el presentational oculta la opción. `listCheckoutCourierDestinationsAction`
 → `[]` si `courier_enabled` off o sin provincias habilitadas. Fee vía
 `resolveCheckoutFulfillmentFee` (`queryKeys.checkout.deliveryFee` incluye
-método, `pickupPointId` o `departmentId` + `provinceSlug`).
+método, `pickupPointId` o `departmentId` + `provinceSlug`). Tras el fee base,
+`applyStorefrontShippingFee` (Regla 32 / `core.storefront_settings`) puede
+poner fee 0 si hay promo de envío vigente.
 
 Al submit, `createGuestOrderService` rehidrata fulfillment desde DB (punto o
-destino courier). Errores: `PICKUP_POINT_*`, `OUT_OF_COVERAGE`,
-`SHIPPING_FEE_MISMATCH`. Courier exige `shippingTotal === 0`. El RPC
-`insert_guest_order` rechaza `pickup` y XOR inválido.
+destino courier) y aplica el mismo overlay de fee + `assertMinOrderSubtotal`
+(guest; admin order-form no bloquea por mínimo). Errores: `PICKUP_POINT_*`,
+`OUT_OF_COVERAGE`, `SHIPPING_FEE_MISMATCH`, `ORDER_BELOW_MINIMUM`. Courier
+exige `shippingTotal === 0`. El RPC `insert_guest_order` rechaza `pickup` y
+XOR inválido.
+
+Checkout UI: banner de anuncio (`getActiveAnnouncement`), copy “Envío gratis
+por promoción” cuando el overlay deja fee 0, y hint de pedido mínimo.
 
 ## Validación del formulario (cliente)
 

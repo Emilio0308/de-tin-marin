@@ -2,6 +2,7 @@ import "server-only";
 
 import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
 import { listEnabledCheckoutCourierDepartments } from "@de-tin-marin/shared/courier-coverage";
+import { applyStorefrontShippingFee } from "@de-tin-marin/shared/storefront-settings";
 import { courierProvinceSchema } from "@de-tin-marin/validations/courier";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { resolveCheckoutFulfillmentFeeInputSchema } from "@de-tin-marin/validations/checkout";
@@ -16,6 +17,10 @@ import {
   listActivePickupPointsRepo,
   listActiveCourierDepartmentsRepo,
 } from "../repositories/delivery.repository";
+import {
+  getStorefrontSettingsService,
+  toStorefrontSettingsSource,
+} from "@/modules/storefront-settings/services/storefront-settings.service";
 
 function parseCourierProvinces(raw: unknown) {
   if (!Array.isArray(raw)) return [];
@@ -100,12 +105,14 @@ export async function resolveCheckoutFulfillmentFeeService(
     return { ok: false, error: "VALIDATION" };
   }
 
-  const [zones, settings, points, courierDepartments] = await Promise.all([
-    listActiveDeliveryZonesRepo(config),
-    getDeliverySettingsRepo(config),
-    listActivePickupPointsRepo(config),
-    listActiveCourierDepartmentsRepo(config),
-  ]);
+  const [zones, settings, points, courierDepartments, storefront] =
+    await Promise.all([
+      listActiveDeliveryZonesRepo(config),
+      getDeliverySettingsRepo(config),
+      listActivePickupPointsRepo(config),
+      listActiveCourierDepartmentsRepo(config),
+      getStorefrontSettingsService(config),
+    ]);
 
   const courierDepartmentSources = courierDepartments.map((row) => ({
     id: row.id,
@@ -141,16 +148,23 @@ export async function resolveCheckoutFulfillmentFeeService(
     courierDepartmentSources,
   );
 
+  const fee = applyStorefrontShippingFee(
+    result.fee,
+    toStorefrontSettingsSource(storefront),
+    parsed.data.method,
+  );
+
   logServerInfo(scope, "resolved", {
     method: parsed.data.method,
     pickupPointId: parsed.data.pickupPointId,
     district: parsed.data.district,
     hasMapPin: Boolean(parsed.data.mapPin),
-    fee: result.fee,
+    baseFee: result.fee,
+    fee,
     covered: result.covered,
   });
 
-  return { ok: true, data: result };
+  return { ok: true, data: { fee, covered: result.covered } };
 }
 
 /** @deprecated Use resolveCheckoutFulfillmentFeeService */

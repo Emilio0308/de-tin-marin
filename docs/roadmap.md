@@ -413,6 +413,19 @@ checkout guest elige destino + DNI/datos de retiro; **`shipping_total = 0`**
 
 **Depends on:** S1E ✅, S2B ✅, S3A-3 ✅
 
+### S4-12 — Storefront settings (reglas de tienda) ✅
+
+**Goal:** Singleton `core.storefront_settings` para promo de envío (overlay
+fee → 0), pedido mínimo sobre `subtotal` (guest) y aviso en checkout.
+Separado de `/delivery` y `/business-settings`.
+
+- [x] Migración `00032_storefront_settings.sql` + pgTAP
+- [x] Shared/validations + Admin `/storefront-settings`
+- [x] Checkout overlay + mínimo + banner; admin fee overlay
+- Brief: [`docs/stages/S4/12-storefront-settings.md`](stages/S4/12-storefront-settings.md)
+
+**Depends on:** S1E ✅, S3A-3 ✅, S4-08 ✅, S4-11 ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

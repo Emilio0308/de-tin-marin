@@ -182,13 +182,13 @@ Línea `type: "bundle"` con `quantity: 30`, `container` congelado y 6
 total = subtotal − discount_total + shipping_total + surcharge_total
 ```
 
-| Campo             | Quién lo setea            | Notas                             |
-| ----------------- | ------------------------- | --------------------------------- |
-| `subtotal`        | Backend al crear          | Σ `lineTotal` del `shopping_cart` |
-| `shipping_total`  | Delivery zones / pickup=0 | No se recalcula post-checkout     |
-| `discount_total`  | Admin (y 0 en guest)      | `>= 0`                            |
-| `surcharge_total` | **Solo admin**            | `>= 0`; guest siempre `0`         |
-| `total`           | Backend                   | Fórmula anterior; snapshot        |
+| Campo             | Quién lo setea                | Notas                                               |
+| ----------------- | ----------------------------- | --------------------------------------------------- |
+| `subtotal`        | Backend al crear              | Σ `lineTotal` del `shopping_cart`                   |
+| `shipping_total`  | Fee base + overlay storefront | No se recalcula post-checkout; promo → 0 (Regla 32) |
+| `discount_total`  | Admin (y 0 en guest)          | `>= 0`                                              |
+| `surcharge_total` | **Solo admin**                | `>= 0`; guest siempre `0`                           |
+| `total`           | Backend                       | Fórmula anterior; snapshot                          |
 
 **Admin — UI Totales (`order-form`):**
 
@@ -208,6 +208,10 @@ Los ajustes **no** mutan `packagePrice` / `unitPrice` / `lineTotal` de las líne
 | Tab Descuento=5 + Recargo=2 | ambos persistidos; `total = 100 − 5 + 10 + 2 = 107`       |
 
 **Ecommerce / guest:** `discountTotal = 0`, `surchargeTotal = 0` en create/preview.
+Guest también aplica Regla **32**: overlay de fee (promo),
+`assertMinOrderSubtotal` sobre `subtotal` (antes de envío) y banner de aviso
+si está activo. Admin order-form usa el mismo overlay de fee pero **no**
+bloquea por `min_order_subtotal`.
 
 ### `fulfillment` (v1)
 
@@ -457,8 +461,10 @@ Detalle de módulo: [`apps/admin/src/modules/orders/README.md`](../apps/admin/sr
 - Carrito localStorage: líneas product siempre `unitQuantity: 0`; cantidad = `packageQuantity`
 - Checkout guest: `surchargeTotal = 0`; `method` = `delivery` \| `pickup_point` \| `courier`;
   input Zod dual con `unitQuantity: 0`
+- Storefront settings (Regla 32 / S4-12): fee base + overlay; pedido mínimo
+  sobre `subtotal` (`ORDER_BELOW_MINIMUM`); banner `announcement_*`
 - Confirmación / lookup guest: DTO incluye `surchargeTotal` (0) y snapshot
-  `fulfillment.pickupPoint` si aplica
+  `fulfillment.pickupPoint` / `courier` si aplica
 
 ## Módulo
 

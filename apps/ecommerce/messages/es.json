@@ -250,7 +250,11 @@
     "mapSearchNoResults": "No encontramos lugares en Piura. Prueba otro nombre o marca el pin en el mapa.",
     "subtotal": "Subtotal",
     "shipping": "Envío",
+    "shippingFree": "Gratis",
     "shippingPending": "Calculando…",
+    "shippingPromoNote": "Envío gratis por promoción",
+    "announcementLabel": "Aviso importante",
+    "minOrderHint": "Pedido mínimo: {amount}",
     "total": "Total",
     "submit": "Confirmar pedido",
     "submitting": "Creando pedido…",
@@ -294,6 +298,7 @@
       "pickupPointInactive": "El punto de recojo seleccionado está desactivado.",
       "pickupPointRequired": "Selecciona un punto de recojo.",
       "shippingFeeMismatch": "El costo de envío cambió. Vuelve a revisar tu pedido.",
+      "orderBelowMinimum": "El pedido mínimo es {amount}. Agrega más productos para continuar.",
       "unexpected": "No pudimos crear el pedido. Intenta de nuevo en unos minutos."
     }
   },

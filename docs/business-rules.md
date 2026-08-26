@@ -259,8 +259,13 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
      `courier`.
   4. `courier` → **`shipping_total = 0`** siempre (flete en agencia);
      catálogo + snapshot + XOR → **Regla 31** (DECISIONS #43).
-  5. Congelar `shipping_total` al crear. Guest revalida el fee enviado
-     (`SHIPPING_FEE_MISMATCH` si no coincide; courier exige `=== 0`).
+  5. Tras el fee **base** (pasos 1–4), aplicar overlay de tienda
+     (`applyStorefrontShippingFee`) — **Regla 32** / DECISIONS #44. Puede
+     dejar fee 0 si hay promo vigente para `delivery` / `pickup_point`;
+     **no** reescribe fees en `delivery_zones` / `pickup_points`.
+  6. Congelar `shipping_total` al crear. Guest revalida el fee enviado
+     (`SHIPPING_FEE_MISMATCH` si no coincide con fee base + overlay;
+     courier exige `=== 0`).
 - **Guest ecommerce:** `delivery` \| `pickup_point` \| `courier`. Flag
   `storeFeatures.pickupEnabled` oculta recojo en tienda; **no** controla
   puntos de recojo (`pickup_points_enabled`) ni courier (`courier_enabled`).
@@ -465,6 +470,40 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 
 ---
 
+## Storefront — reglas generales de tienda
+
+### Regla 32 — Promo envío, pedido mínimo y aviso
+
+- **Trigger:** Staff edita `/storefront-settings`; checkout guest resuelve
+  fee / submit; admin order-form resuelve fee.
+- **Pasos:**
+  1. Fuente: `core.storefront_settings` singleton (`default`). **No**
+     mezclar con `pricing.delivery_settings` (tarifas base / kill switches)
+     ni `core.public_business_settings` (contacto/pagos).
+  2. **Promo envío:** si el flag del método está on (`free_delivery` /
+     `free_pickup_point`) **y** la ventana compartida admite `now()`:
+     bound null = sin límite en ese lado; ambos null = siempre vigente;
+     ambos set → `starts ≤ now ≤ ends` (invalid dates → no vigente). Entonces
+     el fee base del método pasa a **0** vía overlay
+     (`applyStorefrontShippingFee`). Las fees de `delivery_zones` /
+     `pickup_points` **no** se ponen en 0 en DB.
+  3. Courier y pickup-en-tienda no cambian por esta promo (courier ya es 0;
+     pickup tienda no es guest).
+  4. **Pedido mínimo:** si `min_order_subtotal > 0`, guest exige
+     `subtotal >=` ese monto (`ORDER_BELOW_MINIMUM`). Compara el subtotal
+     congelado del carrito, **antes** de `shipping_total`. No relaja
+     `purchase_min_quantity` por producto (Regla 21).
+  5. **Admin order-form** aplica el overlay de fee para consistencia de
+     snapshot, pero **no** bloquea por pedido mínimo (igual que min/max
+     producto).
+  6. **Aviso:** si `announcement_enabled` y mensaje no vacío → banner en
+     checkout.
+- **RLS:** `SELECT` público; `UPDATE` staff.
+- **Fallo:** Guest bajo el mínimo → no crea orden; fee cliente ≠ fee
+  resuelto (con overlay) → `SHIPPING_FEE_MISMATCH`.
+
+---
+
 ## Futuro (v2 — no implementar en v1)
 
 | ID  | Tema                           |
@@ -479,19 +518,20 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 
 ## Índice rápido
 
-| ID    | Dominio            | Resumen                                                             |
-| ----- | ------------------ | ------------------------------------------------------------------- |
-| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package)  |
-| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio       |
-| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único                |
-| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular  |
-| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)    |
-| 19–20 | Delivery / Envases | Tarifa distrito / pickup / pickup_point / courier→R31; stock envase |
-| 21    | Products           | Min/max compra por presentación (default 10/100)                    |
-| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max      |
-| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                 |
-| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas               |
-| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)     |
-| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)     |
-| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda     |
-| 31    | Fulfillment        | Courier agencia: dept/provincias JSON; fee 0; snapshot guest XOR    |
+| ID    | Dominio            | Resumen                                                            |
+| ----- | ------------------ | ------------------------------------------------------------------ |
+| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package) |
+| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio      |
+| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
+| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular |
+| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)   |
+| 19–20 | Delivery / Envases | Fee base + overlay R32; pickup/pickup_point/courier→R31; envase    |
+| 21    | Products           | Min/max compra por presentación (default 10/100)                   |
+| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
+| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
+| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
+| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)    |
+| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)    |
+| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda    |
+| 31    | Fulfillment        | Courier agencia: dept/provincias JSON; fee 0; snapshot guest XOR   |
+| 32    | Storefront         | Promo envío overlay; min pedido sobre subtotal; aviso checkout     |

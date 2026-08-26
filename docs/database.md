@@ -80,16 +80,17 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 ### Schema `core`
 
-| Tabla                           | Descripción                                          |
-| ------------------------------- | ---------------------------------------------------- |
-| `core.profiles`                 | Perfil extendido de auth.users                       |
-| `core.user_roles`               | Rol staff: `admin` \| `super_admin`                  |
-| `core.settings`                 | Configuración global key-value                       |
-| `core.audit_log`                | Auditoría de acciones sensibles                      |
-| `core.hero_settings`            | Singleton modo hero home (`static` \| `carousel`)    |
-| `core.hero_images`              | Slides del hero (URL, orden, vigencia)               |
-| `core.about_page_settings`      | Singleton imagen de “Nuestra Historia” (`/nosotros`) |
-| `core.public_business_settings` | Singleton contacto + instrucciones de pago públicas  |
+| Tabla                           | Descripción                                             |
+| ------------------------------- | ------------------------------------------------------- |
+| `core.profiles`                 | Perfil extendido de auth.users                          |
+| `core.user_roles`               | Rol staff: `admin` \| `super_admin`                     |
+| `core.settings`                 | Configuración global key-value                          |
+| `core.audit_log`                | Auditoría de acciones sensibles                         |
+| `core.hero_settings`            | Singleton modo hero home (`static` \| `carousel`)       |
+| `core.hero_images`              | Slides del hero (URL, orden, vigencia)                  |
+| `core.about_page_settings`      | Singleton imagen de “Nuestra Historia” (`/nosotros`)    |
+| `core.public_business_settings` | Singleton contacto + instrucciones de pago públicas     |
+| `core.storefront_settings`      | Singleton reglas de tienda (promo envío, mínimo, aviso) |
 
 **`core.hero_settings`** (singleton, `singleton_key = 'default'`):
 
@@ -152,6 +153,32 @@ email e instrucciones de cobro se muestran en tienda. `UPDATE` solo
 
 Es información **pública operativa**: no guardar secretos, tokens de pasarela
 ni credenciales bancarias fuera de los datos que se muestran al cliente.
+
+**`core.storefront_settings`** (singleton, `singleton_key = 'default'`;
+migración `00032_storefront_settings.sql`):
+
+| Columna                      | Tipo          | Notas                                           |
+| ---------------------------- | ------------- | ----------------------------------------------- |
+| `id`                         | uuid          | PK                                              |
+| `singleton_key`              | text unique   | Solo `'default'`                                |
+| `free_delivery`              | boolean       | Default `false` — overlay fee 0 si vigente      |
+| `free_pickup_point`          | boolean       | Default `false` — overlay fee 0 si vigente      |
+| `free_fulfillment_starts_at` | timestamptz   | Nullable; inicio ventana compartida             |
+| `free_fulfillment_ends_at`   | timestamptz   | Nullable; `CHECK` ends > starts si ambos set    |
+| `min_order_subtotal`         | numeric(12,2) | `0` = off; guest exige `subtotal >=` (Regla 32) |
+| `announcement_enabled`       | boolean       | Default `false`                                 |
+| `announcement_message`       | text          | Nullable; copy staff (Zod ~500 chars)           |
+| `updated_at`                 | timestamptz   | Trigger `core.set_updated_at()`                 |
+
+Vigencia de promo y overlay de fee se aplican en **service de app**
+(`applyStorefrontShippingFee` / `isFreeFulfillmentActive`), no reescribiendo
+fees de zona/punto. Ventana: bound null = sin tope en ese lado. Courier y
+`pickup` tienda no usan los flags de promo (courier ya es fee 0).
+No reutilizar `core.settings` (key-value staff-only).
+
+**Acceso/RLS:** `SELECT` público (`anon`, `authenticated`). `UPDATE` solo
+`core.is_staff()`. Sin `INSERT`/`DELETE` de app: la migración siembra la
+fila `default`.
 
 ### Schema `catalog`
 
@@ -475,6 +502,7 @@ erDiagram
 | `core.hero_settings`            | Público                       | Staff (update)              |
 | `core.about_page_settings`      | Público                       | Staff (update)              |
 | `core.public_business_settings` | Público                       | Staff (update)              |
+| `core.storefront_settings`      | Público                       | Staff (update)              |
 | `core.hero_images`              | Público (no deleted)          | Staff                       |
 | `catalog.catalog_cache_meta`    | Público                       | Staff (update / bump RPC)   |
 | `commerce.orders`               | Cliente propias / staff todas | Server + staff              |

@@ -14,6 +14,10 @@ import {
 } from "@de-tin-marin/shared/check-order-stock";
 import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
 import { normalizeProvinceSlug } from "@de-tin-marin/shared/courier-coverage";
+import {
+  applyStorefrontShippingFee,
+  assertMinOrderSubtotal,
+} from "@de-tin-marin/shared/storefront-settings";
 import { courierProvinceSchema } from "@de-tin-marin/validations/courier";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import {
@@ -53,6 +57,10 @@ import {
 import { listWizardCampaignsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
 import { getWizardProductsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
 import { getPublicBusinessSettingsService } from "@/modules/business-settings/services/public-business-settings.service";
+import {
+  getStorefrontSettingsService,
+  toStorefrontSettingsSource,
+} from "@/modules/storefront-settings/services/storefront-settings.service";
 import { logServerError, logServerInfo } from "@/shared/errors/server-error";
 import {
   mapCartLinesToNotifyLines,
@@ -512,6 +520,7 @@ export async function createGuestOrderService(
         | "PICKUP_POINT_INACTIVE"
         | "PICKUP_POINT_REQUIRED"
         | "SHIPPING_FEE_MISMATCH"
+        | "ORDER_BELOW_MINIMUM"
         | "INSUFFICIENT_STOCK"
         | "INVALID_PURCHASE_QUANTITY"
         | "INVALID_BUNDLE_CUSTOMIZATION";
@@ -615,12 +624,14 @@ export async function createGuestOrderService(
     return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
   }
 
-  const [zones, settings, points, courierDepartments] = await Promise.all([
-    listActiveDeliveryZonesRepo(config),
-    getDeliverySettingsRepo(config),
-    listActivePickupPointsRepo(config),
-    listActiveCourierDepartmentsRepo(config),
-  ]);
+  const [zones, settings, points, courierDepartments, storefront] =
+    await Promise.all([
+      listActiveDeliveryZonesRepo(config),
+      getDeliverySettingsRepo(config),
+      listActivePickupPointsRepo(config),
+      listActiveCourierDepartmentsRepo(config),
+      getStorefrontSettingsService(config),
+    ]);
 
   let fulfillmentToPersist = parsed.data.fulfillment;
 
@@ -757,6 +768,12 @@ export async function createGuestOrderService(
     courierDepartmentSources,
   );
 
+  const resolvedFee = applyStorefrontShippingFee(
+    deliveryResult.fee,
+    toStorefrontSettingsSource(storefront),
+    fulfillmentToPersist.method,
+  );
+
   if (!deliveryResult.covered) {
     logServerError(scope, {
       message: "OUT_OF_COVERAGE",
@@ -768,11 +785,12 @@ export async function createGuestOrderService(
     return { ok: false, error: "OUT_OF_COVERAGE" };
   }
 
-  if (parsed.data.shippingTotal !== deliveryResult.fee) {
+  if (parsed.data.shippingTotal !== resolvedFee) {
     logServerError(scope, {
       message: "SHIPPING_FEE_MISMATCH",
       clientFee: parsed.data.shippingTotal,
-      serverFee: deliveryResult.fee,
+      serverFee: resolvedFee,
+      baseFee: deliveryResult.fee,
     });
     return { ok: false, error: "SHIPPING_FEE_MISMATCH" };
   }
@@ -784,7 +802,7 @@ export async function createGuestOrderService(
     bundlesById,
     packsById,
     discountTotal: parsed.data.discountTotal,
-    shippingTotal: deliveryResult.fee,
+    shippingTotal: resolvedFee,
   });
 
   if (!cartResult.ok) {
@@ -802,6 +820,19 @@ export async function createGuestOrderService(
       return { ok: false, error: "PRODUCT_NOT_FOUND" };
     }
     return { ok: false, error: "BUNDLE_NOT_FOUND" };
+  }
+
+  const minOrderCheck = assertMinOrderSubtotal(
+    cartResult.totals.subtotal,
+    storefront.minOrderSubtotal,
+  );
+  if (!minOrderCheck.ok) {
+    logServerError(scope, {
+      message: "ORDER_BELOW_MINIMUM",
+      subtotal: cartResult.totals.subtotal,
+      minOrderSubtotal: minOrderCheck.minOrderSubtotal,
+    });
+    return { ok: false, error: "ORDER_BELOW_MINIMUM" };
   }
 
   const stockCheck = await checkCartStockService(config, {

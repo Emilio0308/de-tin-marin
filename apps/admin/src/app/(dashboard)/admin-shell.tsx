@@ -28,6 +28,8 @@ function resolveMobileTitle(
   if (pathname.startsWith("/delivery")) return pageTitles.delivery ?? "";
   if (pathname.startsWith("/business-settings"))
     return pageTitles.businessSettings ?? "";
+  if (pathname.startsWith("/storefront-settings"))
+    return pageTitles.storefrontSettings ?? "";
   if (pathname.startsWith("/web-customization"))
     return pageTitles.webCustomization ?? "";
   if (pathname.startsWith("/orders")) return pageTitles.orders ?? "";

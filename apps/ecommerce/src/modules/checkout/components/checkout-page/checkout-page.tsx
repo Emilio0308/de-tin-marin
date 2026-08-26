@@ -74,6 +74,8 @@ function CheckoutFormSection({
 function CheckoutSummaryPanel({
   subtotal,
   shippingTotal,
+  shippingIsPromotional,
+  minOrderSubtotal,
   total,
   covered,
   isDeliveryPending,
@@ -84,6 +86,8 @@ function CheckoutSummaryPanel({
 }: {
   subtotal: number;
   shippingTotal: number;
+  shippingIsPromotional: boolean;
+  minOrderSubtotal: number;
   total: number;
   covered: boolean;
   isDeliveryPending: boolean;
@@ -94,7 +98,23 @@ function CheckoutSummaryPanel({
 }) {
   const shippingLabel = isDeliveryPending
     ? labels.shippingPending
-    : formatPrice(shippingTotal);
+    : shippingIsPromotional && shippingTotal === 0
+      ? labels.shippingFree
+      : formatPrice(shippingTotal);
+
+  const promoNote =
+    shippingIsPromotional && shippingTotal === 0 && !isDeliveryPending ? (
+      <p className="font-body text-body-sm text-secondary">
+        {labels.shippingPromoNote}
+      </p>
+    ) : null;
+
+  const minOrderNote =
+    minOrderSubtotal > 0 ? (
+      <p className="font-body text-body-sm text-on-surface-variant">
+        {labels.minOrderHint}
+      </p>
+    ) : null;
 
   if (compact) {
     return (
@@ -107,6 +127,8 @@ function CheckoutSummaryPanel({
           <span>{labels.shipping}</span>
           <span>{shippingLabel}</span>
         </div>
+        {promoNote}
+        {minOrderNote}
         <div className="flex items-end justify-between gap-3 pt-1">
           <span className="font-body text-body-sm text-on-surface-variant">
             {labels.total}
@@ -150,6 +172,8 @@ function CheckoutSummaryPanel({
             <span>{labels.shipping}</span>
             <span className="text-on-surface">{shippingLabel}</span>
           </div>
+          {promoNote}
+          {minOrderNote}
         </div>
 
         <div className="border-outline-variant/20 flex items-end justify-between gap-3 border-t pt-4">
@@ -199,6 +223,9 @@ export function CheckoutPage({
   mapPin,
   subtotal,
   shippingTotal,
+  shippingIsPromotional,
+  announcementMessage,
+  minOrderSubtotal,
   total,
   covered,
   isDeliveryPending,
@@ -281,6 +308,20 @@ export function CheckoutPage({
               }}
             />
           </div>
+
+          {announcementMessage ? (
+            <div
+              role="status"
+              className="border-secondary/30 bg-secondary-container/40 text-on-secondary-container mt-stack-md rounded-2xl border px-4 py-3"
+            >
+              <p className="font-label text-label-bold text-sm">
+                {labels.announcementLabel}
+              </p>
+              <p className="font-body text-body-md mt-1">
+                {announcementMessage}
+              </p>
+            </div>
+          ) : null}
 
           <form
             id="checkout-form"
@@ -693,6 +734,8 @@ export function CheckoutPage({
                 <CheckoutSummaryPanel
                   subtotal={subtotal}
                   shippingTotal={shippingTotal}
+                  shippingIsPromotional={shippingIsPromotional}
+                  minOrderSubtotal={minOrderSubtotal}
                   total={total}
                   covered={covered}
                   isDeliveryPending={isDeliveryPending}
@@ -710,11 +753,14 @@ export function CheckoutPage({
           <CheckoutSummaryPanel
             subtotal={subtotal}
             shippingTotal={shippingTotal}
+            shippingIsPromotional={shippingIsPromotional}
+            minOrderSubtotal={minOrderSubtotal}
             total={total}
             covered={covered}
             isDeliveryPending={isDeliveryPending}
             isSubmitting={isSubmitting}
             labels={labels}
+            showSubmitButton={false}
             compact
           />
           <button

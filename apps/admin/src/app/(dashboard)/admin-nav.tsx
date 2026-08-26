@@ -14,6 +14,7 @@ import {
   Receipt,
   Settings2,
   Shapes,
+  Store,
   Truck,
   type LucideIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ type NavLabelKey =
   | "packs"
   | "delivery"
   | "businessSettings"
+  | "storefrontSettings"
   | "webCustomization"
   | "orders";
 
@@ -71,6 +73,11 @@ const navSections: NavSectionConfig[] = [
   {
     sectionKey: "store",
     links: [
+      {
+        href: "/storefront-settings",
+        labelKey: "storefrontSettings",
+        icon: Store,
+      },
       {
         href: "/business-settings",
         labelKey: "businessSettings",

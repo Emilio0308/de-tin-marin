@@ -2,6 +2,7 @@ import "server-only";
 
 import { resolveDeliveryFee } from "@de-tin-marin/shared/delivery-fee";
 import { resolveCourierCoverage } from "@de-tin-marin/shared/courier-coverage";
+import { applyStorefrontShippingFee } from "@de-tin-marin/shared/storefront-settings";
 import {
   deliverySettingsSchema,
   deliveryZoneInputSchema,
@@ -18,6 +19,7 @@ import {
 import { listActivePickupPointsRepo } from "../repositories/pickup-point.repository";
 import { listCourierDepartmentsRepo } from "../repositories/courier.repository";
 import { mapCourierDepartmentRows } from "./courier.service";
+import { getStorefrontSettingsService } from "@/modules/storefront-settings/services/storefront-settings.service";
 import type {
   DeliverySettingsDTO,
   DeliveryZoneDTO,
@@ -132,12 +134,34 @@ export async function resolveDeliveryFeeService(
     };
   }
 
-  const [zones, settings, points, courierDepartments] = await Promise.all([
-    listDeliveryZonesRepo(config),
-    getDeliverySettingsRepo(config),
-    listActivePickupPointsRepo(config),
-    listCourierDepartmentsRepo(config),
-  ]);
+  const [zones, settings, points, courierDepartments, storefront] =
+    await Promise.all([
+      listDeliveryZonesRepo(config),
+      getDeliverySettingsRepo(config),
+      listActivePickupPointsRepo(config),
+      listCourierDepartmentsRepo(config),
+      getStorefrontSettingsService(config),
+    ]);
+
+  const storefrontSource = storefront
+    ? {
+        freeDelivery: storefront.freeDelivery,
+        freePickupPoint: storefront.freePickupPoint,
+        freeFulfillmentStartsAt: storefront.freeFulfillmentStartsAt,
+        freeFulfillmentEndsAt: storefront.freeFulfillmentEndsAt,
+        minOrderSubtotal: storefront.minOrderSubtotal,
+        announcementEnabled: storefront.announcementEnabled,
+        announcementMessage: storefront.announcementMessage,
+      }
+    : {
+        freeDelivery: false,
+        freePickupPoint: false,
+        freeFulfillmentStartsAt: null,
+        freeFulfillmentEndsAt: null,
+        minOrderSubtotal: 0,
+        announcementEnabled: false,
+        announcementMessage: null,
+      };
 
   if (parsed.data.method === "courier") {
     const departments = mapCourierDepartmentRows(courierDepartments).map(
@@ -156,7 +180,7 @@ export async function resolveDeliveryFeeService(
     );
     return {
       ok: true as const,
-      fee: coverage.covered ? 0 : 0,
+      fee: 0,
       covered: coverage.covered,
     };
   }
@@ -184,5 +208,8 @@ export async function resolveDeliveryFeeService(
     })),
   );
 
-  return { ok: true as const, fee };
+  return {
+    ok: true as const,
+    fee: applyStorefrontShippingFee(fee, storefrontSource, parsed.data.method),
+  };
 }

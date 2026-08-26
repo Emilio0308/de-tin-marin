@@ -18,6 +18,8 @@
   (`pickupEnabled=false`). **Puntos de recojo** (`pickup_point`) → S4-08
   (catálogo + kill switch DB; no usar el flag `pickupEnabled`).
   **Courier** (`courier`, fee 0) → S4-11 / Regla 31 / DECISIONS #43.
+  **Reglas de tienda** (overlay fee / mínimo / aviso) → S4-12 / Regla 32 /
+  DECISIONS #44.
 - **Regla 15** — stock: `strictStockValidationOnCheckout=false` → warnings; `true` → rechazar submit.
 - Hoy `commerce.orders` RLS = **solo staff** → migración con **política guest INSERT** (+ SELECT limitado o RPC lookup en S3A-4).
 - Mapa: proveedor **gratuito** (recomendado **Leaflet + OpenStreetMap**); pin guarda `lat`/`lng` + texto referencia en `fulfillment` / `metadata` — **no** geocoding de pago por ahora.
@@ -122,8 +124,9 @@ Errores: `VALIDATION`, `PRODUCT_NOT_FOUND`, `BUNDLE_NOT_FOUND`, `OUT_OF_COVERAGE
 
 ## Rules que aplican
 
-- Reglas **3, 7, 8, 13, 15, 16, 19, 20**
-- DECISIONS **#8, #26**
+- Reglas **3, 7, 8, 13, 15, 16, 19, 20** (+ overlay/mínimo: Regla **32** /
+  S4-12)
+- DECISIONS **#8, #26** (+ **#44** storefront settings)
 - [`orders.md`](../../orders.md), [`pricing.md`](../../pricing.md)
 
 ## Orden de implementación

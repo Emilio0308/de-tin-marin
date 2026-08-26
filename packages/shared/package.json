@@ -21,6 +21,7 @@
     "./checkout-coverage": "./src/checkout-coverage.ts",
     "./courier-coverage": "./src/courier-coverage.ts",
     "./courier-provinces-catalog": "./src/courier-provinces-catalog.ts",
+    "./storefront-settings": "./src/storefront-settings.ts",
     "./map-search": "./src/map-search.ts",
     "./catalog-version": "./src/catalog-version.ts"
   },

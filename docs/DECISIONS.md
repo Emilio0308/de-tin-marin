@@ -50,6 +50,24 @@
 | 41 | Cancelación atómica (refund + restock) | ✅ | Cancelar orden es el único punto de entrada. `pending_payment` → solo `cancelled`. Post-pago (`paid`/`preparing`/`ready`/`awaiting_pickup`/`in_transit`): RPC `commerce.cancel_order_with_restock` atómica (payments → `refunded` + `restock_stock_for_order` + `cancelled`). Idempotente si ya `cancelled`. Sin reembolso suelto de payment. Migración `00029` (+ `00030` amplía cancelables). Regla 18. Brief: S4-09 |
 | 42 | Estados logísticos por fulfillment | ✅ | Tras `ready`: `pickup` → `awaiting_pickup` → `delivered`; `delivery`/`pickup_point`/`courier` → `in_transit` (exige carrier+tracking en `commerce.shipments`) → `delivered`. `delivered` = cliente ya tiene el producto. Sin estado “en el punto”. `canTransitionOrderStatus(from, to, method)`. Migración `00030`. Regla 14 + cancel Regla 18 ampliada. Brief: S4-10 |
 | 43 | Envío courier (agencia nacional) | ✅ | **`courier`** ≠ `delivery` (Piura local). Catálogo `pricing.courier_departments` con provincias fijas en JSON `provinces[]` (`slug`, `name`, `enabled`); staff togglea dept/provincia. Kill switch `delivery_settings.courier_enabled`. Guest ecommerce: `delivery` \| `pickup_point` \| `courier`; **`shipping_total = 0`** (flete en agencia). Snapshot `fulfillment.courier` (destino + DNI/nombre/dirección agencia). Provincia **Piura** excluida del seed courier (cobertura local vía `delivery`). Migración `00031`. Brief: S4-11 |
+| 44 | Storefront settings (reglas de tienda) | ✅ | Singleton tipado `core.storefront_settings` **≠** `delivery_settings` (tarifas base) **≠** `public_business_settings` (contacto/pagos). Promo envío gratis por método (`free_delivery` / `free_pickup_point`) + ventana opcional compartida; overlay de fee → 0 sin tocar fees de zona/punto. `min_order_subtotal` sobre `subtotal` (guest; admin order-form no bloquea). Aviso `announcement_*` en checkout. Migración `00032`. Regla 32. Brief: S4-12 |
+
+## Docs sincronizados (2026-08-25 — storefront settings / reglas de tienda)
+
+- DECISIONS **#44** — singleton `core.storefront_settings` separado de
+  logística y de contacto/pagos; overlay de fee, no fees de zona en 0
+- Migración `00032_storefront_settings.sql` + pgTAP
+  `core__storefront_settings.sql`
+- Regla **32** — vigencia promo (bounds parciales OK); mínimo sobre
+  `subtotal`; admin salta mínimo; Regla **19** paso overlay → Regla 32
+- Admin `/storefront-settings`; ecommerce checkout (banner, fee 0 promo,
+  `ORDER_BELOW_MINIMUM`); fee overlay también en admin resolve fee
+- Shared/validations: `storefront-settings`; brief
+  [`stages/S4/12-storefront-settings.md`](stages/S4/12-storefront-settings.md);
+  roadmap S4-12 ✅
+- Docs: `database.md`, `orders.md`, READMEs admin storefront + delivery +
+  business-settings + ecommerce storefront/checkout; cross-ref S3A-3;
+  índice [`docs/README.md`](README.md)
 
 ## Docs sincronizados (2026-08-25 — envío courier / agencia nacional)
 

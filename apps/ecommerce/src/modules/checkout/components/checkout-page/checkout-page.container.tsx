@@ -18,11 +18,18 @@ import { listCheckoutPickupPointsAction } from "@/modules/checkout/actions/list-
 import { listCheckoutCourierDestinationsAction } from "@/modules/checkout/actions/list-checkout-courier-destinations";
 import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/resolve-checkout-delivery-fee";
 import { validateGuestCheckoutCartAction } from "@/modules/checkout/actions/validate-guest-checkout-cart";
+import { getStorefrontSettingsAction } from "@/modules/storefront-settings/actions/get-storefront-settings";
 import { queryKeys } from "@/shared/query/query-keys";
 import { freshQueryOptions } from "@/shared/query/query-cache";
 import { logClientError } from "@/shared/errors/client-error";
+import {
+  assertMinOrderSubtotal,
+  getActiveAnnouncement,
+  isFreeFulfillmentActive,
+} from "@de-tin-marin/shared/storefront-settings";
 import type { MapPin } from "@de-tin-marin/validations/checkout";
 import { defaultMapPin } from "../delivery-map/delivery-map.constants";
+import { formatPrice } from "@/modules/home/components/product-card/product-card.helpers";
 import {
   getCheckoutFieldErrorKey,
   getCheckoutFieldErrorKeys,
@@ -61,6 +68,7 @@ type GuestOrderErrorCode =
   | "PICKUP_POINT_INACTIVE"
   | "PICKUP_POINT_REQUIRED"
   | "SHIPPING_FEE_MISMATCH"
+  | "ORDER_BELOW_MINIMUM"
   | "UNEXPECTED";
 
 const initialForm: CheckoutFormValues = {
@@ -329,9 +337,27 @@ export function CheckoutPageContainer() {
     },
   });
 
+  const storefrontSettingsQuery = useQuery({
+    queryKey: queryKeys.storefrontSettings.public(),
+    queryFn: async () => {
+      const result = await getStorefrontSettingsAction();
+      if (!result.ok) {
+        logClientError("getStorefrontSettingsAction", result.error);
+        throw new Error(result.error);
+      }
+      return result.data;
+    },
+  });
+
   const courierDepartments = courierDestinationsQuery.data ?? [];
   const showCourierOption = courierDepartments.length > 0;
   const showFulfillmentSelector = showPickupPointOption || showCourierOption;
+
+  const storefrontSettings = storefrontSettingsQuery.data ?? null;
+  const announcementMessage = storefrontSettings
+    ? getActiveAnnouncement(storefrontSettings)
+    : null;
+  const minOrderSubtotal = storefrontSettings?.minOrderSubtotal ?? 0;
 
   const feeQueryInput = useMemo(() => {
     if (fulfillmentMethod === "pickup_point") {
@@ -412,6 +438,14 @@ export function CheckoutPageContainer() {
       ? feeQuery.isLoading || feeQuery.isFetching
       : false;
 
+  const shippingIsPromotional =
+    storefrontSettings != null &&
+    (fulfillmentMethod === "delivery" ||
+      fulfillmentMethod === "pickup_point") &&
+    isFreeFulfillmentActive(storefrontSettings, fulfillmentMethod) &&
+    shippingTotal === 0 &&
+    !isDeliveryPending;
+
   if (!isReady) {
     return null;
   }
@@ -454,6 +488,21 @@ export function CheckoutPageContainer() {
 
     if (!covered) {
       toast.error(t("outOfCoverage"));
+      return;
+    }
+
+    const minOrderCheck = assertMinOrderSubtotal(subtotal, minOrderSubtotal);
+    if (!minOrderCheck.ok) {
+      toast.error(
+        t("errors.orderBelowMinimum", {
+          amount: formatPrice(minOrderCheck.minOrderSubtotal),
+        }),
+      );
+      setErrorMessage(
+        t("errors.orderBelowMinimum", {
+          amount: formatPrice(minOrderCheck.minOrderSubtotal),
+        }),
+      );
       return;
     }
 
@@ -641,6 +690,9 @@ export function CheckoutPageContainer() {
         PICKUP_POINT_INACTIVE: t("errors.pickupPointInactive"),
         PICKUP_POINT_REQUIRED: t("errors.pickupPointRequired"),
         SHIPPING_FEE_MISMATCH: t("errors.shippingFeeMismatch"),
+        ORDER_BELOW_MINIMUM: t("errors.orderBelowMinimum", {
+          amount: formatPrice(minOrderSubtotal),
+        }),
         UNEXPECTED: t("errors.unexpected"),
       };
       const errorCode = result.error;
@@ -675,6 +727,9 @@ export function CheckoutPageContainer() {
       mapPin={mapPin}
       subtotal={subtotal}
       shippingTotal={shippingTotal}
+      shippingIsPromotional={shippingIsPromotional}
+      announcementMessage={announcementMessage}
+      minOrderSubtotal={minOrderSubtotal}
       total={total}
       covered={covered}
       isDeliveryPending={isDeliveryPending}
@@ -728,7 +783,13 @@ export function CheckoutPageContainer() {
         phoneHint: t("phoneHint"),
         subtotal: t("subtotal"),
         shipping: t("shipping"),
+        shippingFree: t("shippingFree"),
         shippingPending: t("shippingPending"),
+        shippingPromoNote: t("shippingPromoNote"),
+        announcementLabel: t("announcementLabel"),
+        minOrderHint: t("minOrderHint", {
+          amount: formatPrice(minOrderSubtotal),
+        }),
         total: t("total"),
         submit: t("submit"),
         submitting: t("submitting"),

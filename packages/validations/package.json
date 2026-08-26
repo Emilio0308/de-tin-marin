@@ -24,6 +24,7 @@
     "./hero": "./src/hero.ts",
     "./about-page": "./src/about-page.ts",
     "./business-settings": "./src/business-settings.ts",
+    "./storefront-settings": "./src/storefront-settings.ts",
     "./admin-list": "./src/admin-list.ts"
   },
   "scripts": {
