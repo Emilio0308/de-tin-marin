@@ -42,7 +42,7 @@ function StorefrontTabs({
     <div
       role="tablist"
       aria-label={tabLabels.products}
-      className="border-outline-variant/20 bg-surface-container-lowest container-max px-gutter mx-auto flex w-full gap-2 rounded-full border p-1 shadow-sm"
+      className="border-outline-variant/20 bg-surface-container-lowest container-max px-gutter mx-auto flex w-full gap-2 rounded-full border p-1.5 shadow-sm"
     >
       {tabs.map((item) => {
         const selected = tab === item.id;
@@ -54,10 +54,10 @@ function StorefrontTabs({
             aria-selected={selected}
             onClick={() => onTabChange(item.id)}
             className={cn(
-              "font-label text-label-bold flex-1 rounded-full px-6 py-3 transition-all duration-200",
+              "font-label text-label-bold focus-visible:ring-primary flex min-h-11 flex-1 items-center justify-center rounded-full px-4 py-2.5 transition-[transform,background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 sm:px-6",
               selected
                 ? "bg-primary text-on-primary shadow-primary/20 shadow-md"
-                : "text-on-surface-variant hover:text-primary",
+                : "text-on-surface-variant hover:bg-primary-fixed/35 hover:text-primary",
             )}
           >
             {item.label}
@@ -296,7 +296,7 @@ export function StorefrontPage({
   return (
     <>
       <HeroSectionContainer />
-      <div className="bg-surface py-stack-md">
+      <div className="bg-surface pb-stack-md relative z-20 -mt-7 pt-0 md:-mt-8">
         <StorefrontTabs
           tab={tab}
           tabLabels={tabLabels}

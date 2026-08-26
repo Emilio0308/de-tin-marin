@@ -122,6 +122,7 @@ export type Database = {
           pack_id: string
           package_quantity: number
           product_id: string
+          unit_quantity: number
           updated_at: string
         }
         Insert: {
@@ -130,6 +131,7 @@ export type Database = {
           pack_id: string
           package_quantity?: number
           product_id: string
+          unit_quantity?: number
           updated_at?: string
         }
         Update: {
@@ -138,6 +140,7 @@ export type Database = {
           pack_id?: string
           package_quantity?: number
           product_id?: string
+          unit_quantity?: number
           updated_at?: string
         }
         Relationships: [
@@ -161,6 +164,8 @@ export type Database = {
         Row: {
           container_id: string
           created_at: string
+          customization_max_products: number
+          customization_min_products: number
           deleted_at: string | null
           description: string | null
           id: string
@@ -173,6 +178,8 @@ export type Database = {
         Insert: {
           container_id: string
           created_at?: string
+          customization_max_products?: number
+          customization_min_products?: number
           deleted_at?: string | null
           description?: string | null
           id?: string
@@ -185,6 +192,8 @@ export type Database = {
         Update: {
           container_id?: string
           created_at?: string
+          customization_max_products?: number
+          customization_min_products?: number
           deleted_at?: string | null
           description?: string | null
           id?: string
@@ -263,6 +272,7 @@ export type Database = {
           brand: string | null
           campaign_id: string | null
           category_id: string
+          cost_net_price: number | null
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -286,6 +296,7 @@ export type Database = {
           brand?: string | null
           campaign_id?: string | null
           category_id: string
+          cost_net_price?: number | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -309,6 +320,7 @@ export type Database = {
           brand?: string | null
           campaign_id?: string | null
           category_id?: string
+          cost_net_price?: number | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -405,6 +417,24 @@ export type Database = {
         }[]
       }
       bump_catalog_version: { Args: never; Returns: string }
+      list_public_bundles: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_search?: string | null
+          p_sort?: string
+        }
+        Returns: Json
+      }
+      list_public_packs: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_search?: string | null
+          p_sort?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
@@ -433,6 +463,7 @@ export type Database = {
           shopping_cart: Json
           status: string
           subtotal: number
+          surcharge_total: number
           total: number
           updated_at: string
         }
@@ -453,6 +484,7 @@ export type Database = {
           shopping_cart: Json
           status?: string
           subtotal: number
+          surcharge_total?: number
           total: number
           updated_at?: string
         }
@@ -473,6 +505,7 @@ export type Database = {
           shopping_cart?: Json
           status?: string
           subtotal?: number
+          surcharge_total?: number
           total?: number
           updated_at?: string
         }
@@ -580,6 +613,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_order_with_restock: {
+        Args: {
+          p_notes?: string
+          p_order_id: string
+          p_staff_user_id: string
+        }
+        Returns: Json
+      }
       confirm_payment_with_stock_deduct: {
         Args: {
           p_notes?: string
@@ -590,6 +631,10 @@ export type Database = {
         Returns: Json
       }
       deduct_stock_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      restock_stock_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
       }
@@ -621,6 +666,27 @@ export type Database = {
   }
   core: {
     Tables: {
+      about_page_settings: {
+        Row: {
+          id: string
+          image_url: string | null
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          image_url?: string | null
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          image_url?: string | null
+          singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -648,6 +714,144 @@ export type Database = {
           entity_id?: string | null
           id?: string
           metadata?: Json
+        }
+        Relationships: []
+      }
+      hero_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          deleted_at: string | null
+          ends_at: string
+          id: string
+          image_url: string
+          sort_order: number
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          ends_at: string
+          id?: string
+          image_url: string
+          sort_order?: number
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          ends_at?: string
+          id?: string
+          image_url?: string
+          sort_order?: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hero_settings: {
+        Row: {
+          display_mode: string
+          id: string
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          display_mode?: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          display_mode?: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      public_business_settings: {
+        Row: {
+          bank_account_holder_name: string
+          bank_account_number: string
+          bank_interbank_account_number: string
+          bank_name: string
+          email: string
+          id: string
+          singleton_key: string
+          updated_at: string
+          whatsapp_e164: string
+          yape_holder_name: string
+          yape_phone: string
+        }
+        Insert: {
+          bank_account_holder_name: string
+          bank_account_number: string
+          bank_interbank_account_number: string
+          bank_name: string
+          email: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+          whatsapp_e164: string
+          yape_holder_name: string
+          yape_phone: string
+        }
+        Update: {
+          bank_account_holder_name?: string
+          bank_account_number?: string
+          bank_interbank_account_number?: string
+          bank_name?: string
+          email?: string
+          id?: string
+          singleton_key?: string
+          updated_at?: string
+          whatsapp_e164?: string
+          yape_holder_name?: string
+          yape_phone?: string
+        }
+        Relationships: []
+      }
+      storefront_settings: {
+        Row: {
+          announcement_enabled: boolean
+          announcement_message: string | null
+          free_delivery: boolean
+          free_fulfillment_ends_at: string | null
+          free_fulfillment_starts_at: string | null
+          free_pickup_point: boolean
+          id: string
+          min_order_subtotal: number
+          singleton_key: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_enabled?: boolean
+          announcement_message?: string | null
+          free_delivery?: boolean
+          free_fulfillment_ends_at?: string | null
+          free_fulfillment_starts_at?: string | null
+          free_pickup_point?: boolean
+          id?: string
+          min_order_subtotal?: number
+          singleton_key?: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_enabled?: boolean
+          announcement_message?: string | null
+          free_delivery?: boolean
+          free_fulfillment_ends_at?: string | null
+          free_fulfillment_starts_at?: string | null
+          free_pickup_point?: boolean
+          id?: string
+          min_order_subtotal?: number
+          singleton_key?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -782,27 +986,99 @@ export type Database = {
       }
       delivery_settings: {
         Row: {
+          courier_enabled: boolean
           delivery_enabled: boolean
           fallback_fee: number
           id: string
           pickup_enabled: boolean
+          pickup_points_enabled: boolean
           singleton_key: string
           updated_at: string
         }
         Insert: {
+          courier_enabled?: boolean
           delivery_enabled?: boolean
           fallback_fee?: number
           id?: string
           pickup_enabled?: boolean
+          pickup_points_enabled?: boolean
           singleton_key?: string
           updated_at?: string
         }
         Update: {
+          courier_enabled?: boolean
           delivery_enabled?: boolean
           fallback_fee?: number
           id?: string
           pickup_enabled?: boolean
+          pickup_points_enabled?: boolean
           singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      courier_departments: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          provinces: Json
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          provinces?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          provinces?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pickup_points: {
+        Row: {
+          created_at: string
+          fee: number
+          id: string
+          is_active: boolean
+          lat: number
+          lng: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fee?: number
+          id?: string
+          is_active?: boolean
+          lat: number
+          lng: number
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fee?: number
+          id?: string
+          is_active?: boolean
+          lat?: number
+          lng?: number
+          name?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

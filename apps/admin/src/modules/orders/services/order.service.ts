@@ -12,49 +12,103 @@ import {
   canTransitionOrderStatus,
   type OrderStatus,
 } from "@de-tin-marin/shared/order-cart";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
   createOrderInputSchema,
   transitionOrderStatusInputSchema,
 } from "@de-tin-marin/validations/order";
+import {
+  resolveBundleCustomizationBounds,
+  validateOrderLinesBundleCustomization,
+  type BundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
+import { zodIssuesToFieldErrorKeys } from "../helpers/order-form-validation";
+import {
+  adminOrderListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import { getPackByIdRepo } from "@/modules/catalog/repositories/pack.repository";
 import { listCampaignsByIdsRepo } from "@/modules/catalog/repositories/product.repository";
+import { getBusinessSettingsService } from "@/modules/business-settings/services/business-settings.service";
 import { resolveDeliveryFeeService } from "@/modules/delivery/services/delivery.service";
+import {
+  mapCartLinesToNotifyLines,
+  mapFulfillmentToNotify,
+} from "@de-tin-marin/notifications/map-order-notify";
+import { scheduleOrderCreatedNotification } from "../helpers/schedule-order-created-notification";
 import {
   asJson,
   countOrdersByDatePrefixRepo,
   getOrderByIdRepo,
   getOrderProductsByIdsRepo,
   insertOrderRepo,
+  listOrdersPageRepo,
   listOrdersRepo,
   updateOrderStatusRepo,
   type OrderRow,
 } from "../repositories/order.repository";
 import {
+  getShipmentByOrderIdRepo,
+  upsertShipmentRepo,
+} from "../repositories/shipment.repository";
+import {
   parseOrderDetailWithRelations,
   type OrderDetail,
   type OrderListItem,
 } from "../types/order.dto";
+import { cancelOrderWithRestockRepo } from "../repositories/payment.repository";
+import { bumpCatalogVersionSafe } from "@/modules/catalog/repositories/catalog-cache-meta.repository";
+import { logServerError, logServerInfo } from "@/shared/errors/server-error";
+
+function readFulfillmentMethod(
+  fulfillment: OrderRow["fulfillment"],
+): OrderFulfillmentMethod | undefined {
+  if (
+    !fulfillment ||
+    typeof fulfillment !== "object" ||
+    Array.isArray(fulfillment)
+  ) {
+    return undefined;
+  }
+  const method = (fulfillment as { method?: unknown }).method;
+  if (
+    method === "delivery" ||
+    method === "pickup" ||
+    method === "pickup_point" ||
+    method === "courier"
+  ) {
+    return method;
+  }
+  return undefined;
+}
 
 async function resolveBundlesById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
-): Promise<Map<string, OrderBundleSource>> {
+): Promise<{
+  bundlesById: Map<string, OrderBundleSource>;
+  customizationBoundsById: Map<string, BundleCustomizationBounds>;
+}> {
+  const bundleIds = [
+    ...new Set(
+      lines
+        .filter((line) => line.type === "bundle")
+        .map((line) => line.bundleId),
+    ),
+  ];
+
+  const rows = await Promise.all(
+    bundleIds.map((bundleId) => getBundleByIdRepo(config, bundleId)),
+  );
+
   const bundlesById = new Map<string, OrderBundleSource>();
-
-  for (const line of lines) {
-    if (line.type !== "bundle" || bundlesById.has(line.bundleId)) {
-      continue;
-    }
-
-    const bundle = await getBundleByIdRepo(config, line.bundleId);
-    if (!bundle) {
-      continue;
-    }
-
+  const customizationBoundsById = new Map<string, BundleCustomizationBounds>();
+  for (const bundle of rows) {
+    if (!bundle) continue;
     const containerRow = bundle.surprise_containers;
-    bundlesById.set(line.bundleId, {
+    bundlesById.set(bundle.id, {
       id: bundle.id,
       name: bundle.name,
       is_active: bundle.is_active,
@@ -68,22 +122,31 @@ async function resolveBundlesById(
           }
         : null,
     });
+    customizationBoundsById.set(
+      bundle.id,
+      resolveBundleCustomizationBounds({
+        customizationMinProducts: bundle.customization_min_products,
+        customizationMaxProducts: bundle.customization_max_products,
+      }),
+    );
   }
 
-  return bundlesById;
+  return { bundlesById, customizationBoundsById };
 }
 
 async function resolvePacksById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
 ): Promise<Map<string, OrderPackSource>> {
+  const packIds = collectPackIdsFromOrderLines(lines);
+  const rows = await Promise.all(
+    packIds.map((packId) => getPackByIdRepo(config, packId)),
+  );
+
   const packsById = new Map<string, OrderPackSource>();
-
-  for (const packId of collectPackIdsFromOrderLines(lines)) {
-    const pack = await getPackByIdRepo(config, packId);
+  for (const pack of rows) {
     if (!pack) continue;
-
-    packsById.set(packId, {
+    packsById.set(pack.id, {
       id: pack.id,
       sku: pack.sku,
       name: pack.name,
@@ -95,6 +158,7 @@ async function resolvePacksById(
       items: (pack.pack_items ?? []).map((item) => ({
         product_id: item.product_id,
         package_quantity: item.package_quantity,
+        unit_quantity: item.unit_quantity ?? 0,
       })),
     });
   }
@@ -124,6 +188,30 @@ export async function listOrdersService(
   return { ok: true, data: rows.map(toListItem) };
 }
 
+export async function listOrdersPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<OrderListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminOrderListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize } = parsed.data;
+  const { rows, total } = await listOrdersPageRepo(config, { page, pageSize });
+
+  return {
+    ok: true,
+    data: {
+      items: rows.map(toListItem),
+      page,
+      pageSize,
+      total,
+    },
+  };
+}
+
 export async function getOrderService(
   config: SupabaseConfig,
   id: string,
@@ -137,7 +225,8 @@ export async function getOrderService(
   try {
     const data = await parseOrderDetailWithRelations(config, row);
     return { ok: true, data };
-  } catch {
+  } catch (error) {
+    logServerError("getOrderService", error, { orderId: id });
     return { ok: false, error: "INVALID_ORDER_ROW" };
   }
 }
@@ -154,11 +243,27 @@ export async function createOrderService(
         | "PRODUCT_NOT_FOUND"
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
-        | "DUPLICATE_PRODUCT_IN_BUNDLE";
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
+      fieldErrors?: Record<string, string>;
     }
 > {
   const parsed = createOrderInputSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+  if (!parsed.success) {
+    logServerError("createOrderService", {
+      message: "VALIDATION",
+      issueCount: parsed.error.issues.length,
+    });
+    return {
+      ok: false,
+      error: "VALIDATION",
+      fieldErrors: zodIssuesToFieldErrorKeys(parsed.error.issues),
+    };
+  }
+
+  logServerInfo("createOrderService", "start", {
+    lineCount: parsed.data.lines.length,
+  });
 
   const packsById = await resolvePacksById(config, parsed.data.lines);
   for (const line of parsed.data.lines) {
@@ -185,11 +290,32 @@ export async function createOrderService(
       .filter((id): id is string => Boolean(id)),
   ];
   const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
+
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
+
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const shippingResult = await resolveDeliveryFeeService(config, {
     method: parsed.data.fulfillment.method,
     district: parsed.data.fulfillment.deliveryAddress?.district,
+    pickupPointId: parsed.data.fulfillment.pickupPoint?.id,
+    departmentId: parsed.data.fulfillment.courier?.destination.departmentId,
+    provinceSlug: parsed.data.fulfillment.courier?.destination.provinceSlug,
   });
   const shippingTotal =
     shippingResult.ok === true ? shippingResult.fee : parsed.data.shippingTotal;
@@ -201,6 +327,7 @@ export async function createOrderService(
     bundlesById,
     packsById,
     discountTotal: parsed.data.discountTotal,
+    surchargeTotal: parsed.data.surchargeTotal,
     shippingTotal,
   });
 
@@ -209,6 +336,10 @@ export async function createOrderService(
   }
 
   const { shoppingCart, totals } = cartResult;
+
+  if (totals.total < 0) {
+    return { ok: false, error: "VALIDATION" };
+  }
 
   const datePrefix = formatOrderNumber(0).slice(0, 12);
   const sequence = (await countOrdersByDatePrefixRepo(config, datePrefix)) + 1;
@@ -224,6 +355,7 @@ export async function createOrderService(
     payment_methods: asJson([]),
     subtotal: totals.subtotal,
     discount_total: totals.discountTotal,
+    surcharge_total: totals.surchargeTotal,
     shipping_total: totals.shippingTotal,
     total: totals.total,
     pricing_snapshot: asJson(totals),
@@ -231,11 +363,44 @@ export async function createOrderService(
     metadata: asJson({}),
   });
 
+  logServerInfo("createOrderService", "created", {
+    orderId: row.id,
+    orderNumber: row.order_number,
+    total: totals.total,
+  });
+
+  const settings = await getBusinessSettingsService(config);
+  await scheduleOrderCreatedNotification({
+    orderId: row.id,
+    orderNumber: row.order_number,
+    total: totals.total,
+    currencyCode: row.currency_code ?? "PEN",
+    subtotal: totals.subtotal,
+    shippingTotal: totals.shippingTotal,
+    discountTotal: totals.discountTotal,
+    statusLabel: "Pendiente de pago",
+    contact: {
+      name: parsed.data.contact.name,
+      lastName: parsed.data.contact.lastName,
+      email: parsed.data.contact.email,
+      phone: parsed.data.contact.phone,
+    },
+    lines: mapCartLinesToNotifyLines(shoppingCart.lines),
+    fulfillment: mapFulfillmentToNotify({
+      method: parsed.data.fulfillment.method,
+      deliveryAddress: parsed.data.fulfillment.deliveryAddress,
+      pickupPoint: parsed.data.fulfillment.pickupPoint,
+      courier: parsed.data.fulfillment.courier,
+    }),
+    adminEmail: settings?.email ?? "",
+  });
+
   return { ok: true, data: { id: row.id, orderNumber: row.order_number } };
 }
 
 export async function transitionOrderStatusService(
   config: SupabaseConfig,
+  staffUserId: string,
   raw: unknown,
 ): Promise<
   | { ok: true; data: { id: string; status: OrderStatus } }
@@ -245,30 +410,122 @@ export async function transitionOrderStatusService(
         | "VALIDATION"
         | "NOT_FOUND"
         | "INVALID_TRANSITION"
-        | "PAYMENT_CONFIRMATION_REQUIRED";
+        | "PAYMENT_CONFIRMATION_REQUIRED"
+        | "FORBIDDEN";
     }
 > {
   const parsed = transitionOrderStatusInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  if (parsed.data.status === "cancelled") {
+    return cancelOrderService(config, staffUserId, parsed.data.id);
+  }
 
   const row = await getOrderByIdRepo(config, parsed.data.id);
   if (!row) return { ok: false, error: "NOT_FOUND" };
 
   const from = row.status as OrderStatus;
   const to = parsed.data.status;
+  const method = readFulfillmentMethod(row.fulfillment);
 
   if (to === "paid") {
+    logServerError("transitionOrderStatusService", {
+      message: "PAYMENT_CONFIRMATION_REQUIRED",
+      orderId: parsed.data.id,
+      from,
+      to,
+    });
     return { ok: false, error: "PAYMENT_CONFIRMATION_REQUIRED" };
   }
 
-  if (!canTransitionOrderStatus(from, to)) {
+  if (!canTransitionOrderStatus(from, to, method)) {
+    logServerError("transitionOrderStatusService", {
+      message: "INVALID_TRANSITION",
+      orderId: parsed.data.id,
+      from,
+      to,
+      method,
+    });
     return { ok: false, error: "INVALID_TRANSITION" };
   }
 
+  if (to === "in_transit") {
+    const shipment = parsed.data.shipment;
+    if (!shipment) return { ok: false, error: "VALIDATION" };
+
+    const existing = await getShipmentByOrderIdRepo(config, parsed.data.id);
+    const now = new Date().toISOString();
+    await upsertShipmentRepo(config, {
+      order_id: parsed.data.id,
+      status: "shipped",
+      carrier: shipment.carrier,
+      tracking_number: shipment.trackingNumber,
+      notes: shipment.notes ?? null,
+      shipped_at: existing?.shipped_at ?? now,
+      delivered_at: existing?.delivered_at ?? null,
+    });
+  }
+
   const updated = await updateOrderStatusRepo(config, parsed.data.id, to);
+  logServerInfo("transitionOrderStatusService", "transitioned", {
+    orderId: updated.id,
+    from,
+    to,
+  });
   return { ok: true, data: { id: updated.id, status: to } };
 }
 
-export async function cancelOrderService(config: SupabaseConfig, id: string) {
-  return transitionOrderStatusService(config, { id, status: "cancelled" });
+export async function cancelOrderService(
+  config: SupabaseConfig,
+  staffUserId: string,
+  id: string,
+  notes?: string | null,
+): Promise<
+  | { ok: true; data: { id: string; status: OrderStatus } }
+  | {
+      ok: false;
+      error:
+        | "VALIDATION"
+        | "NOT_FOUND"
+        | "INVALID_TRANSITION"
+        | "PAYMENT_CONFIRMATION_REQUIRED"
+        | "FORBIDDEN";
+    }
+> {
+  try {
+    const data = await cancelOrderWithRestockRepo(config, {
+      orderId: id,
+      staffUserId,
+      notes: notes ?? null,
+    });
+
+    if (data.restocked) {
+      await bumpCatalogVersionSafe(config);
+    }
+
+    logServerInfo("cancelOrderService", "cancelled", {
+      orderId: data.orderId,
+      restocked: data.restocked,
+      idempotent: data.idempotent,
+    });
+
+    return {
+      ok: true,
+      data: { id: data.orderId, status: "cancelled" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logServerError("cancelOrderService", error, { orderId: id });
+
+    if (message.includes("NOT_FOUND")) {
+      return { ok: false, error: "NOT_FOUND" };
+    }
+    if (message.includes("FORBIDDEN")) {
+      return { ok: false, error: "FORBIDDEN" };
+    }
+    if (message.includes("INVALID_TRANSITION")) {
+      return { ok: false, error: "INVALID_TRANSITION" };
+    }
+    return { ok: false, error: "INVALID_TRANSITION" };
+  }
 }

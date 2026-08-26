@@ -44,17 +44,17 @@ function ProductList() {
 ## No mockear si ya existe el servicio
 
 - Si hay Server Action + service + repository implementados, el **container** debe consumirlos (TanStack Query → action).
-- **Prohibido** arrays fake en producción cuando `listProductsAction`, `listCategoriesAction`, etc. ya existen.
+- **Prohibido** arrays fake en producción cuando `listProductsPageAction`, `listCategoriesAction`, etc. ya existen.
 
 ```tsx
 // ❌ maquetación con datos inventados en container final
 const products = [{ id: "1", name: "Fake" }];
 
-// ✅
+// ✅ listado paginado / picker
 const productsQuery = useQuery({
-  queryKey: ["products"],
+  queryKey: queryKeys.catalog.productsPage(query),
   queryFn: async () => {
-    const result = await listProductsAction();
+    const result = await listProductsPageAction(query);
     if (!result.ok) throw new Error(result.error);
     return result.data;
   },

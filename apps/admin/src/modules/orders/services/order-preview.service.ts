@@ -9,7 +9,13 @@ import {
 } from "@de-tin-marin/shared/build-order-cart";
 import { roundMoney } from "@de-tin-marin/shared/prices";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
-import { previewAdminBundleLineInputSchema } from "@de-tin-marin/validations/customize-bundle";
+import {
+  previewAdminBundleLineInputSchema,
+  resolveBundleCustomizationBounds,
+  validateBundleCustomization,
+  validateOrderLinesBundleCustomization,
+  type BundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
 import { previewOrderCartInputSchema } from "@de-tin-marin/validations/order";
 import { getBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import { getPackByIdRepo } from "@/modules/catalog/repositories/pack.repository";
@@ -19,8 +25,12 @@ import { getOrderProductsByIdsRepo } from "../repositories/order.repository";
 async function resolveBundlesById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
-): Promise<Map<string, OrderBundleSource>> {
+): Promise<{
+  bundlesById: Map<string, OrderBundleSource>;
+  customizationBoundsById: Map<string, BundleCustomizationBounds>;
+}> {
   const bundlesById = new Map<string, OrderBundleSource>();
+  const customizationBoundsById = new Map<string, BundleCustomizationBounds>();
 
   for (const line of lines) {
     if (line.type !== "bundle" || bundlesById.has(line.bundleId)) {
@@ -45,9 +55,16 @@ async function resolveBundlesById(
           }
         : null,
     });
+    customizationBoundsById.set(
+      line.bundleId,
+      resolveBundleCustomizationBounds({
+        customizationMinProducts: bundle.customization_min_products,
+        customizationMaxProducts: bundle.customization_max_products,
+      }),
+    );
   }
 
-  return bundlesById;
+  return { bundlesById, customizationBoundsById };
 }
 
 async function resolvePacksById(
@@ -72,6 +89,7 @@ async function resolvePacksById(
       items: (pack.pack_items ?? []).map((item) => ({
         product_id: item.product_id,
         package_quantity: item.package_quantity,
+        unit_quantity: item.unit_quantity ?? 0,
       })),
     });
   }
@@ -98,19 +116,26 @@ export async function previewAdminBundleLineService(
         | "VALIDATION"
         | "BUNDLE_NOT_FOUND"
         | "PRODUCT_NOT_FOUND"
-        | "DUPLICATE_PRODUCT_IN_BUNDLE";
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = previewAdminBundleLineInputSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { bundleId, quantity, components } = parsed.data;
-  const bundlesById = await resolveBundlesById(config, [
-    { type: "bundle", bundleId, quantity, components },
-  ]);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    [{ type: "bundle", bundleId, quantity, components }],
+  );
 
   if (!bundlesById.has(bundleId)) {
     return { ok: false, error: "BUNDLE_NOT_FOUND" };
+  }
+
+  const bounds = customizationBoundsById.get(bundleId);
+  if (!bounds || !validateBundleCustomization(components, bounds).ok) {
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
   }
 
   const productIds = components.map((component) => component.productId);
@@ -180,6 +205,7 @@ export async function previewOrderCartService(
       data: {
         subtotal: number;
         discountTotal: number;
+        surchargeTotal: number;
         shippingTotal: number;
         total: number;
         lineTotals: number[];
@@ -192,7 +218,8 @@ export async function previewOrderCartService(
         | "PRODUCT_NOT_FOUND"
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
-        | "DUPLICATE_PRODUCT_IN_BUNDLE";
+        | "DUPLICATE_PRODUCT_IN_BUNDLE"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = previewOrderCartInputSchema.safeParse(raw);
@@ -204,9 +231,12 @@ export async function previewOrderCartService(
       data: {
         subtotal: 0,
         discountTotal: parsed.data.discountTotal,
+        surchargeTotal: parsed.data.surchargeTotal,
         shippingTotal: parsed.data.shippingTotal,
         total: roundMoney(
-          parsed.data.shippingTotal - parsed.data.discountTotal,
+          parsed.data.shippingTotal -
+            parsed.data.discountTotal +
+            parsed.data.surchargeTotal,
         ),
         lineTotals: [],
       },
@@ -238,7 +268,25 @@ export async function previewOrderCartService(
       .filter((id): id is string => Boolean(id)),
   ];
   const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
+
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
+
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const cartResult = buildOrderCartWithTotals({
     lines: parsed.data.lines,
@@ -247,6 +295,7 @@ export async function previewOrderCartService(
     bundlesById,
     packsById,
     discountTotal: parsed.data.discountTotal,
+    surchargeTotal: parsed.data.surchargeTotal,
     shippingTotal: parsed.data.shippingTotal,
   });
 
@@ -259,6 +308,7 @@ export async function previewOrderCartService(
     data: {
       subtotal: cartResult.totals.subtotal,
       discountTotal: cartResult.totals.discountTotal,
+      surchargeTotal: cartResult.totals.surchargeTotal,
       shippingTotal: cartResult.totals.shippingTotal,
       total: cartResult.totals.total,
       lineTotals: cartResult.shoppingCart.lines.map((line) => line.lineTotal),

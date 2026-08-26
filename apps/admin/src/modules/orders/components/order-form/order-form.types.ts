@@ -21,11 +21,21 @@ export type BundleOption = {
   templateQuantity: number;
 };
 
+export type PackStockShortageOption = {
+  productId: string;
+  productName: string;
+  sku: string;
+  availableCombos: number;
+  reason: "missing_product" | "inactive" | "insufficient_stock";
+};
+
 export type PackOption = {
   id: string;
   name: string;
   sku: string;
   finalPrice: number;
+  availableQuantity: number;
+  stockShortages: PackStockShortageOption[];
   purchaseMinQuantity: number;
   purchaseMaxQuantity: number;
   itemCount: number;
@@ -34,7 +44,8 @@ export type PackOption = {
 export type OrderFormProductLine = {
   type: "product";
   productId: string;
-  quantity: number;
+  packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type OrderFormBundleComponent = {
@@ -66,7 +77,13 @@ export type OrderFormValues = {
     email: string;
   };
   fulfillment: {
-    method: "delivery" | "pickup";
+    method: "delivery" | "pickup" | "pickup_point" | "courier";
+    pickupPointId: string;
+    courierDepartmentId: string;
+    courierProvinceSlug: string;
+    courierDni: string;
+    courierFullName: string;
+    courierAgencyAddress: string;
     deliveryAddress: {
       recipientName: string;
       line1: string;
@@ -81,6 +98,7 @@ export type OrderFormValues = {
   lines: OrderFormLine[];
   shippingTotal: number;
   discountTotal: number;
+  surchargeTotal: number;
 };
 
 export const emptyOrderFormValues: OrderFormValues = {
@@ -92,6 +110,12 @@ export const emptyOrderFormValues: OrderFormValues = {
   },
   fulfillment: {
     method: "delivery",
+    pickupPointId: "",
+    courierDepartmentId: "",
+    courierProvinceSlug: "",
+    courierDni: "",
+    courierFullName: "",
+    courierAgencyAddress: "",
     deliveryAddress: {
       recipientName: "",
       line1: "",
@@ -106,6 +130,7 @@ export const emptyOrderFormValues: OrderFormValues = {
   lines: [],
   shippingTotal: 0,
   discountTotal: 0,
+  surchargeTotal: 0,
 };
 
 export type OrderFormBundleDraft = {
@@ -114,6 +139,8 @@ export type OrderFormBundleDraft = {
   containerName: string;
   containerNetPrice: number;
   templateQuantity: number;
+  customizationMinProducts: number;
+  customizationMaxProducts: number;
   templateItems: Array<{ productId: string; productName: string }>;
   components: OrderFormBundleComponent[];
   quantity: number;
@@ -137,6 +164,16 @@ export type OrderFormLabels = {
   email: string;
   delivery: string;
   pickup: string;
+  pickupPoint: string;
+  courier: string;
+  selectPickupPoint: string;
+  courierDepartment: string;
+  selectCourierDepartment: string;
+  courierProvince: string;
+  selectCourierProvince: string;
+  courierDni: string;
+  courierFullName: string;
+  courierAgencyAddress: string;
   recipientName: string;
   address: string;
   district: string;
@@ -152,12 +189,16 @@ export type OrderFormLabels = {
   surprise: string;
   selectSurprise: string;
   surpriseQuantity: string;
-  addSurprise: string;
   removeLine: string;
   emptyLines: string;
   shipping: string;
   shippingHint: string;
   discount: string;
+  surcharge: string;
+  finalPrice: string;
+  finalPriceHint: string;
+  tabFinalPrice: string;
+  tabAdjustments: string;
   subtotal: string;
   total: string;
   createOrder: string;
@@ -165,27 +206,42 @@ export type OrderFormLabels = {
   productLine: string;
   surpriseLine: string;
   formatComponents: (count: number) => string;
+  viewComponents: (count: number) => string;
+  formatPackComponentQty: (packages: number, units: number) => string;
+  formatProductDualQty: (packages: number, units: number) => string;
   formatQuantityLabel: (quantity: number) => string;
+  packagesLabel: string;
+  unitsLabel: string;
   quantityBounds: (min: number, max: number) => string;
   configureSurprise: string;
+  addSurprise: string;
+  addingSurprise: string;
+  tabProducts: string;
+  tabCombos: string;
+  tabSurprises: string;
+  selectProductFirst: string;
+  productOutOfStock: (min: number, available: number) => string;
   customizeTitle: string;
-  customizeSubtitle: string;
+  customizeSubtitle: (min: number, max: number) => string;
   candyCount: string;
   customizationProgress: string;
-  minCandiesReached: string;
-  maxCandiesReached: string;
+  minCandiesReached: (min: number) => string;
+  maxCandiesReached: (max: number) => string;
   removeCandy: string;
   addCandy: string;
   selectCandy: string;
   confirmSurprise: string;
   cancelCustomize: string;
-  validationMinCandies: string;
-  validationMaxCandies: string;
+  validationMinCandies: (min: number) => string;
+  validationMaxCandies: (max: number) => string;
   editSurprise: string;
   combo: string;
   selectCombo: string;
+  selectComboFirst: string;
   addCombo: string;
   comboLine: string;
+  packOutOfStock: (available: number) => string;
+  packStockShortages: (names: string) => string;
   candiesSubtotal: string;
   containerSubtotal: string;
   containerCostHint: (unitPrice: string, quantity: number) => string;
@@ -202,12 +258,31 @@ export type OrderFormLabels = {
   surpriseQuantityHint: string;
 };
 
+export type OrderFormFieldErrors = Record<string, string>;
+
 export type OrderFormProps = {
   values: OrderFormValues;
   products: ProductOption[];
   bundles: BundleOption[];
   packs: PackOption[];
+  packCompositionsById: Map<
+    string,
+    Array<{ productId: string; productName: string; quantityLabel: string }>
+  >;
   deliveryDistricts: string[];
+  pickupPoints: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    fee: number;
+    isActive: boolean;
+  }>;
+  courierDepartments: Array<{
+    id: string;
+    name: string;
+    provinces: Array<{ slug: string; name: string; enabled: boolean }>;
+  }>;
   bundleDraft: OrderFormBundleDraft | null;
   bundleDraftLoading: boolean;
   bundlePriceSummary: OrderFormBundlePriceSummary | null;
@@ -216,17 +291,31 @@ export type OrderFormProps = {
   totals: {
     subtotal: number;
     discountTotal: number;
+    surchargeTotal: number;
     shippingTotal: number;
     total: number;
   } | null;
   submitting: boolean;
   error: string | null;
+  fieldErrors: OrderFormFieldErrors;
   labels: OrderFormLabels;
   onChange: (values: OrderFormValues) => void;
-  onAddProductLine: (productId: string, quantity: number) => void;
-  onUpdateProductLineQuantity: (index: number, quantity: number) => void;
+  onFieldBlur: (path: string) => void;
+  onEnsureProductOption: (product: ProductOption) => void;
+  onAddProductLine: (
+    productId: string,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) => void;
+  onUpdateProductLineQuantity: (
+    index: number,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) => void;
   onAddPackLine: (packId: string, quantity: number) => void;
   onStartBundleDraft: (bundleId: string) => void;
+  onAddBundleAsTemplate: (bundleId: string) => void;
+  onAddBundleCandy: (product: ProductOption) => void;
   onBundleDraftComponentsChange: (
     components: OrderFormBundleComponent[],
   ) => void;

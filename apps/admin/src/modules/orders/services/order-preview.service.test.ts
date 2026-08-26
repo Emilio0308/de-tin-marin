@@ -46,6 +46,8 @@ describe("previewAdminBundleLineService", () => {
       name: "Sorpresa test",
       is_active: true,
       deleted_at: null,
+      customization_min_products: 8,
+      customization_max_products: 20,
       surprise_containers: {
         id: "22222222-2222-4222-8222-222222222222",
         sku: "BOX-M",
@@ -91,6 +93,9 @@ describe("previewAdminBundleLineService", () => {
       components: buildComponents().slice(0, 3),
     });
 
-    expect(result).toEqual({ ok: false, error: "VALIDATION" });
+    expect(result).toEqual({
+      ok: false,
+      error: "INVALID_BUNDLE_CUSTOMIZATION",
+    });
   });
 });

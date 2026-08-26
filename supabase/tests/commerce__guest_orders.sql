@@ -1,5 +1,5 @@
 begin;
-select plan(11);
+select plan(14);
 
 select ok(
   (
@@ -28,7 +28,7 @@ select lives_ok(
        'pending',
        null,
        '{"name":"Ana","lastName":"Garcia","phone":"999","email":"guest@example.com"}'::jsonb,
-       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
        1,
        1
      ) $$,
@@ -49,7 +49,7 @@ select throws_ok(
        'paid',
        'pending',
        null,
-       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
        1,
        1
      ) $$,
@@ -82,7 +82,7 @@ insert into commerce.orders (
   null,
   '{"name":"Luis","lastName":"Perez","phone":"999","email":"lookup@example.com"}'::jsonb,
   '{"method":"delivery","deliveryAddress":{"recipientName":"Luis Perez","line1":"Av 1","district":"Piura","city":"Piura","province":"Piura","reference":null,"phone":"999"}}'::jsonb,
-  '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":10,"lineTotal":10}]}'::jsonb,
+  '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":10,"unitPrice":10,"lineTotal":10}]}'::jsonb,
   10,
   8,
   18
@@ -124,7 +124,7 @@ select lives_ok(
   $$ select commerce.insert_guest_order(
        '{"name":"Ana","lastName":"Garcia","phone":"999","email":"insert@example.com"}'::jsonb,
        '{"method":"delivery","deliveryAddress":{"recipientName":"Ana Garcia","line1":"Av 1","district":"Piura","city":"Piura","province":"Piura","reference":null,"phone":"999"}}'::jsonb,
-       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
        1,
        0,
        8,
@@ -140,13 +140,93 @@ select ok(
     select (commerce.insert_guest_order(
       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"insert2@example.com"}'::jsonb,
       '{"method":"delivery","deliveryAddress":{"recipientName":"Ana Garcia","line1":"Av 1","district":"Piura","city":"Piura","province":"Piura","reference":null,"phone":"999"}}'::jsonb,
-      '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+      '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
       1, 0, 8, 9,
       '{"subtotal":1,"discountTotal":0,"shippingTotal":8,"total":9}'::jsonb,
       '{}'::jsonb
     ) ->> 'orderNumber') is not null
   ),
   'insert_guest_order returns orderNumber'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"pickup@example.com"}'::jsonb,
+       '{"method":"pickup"}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 0, 1,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":0,"total":1}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects in-store pickup method'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"pp-missing@example.com"}'::jsonb,
+       '{"method":"pickup_point"}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 6, 7,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":6,"total":7}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects pickup_point without snapshot'
+);
+
+select lives_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"pp@example.com"}'::jsonb,
+       '{"method":"pickup_point","pickupPoint":{"id":"11111111-1111-4111-8111-111111111111","name":"Mall","lat":-5.19,"lng":-80.63,"fee":6}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 6, 7,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":6,"total":7}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'guest insert accepts pickup_point with snapshot'
+);
+
+select lives_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"courier@example.com"}'::jsonb,
+       '{"method":"courier","courier":{"destination":{"departmentId":"22222222-2222-4222-8222-222222222222","departmentName":"Piura","provinceSlug":"sullana","provinceName":"Sullana"},"recipient":{"dni":"12345678","fullName":"Ana Garcia Lopez","agencyAddress":"Olva Courier Av 1"}}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 0, 1,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":0,"total":1}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'guest insert accepts courier with snapshot and zero shipping'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"courier-fee@example.com"}'::jsonb,
+       '{"method":"courier","courier":{"destination":{"departmentId":"22222222-2222-4222-8222-222222222222","departmentName":"Piura","provinceSlug":"sullana","provinceName":"Sullana"},"recipient":{"dni":"12345678","fullName":"Ana Garcia Lopez","agencyAddress":"Olva Courier Av 1"}}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 5, 6,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":5,"total":6}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects courier with non-zero shipping'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"courier-missing@example.com"}'::jsonb,
+       '{"method":"courier"}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 0, 1,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":0,"total":1}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects courier without snapshot'
 );
 
 select * from finish();

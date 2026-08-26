@@ -3,11 +3,15 @@ import type { StoredCartLine } from "../../repositories/cart.repository";
 
 export type CartPageLabels = {
   title: string;
+  subtitle: string;
   empty: string;
+  emptyHint: string;
   continueShopping: string;
   checkout: string;
   remove: string;
   subtotal: string;
+  summaryTitle: string;
+  itemCount: string;
   unitPriceSuffix: string;
   decreaseQuantity: string;
   increaseQuantity: string;
@@ -19,6 +23,10 @@ export type CartPageLabels = {
   bundleBadge: string;
   packBadge: string;
   packComponents: string;
+  stepsLabel: string;
+  stepCart: string;
+  stepCheckout: string;
+  stepDone: string;
 };
 
 export type CartPageProps = {

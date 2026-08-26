@@ -1,44 +1,201 @@
 import { z } from "zod";
+import { courierSnapshotSchema } from "./courier";
 import { paymentSummarySchema } from "./payment";
+import { pickupPointSnapshotSchema } from "./pickup-point";
 import { shipmentDtoSchema } from "./shipment";
 
+export const orderFulfillmentMethodSchema = z.enum([
+  "delivery",
+  "pickup",
+  "pickup_point",
+  "courier",
+]);
+
 export const orderContactSchema = z.object({
-  name: z.string().min(1).max(200),
-  lastName: z.string().min(1).max(200),
-  phone: z.string().min(1).max(50),
-  email: z.string().email().max(320),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  lastName: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^9\d{8}$/),
+  email: z.string().trim().email().max(320),
 });
 
 export const deliveryAddressSchema = z.object({
-  recipientName: z.string().min(1).max(200),
-  line1: z.string().min(1).max(300),
-  district: z.string().min(1).max(120),
-  city: z.string().min(1).max(120),
-  province: z.string().min(1).max(120),
+  recipientName: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  line1: z.string().trim().min(1).min(5).max(300),
+  district: z.string().trim().min(1).max(120),
+  city: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(120)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
+  province: z
+    .string()
+    .trim()
+    .min(1)
+    .min(2)
+    .max(120)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u),
   reference: z.string().max(500).optional().nullable(),
-  phone: z.string().min(1).max(50),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^9\d{8}$/),
 });
 
-export const orderFulfillmentSchema = z
-  .object({
-    method: z.enum(["delivery", "pickup"]),
-    deliveryAddress: deliveryAddressSchema.optional(),
-    notes: z.string().max(1000).optional().nullable(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.method === "delivery" && !value.deliveryAddress) {
+function refineOrderFulfillment(
+  value: {
+    method: z.infer<typeof orderFulfillmentMethodSchema>;
+    deliveryAddress?: z.infer<typeof deliveryAddressSchema>;
+    pickupPoint?: z.infer<typeof pickupPointSnapshotSchema>;
+    courier?: z.infer<typeof courierSnapshotSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.method === "delivery") {
+    if (!value.deliveryAddress) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "deliveryAddress is required for delivery",
         path: ["deliveryAddress"],
       });
     }
-  });
+    if (value.pickupPoint) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPoint is not allowed for delivery",
+        path: ["pickupPoint"],
+      });
+    }
+    if (value.courier) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "courier is not allowed for delivery",
+        path: ["courier"],
+      });
+    }
+    return;
+  }
+
+  if (value.method === "pickup_point") {
+    if (!value.pickupPoint) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPoint is required for pickup_point",
+        path: ["pickupPoint"],
+      });
+    }
+    if (value.deliveryAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "deliveryAddress is not allowed for pickup_point",
+        path: ["deliveryAddress"],
+      });
+    }
+    if (value.courier) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "courier is not allowed for pickup_point",
+        path: ["courier"],
+      });
+    }
+    return;
+  }
+
+  if (value.method === "courier") {
+    if (!value.courier) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "courier is required for courier method",
+        path: ["courier"],
+      });
+    }
+    if (value.deliveryAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "deliveryAddress is not allowed for courier",
+        path: ["deliveryAddress"],
+      });
+    }
+    if (value.pickupPoint) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPoint is not allowed for courier",
+        path: ["pickupPoint"],
+      });
+    }
+    return;
+  }
+
+  if (value.deliveryAddress) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "deliveryAddress is not allowed for pickup",
+      path: ["deliveryAddress"],
+    });
+  }
+  if (value.pickupPoint) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "pickupPoint is not allowed for pickup",
+      path: ["pickupPoint"],
+    });
+  }
+  if (value.courier) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "courier is not allowed for pickup",
+      path: ["courier"],
+    });
+  }
+}
+
+export const orderFulfillmentSchema = z
+  .object({
+    method: orderFulfillmentMethodSchema,
+    deliveryAddress: deliveryAddressSchema.optional(),
+    pickupPoint: pickupPointSnapshotSchema.optional(),
+    courier: courierSnapshotSchema.optional(),
+    notes: z.string().max(1000).optional().nullable(),
+  })
+  .superRefine(refineOrderFulfillment);
+
+export const guestOrderFulfillmentSchema = z
+  .object({
+    method: z.enum(["delivery", "pickup_point", "courier"]),
+    deliveryAddress: deliveryAddressSchema.optional(),
+    pickupPoint: pickupPointSnapshotSchema.optional(),
+    courier: courierSnapshotSchema.optional(),
+    notes: z.string().max(1000).optional().nullable(),
+  })
+  .superRefine(refineOrderFulfillment);
 
 export const orderProductLineInputSchema = z.object({
   type: z.literal("product"),
   productId: z.string().uuid(),
-  quantity: z.number().int().min(1),
+  packageQuantity: z.number().int().min(0),
+  unitQuantity: z.number().int().min(0),
 });
 
 export const orderBundleComponentInputSchema = z.object({
@@ -59,7 +216,7 @@ export const orderPackLineInputSchema = z.object({
   quantity: z.number().int().min(1),
 });
 
-export const createOrderInputSchema = z.object({
+const createOrderInputObjectSchema = z.object({
   contact: orderContactSchema,
   fulfillment: orderFulfillmentSchema,
   lines: z
@@ -73,26 +230,79 @@ export const createOrderInputSchema = z.object({
     .min(1),
   shippingTotal: z.number().nonnegative().default(0),
   discountTotal: z.number().nonnegative().default(0),
+  surchargeTotal: z.number().nonnegative().default(0),
 });
 
-export const previewOrderCartInputSchema = createOrderInputSchema.pick({
-  lines: true,
-  shippingTotal: true,
-  discountTotal: true,
-});
+export { createOrderInputObjectSchema };
 
-export const transitionOrderStatusInputSchema = z.object({
-  id: z.string().uuid(),
-  status: z.enum([
-    "pending_payment",
-    "paid",
-    "preparing",
-    "ready",
-    "delivered",
-    "completed",
-    "cancelled",
-  ]),
-});
+function refineProductLineDualQuantities(
+  value: {
+    lines: Array<{
+      type: string;
+      packageQuantity?: number;
+      unitQuantity?: number;
+    }>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  value.lines.forEach((line, index) => {
+    if (
+      line.type === "product" &&
+      (line.packageQuantity ?? 0) + (line.unitQuantity ?? 0) < 1
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "packageQuantity + unitQuantity must be >= 1",
+        path: ["lines", index, "packageQuantity"],
+      });
+    }
+  });
+}
+
+export const createOrderInputSchema = createOrderInputObjectSchema.superRefine(
+  refineProductLineDualQuantities,
+);
+
+export const previewOrderCartInputSchema = createOrderInputObjectSchema
+  .pick({
+    lines: true,
+    shippingTotal: true,
+    discountTotal: true,
+    surchargeTotal: true,
+  })
+  .superRefine(refineProductLineDualQuantities);
+
+export const transitionOrderStatusInputSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.enum([
+      "pending_payment",
+      "paid",
+      "preparing",
+      "ready",
+      "awaiting_pickup",
+      "in_transit",
+      "delivered",
+      "completed",
+      "cancelled",
+    ]),
+    shipment: z
+      .object({
+        carrier: z.string().trim().min(1).max(200),
+        trackingNumber: z.string().trim().min(1).max(200),
+        notes: z.string().max(1000).optional().nullable(),
+      })
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.status === "in_transit" && !value.shipment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "SHIPMENT_REQUIRED",
+        path: ["shipment"],
+      });
+    }
+  });
 
 export const orderListItemSchema = z.object({
   id: z.string().uuid(),
@@ -110,7 +320,9 @@ export const orderShoppingCartProductLineSchema = z.object({
   productId: z.string().uuid(),
   sku: z.string(),
   name: z.string(),
-  quantity: z.number(),
+  packageQuantity: z.number(),
+  unitQuantity: z.number(),
+  packagePrice: z.number(),
   unitPrice: z.number(),
   lineTotal: z.number(),
   imageUrl: z.string().nullable().optional(),
@@ -158,7 +370,9 @@ export const orderShoppingCartPackLineSchema = z.object({
       productName: z.string(),
       sku: z.string(),
       packageQuantity: z.number(),
+      unitQuantity: z.number().default(0),
       totalPackages: z.number(),
+      totalUnits: z.number().default(0),
     }),
   ),
   imageUrl: z.string().nullable().optional(),
@@ -200,6 +414,7 @@ export const orderDetailSchema = z.object({
   paymentMethods: z.array(z.unknown()),
   subtotal: z.number(),
   discountTotal: z.number(),
+  surchargeTotal: z.number(),
   shippingTotal: z.number(),
   total: z.number(),
   currencyCode: z.literal("PEN"),

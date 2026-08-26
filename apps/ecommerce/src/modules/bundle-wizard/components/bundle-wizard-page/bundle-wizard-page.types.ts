@@ -7,6 +7,10 @@ export type BundleWizardPageLabels = {
   back: string;
   title: string;
   personCount: string;
+  surpriseQuantity: string;
+  surpriseQuantityHint: string;
+  decreaseQuantity: string;
+  increaseQuantity: string;
   addToCart: string;
   addToCartLoading: string;
   validationMin: string;
@@ -45,6 +49,9 @@ export type BundleWizardPageLabels = {
 export type BundleWizardPageProps = {
   template: BundleWizardTemplate;
   components: CustomizeBundleComponent[];
+  quantity: number;
+  minQuantity: number;
+  maxQuantity: number;
   searchValue: string;
   products: PublicProductListItem[];
   selectedProductIds: Set<string>;
@@ -56,6 +63,7 @@ export type BundleWizardPageProps = {
   isValid: boolean;
   canRemove: boolean;
   canAdd: boolean;
+  enableUnitsPerPerson: boolean;
   isPreviewLoading: boolean;
   isPreviewError: boolean;
   isProductsLoading: boolean;
@@ -66,6 +74,8 @@ export type BundleWizardPageProps = {
   labels: BundleWizardPageLabels;
   onRemove: (productId: string) => void;
   onAdd: (product: PublicProductListItem) => void;
+  onQuantityPerUnitChange: (productId: string, quantityPerUnit: number) => void;
+  onQuantityChange: (quantity: number) => void;
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
   onProductsRetry: () => void;

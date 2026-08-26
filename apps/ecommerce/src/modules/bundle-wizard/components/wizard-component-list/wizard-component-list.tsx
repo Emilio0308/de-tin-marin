@@ -1,33 +1,33 @@
 "use client";
 
 import Image from "next/image";
+import { Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
-} from "@de-tin-marin/validations/customize-bundle";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolveComponentTotalQuantity } from "./wizard-component-list.helpers";
 import type { WizardComponentListProps } from "./wizard-component-list.types";
 
 function WizardProgressBar({
   current,
+  minProducts,
+  maxProducts,
   label,
 }: {
   current: number;
+  minProducts: number;
+  maxProducts: number;
   label: string;
 }) {
-  const fillPercent = Math.min(100, (current / BUNDLE_CUSTOMIZATION_MAX) * 100);
-  const minMarkerPercent =
-    (BUNDLE_CUSTOMIZATION_MIN / BUNDLE_CUSTOMIZATION_MAX) * 100;
+  const fillPercent = Math.min(100, (current / maxProducts) * 100);
+  const minMarkerPercent = (minProducts / maxProducts) * 100;
 
   return (
     <div className="space-y-2">
       <div
         role="progressbar"
         aria-valuenow={current}
-        aria-valuemin={BUNDLE_CUSTOMIZATION_MIN}
-        aria-valuemax={BUNDLE_CUSTOMIZATION_MAX}
+        aria-valuemin={minProducts}
+        aria-valuemax={maxProducts}
         aria-label={label}
         className="bg-surface-container relative h-2.5 overflow-hidden rounded-full"
       >
@@ -45,23 +45,70 @@ function WizardProgressBar({
   );
 }
 
+function UnitsPerPersonStepper({
+  value,
+  productName,
+  onDecrease,
+  onIncrease,
+}: {
+  value: number;
+  productName: string;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
+  const t = useTranslations("catalog.wizard.componentList");
+
+  return (
+    <div className="border-outline-variant bg-surface flex shrink-0 items-center rounded-full border px-0.5">
+      <button
+        type="button"
+        onClick={onDecrease}
+        disabled={value <= 1}
+        aria-label={t("decreaseUnits", { name: productName })}
+        className="text-primary hover:bg-primary-container disabled:text-on-surface-variant/40 flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
+      >
+        <Minus className="h-4 w-4" aria-hidden />
+      </button>
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="font-label text-label-bold text-on-surface min-w-6 text-center text-sm"
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={onIncrease}
+        aria-label={t("increaseUnits", { name: productName })}
+        className="text-primary hover:bg-primary-container flex h-9 w-9 items-center justify-center rounded-full transition-colors"
+      >
+        <Plus className="h-4 w-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 export function WizardComponentList({
   components,
   personCount,
+  minProducts,
+  maxProducts,
   labelsByProductId,
   imagesByProductId,
   unitPricesByProductId,
   canRemove,
+  enableUnitsPerPerson,
   onRemove,
+  onQuantityPerUnitChange,
 }: WizardComponentListProps) {
   const t = useTranslations("catalog.wizard.componentList");
   const count = t("count", {
     current: components.length,
-    max: BUNDLE_CUSTOMIZATION_MAX,
+    max: maxProducts,
   });
   const progressLabel = t("progressLabel", {
     current: components.length,
-    max: BUNDLE_CUSTOMIZATION_MAX,
+    max: maxProducts,
   });
 
   return (
@@ -79,14 +126,19 @@ export function WizardComponentList({
         </p>
       </div>
 
-      <WizardProgressBar current={components.length} label={progressLabel} />
+      <WizardProgressBar
+        current={components.length}
+        minProducts={minProducts}
+        maxProducts={maxProducts}
+        label={progressLabel}
+      />
 
       {!canRemove ? (
         <p
           role="status"
           className="font-body text-body-sm text-on-surface-variant bg-surface-container border-outline-variant/30 rounded-2xl border px-4 py-3"
         >
-          {t("minReached", { min: BUNDLE_CUSTOMIZATION_MIN })}
+          {t("minReached", { min: minProducts })}
         </p>
       ) : null}
 
@@ -128,6 +180,18 @@ export function WizardComponentList({
                   })}
                 </p>
               </div>
+              {enableUnitsPerPerson ? (
+                <UnitsPerPersonStepper
+                  value={perPerson}
+                  productName={name}
+                  onDecrease={() =>
+                    onQuantityPerUnitChange(component.productId, perPerson - 1)
+                  }
+                  onIncrease={() =>
+                    onQuantityPerUnitChange(component.productId, perPerson + 1)
+                  }
+                />
+              ) : null}
               <button
                 type="button"
                 disabled={!canRemove}

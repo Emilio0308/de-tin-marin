@@ -12,12 +12,19 @@ import {
   aggregateStockDemands,
   checkOrderStock,
 } from "@de-tin-marin/shared/check-order-stock";
-import { resolveCheckoutDeliveryFee } from "@de-tin-marin/shared/checkout-coverage";
+import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
+import { normalizeProvinceSlug } from "@de-tin-marin/shared/courier-coverage";
+import {
+  applyStorefrontShippingFee,
+  assertMinOrderSubtotal,
+} from "@de-tin-marin/shared/storefront-settings";
+import { courierProvinceSchema } from "@de-tin-marin/validations/courier";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import {
-  resolveProductPurchaseBounds,
-  resolveStockInPresentations,
-} from "@de-tin-marin/shared/product-purchase-limits";
+  computePackAvailableQuantity as computePackAvailableQuantityShared,
+  type PackAvailabilityComponent,
+} from "@de-tin-marin/shared/pack-availability";
+import { resolveProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
@@ -27,6 +34,11 @@ import {
   validateGuestCheckoutCartInputSchema,
   type ValidateGuestCheckoutCartInput,
 } from "@de-tin-marin/validations/checkout";
+import {
+  resolveBundleCustomizationBounds,
+  validateOrderLinesBundleCustomization,
+  type BundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
 import { getPublicBundleByIdRepo } from "@/modules/catalog/repositories/bundle.repository";
 import {
   getPublicPackByIdRepo,
@@ -44,18 +56,46 @@ import {
 } from "@/modules/bundle-wizard/repositories/wizard-stock.repository";
 import { listWizardCampaignsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
 import { getWizardProductsByIdsRepo } from "@/modules/bundle-wizard/repositories/wizard-product.repository";
+import { getPublicBusinessSettingsService } from "@/modules/business-settings/services/public-business-settings.service";
+import {
+  getStorefrontSettingsService,
+  toStorefrontSettingsSource,
+} from "@/modules/storefront-settings/services/storefront-settings.service";
 import { logServerError, logServerInfo } from "@/shared/errors/server-error";
+import {
+  mapCartLinesToNotifyLines,
+  mapFulfillmentToNotify,
+} from "@de-tin-marin/notifications/map-order-notify";
+import { scheduleOrderCreatedNotification } from "../helpers/schedule-order-created-notification";
 import { asJson, insertGuestOrderRepo } from "../repositories/order.repository";
 import {
+  getCourierDepartmentByIdRepo,
   getDeliverySettingsRepo,
+  getPickupPointByIdRepo,
+  listActiveCourierDepartmentsRepo,
   listActiveDeliveryZonesRepo,
+  listActivePickupPointsRepo,
 } from "../repositories/delivery.repository";
+
+function parseCourierProvinces(raw: unknown) {
+  if (!Array.isArray(raw)) return [];
+  const provinces = [];
+  for (const item of raw) {
+    const parsed = courierProvinceSchema.safeParse(item);
+    if (parsed.success) provinces.push(parsed.data);
+  }
+  return provinces;
+}
 
 async function resolveBundlesById(
   config: SupabaseConfig,
   lines: Parameters<typeof collectProductIdsFromOrderLines>[0],
-): Promise<Map<string, OrderBundleSource>> {
+): Promise<{
+  bundlesById: Map<string, OrderBundleSource>;
+  customizationBoundsById: Map<string, BundleCustomizationBounds>;
+}> {
   const bundlesById = new Map<string, OrderBundleSource>();
+  const customizationBoundsById = new Map<string, BundleCustomizationBounds>();
 
   for (const line of lines) {
     if (line.type !== "bundle" || bundlesById.has(line.bundleId)) {
@@ -83,41 +123,37 @@ async function resolveBundlesById(
         prices: containerRow.prices,
       },
     });
+    customizationBoundsById.set(
+      line.bundleId,
+      resolveBundleCustomizationBounds({
+        customizationMinProducts: bundle.customization_min_products,
+        customizationMaxProducts: bundle.customization_max_products,
+      }),
+    );
   }
 
-  return bundlesById;
+  return { bundlesById, customizationBoundsById };
 }
 
 function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
-  const active = items.filter(
-    (item) => item.products?.is_active && item.products.deleted_at === null,
-  );
-  if (active.length === 0) return 0;
-
-  let min = Number.POSITIVE_INFINITY;
-  for (const item of active) {
+  const components: PackAvailabilityComponent[] = items.map((item) => {
     const product = item.products;
-    if (!product) return 0;
-    const itemsPerPackage = Math.max(1, product.items_per_package ?? 1);
-    const productType = (product.product_type as "unit" | "package") ?? "unit";
-    const stockTotalBaseUnits =
-      productType === "unit"
-        ? product.stock_loose_base_units
-        : computeTotalBaseUnits(
-            product.stock_sealed_packages,
-            product.stock_loose_base_units,
-            itemsPerPackage,
-          );
-    const presentations = resolveStockInPresentations({
-      productType,
-      itemsPerPackage,
-      stockTotalBaseUnits,
-    });
-    const packageQuantity = Math.max(1, item.package_quantity);
-    min = Math.min(min, Math.floor(presentations / packageQuantity));
-  }
-
-  return Number.isFinite(min) ? Math.max(0, min) : 0;
+    return {
+      packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
+      product: product
+        ? {
+            isActive: product.is_active,
+            deletedAt: product.deleted_at,
+            productType: (product.product_type as "unit" | "package") ?? "unit",
+            itemsPerPackage: product.items_per_package ?? 1,
+            stockSealedPackages: product.stock_sealed_packages,
+            stockLooseBaseUnits: product.stock_loose_base_units,
+          }
+        : null,
+    };
+  });
+  return computePackAvailableQuantityShared(components);
 }
 
 async function resolvePacksById(
@@ -171,6 +207,7 @@ async function resolvePacksById(
         items: items.map((item) => ({
           product_id: item.product_id,
           package_quantity: item.package_quantity,
+          unit_quantity: item.unit_quantity ?? 0,
         })),
         purchase_min_quantity: pack.purchase_min_quantity ?? 1,
         purchase_max_quantity: pack.purchase_max_quantity ?? 100,
@@ -183,15 +220,26 @@ async function resolvePacksById(
 }
 
 function validateProductPurchaseQuantities(
-  lines: { type: string; productId?: string; quantity?: number }[],
+  lines: {
+    type: string;
+    productId?: string;
+    packageQuantity?: number;
+    unitQuantity?: number;
+  }[],
   catalogProducts: PublicProductRow[],
 ): boolean {
   const productsById = new Map(catalogProducts.map((row) => [row.id, row]));
 
   for (const line of lines) {
-    if (line.type !== "product" || !line.productId || line.quantity == null) {
+    if (
+      line.type !== "product" ||
+      !line.productId ||
+      line.packageQuantity == null
+    ) {
       continue;
     }
+
+    if ((line.unitQuantity ?? 0) > 0) return false;
 
     const product = productsById.get(line.productId);
     if (!product) return false;
@@ -212,8 +260,8 @@ function validateProductPurchaseQuantities(
 
     if (
       !bounds.purchasable ||
-      line.quantity < bounds.minQuantity ||
-      line.quantity > bounds.maxQuantity
+      line.packageQuantity < bounds.minQuantity ||
+      line.packageQuantity > bounds.maxQuantity
     ) {
       return false;
     }
@@ -334,7 +382,8 @@ export async function previewGuestOrderCartService(
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
-        | "INVALID_PURCHASE_QUANTITY";
+        | "INVALID_PURCHASE_QUANTITY"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = previewGuestCartInputSchema.safeParse(raw);
@@ -397,7 +446,25 @@ export async function previewGuestOrderCartService(
     ]),
   ];
   const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
+
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
+
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
 
   const cartResult = buildOrderCartWithTotals({
     lines: parsed.data.lines,
@@ -449,8 +516,14 @@ export async function createGuestOrderService(
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
         | "OUT_OF_COVERAGE"
+        | "PICKUP_POINT_NOT_FOUND"
+        | "PICKUP_POINT_INACTIVE"
+        | "PICKUP_POINT_REQUIRED"
+        | "SHIPPING_FEE_MISMATCH"
+        | "ORDER_BELOW_MINIMUM"
         | "INSUFFICIENT_STOCK"
-        | "INVALID_PURCHASE_QUANTITY";
+        | "INVALID_PURCHASE_QUANTITY"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const scope = "createGuestOrderService";
@@ -458,15 +531,17 @@ export async function createGuestOrderService(
   if (!parsed.success) {
     logServerError(scope, {
       message: "VALIDATION",
-      issues: parsed.error.flatten(),
+      issueCount: parsed.error.issues.length,
     });
     return { ok: false, error: "VALIDATION" };
   }
 
   logServerInfo(scope, "start", {
     lineCount: parsed.data.lines.length,
-    district: parsed.data.fulfillment.deliveryAddress?.district ?? null,
-    mapPin: parsed.data.mapPin,
+    method: parsed.data.fulfillment.method,
+    hasDistrict: Boolean(parsed.data.fulfillment.deliveryAddress?.district),
+    hasMapPin: Boolean(parsed.data.mapPin),
+    pickupPointId: parsed.data.fulfillment.pickupPoint?.id,
   });
 
   const packsById = await resolvePacksById(config, parsed.data.lines);
@@ -489,7 +564,6 @@ export async function createGuestOrderService(
       message: "PRODUCT_NOT_FOUND",
       requested: productIds.length,
       found: products.length,
-      productIds,
     });
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
@@ -498,9 +572,7 @@ export async function createGuestOrderService(
     logServerError(scope, {
       message: "PRODUCT_NOT_FOUND",
       reason: "inactive_product",
-      inactiveIds: products
-        .filter((product) => !product.is_active)
-        .map((product) => product.id),
+      inactiveCount: products.filter((product) => !product.is_active).length,
     });
     return { ok: false, error: "PRODUCT_NOT_FOUND" };
   }
@@ -529,16 +601,145 @@ export async function createGuestOrderService(
     ]),
   ];
   const campaigns = await listWizardCampaignsByIdsRepo(config, campaignIds);
-  const bundlesById = await resolveBundlesById(config, parsed.data.lines);
+  const { bundlesById, customizationBoundsById } = await resolveBundlesById(
+    config,
+    parsed.data.lines,
+  );
 
-  const [zones, settings] = await Promise.all([
-    listActiveDeliveryZonesRepo(config),
-    getDeliverySettingsRepo(config),
-  ]);
+  for (const line of parsed.data.lines) {
+    if (line.type === "bundle" && !bundlesById.has(line.bundleId)) {
+      return { ok: false, error: "BUNDLE_NOT_FOUND" };
+    }
+  }
 
-  const deliveryResult = resolveCheckoutDeliveryFee(
-    parsed.data.fulfillment.method,
-    parsed.data.fulfillment.deliveryAddress?.district,
+  if (
+    !validateOrderLinesBundleCustomization(
+      parsed.data.lines,
+      customizationBoundsById,
+    )
+  ) {
+    logServerError(scope, {
+      message: "INVALID_BUNDLE_CUSTOMIZATION",
+    });
+    return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
+  }
+
+  const [zones, settings, points, courierDepartments, storefront] =
+    await Promise.all([
+      listActiveDeliveryZonesRepo(config),
+      getDeliverySettingsRepo(config),
+      listActivePickupPointsRepo(config),
+      listActiveCourierDepartmentsRepo(config),
+      getStorefrontSettingsService(config),
+    ]);
+
+  let fulfillmentToPersist = parsed.data.fulfillment;
+
+  if (parsed.data.fulfillment.method === "pickup_point") {
+    const pickupPointId = parsed.data.fulfillment.pickupPoint?.id;
+    if (!pickupPointId) {
+      logServerError(scope, { message: "PICKUP_POINT_REQUIRED" });
+      return { ok: false, error: "PICKUP_POINT_REQUIRED" };
+    }
+
+    const pointRow =
+      points.find((point) => point.id === pickupPointId) ??
+      (await getPickupPointByIdRepo(config, pickupPointId));
+
+    if (!pointRow) {
+      logServerError(scope, {
+        message: "PICKUP_POINT_NOT_FOUND",
+        pickupPointId,
+      });
+      return { ok: false, error: "PICKUP_POINT_NOT_FOUND" };
+    }
+
+    if (!pointRow.is_active) {
+      logServerError(scope, {
+        message: "PICKUP_POINT_INACTIVE",
+        pickupPointId,
+      });
+      return { ok: false, error: "PICKUP_POINT_INACTIVE" };
+    }
+
+    fulfillmentToPersist = {
+      method: "pickup_point",
+      pickupPoint: {
+        id: pointRow.id,
+        name: pointRow.name,
+        lat: Number(pointRow.lat),
+        lng: Number(pointRow.lng),
+        fee: Number(pointRow.fee),
+      },
+      notes: parsed.data.fulfillment.notes ?? null,
+    };
+  }
+
+  if (parsed.data.fulfillment.method === "courier") {
+    const courierInput = parsed.data.fulfillment.courier;
+    if (!courierInput) {
+      logServerError(scope, { message: "COURIER_REQUIRED" });
+      return { ok: false, error: "VALIDATION" };
+    }
+
+    const departmentId = courierInput.destination.departmentId;
+    const provinceSlug = courierInput.destination.provinceSlug;
+    const departmentRow =
+      courierDepartments.find((row) => row.id === departmentId) ??
+      (await getCourierDepartmentByIdRepo(config, departmentId));
+
+    if (!departmentRow || !departmentRow.is_active) {
+      logServerError(scope, {
+        message: "OUT_OF_COVERAGE",
+        reason: "courier_department_inactive",
+        departmentId,
+      });
+      return { ok: false, error: "OUT_OF_COVERAGE" };
+    }
+
+    const provinces = parseCourierProvinces(departmentRow.provinces);
+    const province = provinces.find(
+      (entry) =>
+        entry.enabled &&
+        normalizeProvinceSlug(entry.slug) ===
+          normalizeProvinceSlug(provinceSlug),
+    );
+
+    if (!province) {
+      logServerError(scope, {
+        message: "OUT_OF_COVERAGE",
+        reason: "courier_province_disabled",
+        departmentId,
+        provinceSlug,
+      });
+      return { ok: false, error: "OUT_OF_COVERAGE" };
+    }
+
+    fulfillmentToPersist = {
+      method: "courier",
+      courier: {
+        destination: {
+          departmentId: departmentRow.id,
+          departmentName: departmentRow.name,
+          provinceSlug: province.slug,
+          provinceName: province.name,
+        },
+        recipient: courierInput.recipient,
+      },
+      notes: parsed.data.fulfillment.notes ?? null,
+    };
+  }
+
+  const courierDepartmentSources = courierDepartments.map((row) => ({
+    id: row.id,
+    name: row.name,
+    isActive: row.is_active,
+    provinces: parseCourierProvinces(row.provinces),
+  }));
+
+  const deliveryResult = resolveCheckoutFulfillmentFee(
+    fulfillmentToPersist.method,
+    fulfillmentToPersist.deliveryAddress?.district,
     parsed.data.mapPin,
     zones.map((zone) => ({
       district: zone.district,
@@ -547,18 +748,51 @@ export async function createGuestOrderService(
     })),
     {
       pickupEnabled: settings?.pickup_enabled ?? storeFeatures.pickupEnabled,
+      pickupPointsEnabled: settings?.pickup_points_enabled ?? true,
       deliveryEnabled: settings?.delivery_enabled ?? true,
+      courierEnabled: settings?.courier_enabled ?? false,
       fallbackFee: Number(settings?.fallback_fee ?? 0),
     },
+    fulfillmentToPersist.pickupPoint?.id,
+    points.map((point) => ({
+      id: point.id,
+      fee: Number(point.fee),
+      isActive: point.is_active,
+    })),
+    fulfillmentToPersist.method === "courier"
+      ? fulfillmentToPersist.courier?.destination.departmentId
+      : undefined,
+    fulfillmentToPersist.method === "courier"
+      ? fulfillmentToPersist.courier?.destination.provinceSlug
+      : undefined,
+    courierDepartmentSources,
+  );
+
+  const resolvedFee = applyStorefrontShippingFee(
+    deliveryResult.fee,
+    toStorefrontSettingsSource(storefront),
+    fulfillmentToPersist.method,
   );
 
   if (!deliveryResult.covered) {
     logServerError(scope, {
       message: "OUT_OF_COVERAGE",
-      district: parsed.data.fulfillment.deliveryAddress?.district ?? null,
-      mapPin: parsed.data.mapPin,
+      method: fulfillmentToPersist.method,
+      hasDistrict: Boolean(fulfillmentToPersist.deliveryAddress?.district),
+      hasMapPin: Boolean(parsed.data.mapPin),
+      pickupPointId: fulfillmentToPersist.pickupPoint?.id,
     });
     return { ok: false, error: "OUT_OF_COVERAGE" };
+  }
+
+  if (parsed.data.shippingTotal !== resolvedFee) {
+    logServerError(scope, {
+      message: "SHIPPING_FEE_MISMATCH",
+      clientFee: parsed.data.shippingTotal,
+      serverFee: resolvedFee,
+      baseFee: deliveryResult.fee,
+    });
+    return { ok: false, error: "SHIPPING_FEE_MISMATCH" };
   }
 
   const cartResult = buildOrderCartWithTotals({
@@ -568,7 +802,7 @@ export async function createGuestOrderService(
     bundlesById,
     packsById,
     discountTotal: parsed.data.discountTotal,
-    shippingTotal: deliveryResult.fee,
+    shippingTotal: resolvedFee,
   });
 
   if (!cartResult.ok) {
@@ -588,6 +822,19 @@ export async function createGuestOrderService(
     return { ok: false, error: "BUNDLE_NOT_FOUND" };
   }
 
+  const minOrderCheck = assertMinOrderSubtotal(
+    cartResult.totals.subtotal,
+    storefront.minOrderSubtotal,
+  );
+  if (!minOrderCheck.ok) {
+    logServerError(scope, {
+      message: "ORDER_BELOW_MINIMUM",
+      subtotal: cartResult.totals.subtotal,
+      minOrderSubtotal: minOrderCheck.minOrderSubtotal,
+    });
+    return { ok: false, error: "ORDER_BELOW_MINIMUM" };
+  }
+
   const stockCheck = await checkCartStockService(config, {
     lines: cartResult.shoppingCart.lines,
   });
@@ -601,7 +848,7 @@ export async function createGuestOrderService(
   if (!stockCheck.data.ok) {
     logServerError(scope, {
       message: "INSUFFICIENT_STOCK",
-      shortages: stockCheck.data.shortages,
+      shortageCount: stockCheck.data.shortages.length,
     });
     return { ok: false, error: "INSUFFICIENT_STOCK" };
   }
@@ -609,20 +856,56 @@ export async function createGuestOrderService(
   const { shoppingCart, totals } = cartResult;
   const inserted = await insertGuestOrderRepo(config, {
     contact: asJson(parsed.data.contact),
-    fulfillment: asJson(parsed.data.fulfillment),
+    fulfillment: asJson(fulfillmentToPersist),
     shoppingCart: asJson(shoppingCart),
     subtotal: totals.subtotal,
     discountTotal: totals.discountTotal,
     shippingTotal: totals.shippingTotal,
     total: totals.total,
     pricingSnapshot: asJson(totals),
-    metadata: asJson({ mapPin: parsed.data.mapPin }),
+    metadata: asJson(
+      fulfillmentToPersist.method === "delivery" && parsed.data.mapPin
+        ? { mapPin: parsed.data.mapPin }
+        : {},
+    ),
   });
 
   logServerInfo(scope, "created", {
     orderId: inserted.id,
     orderNumber: inserted.orderNumber,
     total: totals.total,
+  });
+
+  const settingsResult = await getPublicBusinessSettingsService(config);
+  const adminEmail =
+    settingsResult.ok && settingsResult.data.email
+      ? settingsResult.data.email
+      : "";
+
+  await scheduleOrderCreatedNotification({
+    source: "ecommerce",
+    orderId: inserted.id,
+    orderNumber: inserted.orderNumber,
+    total: totals.total,
+    currencyCode: "PEN",
+    subtotal: totals.subtotal,
+    shippingTotal: totals.shippingTotal,
+    discountTotal: totals.discountTotal,
+    statusLabel: "Pendiente de pago",
+    contact: {
+      name: parsed.data.contact.name,
+      lastName: parsed.data.contact.lastName,
+      email: parsed.data.contact.email,
+      phone: parsed.data.contact.phone,
+    },
+    lines: mapCartLinesToNotifyLines(shoppingCart.lines),
+    fulfillment: mapFulfillmentToNotify({
+      method: fulfillmentToPersist.method,
+      deliveryAddress: fulfillmentToPersist.deliveryAddress,
+      pickupPoint: fulfillmentToPersist.pickupPoint,
+      courier: fulfillmentToPersist.courier,
+    }),
+    adminEmail,
   });
 
   return {
@@ -639,7 +922,8 @@ function snapshotLinesToOrderInput(
       return {
         type: "product" as const,
         productId: line.productId,
-        quantity: line.quantity,
+        packageQuantity: line.packageQuantity,
+        unitQuantity: 0,
       };
     }
     if (line.type === "pack") {
@@ -674,7 +958,10 @@ function detectSnapshotPriceDrift(
 
     if (local.type === "product" && server.type === "product") {
       if (
+        local.packagePrice !== server.packagePrice ||
         local.unitPrice !== server.unitPrice ||
+        local.packageQuantity !== server.packageQuantity ||
+        local.unitQuantity !== server.unitQuantity ||
         local.lineTotal !== server.lineTotal
       ) {
         return true;
@@ -722,7 +1009,8 @@ export async function validateGuestCheckoutCartService(
         | "BUNDLE_NOT_FOUND"
         | "PACK_NOT_FOUND"
         | "DUPLICATE_PRODUCT_IN_BUNDLE"
-        | "INVALID_PURCHASE_QUANTITY";
+        | "INVALID_PURCHASE_QUANTITY"
+        | "INVALID_BUNDLE_CUSTOMIZATION";
     }
 > {
   const parsed = validateGuestCheckoutCartInputSchema.safeParse(raw);

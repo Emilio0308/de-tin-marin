@@ -4,6 +4,7 @@ export type ProductOption = {
   id: string;
   name: string;
   packageNetPrice: number;
+  unitNetPrice: number;
 };
 
 export type CampaignOption = {
@@ -18,6 +19,7 @@ export type CampaignOption = {
 export type PackFormItemValues = {
   productId: string;
   packageQuantity: number;
+  unitQuantity: number;
 };
 
 export type PackFormValues = {
@@ -34,9 +36,13 @@ export type PackFormValues = {
   items: PackFormItemValues[];
 };
 
+export type PackImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type PackFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionGeneral: string;
   sectionImage: string;
@@ -51,16 +57,24 @@ export type PackFormLabels = {
   slugPlaceholder: string;
   description: string;
   descriptionPlaceholder: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
   imageAlt: string;
   imageEmptyTitle: string;
   imageEmptyHint: string;
+  imageFileInvalid: string;
   productSelectPlaceholder: string;
+  includeInactiveProducts: string;
+  includeInactiveProductsHint: string;
   addProduct: string;
   emptyItems: string;
   decreasePackages: string;
   increasePackages: string;
+  decreaseUnits: string;
+  increaseUnits: string;
+  packagesLabel: string;
+  unitsLabel: string;
   removeProduct: string;
   referencePrice: string;
   normalPrice: string;
@@ -76,14 +90,24 @@ export type PackFormLabels = {
   saving: string;
   formatCompositionCount: (count: number) => string;
   formatPackagePrice: (price: string) => string;
+  formatUnitPrice: (price: string) => string;
 };
 
 export type PackFormProps = {
   initial?: PackFormDTO;
   products: ProductOption[];
   campaigns: CampaignOption[];
+  backHref: string;
   labels: PackFormLabels;
-  onSubmit: (values: PackFormValues) => Promise<void>;
+  includeInactiveProducts: boolean;
+  onIncludeInactiveProductsChange: (value: boolean) => void;
+  onEnsureProductOption: (option: ProductOption) => void;
+  productStatus: "all" | "active" | "inactive";
+  /** `pendingImage` is set only when the user picked a new file; upload happens in the container on save. */
+  onSubmit: (
+    values: PackFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

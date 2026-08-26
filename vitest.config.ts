@@ -16,6 +16,9 @@ export default defineConfig({
     projects: [
       {
         esbuild: jsxAutomatic,
+        resolve: {
+          alias: { "server-only": serverOnlyStub },
+        },
         test: {
           name: "packages",
           environment: "node",
@@ -30,6 +33,9 @@ export default defineConfig({
         test: {
           name: "ecommerce",
           environment: "jsdom",
+          environmentOptions: {
+            jsdom: { url: "http://localhost" },
+          },
           setupFiles: ["./vitest.setup.ts"],
           include: ["apps/ecommerce/src/**/*.test.{ts,tsx}"],
         },
@@ -42,6 +48,9 @@ export default defineConfig({
         test: {
           name: "admin",
           environment: "jsdom",
+          environmentOptions: {
+            jsdom: { url: "http://localhost" },
+          },
           setupFiles: ["./vitest.setup.ts"],
           include: ["apps/admin/src/**/*.test.{ts,tsx}"],
         },

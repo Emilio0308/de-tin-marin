@@ -5,16 +5,25 @@ import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createBundleAction } from "@/modules/catalog/actions/create-bundle";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
 import { listSurpriseContainersAction } from "@/modules/catalog/actions/list-surprise-containers";
 import { updateBundleAction } from "@/modules/catalog/actions/update-bundle";
+import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
+import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
+import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import { BundleForm } from "./bundle-form";
+import {
+  mergeBundleProductOptions,
+  resolveBundleImageUrlForPersist,
+} from "./bundle-form.helpers";
 import type {
   BundleFormContainerProps,
   BundleFormLabels,
   BundleFormValues,
+  BundleImageUploadResult,
   ProductOption,
 } from "./bundle-form.types";
 
@@ -31,12 +40,18 @@ function bundleErrorMessage(
       return t("duplicateProduct");
     case "CONTAINER_NOT_FOUND":
       return t("containerNotFound");
+    case "ITEMS_OUT_OF_CUSTOMIZATION_RANGE":
+      return t("itemsOutOfCustomizationRange");
     case "NOT_FOUND":
       return t("notFound");
     case "UNAUTHORIZED":
       return t("unauthorized");
     case "FORBIDDEN":
       return t("forbidden");
+    case "UNEXPECTED":
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("unexpected");
     default:
       return result.message
         ? t("defaultWithMessage", { message: result.message })
@@ -54,17 +69,13 @@ export function BundleFormContainer({
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includeInactiveProducts, setIncludeInactiveProducts] = useState(false);
+  const [pickedProducts, setPickedProducts] = useState<ProductOption[]>([]);
 
-  const productsQuery = useQuery({
-    queryKey: queryKeys.catalog.products(),
-    queryFn: async () => {
-      const result = await listProductsAction();
-      if (!result.ok) {
-        throw new Error("message" in result ? result.message : result.error);
-      }
-      return result.data;
-    },
-  });
+  const productStatus =
+    SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH && includeInactiveProducts
+      ? "all"
+      : "active";
 
   const containersQuery = useQuery({
     queryKey: queryKeys.catalog.surpriseContainers(),
@@ -82,6 +93,7 @@ export function BundleFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       sectionGeneral: t("sectionGeneral"),
       sectionImage: t("sectionImage"),
@@ -91,12 +103,16 @@ export function BundleFormContainer({
       namePlaceholder: t("namePlaceholder"),
       description: t("description"),
       descriptionPlaceholder: t("descriptionPlaceholder"),
-      imageUrl: t("imageUrl"),
-      imageUrlPlaceholder: t("imageUrlPlaceholder"),
+      imageUpload: t("imageUpload"),
+      imageUploading: t("imageUploading"),
+      imageClear: t("imageClear"),
       imageAlt: t("imageAlt"),
       imageEmptyTitle: t("imageEmptyTitle"),
       imageEmptyHint: t("imageEmptyHint"),
+      imageFileInvalid: t("imageFileInvalid"),
       productSelectPlaceholder: t("productSelectPlaceholder"),
+      includeInactiveProducts: t("includeInactiveProducts"),
+      includeInactiveProductsHint: t("includeInactiveProductsHint"),
       addProduct: t("addProduct"),
       emptyItems: t("emptyItems"),
       decreaseUnits: t("decreaseUnits"),
@@ -107,6 +123,9 @@ export function BundleFormContainer({
       container: t("container"),
       containerPlaceholder: t("containerPlaceholder"),
       persons: t("persons"),
+      customizationMin: t("customizationMin"),
+      customizationMax: t("customizationMax"),
+      customizationHint: t("customizationHint"),
       subtotalLabel: t("subtotalLabel"),
       containerLabel: t("containerLabel"),
       totalLabel: t("totalLabel"),
@@ -119,17 +138,94 @@ export function BundleFormContainer({
     [t, mode],
   );
 
-  async function handleSubmit(values: BundleFormValues) {
+  const products = useMemo(
+    () => mergeBundleProductOptions(pickedProducts, initial),
+    [pickedProducts, initial],
+  );
+
+  function handleEnsureProductOption(option: ProductOption) {
+    setPickedProducts((current) => {
+      if (current.some((product) => product.id === option.id)) return current;
+      return [...current, option];
+    });
+  }
+
+  async function uploadBundleImage(
+    file: File,
+  ): Promise<BundleImageUploadResult> {
+    const presign = await createCatalogImageUploadUrlAction({
+      folder: "bundles",
+      contentType: file.type as CatalogImageContentType,
+      contentLength: file.size,
+      fileName: file.name,
+    });
+
+    if (!presign.ok) {
+      if (presign.error === "UNAUTHORIZED") {
+        return { ok: false, error: tErrors("unauthorized") };
+      }
+      if (presign.error === "FORBIDDEN") {
+        return { ok: false, error: tErrors("forbidden") };
+      }
+      if (presign.error === "VALIDATION") {
+        return { ok: false, error: t("imageFileInvalid") };
+      }
+      return {
+        ok: false,
+        error:
+          "message" in presign && presign.message
+            ? t("imageUploadFailedWithMessage", { message: presign.message })
+            : t("imageUploadFailed"),
+      };
+    }
+
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
+    }
+
+    return { ok: true, publicUrl: presign.data.publicUrl };
+  }
+
+  async function handleSubmit(
+    values: BundleFormValues,
+    pendingImage: File | null,
+  ) {
     setSubmitting(true);
     setError(null);
 
     try {
+      let uploadedPublicUrl: string | null = null;
+
+      if (pendingImage) {
+        const upload = await uploadBundleImage(pendingImage);
+        if (!upload.ok) {
+          setError(upload.error);
+          return;
+        }
+        uploadedPublicUrl = upload.publicUrl;
+      }
+
+      const imageUrl = resolveBundleImageUrlForPersist(
+        values.imageUrl,
+        pendingImage,
+        uploadedPublicUrl,
+      );
+
+      const base = {
+        ...values,
+        imageUrl,
+      };
+
       const payload =
         mode === "create"
-          ? values
+          ? base
           : {
               id: initial?.id,
-              ...values,
+              ...base,
             };
 
       const result =
@@ -147,8 +243,11 @@ export function BundleFormContainer({
       startTransition(() => {
         router.push("/bundles");
       });
-    } catch {
-      setError(tErrors("unexpected"));
+    } catch (error) {
+      logClientError("BundleFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -158,38 +257,38 @@ export function BundleFormContainer({
     router.push("/bundles");
   }
 
+  const containersLoading = containersQuery.isLoading;
+
   return (
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-40 lg:p-8 lg:pb-8">
-      {productsQuery.isLoading || containersQuery.isLoading ? (
+      {containersLoading ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
             {t("loadingProducts")}
           </p>
         </div>
-      ) : productsQuery.isError ||
-        !productsQuery.data?.length ||
-        containersQuery.isError ||
-        !containersQuery.data?.length ? (
+      ) : containersQuery.isError || !containersQuery.data?.length ? (
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl mx-auto w-full max-w-5xl border p-12 text-center">
           <p className="font-body text-body-md text-on-surface-variant">
-            {!productsQuery.data?.length ? t("noProducts") : t("noContainers")}
+            {t("noContainers")}
           </p>
         </div>
       ) : (
         <BundleForm
           initial={initial}
-          products={productsQuery.data.map((product): ProductOption => ({
-            id: product.id,
-            name: product.name,
-            unitNetPrice: product.unitNetPrice,
-          }))}
+          products={products}
           containers={containersQuery.data.map((container) => ({
             id: container.id,
             name: container.name,
             sku: container.sku,
             netPrice: container.netPrice,
           }))}
+          backHref="/bundles"
           labels={labels}
+          includeInactiveProducts={includeInactiveProducts}
+          onIncludeInactiveProductsChange={setIncludeInactiveProducts}
+          onEnsureProductOption={handleEnsureProductOption}
+          productStatus={productStatus}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           submitting={submitting}

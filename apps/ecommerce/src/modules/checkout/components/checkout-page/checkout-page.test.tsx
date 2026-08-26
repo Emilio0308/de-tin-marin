@@ -20,10 +20,31 @@ vi.mock("../delivery-map/delivery-map.dynamic", () => ({
 }));
 
 const defaultLabels: CheckoutPageLabels = {
-  title: "Checkout",
+  title: "Datos de entrega",
+  subtitle: "Cuéntanos a dónde enviamos tu pedido en Piura.",
   backToCart: "Volver al carrito",
+  summaryTitle: "Tu pedido",
+  secureNote: "Revisamos stock y cobertura antes de confirmar.",
   contactTitle: "Datos de contacto",
+  fulfillmentTitle: "Método de entrega",
+  fulfillmentLoading: "Cargando métodos de entrega…",
+  fulfillmentDelivery: "Delivery",
+  fulfillmentPickupPoint: "Punto de recojo",
+  fulfillmentCourier: "Envío por agencia",
+  courierTitle: "Envío por agencia",
+  courierDepartment: "Departamento",
+  courierDepartmentPlaceholder: "Selecciona departamento",
+  courierProvince: "Provincia",
+  courierProvincePlaceholder: "Selecciona provincia",
+  courierDni: "DNI de quien retira",
+  courierFullName: "Nombre completo de quien retira",
+  courierAgencyAddress: "Dirección de la agencia",
+  courierFeeNote: "El flete se paga en la agencia según peso y destino.",
   addressTitle: "Dirección de entrega",
+  pickupPointTitle: "Punto de recojo",
+  pickupPointPlaceholder: "Selecciona un punto de recojo",
+  pickupMapHint: "Ubicación del punto seleccionado.",
+  mapSectionTitle: "Ubicación",
   name: "Nombre",
   lastName: "Apellido",
   phone: "Teléfono",
@@ -38,9 +59,17 @@ const defaultLabels: CheckoutPageLabels = {
   requiredHint: "Campo obligatorio",
   mapTitle: "Ubicación en el mapa",
   mapHint: "Arrastra el pin o haz clic para indicar tu ubicación en Piura.",
+  mapSearchLabel: "Buscar ubicación",
+  mapSearchPlaceholder: "Busca una avenida, mall o referencia en Piura…",
+  mapSearchNoResults: "No encontramos lugares en Piura.",
+  phoneHint: "9 dígitos, sin espacios ni letras",
   subtotal: "Subtotal",
   shipping: "Envío",
+  shippingFree: "Gratis",
   shippingPending: "Calculando…",
+  shippingPromoNote: "Envío gratis por promoción",
+  announcementLabel: "Aviso importante",
+  minOrderHint: "Pedido mínimo: S/ 50.00",
   total: "Total",
   submit: "Confirmar pedido",
   submitting: "Creando pedido…",
@@ -49,10 +78,26 @@ const defaultLabels: CheckoutPageLabels = {
   stockChecking: "Verificando stock…",
   emptyCart: "Tu carrito está vacío.",
   validationSummary: "Revisa los campos marcados en rojo antes de continuar.",
+  stepsLabel: "Progreso del pedido",
+  stepCart: "Carrito",
+  stepCheckout: "Entrega",
+  stepDone: "Listo",
   validation: {
     required: "Este campo es obligatorio",
     invalidEmail: "Ingresa un correo electrónico válido",
+    invalidName: "Solo letras (puedes usar tildes, espacios o guion)",
+    invalidPhone: "Ingresa un celular de 9 dígitos que empiece con 9",
+    invalidDni: "Ingresa un DNI válido de 8 dígitos",
+    tooShort: "Escribe un poco más de detalle",
   },
+};
+
+const defaultCourierForm: CheckoutPageProps["courierForm"] = {
+  courierDepartmentId: "",
+  courierProvinceSlug: "",
+  courierDni: "",
+  courierFullName: "",
+  courierAgencyAddress: "",
 };
 
 const defaultForm: CheckoutPageProps["form"] = {
@@ -72,24 +117,42 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
   render(
     <CheckoutPage
       form={defaultForm}
+      courierForm={defaultCourierForm}
       fieldErrors={{}}
+      courierFieldErrors={{}}
       showValidationSummary={false}
+      fulfillmentMethod="delivery"
+      showFulfillmentSelector={false}
+      isFulfillmentOptionsPending={false}
+      showPickupPointOption={false}
+      showCourierOption={false}
+      pickupPointId=""
+      pickupPointError={null}
+      pickupPoints={[]}
+      courierDepartments={[]}
       districts={[{ id: "1", district: "Piura", fee: 8 }]}
       mapPin={{ lat: -5.1783, lng: -80.6328 }}
       subtotal={89.9}
       shippingTotal={8}
+      shippingIsPromotional={false}
+      announcementMessage={null}
+      minOrderSubtotal={0}
       total={97.9}
       covered
       isDeliveryPending={false}
       isSubmitting={false}
       errorMessage={null}
-      stockBlocked={false}
       isStockPending={false}
       stockWarning={false}
       stockMessages={[]}
       labels={defaultLabels}
       onChange={vi.fn()}
+      onCourierChange={vi.fn()}
       onFieldBlur={vi.fn()}
+      onCourierFieldBlur={vi.fn()}
+      onFulfillmentMethodChange={vi.fn()}
+      onPickupPointChange={vi.fn()}
+      onPickupPointBlur={vi.fn()}
       onMapPinChange={vi.fn()}
       onSubmit={onSubmit}
       {...overrides}
@@ -103,7 +166,7 @@ describe("CheckoutPage", () => {
     renderCheckout();
 
     expect(
-      screen.getByRole("heading", { name: "Checkout" }),
+      screen.getByRole("heading", { name: "Datos de entrega" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Datos de contacto")).toBeInTheDocument();
     expect(screen.getByText("Dirección de entrega")).toBeInTheDocument();
@@ -174,5 +237,99 @@ describe("CheckoutPage", () => {
     });
     fireEvent.click(submitButtons[0]!);
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("muestra aviso y nota de envío gratis por promoción", () => {
+    renderCheckout({
+      shippingTotal: 0,
+      shippingIsPromotional: true,
+      announcementMessage: "Horario especial esta semana",
+      minOrderSubtotal: 50,
+      total: 89.9,
+    });
+
+    expect(screen.getByText("Aviso importante")).toBeInTheDocument();
+    expect(
+      screen.getByText("Horario especial esta semana"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Envío gratis por promoción").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Pedido mínimo:/).length).toBeGreaterThan(0);
+  });
+
+  it("mantiene el botón confirmar habilitado aunque no haya cobertura", () => {
+    renderCheckout({ covered: false, isDeliveryPending: false });
+
+    const submitButtons = screen.getAllByRole("button", {
+      name: "Confirmar pedido",
+    });
+    for (const button of submitButtons) {
+      expect(button).toBeEnabled();
+    }
+  });
+
+  it("deshabilita confirmar solo mientras envía", () => {
+    renderCheckout({ isSubmitting: true });
+
+    const submitButtons = screen.getAllByRole("button", {
+      name: "Creando pedido…",
+    });
+    for (const button of submitButtons) {
+      expect(button).toBeDisabled();
+    }
+  });
+
+  it("muestra selector de método cuando hay puntos de recojo", () => {
+    renderCheckout({
+      showFulfillmentSelector: true,
+      showPickupPointOption: true,
+      pickupPoints: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Real Plaza",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+      ],
+    });
+
+    expect(screen.getByText("Método de entrega")).toBeInTheDocument();
+    expect(screen.getByText("Punto de recojo")).toBeInTheDocument();
+  });
+
+  it("muestra skeleton de métodos mientras cargan opciones", () => {
+    renderCheckout({
+      showFulfillmentSelector: true,
+      isFulfillmentOptionsPending: true,
+    });
+
+    expect(screen.getByText("Método de entrega")).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Cargando métodos de entrega…" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Delivery")).not.toBeInTheDocument();
+  });
+
+  it("muestra selector de punto en rama pickup_point", () => {
+    renderCheckout({
+      fulfillmentMethod: "pickup_point",
+      showPickupPointOption: true,
+      pickupPoints: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Real Plaza",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: /Punto de recojo/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Dirección de entrega")).not.toBeInTheDocument();
   });
 });

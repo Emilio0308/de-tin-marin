@@ -11,6 +11,10 @@ vi.mock(
   }),
 );
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 const baseOrder = {
   orderNumber: "TM-20250707-0001",
   status: "pending_payment",
@@ -39,7 +43,9 @@ const baseOrder = {
         productId: "00000000-0000-0000-0000-000000000001",
         sku: "SKU-1",
         name: "Gomita",
-        quantity: 1,
+        packageQuantity: 1,
+        unitQuantity: 0,
+        packagePrice: 10,
         unitPrice: 10,
         lineTotal: 10,
       },
@@ -63,10 +69,19 @@ const defaultLabels = {
     paymentStatus: "Pago",
     deliveryTitle: "Entrega",
     pickupTitle: "Recojo",
+    pickupPointTitle: "Punto de recojo",
+    courierTitle: "Envío por agencia",
+    pickupInStoreNote: "Recojo en tienda",
     bundleBadge: "Sorpresa",
     packBadge: "Combo",
     bundleComponents: "dulces",
     packComponents: "productos",
+    progressTitle: "Seguimiento del pedido",
+    orderPlaced: "Pedido registrado",
+    orderNumber: "Número de pedido",
+    dateLabel: "Creado",
+    statusCurrent: "Estado actual",
+    paymentPendingHint: "Te avisaremos cuando confirmemos tu pago.",
     formatBundlePersons: (count: number) => `Para ${count} personas`,
     formatStatus: () => "Pendiente de pago",
     formatPaymentStatus: () => "Pendiente",
@@ -77,7 +92,7 @@ const defaultLabels = {
     transferLabel: "Transferencia bancaria",
     yape: "Yape al número 999 888 777 a nombre de De Tin Marín.",
     transfer:
-      "Transferencia BCP — cuenta 191-12345678-0-12 (De Tin Marín SAC).",
+      "Transferencia BCP — cuenta 191-12345678-0-12 · CCI 00219100123456789012 (De Tin Marín SAC).",
     note: "Envía el voucher",
   },
 };

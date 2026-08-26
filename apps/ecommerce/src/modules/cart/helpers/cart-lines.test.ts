@@ -38,7 +38,7 @@ const bounds = {
 describe("cart-lines purchase limits", () => {
   it("createProductCartLine usa purchaseMinQuantity por defecto", () => {
     const line = createProductCartLine(baseProduct);
-    expect(line.quantity).toBe(10);
+    expect(line.packageQuantity).toBe(10);
     expect(line.lineTotal).toBe(50);
   });
 
@@ -51,7 +51,9 @@ describe("cart-lines purchase limits", () => {
           productId: "p1",
           sku: "SKU-1",
           name: "Producto 1",
-          quantity: 45,
+          packageQuantity: 45,
+          unitQuantity: 0,
+          packagePrice: 5,
           unitPrice: 5,
           lineTotal: 225,
         },
@@ -65,7 +67,9 @@ describe("cart-lines purchase limits", () => {
         productId: "p1",
         sku: "SKU-1",
         name: "Producto 1",
-        quantity: 10,
+        packageQuantity: 10,
+        unitQuantity: 0,
+        packagePrice: 5,
         unitPrice: 5,
         lineTotal: 50,
       },
@@ -74,7 +78,7 @@ describe("cart-lines purchase limits", () => {
 
     expect(next).toHaveLength(1);
     if (next[0]?.line.type === "product") {
-      expect(next[0].line.quantity).toBe(50);
+      expect(next[0].line.packageQuantity).toBe(50);
       expect(next[0].line.lineTotal).toBe(250);
     }
   });
@@ -88,7 +92,9 @@ describe("cart-lines purchase limits", () => {
           productId: "p1",
           sku: "SKU-1",
           name: "Producto 1",
-          quantity: 20,
+          packageQuantity: 20,
+          unitQuantity: 0,
+          packagePrice: 5,
           unitPrice: 5,
           lineTotal: 100,
         },
@@ -97,12 +103,12 @@ describe("cart-lines purchase limits", () => {
 
     const increased = updateStoredProductQuantity(lines, "line-1", 80, bounds);
     if (increased[0]?.line.type === "product") {
-      expect(increased[0].line.quantity).toBe(50);
+      expect(increased[0].line.packageQuantity).toBe(50);
     }
 
     const decreased = updateStoredProductQuantity(lines, "line-1", 5, bounds);
     if (decreased[0]?.line.type === "product") {
-      expect(decreased[0].line.quantity).toBe(10);
+      expect(decreased[0].line.packageQuantity).toBe(10);
     }
   });
 
@@ -161,7 +167,9 @@ describe("applyServerCartPricing", () => {
           productId: "p1",
           sku: "SKU-1",
           name: "Producto 1",
-          quantity: 10,
+          packageQuantity: 10,
+          unitQuantity: 0,
+          packagePrice: 5,
           unitPrice: 5,
           lineTotal: 50,
         },
@@ -174,7 +182,9 @@ describe("applyServerCartPricing", () => {
         productId: "p1",
         sku: "SKU-1",
         name: "Producto 1",
-        quantity: 10,
+        packageQuantity: 10,
+        unitQuantity: 0,
+        packagePrice: 6,
         unitPrice: 6,
         lineTotal: 60,
       },
@@ -185,6 +195,7 @@ describe("applyServerCartPricing", () => {
     const synced = applyServerCartPricing(stored, server);
     expect(synced[0]?.line.type).toBe("product");
     if (synced[0]?.line.type === "product") {
+      expect(synced[0].line.packagePrice).toBe(6);
       expect(synced[0].line.unitPrice).toBe(6);
       expect(synced[0].line.lineTotal).toBe(60);
     }
@@ -199,7 +210,9 @@ describe("applyServerCartPricing", () => {
           productId: "p1",
           sku: "SKU-1",
           name: "Producto 1",
-          quantity: 2,
+          packageQuantity: 2,
+          unitQuantity: 0,
+          packagePrice: 5,
           unitPrice: 5,
           lineTotal: 10,
         },
@@ -212,7 +225,9 @@ describe("applyServerCartPricing", () => {
         productId: "p1",
         sku: "SKU-1",
         name: "Producto 1",
-        quantity: 2,
+        packageQuantity: 2,
+        unitQuantity: 0,
+        packagePrice: null as unknown as number,
         unitPrice: null as unknown as number,
         lineTotal: null as unknown as number,
       },
@@ -234,7 +249,9 @@ describe("sanitizeStoredCartLine", () => {
         productId: "p1",
         sku: "SKU-1",
         name: "Producto 1",
-        quantity: 3,
+        packageQuantity: 3,
+        unitQuantity: 0,
+        packagePrice: null as unknown as number,
         unitPrice: null as unknown as number,
         lineTotal: null as unknown as number,
       },

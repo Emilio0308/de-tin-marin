@@ -2,11 +2,20 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   ABOUT_BRAND_CONTENT,
-  ABOUT_CONTACT_LINKS,
-  ABOUT_EMAIL_HREF,
-  ABOUT_WHATSAPP_HREF,
+  ABOUT_FACEBOOK_HREF,
+  ABOUT_TIKTOK_HREF,
+  type AboutContactLinks,
 } from "@/modules/about/data/about.data";
 import { AboutPage } from "./about-page";
+
+const contact: AboutContactLinks = {
+  whatsappHref: "https://wa.me/51980966238",
+  whatsappDisplay: "+51 980 966 238",
+  emailHref: "mailto:detinmarindulcesyconfiteria@gmail.com",
+  email: "detinmarindulcesyconfiteria@gmail.com",
+  facebookHref: ABOUT_FACEBOOK_HREF,
+  tiktokHref: ABOUT_TIKTOK_HREF,
+};
 
 vi.mock(
   "@/modules/home/components/storefront-layout/storefront-layout",
@@ -46,9 +55,7 @@ vi.mock("next-intl", () => ({
 
 describe("AboutPage", () => {
   it("renderiza historia, misión, visión y CTA de contacto", () => {
-    render(
-      <AboutPage content={ABOUT_BRAND_CONTENT} contact={ABOUT_CONTACT_LINKS} />,
-    );
+    render(<AboutPage content={ABOUT_BRAND_CONTENT} contact={contact} />);
 
     expect(
       screen.getByRole("heading", { name: "Nuestra Historia" }),
@@ -69,10 +76,32 @@ describe("AboutPage", () => {
     const whatsapp = screen.getByRole("link", {
       name: "Escríbenos por WhatsApp",
     });
-    expect(whatsapp).toHaveAttribute("href", ABOUT_WHATSAPP_HREF);
+    expect(whatsapp).toHaveAttribute("href", contact.whatsappHref);
     expect(whatsapp).toHaveAttribute("target", "_blank");
 
     const email = screen.getByRole("link", { name: "Gmail" });
-    expect(email).toHaveAttribute("href", ABOUT_EMAIL_HREF);
+    expect(email).toHaveAttribute("href", contact.emailHref);
+
+    expect(
+      screen.getByRole("img", {
+        name: "Selección de dulces artesanales de colores",
+      }),
+    ).toHaveAttribute("src", ABOUT_BRAND_CONTENT.storyImageUrl);
+  });
+
+  it("muestra la URL personalizada de Nuestra Historia", () => {
+    const customUrl = "https://cdn.example.com/nosotros.jpg";
+    render(
+      <AboutPage
+        content={{ ...ABOUT_BRAND_CONTENT, storyImageUrl: customUrl }}
+        contact={contact}
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", {
+        name: "Selección de dulces artesanales de colores",
+      }),
+    ).toHaveAttribute("src", customUrl);
   });
 });

@@ -1,17 +1,10 @@
 import type { OrderListItem } from "@de-tin-marin/validations/order";
-import type { ProductListItem } from "@de-tin-marin/validations/product";
+import type { DashboardLowStockAlert } from "@/modules/dashboard/services/dashboard-summary.service";
 import type {
   DashboardAlertItem,
   DashboardRecentOrder,
   DashboardStatCard,
 } from "./dashboard-page.types";
-
-const PENDING_ORDER_STATUSES = new Set([
-  "pending_payment",
-  "paid",
-  "preparing",
-  "ready",
-]);
 
 export type DashboardStatLabels = {
   totalProducts: string;
@@ -55,11 +48,6 @@ export function buildDashboardStats(input: {
   ];
 }
 
-export function countPendingOrders(orders: OrderListItem[]): number {
-  return orders.filter((order) => PENDING_ORDER_STATUSES.has(order.status))
-    .length;
-}
-
 export function mapRecentOrders(
   orders: OrderListItem[],
   labels: {
@@ -68,25 +56,18 @@ export function mapRecentOrders(
     timeAgo: (createdAt: string) => string;
   },
 ): DashboardRecentOrder[] {
-  return [...orders]
-    .sort(
-      (left, right) =>
-        new Date(right.createdAt).getTime() -
-        new Date(left.createdAt).getTime(),
-    )
-    .slice(0, 5)
-    .map((order) => ({
-      id: order.id,
-      orderId: order.orderNumber,
-      customer: order.customerName || "—",
-      lineSummary: labels.lineSummary(order.lineCount, order.total),
-      amount: `S/ ${order.total.toFixed(2)}`,
-      timeAgo: labels.timeAgo(order.createdAt),
-      statusLabel:
-        labels.statusLabels[order.status] ?? order.status.replaceAll("_", " "),
-      statusVariant: resolveStatusVariant(order.status),
-      href: `/orders/${order.id}`,
-    }));
+  return orders.slice(0, 5).map((order) => ({
+    id: order.id,
+    orderId: order.orderNumber,
+    customer: order.customerName || "—",
+    lineSummary: labels.lineSummary(order.lineCount, order.total),
+    amount: `S/ ${order.total.toFixed(2)}`,
+    timeAgo: labels.timeAgo(order.createdAt),
+    statusLabel:
+      labels.statusLabels[order.status] ?? order.status.replaceAll("_", " "),
+    statusVariant: resolveStatusVariant(order.status),
+    href: `/orders/${order.id}`,
+  }));
 }
 
 function resolveStatusVariant(
@@ -99,23 +80,17 @@ function resolveStatusVariant(
 }
 
 export function buildLowStockAlerts(
-  products: ProductListItem[],
+  alerts: DashboardLowStockAlert[],
   labels: {
     lowStock: (name: string, quantity: number) => string;
   },
 ): DashboardAlertItem[] {
-  return products
-    .filter(
-      (product) =>
-        product.stockTotalBaseUnits > 0 && product.stockTotalBaseUnits < 10,
-    )
-    .slice(0, 4)
-    .map((product) => ({
-      id: product.id,
-      icon: "warning" as const,
-      message: labels.lowStock(product.name, product.stockTotalBaseUnits),
-      timeAgo: "",
-    }));
+  return alerts.map((alert) => ({
+    id: alert.id,
+    icon: "warning" as const,
+    message: labels.lowStock(alert.name, alert.stockTotalBaseUnits),
+    timeAgo: "",
+  }));
 }
 
 export function formatRelativeTimeEs(isoDate: string): string {

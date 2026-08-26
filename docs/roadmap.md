@@ -4,21 +4,21 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ## Resumen
 
-| Etapa   | Nombre                     | Entregable                                         |
-| ------- | -------------------------- | -------------------------------------------------- |
-| **S0**  | Fundación                  | Monorepo, packages base, CI, Supabase spine        |
-| **S1A** | Catálogo                   | Products + Categories                              |
-| **S1B** | Bundles                    | Composición de sorpresas                           |
-| **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1             |
-| **S1D** | Presentaciones + stock     | `prices.unit`, paquetes, stock sealed/loose        |
-| **S1E** | Envases + delivery         | Insumos sorpresa + tarifas por distrito (Piura)    |
-| **S1F** | Packs / Combos             | Combos BOM fija + precio reference/normal (admin)  |
-| **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado            |
-| **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela       |
-| **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)   |
-| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…5, incl. combos)  |
-| **S3B** | Admin app                  | Backoffice                                         |
-| **S4**  | Resto                      | Customers, Users, Notifications, Reports, Settings |
+| Etapa   | Nombre                     | Entregable                                        |
+| ------- | -------------------------- | ------------------------------------------------- |
+| **S0**  | Fundación                  | Monorepo, packages, CI, Supabase spine, media CDN |
+| **S1A** | Catálogo                   | Products + Categories                             |
+| **S1B** | Bundles                    | Composición de sorpresas                          |
+| **S1C** | Pricing + Campaigns        | Precio final en listado + campañas 1:1            |
+| **S1D** | Presentaciones + stock     | `prices.unit`, paquetes, stock sealed/loose       |
+| **S1E** | Envases + delivery         | Insumos sorpresa + tarifas por distrito (Piura)   |
+| **S1F** | Packs / Combos             | Combos BOM fija + precio reference/normal (admin) |
+| **S2B** | Orders                     | Admin + `shopping_cart` JSONB congelado           |
+| **S2C** | Payments manual + Shipping | Confirmación operador → `paid`, sin pasarela      |
+| **S2A** | Stock deduct al pagar      | `deduct_stock_for_order` al confirmar pago (S2C)  |
+| **S3A** | Ecommerce app              | Tienda pública end-to-end (S3A-0…5, incl. combos) |
+| **S3B** | Admin app                  | Backoffice                                        |
+| **S4**  | Completitud                | Reports (Excel catálogo) + Customers, Users, …    |
 
 ---
 
@@ -34,6 +34,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - [x] Migración spine: schemas `core`, `catalog`, `pricing`, `commerce`, `crm`
 - [x] CI: `pnpm check` + build
 - [x] Brief: `docs/stages/S0/01-monorepo-foundation.md`
+- [x] Media CDN: S3 + CloudFront (CDK) — [`docs/infra.md`](infra.md) · [S0/02](stages/S0/02-infra-media-cdn.md)
+- [x] Admin upload imágenes catálogo (presign) — packs · products · bundles · containers · [S0/03](stages/S0/03-admin-pack-image-upload.md)
 
 ---
 
@@ -151,6 +153,12 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - **Sin descuento de stock** → S2A
 - **Sin confirmar pago** → S2C
 
+**Evoluciones post-S2B (canónico en [`orders.md`](orders.md)):**
+
+- `surcharge_total` (`00023`) + tabs Totales admin (precio final XOR / discount+surcharge)
+- Línea product dual `packageQuantity`+`unitQuantity` (`00024`); admin sueltas; ecommerce solo presentaciones
+- Packs en carrito (S1F/S4-04); admin salta min/max (Regla 21)
+
 **Depends on:** S1C
 
 ---
@@ -196,7 +204,7 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - Módulos `catalog`, `cart`, `checkout`, `orders`
 - TanStack Query, `guardAction`, i18n base
 - Extraer lógica `createOrder` a `@de-tin-marin/shared`
-- Feature flags: `enableUnitsPerPerson`, `pickupEnabled`, `strictStockValidationOnCheckout`
+- Feature flags: `enableUnitsPerPerson`, `pickupEnabled` (tienda, no puntos S4-08), `strictStockValidationOnCheckout`
 - Home sin mocks; CTAs a catálogo
 - Brief: [`docs/stages/S3A/00-ecommerce-foundation.md`](stages/S3A/00-ecommerce-foundation.md)
 
@@ -204,14 +212,23 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 - `/productos`, `/sorpresas` — paginación, categoría, búsqueda nombre/SKU, orden nombre/precio
 - Stock visible; inactivos ocultos; `finalPrice` backend; sin campañas v1
+- Remediación paginación SQL: [`docs/stages/S3A/01-remediation-catalog-pagination-sql.md`](stages/S3A/01-remediation-catalog-pagination-sql.md) (S3A-1-R)
 - Brief: [`docs/stages/S3A/01-catalog-products-bundles.md`](stages/S3A/01-catalog-products-bundles.md)
 
 **Depends on:** S3A-0
 
 ### S3A-2 — Wizard personalizar sorpresa
 
-- Mín. 5 / máx. 20 dulces; plantilla editable; personas fijas de plantilla
-- `enableUnitsPerPerson=false`; stock warning only
+- Mín./máx. de productos distintos **configurable por plantilla**:
+  `customization_min_products` / `customization_max_products` (defaults
+  8/20; `1 ≤ min ≤ max ≤ 100`; migración `00025`). La composición inicial,
+  wizard, preview y creación de orden revalidan el rango.
+- Plantilla editable; `bundles.quantity` = sorpresas de plantilla. En
+  ecommerce/guest `line.quantity` editable (**15–100**), init =
+  `clamp(bundles.quantity, 15, 100)`, preview + revalidación en checkout
+  (admin no usa ese rango)
+- `enableUnitsPerPerson=true` (unidades por sorpresa editables en wizard);
+  stock warning only
 - Brief: [`docs/stages/S3A/02-bundle-customization-wizard.md`](stages/S3A/02-bundle-customization-wizard.md)
 
 **Depends on:** S3A-1
@@ -219,7 +236,9 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 ### S3A-3 — Carrito + checkout
 
 - Carrito localStorage (`CartRepository` intercambiable)
-- Checkout delivery Piura + mapa OSM; fuera de cobertura = bloqueo
+- Checkout delivery Piura + mapa OSM; fuera de cobertura = no crea orden
+  (toast al submit; no deshabilitar el botón por cobertura)
+- Recojo en tienda oculto (`pickupEnabled`). Puntos de recojo: S4-08
 - RLS guest insert órdenes; `createGuestOrder`
 - Brief: [`docs/stages/S3A/03-cart-checkout.md`](stages/S3A/03-cart-checkout.md)
 
@@ -252,6 +271,8 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 - Todos los dominios operativos
 - Roles staff
 - Referencia UX: ADMIN_BACKOFFICE (pantallas)
+- [x] Paginación SQL listados: [`docs/stages/S3B/01-admin-list-pagination.md`](stages/S3B/01-admin-list-pagination.md) (default pageSize **5**; SSR + hidratación RQ)
+- [x] Home ecommerce SSR (`loadStorefrontCatalog`) + admin listados SSR; `ProductSearchPicker` en forms
 
 **Depends on:** S2A
 
@@ -259,11 +280,158 @@ Implementación por etapas. Cada etapa tiene **stage briefs** en `docs/stages/` 
 
 ## S4 — Completitud
 
+### S4-01 — Export Excel estado de catálogo (admin) ✅
+
+**Goal:** Staff descarga `.xlsx` multi-hoja desde el dashboard (productos, sorpresas, packs, envases, órdenes + carrito congelado).
+
+- [x] Módulo `apps/admin/src/modules/reports/`
+- [x] Shared `pack-availability` (Regla 22) — admin + ecommerce
+- [x] Panel en home dashboard + `exportCatalogStatusAction`
+- Brief: [`docs/stages/S4/01-catalog-status-excel.md`](stages/S4/01-catalog-status-excel.md)
+
+**Depends on:** S1A, S1B, S1C, S1E, S1F, S2B
+
+### S4-02 — Costo de venta y margen (productos admin) ✅
+
+**Goal:** Staff carga `cost_net_price`; ve margen/% en form/listado; Excel Productos incluye Costo, Margen, Margen %.
+
+- [x] Migración `00019_product_cost_net_price.sql`
+- [x] Shared `product-margin` (`computeProductMargin`)
+- [x] Admin form/list + Excel S4-01
+- Brief: [`docs/stages/S4/02-product-cost-margin.md`](stages/S4/02-product-cost-margin.md)
+
+**Depends on:** S1A, S1D, S4-01
+
+### S4-03 — Hero dinámico + Personalización web ✅
+
+**Goal:** Staff configura imágenes del hero (home ecommerce) con modo estático/carrusel, orden y vigencia; ecommerce las muestra con fallback a la imagen hardcodeada actual. La misma pantalla `/web-customization` es el hub de personalización visual (hero + Nosotros vía S4-07).
+
+- [x] Tablas `core.hero_settings` + `core.hero_images` (migración `00020`)
+- [x] Admin `/web-customization` + folder S3 `hero` + validación aspecto cuadrado
+- [x] Ecommerce `getPublicHeroConfig` + hero static/carousel + fallback
+- Brief: [`docs/stages/S4/03-hero-web-customization.md`](stages/S4/03-hero-web-customization.md)
+
+**Depends on:** S0-03 media ✅, S3A home ✅
+
+### S4-04 — Pack BOM dual (`package_quantity` + `unit_quantity`) ✅
+
+**Goal:** Un componente de combo puede mezclar presentaciones y unidades base en la misma fila; reference, disponibilidad, carrito y deduct al `paid` respetan ambas cantidades.
+
+- [x] Migración `00022_pack_items_unit_quantity.sql` + pgTAP
+- [x] Shared: `pack-price`, `pack-availability`, `order-cart`, `check-order-stock`
+- [x] Admin pack-form (dos steppers) + orders/reports; ecommerce detalle/checkout
+- Brief: [`docs/stages/S4/04-pack-dual-quantities.md`](stages/S4/04-pack-dual-quantities.md)
+
+**Depends on:** S1F ✅, S2A ✅, S3A-05 ✅
+
+### S4-05 — Contacto e instrucciones de pago dinámicas ✅
+
+**Goal:** Staff mantiene una única configuración pública de contacto, Yape y
+transferencia; ecommerce la consume sin valores de cobro hardcodeados.
+
+- [x] Migración `00026_public_business_settings.sql` + pgTAP de RLS/singleton
+- [x] Admin `/business-settings`, actions staff y validación compartida
+- [x] Ecommerce: FAB WhatsApp, páginas legales/Nosotros y confirmación/lookup
+      de pedidos pendientes
+- [x] DTO allowlist público + caché React Query de 5 min
+
+**Depends on:** S2C ✅, S3A-04 ✅
+
+### S4-06 — Notificaciones email al crear orden
+
+**Goal:** Tras crear una orden, enviar correo SMTP best-effort (Nodemailer):
+ecommerce → cliente + admin; admin create → solo admin. Create-order **await**
+el envío (sin `after()`); fallo de mail no tumba la orden.
+
+- [x] Package `@de-tin-marin/notifications` + templates HTML/text
+- [x] Env SMTP + `ORDER_NOTIFY_EXTRA_EMAILS` opcional
+- [x] Hooks en `createGuestOrderService` y `createOrderService`
+- Brief: [`docs/stages/S4/06-order-email-notifications.md`](stages/S4/06-order-email-notifications.md)
+
+**Depends on:** S3A-3 ✅, S3A-4 ✅, S4-05 ✅, S2B ✅
+
+### S4-07 — Imagen personalizable en Nosotros ✅
+
+**Goal:** Staff configura la foto de “Nuestra Historia” (`/nosotros`) desde Personalización web; ecommerce la muestra en SSR con fallback al placeholder actual.
+
+- [x] Tabla `core.about_page_settings` (migración `00027`)
+- [x] Admin `/web-customization` sección Nosotros + folder S3 `about` + validación landscape
+- [x] Ecommerce SSR + fallback `ABOUT_STORY_IMAGE_URL`
+- Brief: [`docs/stages/S4/07-about-page-image.md`](stages/S4/07-about-page-image.md)
+
+**Depends on:** S0-03 media ✅, S4-03 hero ✅
+
+### S4-08 — Puntos de recojo ✅
+
+**Goal:** Staff cataloga puntos de recojo (nombre, mapa, fee); checkout guest
+elige `delivery` o `pickup_point`. El recojo en tienda (`pickup`) sigue
+siendo solo admin.
+
+- [x] Migración `00028_pickup_points.sql` + RPC guest XOR + pgTAP
+- [x] Admin `/delivery` pestaña puntos + kill switch `pickup_points_enabled`
+- [x] Checkout, order-form, detalle/confirmación y emails
+- Brief: [`docs/stages/S4/08-pickup-points.md`](stages/S4/08-pickup-points.md)
+
+**Depends on:** S1E ✅, S2B ✅, S3A-3 ✅
+
+### S4-09 — Cancelación atómica (refund + restock) ✅
+
+**Goal:** Un solo control admin «Cancelar»: sin deduct → solo `cancelled`;
+post-pago → RPC atómica (payments `refunded` + restock + `cancelled`).
+Sin reembolso suelto de payment.
+
+- [x] Migración `00029_cancel_order_with_restock.sql` + pgTAP
+- [x] `cancelOrderService` → RPC; transition a `cancelled` delega; bump catálogo
+- [x] UI: Cancelar en paid/preparing/ready; quitar Reembolsar (`USE_CANCEL_ORDER`)
+- Brief: [`docs/stages/S4/09-cancel-atomic-restock.md`](stages/S4/09-cancel-atomic-restock.md)
+
+**Depends on:** S2A ✅, S2B ✅, S2C ✅
+
+### S4-10 — Estados `in_transit` / `awaiting_pickup` ✅
+
+**Goal:** Tras `ready`, el siguiente estado depende del método de fulfillment;
+`in_transit` exige carrier+tracking; `delivered` = cliente ya tiene el producto.
+
+- [x] Migración `00030_order_status_in_transit_awaiting_pickup.sql`
+- [x] Shared `canTransitionOrderStatus(..., method)` + Zod shipment
+- [x] Admin transition+shipment UI; ecommerce labels
+- DECISIONS **#42**
+- Brief: [`docs/stages/S4/10-order-status-in-transit-awaiting-pickup.md`](stages/S4/10-order-status-in-transit-awaiting-pickup.md)
+
+**Depends on:** S4-09 ✅, S2C ✅
+
+### S4-11 — Envío courier (agencia nacional) ✅
+
+**Goal:** Staff habilita departamentos/provincias para envío vía agencia;
+checkout guest elige destino + DNI/datos de retiro; **`shipping_total = 0`**
+(flete en agencia). Distinto de `delivery` (Piura local).
+
+- [x] Migración `00031_courier_departments.sql` + RPC guest + pgTAP
+- [x] Admin `/delivery` pestaña courier + `courier_enabled`
+- [x] Checkout, order-form, detalle/confirmación y emails
+- Brief: [`docs/stages/S4/11-courier-shipping.md`](stages/S4/11-courier-shipping.md)
+
+**Depends on:** S1E ✅, S2B ✅, S3A-3 ✅
+
+### S4-12 — Storefront settings (reglas de tienda) ✅
+
+**Goal:** Singleton `core.storefront_settings` para promo de envío (overlay
+fee → 0), pedido mínimo sobre `subtotal` (guest) y aviso en checkout.
+Separado de `/delivery` y `/business-settings`.
+
+- [x] Migración `00032_storefront_settings.sql` + pgTAP
+- [x] Shared/validations + Admin `/storefront-settings`
+- [x] Checkout overlay + mínimo + banner; admin fee overlay
+- Brief: [`docs/stages/S4/12-storefront-settings.md`](stages/S4/12-storefront-settings.md)
+
+**Depends on:** S1E ✅, S3A-3 ✅, S4-08 ✅, S4-11 ✅
+
+### Pendiente S4
+
 - Customers (sin VIP v1)
 - Users / roles
-- Notifications
-- Reports
-- Settings
+- Más reports (ventas, PDF, métricas)
+- Settings (otros; contacto y pagos dinámicos ya implementados)
 - Inventory v2 (ledger movimientos)
 - Cupones, VIP, pasarela de pagos (epoch posterior)
 

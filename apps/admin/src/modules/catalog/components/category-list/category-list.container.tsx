@@ -1,19 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
+import { toast } from "sonner";
+import { adminListPageBounds } from "@de-tin-marin/validations/admin-list";
 import { Button } from "@de-tin-marin/ui/button";
-import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
+import { listCategoriesPageAction } from "@/modules/catalog/actions/list-categories";
 import { softDeleteCategoryAction } from "@/modules/catalog/actions/soft-delete-category";
+import {
+  buildAdminListSearchParams,
+  readAdminCategoryListQuery,
+} from "@/shared/helpers/admin-list-url";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
+import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import { CategoryList } from "./category-list";
 import type { CategoryListLabels } from "./category-list.types";
-
-type StatusFilter = "all" | "active" | "inactive";
 
 function FilterChip({
   label,
@@ -48,14 +54,27 @@ function FilterChip({
 
 export function CategoryListContainer() {
   const t = useTranslations("categories");
+  const tCommon = useTranslations("common.pagination");
+  const tFeedback = useTranslations("common");
+  const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const listQuery = useMemo(
+    () => readAdminCategoryListQuery(searchParams),
+    [searchParams],
+  );
+
+  const [searchDraft, setSearchDraft] = useState(
+    () => searchParams.get("search") ?? "",
+  );
 
   const categoriesQuery = useQuery({
-    queryKey: queryKeys.catalog.categories(),
+    queryKey: queryKeys.catalog.categoriesPage(listQuery),
     queryFn: async () => {
-      const result = await listCategoriesAction();
+      const result = await listCategoriesPageAction(listQuery);
       if (!result.ok) {
         throw new Error("message" in result ? result.message : result.error);
       }
@@ -75,29 +94,32 @@ export function CategoryListContainer() {
     },
   });
 
-  function handleDelete(id: string) {
-    if (!window.confirm(t("deleteConfirm"))) return;
-    deleteMutation.mutate(id);
+  function pushParams(updates: Record<string, string | undefined>) {
+    const params = buildAdminListSearchParams(searchParams, updates);
+    startTransition(() => {
+      router.push(`/categories?${params.toString()}`, { scroll: false });
+    });
   }
 
-  const categories = useMemo(
-    () => categoriesQuery.data ?? [],
-    [categoriesQuery.data],
-  );
-
-  const filteredCategories = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return categories.filter((category) => {
-      const matchesSearch =
-        term === "" ||
-        category.name.toLowerCase().includes(term) ||
-        category.slug.toLowerCase().includes(term);
-      const matchesStatus =
-        status === "all" ||
-        (status === "active" ? category.isActive : !category.isActive);
-      return matchesSearch && matchesStatus;
+  async function handleDelete(id: string) {
+    const accepted = await confirm({
+      description: t("deleteConfirm"),
     });
-  }, [categories, search, status]);
+    if (!accepted) return;
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success(tFeedback("confirmDialog.deleteSuccess")),
+      onError: () => toast.error(tFeedback("error")),
+    });
+  }
+
+  const page = categoriesQuery.data?.page ?? listQuery.page;
+  const pageSize = categoriesQuery.data?.pageSize ?? listQuery.pageSize;
+  const total = categoriesQuery.data?.total ?? 0;
+  const items = categoriesQuery.data?.items ?? [];
+  const bounds = adminListPageBounds(page, pageSize, total, items.length);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasActiveFilters =
+    Boolean(listQuery.search) || listQuery.status !== "all";
 
   const labels: CategoryListLabels = useMemo(
     () => ({
@@ -118,90 +140,124 @@ export function CategoryListContainer() {
       emptyFiltered: t("emptyFiltered"),
       formatOrder: (order) => t("orderValue", { order }),
       formatSlug: (slug) => t("slugValue", { slug }),
-      formatPagination: (shown, total) => t("pagination", { shown, total }),
+      pagination: {
+        summary: t("pagination", {
+          from: bounds.from,
+          to: bounds.to,
+          total,
+        }),
+        previous: tCommon("previous"),
+        next: tCommon("next"),
+        page: tCommon("page", { page, totalPages }),
+      },
       formatAriaEdit: (name) => t("ariaEdit", { name }),
       formatAriaDelete: (name) => t("ariaDelete", { name }),
     }),
-    [t],
+    [t, tCommon, bounds.from, bounds.to, total, page, totalPages],
   );
 
   return (
-    <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md relative flex flex-1 flex-col pb-28 lg:p-8 lg:pb-8">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <h1 className="font-display text-on-surface text-[32px] font-extrabold leading-10 tracking-tight lg:text-[40px]">
-            {t("title")}
-          </h1>
-          <p className="font-body text-body-lg text-on-surface-variant max-w-xl">
-            {t("subtitle")}
-          </p>
-        </div>
-        <Link href="/categories/new" className="hidden lg:block lg:self-end">
-          <Button className="min-h-14 px-8">
-            <Plus className="mr-2 h-5 w-5" aria-hidden />
-            {t("newCategory")}
-          </Button>
+    <>
+      {dialog}
+      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md relative flex flex-1 flex-col pb-28 lg:p-8 lg:pb-8">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <h1 className="font-display text-on-surface text-[32px] font-extrabold leading-10 tracking-tight lg:text-[40px]">
+              {t("title")}
+            </h1>
+            <p className="font-body text-body-lg text-on-surface-variant max-w-xl">
+              {t("subtitle")}
+            </p>
+          </div>
+          <Link href="/categories/new" className="hidden lg:block lg:self-end">
+            <Button className="min-h-14 px-8">
+              <Plus className="mr-2 h-5 w-5" aria-hidden />
+              {t("newCategory")}
+            </Button>
+          </Link>
+        </header>
+
+        <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <form
+            className="relative w-full sm:max-w-xs"
+            onSubmit={(event) => {
+              event.preventDefault();
+              pushParams({
+                search: searchDraft.trim() || undefined,
+                page: "1",
+              });
+            }}
+          >
+            <Search
+              className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              placeholder={t("search.placeholder")}
+              aria-label={t("search.label")}
+              className="border-outline-variant/30 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus:border-secondary font-body h-12 w-full rounded-xl border-2 pl-12 pr-4 text-sm outline-none transition-colors"
+            />
+          </form>
+          <FilterChip
+            label={t("filters.status")}
+            value={listQuery.status}
+            onChange={(value) =>
+              pushParams({
+                status: value === "all" ? undefined : value,
+                page: "1",
+              })
+            }
+            options={[
+              { value: "all", label: t("filters.statusAll") },
+              { value: "active", label: t("filters.statusActive") },
+              { value: "inactive", label: t("filters.statusInactive") },
+            ]}
+          />
+        </section>
+
+        {categoriesQuery.isLoading ? (
+          <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl border p-12 text-center">
+            <p className="font-body text-body-md text-on-surface-variant">
+              {t("loading")}
+            </p>
+          </div>
+        ) : categoriesQuery.isError ? (
+          <div className="border-error/20 bg-error-container/40 rounded-4xl border p-12 text-center">
+            <p className="font-body text-body-md text-on-error-container">
+              {t("loadError")}
+            </p>
+          </div>
+        ) : (
+          <CategoryList
+            categories={items}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            hasActiveFilters={hasActiveFilters}
+            labels={labels}
+            onDelete={(id) => {
+              void handleDelete(id);
+            }}
+            onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
+            deletingId={
+              deleteMutation.isPending
+                ? (deleteMutation.variables ?? null)
+                : null
+            }
+          />
+        )}
+
+        <Link
+          href="/categories/new"
+          aria-label={t("newCategory")}
+          className="press-down bg-primary text-on-primary fixed bottom-6 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
+        >
+          <Plus className="h-6 w-6" aria-hidden />
         </Link>
-      </header>
-
-      <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative w-full sm:max-w-xs">
-          <Search
-            className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("search.placeholder")}
-            aria-label={t("search.label")}
-            className="border-outline-variant/30 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus:border-secondary font-body h-12 w-full rounded-xl border-2 pl-12 pr-4 text-sm outline-none transition-colors"
-          />
-        </div>
-        <FilterChip
-          label={t("filters.status")}
-          value={status}
-          onChange={(value) => setStatus(value as StatusFilter)}
-          options={[
-            { value: "all", label: t("filters.statusAll") },
-            { value: "active", label: t("filters.statusActive") },
-            { value: "inactive", label: t("filters.statusInactive") },
-          ]}
-        />
-      </section>
-
-      {categoriesQuery.isLoading ? (
-        <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl border p-12 text-center">
-          <p className="font-body text-body-md text-on-surface-variant">
-            {t("loading")}
-          </p>
-        </div>
-      ) : categoriesQuery.isError ? (
-        <div className="border-error/20 bg-error-container/40 rounded-4xl border p-12 text-center">
-          <p className="font-body text-body-md text-on-error-container">
-            {t("loadError")}
-          </p>
-        </div>
-      ) : (
-        <CategoryList
-          categories={filteredCategories}
-          totalCount={categories.length}
-          labels={labels}
-          onDelete={handleDelete}
-          deletingId={
-            deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
-          }
-        />
-      )}
-
-      <Link
-        href="/categories/new"
-        aria-label={t("newCategory")}
-        className="press-down bg-primary text-on-primary fixed bottom-6 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
-      >
-        <Plus className="h-6 w-6" aria-hidden />
-      </Link>
-    </div>
+      </div>
+    </>
   );
 }

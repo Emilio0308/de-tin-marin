@@ -4,7 +4,17 @@ import {
   createBundleInputSchema,
   updateBundleInputSchema,
 } from "@de-tin-marin/validations/bundle";
+import {
+  BUNDLE_CUSTOMIZATION_DEFAULT_MAX,
+  BUNDLE_CUSTOMIZATION_DEFAULT_MIN,
+  resolveBundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
+import {
+  adminBundleListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { computeBundleTotal } from "@de-tin-marin/shared/bundle-price";
+import { computeTotalBaseUnits } from "@de-tin-marin/shared/product-stock";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { parsePricesJson } from "../repositories/product.repository";
 import {
@@ -18,6 +28,7 @@ import {
   hardDeleteBundleRepo,
   insertBundleRepo,
   listBundleItemsByBundleIdsRepo,
+  listBundlesPageRepo,
   listBundlesRepo,
   replaceBundleItemsRepo,
   softDeleteBundleRepo,
@@ -42,11 +53,27 @@ function toPriceItems(items: BundleItemWithProduct[]) {
 }
 
 function toFormItemDTO(item: BundleItemWithProduct): BundleFormItemDTO {
+  const product = item.products;
+  const prices = parsePricesJson(product?.prices ?? {});
+  const itemsPerPackage = product?.items_per_package ?? 1;
+  const productType = product?.product_type === "package" ? "package" : "unit";
+
   return {
     productId: item.product_id,
-    productName: item.products?.name ?? "—",
-    unitNetPrice: parsePricesJson(item.products?.prices ?? {}).unitNetPrice,
+    productName: product?.name ?? "—",
+    sku: product?.sku ?? "",
+    imageUrl: product?.image_url ?? null,
+    unitNetPrice: prices.unitNetPrice,
+    netPrice: prices.packageNetPrice,
     unitsPerPerson: item.units_per_person,
+    isActive: Boolean(product?.is_active && !product.deleted_at),
+    productType,
+    itemsPerPackage,
+    stockTotalBaseUnits: computeTotalBaseUnits(
+      product?.stock_sealed_packages ?? 0,
+      product?.stock_loose_base_units ?? 0,
+      itemsPerPackage,
+    ),
   };
 }
 
@@ -79,6 +106,8 @@ function toListItem(
     containerName: container?.name ?? "—",
     containerNetPrice,
     quantity: row.quantity,
+    customizationMinProducts: row.customization_min_products,
+    customizationMaxProducts: row.customization_max_products,
     itemCount: items.length,
     total,
     isActive: row.is_active,
@@ -105,6 +134,8 @@ function toFormDTO(
     containerName: container.name,
     containerNetPrice: container.netPrice,
     quantity: row.quantity,
+    customizationMinProducts: row.customization_min_products,
+    customizationMaxProducts: row.customization_max_products,
     isActive: row.is_active,
     items: items.map(toFormItemDTO),
     itemsSubtotal,
@@ -115,6 +146,17 @@ function toFormDTO(
 
 function hasDuplicateProductIds(productIds: string[]): boolean {
   return new Set(productIds).size !== productIds.length;
+}
+
+function validateItemsAgainstCustomizationBounds(
+  itemCount: number,
+  minProducts: number,
+  maxProducts: number,
+): { ok: true } | { ok: false; error: "ITEMS_OUT_OF_CUSTOMIZATION_RANGE" } {
+  if (itemCount < minProducts || itemCount > maxProducts) {
+    return { ok: false, error: "ITEMS_OUT_OF_CUSTOMIZATION_RANGE" };
+  }
+  return { ok: true };
 }
 
 async function validateBundleItems(
@@ -184,6 +226,47 @@ export async function listBundlesService(
   );
 }
 
+export async function listBundlesPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<BundleListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminBundleListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, status } = parsed.data;
+  const { rows, total } = await listBundlesPageRepo(
+    config,
+    { search, status },
+    { page, pageSize },
+  );
+
+  if (rows.length === 0) {
+    return { ok: true, data: { items: [], page, pageSize, total } };
+  }
+
+  const containerIds = [...new Set(rows.map((row) => row.container_id))];
+  const containersById = await buildContainersMap(config, containerIds);
+
+  const bundleIds = rows.map((row) => row.id);
+  const allItems = await listBundleItemsByBundleIdsRepo(config, bundleIds);
+
+  const itemsByBundle = new Map<string, BundleItemWithProduct[]>();
+  for (const item of allItems) {
+    const list = itemsByBundle.get(item.bundle_id) ?? [];
+    list.push(item);
+    itemsByBundle.set(item.bundle_id, list);
+  }
+
+  const items = rows.map((row) =>
+    toListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
+  );
+
+  return { ok: true, data: { items, page, pageSize, total } };
+}
+
 export async function getBundleService(
   config: SupabaseConfig,
   id: string,
@@ -218,6 +301,19 @@ export async function createBundleService(
   }
 
   const data = parsed.data;
+  const bounds = resolveBundleCustomizationBounds({
+    customizationMinProducts: data.customizationMinProducts,
+    customizationMaxProducts: data.customizationMaxProducts,
+  });
+  const itemsRange = validateItemsAgainstCustomizationBounds(
+    data.items.length,
+    bounds.minProducts,
+    bounds.maxProducts,
+  );
+  if (!itemsRange.ok) {
+    return { ok: false as const, error: itemsRange.error };
+  }
+
   const itemsCheck = await validateBundleItems(config, data.items);
   if (!itemsCheck.ok) {
     return { ok: false as const, error: itemsCheck.error };
@@ -234,6 +330,8 @@ export async function createBundleService(
     image_url: normalizeImageUrl(data.imageUrl),
     container_id: data.containerId,
     quantity: data.quantity,
+    customization_min_products: bounds.minProducts,
+    customization_max_products: bounds.maxProducts,
     is_active: data.isActive,
   });
 
@@ -274,10 +372,43 @@ export async function updateBundleService(
     return { ok: false as const, error: "NOT_FOUND" as const };
   }
 
+  const bounds = resolveBundleCustomizationBounds({
+    customizationMinProducts:
+      fields.customizationMinProducts ??
+      existing.customization_min_products ??
+      BUNDLE_CUSTOMIZATION_DEFAULT_MIN,
+    customizationMaxProducts:
+      fields.customizationMaxProducts ??
+      existing.customization_max_products ??
+      BUNDLE_CUSTOMIZATION_DEFAULT_MAX,
+  });
+
   if (fields.items) {
+    const itemsRange = validateItemsAgainstCustomizationBounds(
+      fields.items.length,
+      bounds.minProducts,
+      bounds.maxProducts,
+    );
+    if (!itemsRange.ok) {
+      return { ok: false as const, error: itemsRange.error };
+    }
+
     const itemsCheck = await validateBundleItems(config, fields.items);
     if (!itemsCheck.ok) {
       return { ok: false as const, error: itemsCheck.error };
+    }
+  } else if (
+    fields.customizationMinProducts !== undefined ||
+    fields.customizationMaxProducts !== undefined
+  ) {
+    const existingCount = existing.bundle_items?.length ?? 0;
+    const itemsRange = validateItemsAgainstCustomizationBounds(
+      existingCount,
+      bounds.minProducts,
+      bounds.maxProducts,
+    );
+    if (!itemsRange.ok) {
+      return { ok: false as const, error: itemsRange.error };
     }
   }
 
@@ -298,6 +429,13 @@ export async function updateBundleService(
   if (fields.containerId !== undefined)
     updatePayload.container_id = fields.containerId;
   if (fields.quantity !== undefined) updatePayload.quantity = fields.quantity;
+  if (
+    fields.customizationMinProducts !== undefined ||
+    fields.customizationMaxProducts !== undefined
+  ) {
+    updatePayload.customization_min_products = bounds.minProducts;
+    updatePayload.customization_max_products = bounds.maxProducts;
+  }
   if (fields.isActive !== undefined) updatePayload.is_active = fields.isActive;
 
   if (Object.keys(updatePayload).length > 0) {

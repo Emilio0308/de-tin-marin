@@ -19,6 +19,12 @@ const labels: OrderListLabels = {
   statusLabels: { pending_payment: "Pendiente de pago", paid: "Pagado" },
   paymentStatusLabels: { pending: "Pendiente", confirmed: "Confirmado" },
   formatLines: (count) => `${count} líneas`,
+  pagination: {
+    summary: "Mostrando 1–1 de 1 órdenes",
+    previous: "Anterior",
+    next: "Siguiente",
+    page: "Página 1 de 1",
+  },
 };
 
 const orders = [
@@ -36,12 +42,30 @@ const orders = [
 
 describe("OrderList", () => {
   it("renders empty state", () => {
-    render(<OrderList orders={[]} labels={labels} />);
+    render(
+      <OrderList
+        orders={[]}
+        page={1}
+        pageSize={20}
+        total={0}
+        labels={labels}
+        onPageChange={() => {}}
+      />,
+    );
     expect(screen.getByText("No hay órdenes todavía.")).toBeInTheDocument();
   });
 
   it("renders order badges and detail link", () => {
-    render(<OrderList orders={orders} labels={labels} />);
+    render(
+      <OrderList
+        orders={orders}
+        page={1}
+        pageSize={20}
+        total={1}
+        labels={labels}
+        onPageChange={() => {}}
+      />,
+    );
     expect(screen.getAllByText("TM-20260703-0001").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Pendiente de pago").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ver").length).toBeGreaterThan(0);

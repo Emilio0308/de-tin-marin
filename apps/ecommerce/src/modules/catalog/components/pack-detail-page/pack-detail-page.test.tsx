@@ -40,6 +40,7 @@ const basePack: PublicPackDetail = {
       description: "Snack crocante de maíz.",
       imageUrl: "https://example.com/chisitos.png",
       packageQuantity: 2,
+      unitQuantity: 0,
       itemsPerPackage: 12,
       productType: "package",
       packageLabel: "paquete",
@@ -59,6 +60,11 @@ const labels = {
   formatComponentPackages: (packages: number, units: number) =>
     `${packages} paquetes de ${units} unidades`,
   formatComponentUnits: (count: number) => `${count} unidades`,
+  formatComponentPackagesAndLoose: (
+    packages: number,
+    units: number,
+    loose: number,
+  ) => `${packages} paquetes de ${units} unidades + ${loose} sueltas`,
 };
 
 describe("PackDetailPage", () => {

@@ -3,6 +3,7 @@ import {
   isWithinPiuraBounds,
   PIURA_DELIVERY_BOUNDS,
   resolveCheckoutDeliveryFee,
+  resolveCheckoutFulfillmentFee,
 } from "./checkout-coverage";
 
 const zones = [
@@ -12,9 +13,19 @@ const zones = [
 
 const settings = {
   pickupEnabled: false,
+  pickupPointsEnabled: true,
   deliveryEnabled: true,
+  courierEnabled: true,
   fallbackFee: 20,
 };
+
+const activePointId = "11111111-1111-4111-8111-111111111111";
+const inactivePointId = "22222222-2222-4222-8222-222222222222";
+
+const points = [
+  { id: activePointId, fee: 6, isActive: true },
+  { id: inactivePointId, fee: 4, isActive: false },
+];
 
 const piuraCenter = { lat: -5.1783, lng: -80.6328 };
 const outsidePiura = { lat: -12.05, lng: -77.05 };
@@ -79,6 +90,55 @@ describe("resolveCheckoutDeliveryFee", () => {
       outsidePiura,
       zones,
       settings,
+    );
+    expect(result).toEqual({ covered: true, fee: 0 });
+  });
+
+  it("pickup_point devuelve fee del punto activo", () => {
+    const result = resolveCheckoutFulfillmentFee(
+      "pickup_point",
+      undefined,
+      undefined,
+      zones,
+      settings,
+      activePointId,
+      points,
+    );
+    expect(result).toEqual({ covered: true, fee: 6 });
+  });
+
+  it("pickup_point inactivo no cubierto", () => {
+    const result = resolveCheckoutFulfillmentFee(
+      "pickup_point",
+      undefined,
+      undefined,
+      zones,
+      settings,
+      inactivePointId,
+      points,
+    );
+    expect(result).toEqual({ covered: false, fee: 0 });
+  });
+
+  it("courier devuelve fee 0 cuando destino está habilitado", () => {
+    const result = resolveCheckoutFulfillmentFee(
+      "courier",
+      undefined,
+      undefined,
+      zones,
+      settings,
+      undefined,
+      points,
+      "dept-piura",
+      "sullana",
+      [
+        {
+          id: "dept-piura",
+          name: "Piura",
+          isActive: true,
+          provinces: [{ slug: "sullana", name: "Sullana", enabled: true }],
+        },
+      ],
     );
     expect(result).toEqual({ covered: true, fee: 0 });
   });

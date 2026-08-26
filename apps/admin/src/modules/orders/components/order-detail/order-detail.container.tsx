@@ -4,31 +4,41 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   canTransitionOrderStatus,
   ORDER_STATUSES,
   type OrderStatus,
 } from "@de-tin-marin/shared/order-cart";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { ShipmentStatus } from "@de-tin-marin/validations/shipment";
 import { cancelOrderAction } from "@/modules/orders/actions/cancel-order";
 import { confirmPaymentAction } from "@/modules/orders/actions/confirm-payment";
 import { getOrderAction } from "@/modules/orders/actions/get-order";
-import { refundPaymentAction } from "@/modules/orders/actions/refund-payment";
 import { transitionOrderStatusAction } from "@/modules/orders/actions/transition-order-status";
 import { upsertShipmentAction } from "@/modules/orders/actions/upsert-shipment";
+import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
 import { OrderDetailView } from "./order-detail";
-import type { OrderDetailLabels } from "./order-detail.types";
+import type {
+  OrderDetailLabels,
+  TransitionShipmentInput,
+} from "./order-detail.types";
 
 const LOGISTIC_STATUSES: OrderStatus[] = [
   "preparing",
   "ready",
+  "awaiting_pickup",
+  "in_transit",
   "delivered",
   "completed",
 ];
 
-function buildNextStatuses(current: OrderStatus): OrderStatus[] {
+function buildNextStatuses(
+  current: OrderStatus,
+  method: OrderFulfillmentMethod,
+): OrderStatus[] {
   return LOGISTIC_STATUSES.filter((status) =>
-    canTransitionOrderStatus(current, status),
+    canTransitionOrderStatus(current, status, method),
   );
 }
 
@@ -39,6 +49,7 @@ export function OrderDetailContainer() {
   const t = useTranslations("orders");
   const tCommon = useTranslations("common");
   const tDashboard = useTranslations("dashboard.orderStatus");
+  const { confirm, dialog } = useConfirmDialog();
 
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
@@ -48,9 +59,6 @@ export function OrderDetailContainer() {
   const [shipmentCarrier, setShipmentCarrier] = useState("");
   const [shipmentNotes, setShipmentNotes] = useState("");
   const [transitioningTo, setTransitioningTo] = useState<OrderStatus | null>(
-    null,
-  );
-  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(
     null,
   );
 
@@ -64,6 +72,8 @@ export function OrderDetailContainer() {
       customer: t("detail.customer"),
       delivery: t("detail.delivery"),
       pickupMethod: t("detail.pickupMethod"),
+      pickupPointMethod: t("detail.pickupPointMethod"),
+      courierMethod: t("detail.courierMethod"),
       deliveryMethod: t("detail.deliveryMethod"),
       mapTitle: t("detail.mapTitle"),
       mapHint: t("detail.mapHint"),
@@ -72,6 +82,10 @@ export function OrderDetailContainer() {
       surpriseLine: t("detail.surpriseLine"),
       formatQuantityLabel: (quantity) =>
         t("detail.quantityLabel", { quantity }),
+      formatProductDualQty: (packages, units) =>
+        units > 0
+          ? t("detail.formatProductDualQtyWithUnits", { packages, units })
+          : t("detail.formatProductPackages", { packages }),
       formatComponentsLabel: (count) => t("detail.componentsLabel", { count }),
       componentSku: t("detail.componentSku"),
       componentName: t("detail.componentName"),
@@ -82,6 +96,7 @@ export function OrderDetailContainer() {
       cart: t("detail.cart"),
       subtotal: t("detail.subtotal"),
       discount: t("detail.discount"),
+      surcharge: t("detail.surcharge"),
       shipping: t("detail.shipping"),
       total: t("detail.total"),
       paymentStatus: t("detail.paymentStatusLabel"),
@@ -101,10 +116,12 @@ export function OrderDetailContainer() {
       shipmentNotes: t("detail.shipmentNotes"),
       saveShipment: t("detail.saveShipment"),
       savingShipment: t("detail.savingShipment"),
+      shipmentRequiredHint: t("detail.shipmentRequiredHint"),
       statusActionsTitle: t("detail.statusActionsTitle"),
       cancelOrder: t("detail.cancelOrder"),
       cancelling: t("detail.cancelling"),
       cancelConfirm: t("detail.cancelConfirm"),
+      cancelConfirmPaid: t("detail.cancelConfirmPaid"),
       referencePrefix: t("detail.referencePrefix"),
       paymentReferencePlaceholder: t("detail.paymentReferencePlaceholder"),
       statusLabels,
@@ -123,11 +140,16 @@ export function OrderDetailContainer() {
         paid: t("detail.stepper.paid"),
         preparing: t("detail.stepper.preparing"),
         ready: t("detail.stepper.ready"),
+        awaiting_pickup: t("detail.stepper.awaiting_pickup"),
+        in_transit: t("detail.stepper.in_transit"),
         delivered: t("detail.stepper.delivered"),
         completed: t("detail.stepper.completed"),
       },
       stockWarningTitle: t("detail.stockWarningTitle"),
-      formatStockWarningItem: (params) => t("detail.stockWarningItem", params),
+      stockWarningColName: t("detail.stockWarningColName"),
+      stockWarningColSku: t("detail.stockWarningColSku"),
+      stockWarningColRequired: t("detail.stockWarningColRequired"),
+      stockWarningColAvailable: t("detail.stockWarningColAvailable"),
       insufficientStockError: t("detail.insufficientStockError"),
     };
   }, [t, tDashboard]);
@@ -191,22 +213,19 @@ export function OrderDetailContainer() {
     },
   });
 
-  const refundPaymentMutation = useMutation({
-    mutationFn: async (paymentId: string) => {
-      setRefundingPaymentId(paymentId);
-      const result = await refundPaymentAction({ paymentId });
-      if (!result.ok) throw new Error(result.error);
-    },
-    onSettled: () => setRefundingPaymentId(null),
-    onSuccess: invalidateOrder,
-  });
-
   const transitionMutation = useMutation({
-    mutationFn: async (status: OrderStatus) => {
+    mutationFn: async ({
+      status,
+      shipment,
+    }: {
+      status: OrderStatus;
+      shipment?: TransitionShipmentInput;
+    }) => {
       setTransitioningTo(status);
       const result = await transitionOrderStatusAction({
         id: params.id,
         status,
+        ...(shipment ? { shipment } : {}),
       });
       if (!result.ok) throw new Error(result.error);
     },
@@ -228,9 +247,25 @@ export function OrderDetailContainer() {
     onSuccess: invalidateOrder,
   });
 
-  function handleCancel() {
-    if (!window.confirm(labels.cancelConfirm)) return;
-    cancelMutation.mutate();
+  async function handleCancel() {
+    const status = orderQuery.data?.status;
+    const paidLike =
+      status === "paid" ||
+      status === "preparing" ||
+      status === "ready" ||
+      status === "awaiting_pickup" ||
+      status === "in_transit";
+    const accepted = await confirm({
+      title: tCommon("confirmDialog.cancelOrderTitle"),
+      description: paidLike ? labels.cancelConfirmPaid : labels.cancelConfirm,
+      confirmLabel: tCommon("confirmDialog.confirm"),
+    });
+    if (!accepted) return;
+    cancelMutation.mutate(undefined, {
+      onSuccess: () =>
+        toast.success(tCommon("confirmDialog.cancelOrderSuccess")),
+      onError: () => toast.error(tCommon("error")),
+    });
   }
 
   if (orderQuery.isLoading) {
@@ -257,37 +292,45 @@ export function OrderDetailContainer() {
   }
 
   const order = orderQuery.data;
-  const nextStatuses = buildNextStatuses(order.status as OrderStatus);
+  const nextStatuses = buildNextStatuses(
+    order.status as OrderStatus,
+    order.fulfillment.method,
+  );
 
   return (
-    <div className="p-8">
-      <OrderDetailView
-        order={order}
-        labels={labels}
-        paymentReference={paymentReference}
-        paymentNotes={paymentNotes}
-        onPaymentReferenceChange={setPaymentReference}
-        onPaymentNotesChange={setPaymentNotes}
-        onConfirmPayment={() => confirmPaymentMutation.mutate()}
-        confirmingPayment={confirmPaymentMutation.isPending}
-        onRefundPayment={(paymentId) => refundPaymentMutation.mutate(paymentId)}
-        refundingPaymentId={refundingPaymentId}
-        shipmentStatus={shipmentStatus}
-        shipmentTracking={shipmentTracking}
-        shipmentCarrier={shipmentCarrier}
-        shipmentNotes={shipmentNotes}
-        onShipmentStatusChange={setShipmentStatus}
-        onShipmentTrackingChange={setShipmentTracking}
-        onShipmentCarrierChange={setShipmentCarrier}
-        onShipmentNotesChange={setShipmentNotes}
-        onSaveShipment={() => shipmentMutation.mutate()}
-        savingShipment={shipmentMutation.isPending}
-        nextStatuses={nextStatuses}
-        onTransitionStatus={(status) => transitionMutation.mutate(status)}
-        transitioningTo={transitioningTo}
-        onCancel={handleCancel}
-        cancelling={cancelMutation.isPending}
-      />
-    </div>
+    <>
+      {dialog}
+      <div className="p-8">
+        <OrderDetailView
+          order={order}
+          labels={labels}
+          paymentReference={paymentReference}
+          paymentNotes={paymentNotes}
+          onPaymentReferenceChange={setPaymentReference}
+          onPaymentNotesChange={setPaymentNotes}
+          onConfirmPayment={() => confirmPaymentMutation.mutate()}
+          confirmingPayment={confirmPaymentMutation.isPending}
+          shipmentStatus={shipmentStatus}
+          shipmentTracking={shipmentTracking}
+          shipmentCarrier={shipmentCarrier}
+          shipmentNotes={shipmentNotes}
+          onShipmentStatusChange={setShipmentStatus}
+          onShipmentTrackingChange={setShipmentTracking}
+          onShipmentCarrierChange={setShipmentCarrier}
+          onShipmentNotesChange={setShipmentNotes}
+          onSaveShipment={() => shipmentMutation.mutate()}
+          savingShipment={shipmentMutation.isPending}
+          nextStatuses={nextStatuses}
+          onTransitionStatus={(status, shipment) =>
+            transitionMutation.mutate({ status, shipment })
+          }
+          transitioningTo={transitioningTo}
+          onCancel={() => {
+            void handleCancel();
+          }}
+          cancelling={cancelMutation.isPending}
+        />
+      </div>
+    </>
   );
 }

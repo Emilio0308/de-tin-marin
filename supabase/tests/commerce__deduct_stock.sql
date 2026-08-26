@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(18);
 
 -- Helpers (pure math — no auth)
 select is(
@@ -121,7 +121,9 @@ begin
           'productId', v_product_id,
           'sku', 'LAYS-TEST',
           'name', 'Lay''s Test',
-          'quantity', 3,
+          'packageQuantity', 3,
+          'unitQuantity', 0,
+          'packagePrice', 1,
           'unitPrice', 1,
           'lineTotal', 3
         )
@@ -190,14 +192,16 @@ select throws_like(
           'lines',
           jsonb_build_array(
             jsonb_build_object(
-              'type', 'product',
-              'productId', v_product_id,
-              'sku', 'LAYS-TEST',
-              'name', 'Lay''s Test',
-              'quantity', 15,
-              'unitPrice', 1,
-              'lineTotal', 15
-            )
+          'type', 'product',
+          'productId', v_product_id,
+          'sku', 'LAYS-TEST',
+          'name', 'Lay''s Test',
+          'packageQuantity', 15,
+          'unitQuantity', 0,
+          'packagePrice', 1,
+          'unitPrice', 1,
+          'lineTotal', 15
+        )
           )
         ),
         15,
@@ -374,7 +378,9 @@ begin
           'productId', v_product_id,
           'sku', 'MINI-TEST',
           'name', 'Mini Test',
-          'quantity', 10,
+          'packageQuantity', 10,
+          'unitQuantity', 0,
+          'packagePrice', 1,
           'unitPrice', 1,
           'lineTotal', 10
         )
@@ -520,6 +526,118 @@ select is(
   ),
   0,
   'pack deduct leaves no loose after exact package multiples'
+);
+
+-- Pack dual qty: packageQuantity + unitQuantity → presentation + baseUnits
+do $$
+declare
+  v_category_id uuid := 'aaaaaaaa-0001-0001-0001-000000000001';
+  v_product_id uuid := 'aaaaaaaa-0001-0001-0001-000000000043';
+  v_order_id uuid := 'aaaaaaaa-0001-0001-0001-000000000026';
+begin
+  insert into catalog.products (
+    id,
+    sku,
+    name,
+    slug,
+    category_id,
+    prices,
+    stock_sealed_packages,
+    stock_loose_base_units,
+    items_per_package,
+    product_type
+  )
+  values (
+    v_product_id,
+    'PACK-DUAL',
+    'Pack Dual Component',
+    'pack-dual-deduct',
+    v_category_id,
+    '{"normal":{"netPrice":10,"igv":1.53,"subtotal":8.47},"unit":{"netPrice":1,"igv":0.15,"subtotal":0.85}}'::jsonb,
+    5,
+    0,
+    10,
+    'package'
+  )
+  on conflict (id) do update
+  set
+    stock_sealed_packages = 5,
+    stock_loose_base_units = 0,
+    items_per_package = 10,
+    product_type = 'package';
+
+  insert into commerce.orders (
+    id,
+    order_number,
+    status,
+    payment_status,
+    shopping_cart,
+    subtotal,
+    total
+  )
+  values (
+    v_order_id,
+    'TM-DEDUCT-TEST-006',
+    'pending_payment',
+    'pending',
+    jsonb_build_object(
+      'lines',
+      jsonb_build_array(
+        jsonb_build_object(
+          'type', 'pack',
+          'packId', 'bbbbbbbb-0001-0001-0001-000000000002',
+          'sku', 'COMBO-DUAL',
+          'name', 'Combo Dual',
+          'quantity', 1,
+          'unitPrice', 35,
+          'lineTotal', 35,
+          'components',
+          jsonb_build_array(
+            jsonb_build_object(
+              'productId', v_product_id,
+              'productName', 'Pack Dual Component',
+              'sku', 'PACK-DUAL',
+              'packageQuantity', 3,
+              'unitQuantity', 5,
+              'totalPackages', 3,
+              'totalUnits', 5
+            )
+          )
+        )
+      )
+    ),
+    35,
+    35
+  )
+  on conflict (id) do update
+  set
+    status = 'pending_payment',
+    payment_status = 'pending',
+    shopping_cart = excluded.shopping_cart;
+
+  perform commerce.deduct_stock_for_order(v_order_id);
+end;
+$$;
+
+-- need = 3×10 + 5 = 35 from 50 → sealed=1, loose=5
+select is(
+  (
+    select stock_sealed_packages
+    from catalog.products
+    where id = 'aaaaaaaa-0001-0001-0001-000000000043'
+  ),
+  1,
+  'pack dual qty deduct: 3 packages + 5 units → 1 sealed left'
+);
+
+select is(
+  (
+    select stock_loose_base_units
+    from catalog.products
+    where id = 'aaaaaaaa-0001-0001-0001-000000000043'
+  ),
+  5,
+  'pack dual qty deduct: 3 packages + 5 units → 5 loose left'
 );
 
 select * from finish();

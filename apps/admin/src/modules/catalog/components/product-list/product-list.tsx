@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, Candy, Package, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { ProductListItem } from "@de-tin-marin/validations/product";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import type { ProductListLabels, ProductListProps } from "./product-list.types";
 
 const LOW_STOCK_THRESHOLD = 10;
@@ -18,6 +19,22 @@ const CATEGORY_BADGE_STYLES = [
 
 function formatPrice(value: number): string {
   return `S/ ${value.toFixed(2)}`;
+}
+
+function formatMarginPct(
+  marginPct: number | null,
+  labels: ProductListLabels,
+): string {
+  if (marginPct === null) return labels.marginEmpty;
+  return labels.formatMarginPct((marginPct * 100).toFixed(1));
+}
+
+function formatNullableMoney(
+  value: number | null,
+  labels: ProductListLabels,
+): string {
+  if (value === null) return labels.marginEmpty;
+  return formatPrice(value);
 }
 
 function categoryBadgeClass(name: string): string {
@@ -229,15 +246,19 @@ function EmptyState({
 
 export function ProductList({
   products,
-  totalCount,
+  page,
+  pageSize,
+  total,
+  hasActiveFilters,
   labels,
   onDelete,
+  onPageChange,
   deletingId,
   onToggleActive,
   togglingId,
 }: ProductListProps) {
   if (products.length === 0) {
-    return <EmptyState hasProducts={totalCount > 0} labels={labels} />;
+    return <EmptyState hasProducts={hasActiveFilters} labels={labels} />;
   }
 
   return (
@@ -253,6 +274,8 @@ export function ProductList({
                 labels.columns.name,
                 labels.columns.category,
                 labels.columns.price,
+                labels.columns.cost,
+                labels.columns.margin,
               ].map((label) => (
                 <th
                   key={label}
@@ -314,6 +337,19 @@ export function ProductList({
                   </span>
                 </td>
                 <td className="px-6 py-5">
+                  <span className="font-body text-body-md text-on-surface">
+                    {formatNullableMoney(product.costNetPrice, labels)}
+                  </span>
+                </td>
+                <td className="px-6 py-5">
+                  <p className="font-body text-body-md text-on-surface">
+                    {formatNullableMoney(product.margin, labels)}
+                  </p>
+                  <p className="font-body text-on-surface-variant text-xs">
+                    {formatMarginPct(product.marginPct, labels)}
+                  </p>
+                </td>
+                <td className="px-6 py-5">
                   <StockCell
                     quantity={product.stockTotalBaseUnits}
                     display={product.stockDisplay}
@@ -339,11 +375,16 @@ export function ProductList({
             ))}
           </tbody>
         </table>
-        <div className="bg-surface-container-low border-outline-variant/10 border-t px-6 py-4">
-          <p className="font-label text-label-bold text-on-surface-variant text-xs">
-            {labels.formatPagination(products.length, totalCount)}
-          </p>
-        </div>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       {/* Móvil: tarjetas de producto */}
@@ -379,9 +420,21 @@ export function ProductList({
                   </h3>
                 </div>
                 <div className="mt-2 flex items-end justify-between">
-                  <span className="font-display text-primary text-[20px] font-extrabold">
-                    {formatPrice(product.finalPrice)}
-                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-display text-primary text-[20px] font-extrabold">
+                      {formatPrice(product.finalPrice)}
+                    </span>
+                    <span className="font-body text-on-surface-variant text-xs">
+                      {labels.columns.cost}:{" "}
+                      {formatNullableMoney(product.costNetPrice, labels)}
+                      {" · "}
+                      {labels.columns.margin}:{" "}
+                      {formatNullableMoney(product.margin, labels)}
+                      {" ("}
+                      {formatMarginPct(product.marginPct, labels)}
+                      {")"}
+                    </span>
+                  </div>
                   <StockBadge
                     quantity={product.stockTotalBaseUnits}
                     display={product.stockDisplay}
@@ -420,6 +473,16 @@ export function ProductList({
             </div>
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
     </>
   );

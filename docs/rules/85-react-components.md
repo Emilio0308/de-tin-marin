@@ -199,19 +199,31 @@ Si el componente es Server Component (sin `'use client'`):
 
 Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md).
 
-| Caso                                                  | Dónde fetch                          | Container                                                               |
-| ----------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
-| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)             | Recibe DTO por props; **sin** `useQuery` del mismo recurso              |
-| Listados con filtros URL (home)                       | Objetivo: SSR + hidratación; hoy CSR | `useQuery` + `catalogQueryOptions` + gate `catalog_version` (Broadcast) |
-| Carrito                                               | Container cliente                    | Sync al montar con `freshQueryOptions`; rebuild vía `?sync=1`           |
-| Checkout                                              | Container cliente                    | Fee fresco; `validateGuestCheckoutCart` al submit (sin poll stock)      |
-| Admin order-form preview                              | Container cliente                    | `freshQueryOptions` en bundle/cart preview                              |
+| Caso                                                  | Dónde fetch                                                        | Container                                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Detalle público (producto, sorpresa, template wizard) | `app/.../page.tsx` (SSR)                                           | Recibe DTO por props; **sin** `useQuery` del mismo recurso                                                                      |
+| Listados con filtros URL (home)                       | `app/page.tsx` SSR + `HydrationBoundary` (`loadStorefrontCatalog`) | `useQuery` + `catalogQueryOptions` (sin refetch en mount) + gate `catalog_version`                                              |
+| Admin listados CRUD                                   | `app/(dashboard)/…/page.tsx` SSR + `HydrationBoundary`             | Containers con `useQuery` hidratado; mutaciones invalidan                                                                       |
+| Admin composición (pack/bundle/order)                 | —                                                                  | `ProductSearchPicker` → `listProductsPageAction`; order-form también tabs packs/bundles paginados + `getBundle` (ítems activos) |
+| Carrito                                               | Container cliente                                                  | Sync al montar con `freshQueryOptions`; rebuild vía `?sync=1`                                                                   |
+| Checkout                                              | Container cliente                                                  | Fee fresco; `validateGuestCheckoutCart` al submit (sin poll stock)                                                              |
+| Admin order-form preview                              | Container cliente                                                  | `freshQueryOptions` en bundle/cart preview                                                                                      |
 
 **Reglas:**
 
 - Presentational recibe `isLoading`, `isError`, `onRetry` — no importa `@tanstack/react-query`.
 - Container no duplica fetch SSR en mount.
 - Debounce de inputs frecuentes (búsqueda, componentes de bundle) en estado local antes de actualizar la query key.
+
+## Inputs numéricos (admin)
+
+**Prohibido** `value={number}` + `onChange` con `Number(raw) || fallback` / `Math.max(..., Number(raw) || min)` en cada tecla (impide borrar el `0`, produce `04`).
+
+Usar draft **string** + commit (clamp / fallback) en **blur** (y validación Zod al submit). Preferir `type="text"` + `inputMode="numeric"|"decimal"`.
+
+En admin: `apps/admin/src/shared/forms/granular-number-input.tsx` + `number-draft.helpers.ts`. Adoptado en forms de catálogo (product/pack/bundle/category/container), delivery y order-form.
+
+Detalle y anti-patrón: [`coding-guidelines.md`](../coding-guidelines.md) § Inputs numéricos controlados.
 
 ## Enforcement
 
@@ -222,5 +234,6 @@ Decisión #32 · reglas en [`50-data-fetching-cache-ssr.md`](50-data-fetching-ca
 | Props mínimas / sin labels bag    | Convención + review      |
 | Test de render por presentational | Convención + review + CI |
 | Orden interno del archivo         | Convención + review      |
+| Inputs numéricos (draft string)   | Convención + review      |
 
 Ver también [`00-architecture.md`](00-architecture.md) · [`50-data-fetching-cache-ssr.md`](50-data-fetching-cache-ssr.md) · [`coding-guidelines.md`](../coding-guidelines.md).

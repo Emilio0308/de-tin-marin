@@ -6,9 +6,14 @@ import {
 } from "@de-tin-marin/validations/product";
 import { pricesSchemaWithCoherence } from "@de-tin-marin/validations/prices";
 import {
+  adminProductListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
+import {
   buildPricesFromPackageNetPrice,
   roundMoney,
 } from "@de-tin-marin/shared/prices";
+import { computeProductMargin } from "@de-tin-marin/shared/product-margin";
 import {
   computeFinalPrice,
   isCampaignActive,
@@ -27,6 +32,7 @@ import {
   isProductSlugTakenRepo,
   isSkuTakenRepo,
   listCampaignsByIdsRepo,
+  listProductsPageRepo,
   listProductsRepo,
   parsePricesJson,
   softDeleteProductRepo,
@@ -84,6 +90,14 @@ function toListItem(
     row.stock_loose_base_units,
     itemsPerPackage,
   );
+  const costNetPrice =
+    row.cost_net_price === null || row.cost_net_price === undefined
+      ? null
+      : Number(row.cost_net_price);
+  const { margin, marginPct } = computeProductMargin({
+    saleNetPrice: packageNetPrice,
+    costNetPrice,
+  });
 
   return {
     id: row.id,
@@ -100,6 +114,9 @@ function toListItem(
     unitNetPrice,
     finalPrice,
     finalUnitPrice,
+    costNetPrice,
+    margin,
+    marginPct,
     campaign:
       campaign && isCampaignActive(campaignForPricing)
         ? {
@@ -142,6 +159,10 @@ function toFormDTO(
     packageLabel: row.package_label,
     packageNetPrice,
     unitNetPrice,
+    costNetPrice:
+      row.cost_net_price === null || row.cost_net_price === undefined
+        ? null
+        : Number(row.cost_net_price),
     stockSealedPackages: row.stock_sealed_packages ?? 0,
     stockLooseBaseUnits: row.stock_loose_base_units ?? 0,
     stockTotalBaseUnits: computeTotalBaseUnits(
@@ -164,8 +185,9 @@ function normalizeImageUrl(imageUrl: string | null | undefined): string | null {
 
 export async function listProductsService(
   config: SupabaseConfig,
+  filters?: { status?: "all" | "active" | "inactive" },
 ): Promise<ProductListItem[]> {
-  const rows = await listProductsRepo(config);
+  const rows = await listProductsRepo(config, filters);
   if (rows.length === 0) return [];
 
   const campaignIds = [
@@ -186,6 +208,49 @@ export async function listProductsService(
       row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
     ),
   );
+}
+
+export async function listProductsPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<ProductListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminProductListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, categoryId, status } = parsed.data;
+  const { rows, total } = await listProductsPageRepo(
+    config,
+    { search, categoryId, status },
+    { page, pageSize },
+  );
+
+  if (rows.length === 0) {
+    return { ok: true, data: { items: [], page, pageSize, total } };
+  }
+
+  const campaignIds = [
+    ...new Set(
+      rows
+        .map((row) => row.campaign_id)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
+  const campaignById = new Map(
+    campaigns.map((campaign) => [campaign.id, campaign]),
+  );
+
+  const items = rows.map((row) =>
+    toListItem(
+      row,
+      row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
+    ),
+  );
+
+  return { ok: true, data: { items, page, pageSize, total } };
 }
 
 export async function getProductService(
@@ -250,6 +315,7 @@ export async function createProductService(
         ? data.packageLabel?.trim() || null
         : null,
     prices: priceCheck.data as Json,
+    cost_net_price: data.costNetPrice ?? null,
     image_url: normalizeImageUrl(data.imageUrl),
     stock_sealed_packages: normalized.stock.sealedPackages,
     stock_loose_base_units: normalized.stock.looseBaseUnits,
@@ -328,6 +394,9 @@ export async function updateProductService(
   }
   if (fields.purchaseMaxQuantity !== undefined) {
     updatePayload.purchase_max_quantity = fields.purchaseMaxQuantity;
+  }
+  if (fields.costNetPrice !== undefined) {
+    updatePayload.cost_net_price = fields.costNetPrice ?? null;
   }
   updatePayload.items_per_package = normalized.itemsPerPackage;
   updatePayload.product_type = normalized.productType;

@@ -11,7 +11,10 @@ import {
 const productId = "11111111-1111-1111-1111-111111111111";
 const containerId = "22222222-2222-2222-2222-222222222222";
 
-function productCart(quantity: number): OrderShoppingCart {
+function productCart(
+  packageQuantity: number,
+  unitQuantity = 0,
+): OrderShoppingCart {
   return {
     lines: [
       {
@@ -19,9 +22,11 @@ function productCart(quantity: number): OrderShoppingCart {
         productId,
         sku: "LAYS-10",
         name: "Lay's",
-        quantity,
-        unitPrice: 1,
-        lineTotal: quantity,
+        packageQuantity,
+        unitQuantity,
+        packagePrice: 1,
+        unitPrice: 0.1,
+        lineTotal: packageQuantity + unitQuantity * 0.1,
       },
     ],
   };
@@ -82,11 +87,19 @@ describe("aggregateStockDemands", () => {
     });
   });
 
-  it("acumula presentaciones en líneas producto", () => {
+  it("acumula presentaciones y unidades en líneas producto", () => {
     const { products } = aggregateStockDemands(productCart(10));
     expect(products.get(productId)).toEqual({
       presentationQuantity: 10,
       baseUnits: 0,
+      sku: "LAYS-10",
+      name: "Lay's",
+    });
+
+    const mixed = aggregateStockDemands(productCart(1, 5));
+    expect(mixed.products.get(productId)).toEqual({
+      presentationQuantity: 1,
+      baseUnits: 5,
       sku: "LAYS-10",
       name: "Lay's",
     });
@@ -217,7 +230,9 @@ describe("checkOrderStock", () => {
           productId: unitProductId,
           sku: "MINI-CAN",
           name: "Mini cañonazo",
-          quantity: 10,
+          packageQuantity: 10,
+          unitQuantity: 0,
+          packagePrice: 1,
           unitPrice: 1,
           lineTotal: 10,
         },
@@ -250,7 +265,9 @@ describe("checkOrderStock", () => {
               productName: "Lay's",
               sku: "LAYS-10",
               packageQuantity: 2,
+              unitQuantity: 0,
               totalPackages: 4,
+              totalUnits: 0,
             },
           ],
         },
@@ -263,6 +280,108 @@ describe("checkOrderStock", () => {
 
     const result = checkOrderStock(cart, products, new Map());
     expect(result.ok).toBe(true);
+  });
+
+  it("deducts pack dual qty (packages + units) into shared demand", () => {
+    // need = 3×10 + 5 = 35 from 50 available → ok
+    const cart: OrderShoppingCart = {
+      lines: [
+        {
+          type: "pack",
+          packId: "55555555-5555-5555-5555-555555555555",
+          sku: "COMBO-DUAL",
+          name: "Combo Dual",
+          quantity: 1,
+          unitPrice: 35,
+          lineTotal: 35,
+          components: [
+            {
+              productId,
+              productName: "Lay's",
+              sku: "LAYS-10",
+              packageQuantity: 3,
+              unitQuantity: 5,
+              totalPackages: 3,
+              totalUnits: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const products = new Map<string, StockInventoryProduct>([
+      [productId, laysProduct],
+    ]);
+
+    expect(checkOrderStock(cart, products, new Map()).ok).toBe(true);
+  });
+
+  it("aggregates pack units with bundle baseUnits without double-counting presentations", () => {
+    // pack: 1 presentation (10 base) + 2 units; bundle: 5 base → need 17 from 50
+    const cart: OrderShoppingCart = {
+      lines: [
+        {
+          type: "pack",
+          packId: "55555555-5555-5555-5555-555555555555",
+          sku: "COMBO-1",
+          name: "Combo",
+          quantity: 1,
+          unitPrice: 12,
+          lineTotal: 12,
+          components: [
+            {
+              productId,
+              productName: "Lay's",
+              sku: "LAYS-10",
+              packageQuantity: 1,
+              unitQuantity: 2,
+              totalPackages: 1,
+              totalUnits: 2,
+            },
+          ],
+        },
+        {
+          type: "bundle",
+          bundleId: "33333333-3333-3333-3333-333333333333",
+          name: "Sorpresa",
+          quantity: 5,
+          lineTotal: 50,
+          container: {
+            containerId,
+            sku: "CAJA-M",
+            name: "Caja mediana",
+            unitPrice: 3,
+          },
+          components: [
+            {
+              productId,
+              productName: "Lay's",
+              sku: "LAYS-10",
+              quantityPerUnit: 1,
+              totalQuantity: 5,
+              unitPrice: 1,
+            },
+          ],
+        },
+      ],
+    };
+
+    const products = new Map<string, StockInventoryProduct>([
+      [productId, laysProduct],
+    ]);
+    const containers = new Map<string, StockInventoryContainer>([
+      [
+        containerId,
+        {
+          id: containerId,
+          sku: "CAJA-M",
+          name: "Caja mediana",
+          stockQuantity: 10,
+        },
+      ],
+    ]);
+
+    expect(checkOrderStock(cart, products, containers).ok).toBe(true);
   });
 
   it("reports container shortage for bundle lines", () => {

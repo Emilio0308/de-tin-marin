@@ -24,7 +24,14 @@ const baseGuestOrder = {
     },
     notes: null,
   },
-  lines: [{ type: "product" as const, productId, quantity: 1 }],
+  lines: [
+    {
+      type: "product" as const,
+      productId,
+      packageQuantity: 1,
+      unitQuantity: 0,
+    },
+  ],
   shippingTotal: 8,
   discountTotal: 0,
   mapPin: { lat: -5.1783, lng: -80.6328 },
@@ -44,6 +51,36 @@ describe("createGuestOrderInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("acepta pickup_point con snapshot sin mapPin", () => {
+    const pickupPointId = "22222222-2222-4222-8222-222222222222";
+    const result = createGuestOrderInputSchema.safeParse({
+      contact: baseGuestOrder.contact,
+      fulfillment: {
+        method: "pickup_point",
+        pickupPoint: {
+          id: pickupPointId,
+          name: "Mall Aventura",
+          lat: -5.19,
+          lng: -80.63,
+          fee: 6,
+        },
+        notes: null,
+      },
+      lines: baseGuestOrder.lines,
+      shippingTotal: 6,
+      discountTotal: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rechaza pickup in-store en guest checkout", () => {
+    const result = createGuestOrderInputSchema.safeParse({
+      ...baseGuestOrder,
+      fulfillment: { method: "pickup" },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("acepta línea bundle con componentes", () => {
     const result = createGuestOrderInputSchema.safeParse({
       ...baseGuestOrder,
@@ -51,7 +88,7 @@ describe("createGuestOrderInputSchema", () => {
         {
           type: "bundle",
           bundleId,
-          quantity: 10,
+          quantity: 15,
           components: [
             { productId, quantityPerUnit: 1 },
             {
@@ -75,5 +112,26 @@ describe("createGuestOrderInputSchema", () => {
       ],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rechaza bundle con quantity fuera de 15–100", () => {
+    const result = createGuestOrderInputSchema.safeParse({
+      ...baseGuestOrder,
+      lines: [
+        {
+          type: "bundle",
+          bundleId,
+          quantity: 14,
+          components: [
+            { productId, quantityPerUnit: 1 },
+            {
+              productId: "00000000-0000-4000-8000-000000000002",
+              quantityPerUnit: 1,
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
   });
 });

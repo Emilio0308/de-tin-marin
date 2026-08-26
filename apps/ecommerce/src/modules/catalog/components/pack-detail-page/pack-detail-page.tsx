@@ -121,6 +121,8 @@ function PackComponentCard({
     packagesOfUnits: ({ packages, units }) =>
       labels.formatComponentPackages(packages, units),
     unitsOnly: ({ count }) => labels.formatComponentUnits(count),
+    packagesAndLoose: ({ packages, unitsPerPackage, loose }) =>
+      labels.formatComponentPackagesAndLoose(packages, unitsPerPackage, loose),
   });
 
   return (

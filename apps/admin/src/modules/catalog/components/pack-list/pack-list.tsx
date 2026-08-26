@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Layers, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import type { PackListItem } from "@de-tin-marin/validations/pack";
+import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
+import { AdminCatalogStatusToggle } from "@/shared/components/admin-catalog-status-toggle/admin-catalog-status-toggle";
 import type { PackListLabels, PackListProps } from "./pack-list.types";
 
 function formatPrice(value: number): string {
@@ -43,30 +45,27 @@ function PackThumb({
   );
 }
 
-function StatusBadge({
-  active,
+function StatusToggle({
+  pack,
+  disabled,
+  onToggle,
   labels,
 }: {
-  active: boolean;
+  pack: PackListItem;
+  disabled: boolean;
+  onToggle: () => void;
   labels: PackListLabels;
 }) {
   return (
-    <span
-      className={cn(
-        "font-label text-label-bold inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs",
-        active
-          ? "bg-secondary-container text-on-secondary-container"
-          : "bg-surface-container-high text-on-surface-variant",
-      )}
-    >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 rounded-full",
-          active ? "bg-secondary" : "bg-outline",
-        )}
-      />
-      {active ? labels.statusActive : labels.statusDraft}
-    </span>
+    <AdminCatalogStatusToggle
+      active={pack.isActive}
+      disabled={disabled}
+      onToggle={onToggle}
+      activeLabel={labels.statusActive}
+      inactiveLabel={labels.statusDraft}
+      ariaActivate={labels.ariaActivate}
+      ariaDeactivate={labels.ariaDeactivate}
+    />
   );
 }
 
@@ -121,13 +120,19 @@ function EmptyState({
 
 export function PackList({
   packs,
-  totalCount,
+  page,
+  pageSize,
+  total,
+  hasActiveFilters,
   labels,
   onDelete,
+  onPageChange,
   deletingId,
+  onToggleActive,
+  togglingId,
 }: PackListProps) {
   if (packs.length === 0) {
-    return <EmptyState hasPacks={totalCount > 0} labels={labels} />;
+    return <EmptyState hasPacks={hasActiveFilters} labels={labels} />;
   }
 
   return (
@@ -195,7 +200,12 @@ export function PackList({
                   </span>
                 </td>
                 <td className="px-6 py-5">
-                  <StatusBadge active={pack.isActive} labels={labels} />
+                  <StatusToggle
+                    pack={pack}
+                    disabled={togglingId === pack.id}
+                    onToggle={() => onToggleActive(pack)}
+                    labels={labels}
+                  />
                 </td>
                 <td className="px-6 py-5 text-right">
                   <PackActions
@@ -209,11 +219,16 @@ export function PackList({
             ))}
           </tbody>
         </table>
-        <div className="bg-surface-container-low border-outline-variant/10 border-t px-6 py-4">
-          <p className="font-label text-label-bold text-on-surface-variant text-xs">
-            {labels.formatPagination(packs.length, totalCount)}
-          </p>
-        </div>
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
 
       <div className="flex flex-col gap-4 lg:hidden">
@@ -229,25 +244,27 @@ export function PackList({
                 className="h-20 w-20 shrink-0 rounded-xl"
               />
               <div className="flex flex-1 flex-col justify-between">
-                <div className="flex items-start justify-between gap-2">
+                <div>
                   <h3 className="font-display text-body-md text-on-surface font-bold leading-tight">
                     {pack.name}
                   </h3>
-                  <StatusBadge active={pack.isActive} labels={labels} />
+                  <p className="text-on-surface-variant/70 mt-1 text-xs">
+                    {pack.sku} · {labels.formatItemCount(pack.itemCount)}
+                  </p>
+                  <span className="font-display text-primary mt-2 text-[20px] font-extrabold">
+                    {formatPrice(pack.finalPrice)}
+                  </span>
                 </div>
-                <p className="text-on-surface-variant/70 mt-1 text-xs">
-                  {pack.sku} · {labels.formatItemCount(pack.itemCount)}
-                </p>
-                <span className="font-display text-primary mt-2 text-[20px] font-extrabold">
-                  {formatPrice(pack.finalPrice)}
-                </span>
               </div>
             </div>
             <div className="bg-outline-variant/10 h-px w-full" />
-            <div className="flex items-center justify-between">
-              <span className="text-on-surface-variant/60 font-label text-label-bold text-xs">
-                Ref. {formatPrice(pack.referencePrice)}
-              </span>
+            <div className="flex items-center justify-between gap-3">
+              <StatusToggle
+                pack={pack}
+                disabled={togglingId === pack.id}
+                onToggle={() => onToggleActive(pack)}
+                labels={labels}
+              />
               <div className="flex items-center gap-1">
                 <Link
                   href={`/packs/${pack.id}/edit`}
@@ -270,6 +287,16 @@ export function PackList({
             </div>
           </article>
         ))}
+        <AdminTablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          previousLabel={labels.pagination.previous}
+          nextLabel={labels.pagination.next}
+          pageLabel={labels.pagination.page}
+          summaryLabel={labels.pagination.summary}
+          onPageChange={onPageChange}
+        />
       </div>
     </>
   );

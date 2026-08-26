@@ -44,7 +44,7 @@
   --color-error-container: #ffdad6;
   --color-on-error-container: #93000a;
 
-  /* Colores — Surface / Background */
+  /* Colores — Surface / Background (Stitch namedColors) */
   --color-background: #fbf9f1;
   --color-on-background: #1b1c17;
   --color-surface: #fbf9f1;
@@ -111,8 +111,8 @@
   --text-label-bold--letter-spacing: 0.05em;
   --text-label-bold--font-weight: 700;
 
-  --text-price-display: 28px;
-  --text-price-display--line-height: 28px;
+  --text-price-display: 36px;
+  --text-price-display--line-height: 40px;
   --text-price-display--font-weight: 800;
 
   /* Espaciado (genera p-*, px-*, gap-*, etc.) */
@@ -120,6 +120,7 @@
   --spacing-stack-sm: 12px;
   --spacing-stack-md: 24px;
   --spacing-stack-lg: 48px;
+  --spacing-section-lg: 80px;
   --spacing-gutter: 24px;
   --spacing-margin-mobile: 16px;
   --spacing-storefront-header: 96px;
@@ -154,4 +155,34 @@
     linear-gradient(to right, #b60058, #006874, #83467e);
   background-origin: border-box;
   background-clip: padding-box, border-box;
+}
+
+/* Entrada suave de ítems del carrito / checkout (respetar reduced-motion). */
+@keyframes storefront-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.storefront-rise {
+  animation: storefront-rise 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-rise {
+    animation: none;
+  }
+
+  .press-down {
+    transition: none;
+  }
+
+  .press-down:active {
+    transform: none;
+  }
 }

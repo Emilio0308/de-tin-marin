@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "@de-tin-marin/config",
     "@de-tin-marin/db",
     "@de-tin-marin/validations",
+    "@de-tin-marin/notifications",
   ],
   images: {
     // Catálogo: image_url puede apuntar a cualquier proveedor externo.

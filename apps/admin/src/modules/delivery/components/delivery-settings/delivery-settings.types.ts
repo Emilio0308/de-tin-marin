@@ -18,21 +18,29 @@ export type ZoneEditDraft = {
   isActive: boolean;
 };
 
-export type DeliverySettingsLabels = {
-  title: string;
-  subtitle: string;
-  loading: string;
-  loadError: string;
+export type DeliveryGlobalSettingsLabels = {
   sectionGlobal: string;
   pickupEnabled: string;
   pickupHint: string;
+  pickupPointsEnabled: string;
+  pickupPointsHint: string;
   deliveryEnabled: string;
   deliveryHint: string;
+  courierEnabled: string;
+  courierHint: string;
   fallbackFee: string;
   fallbackHint: string;
   saveSettings: string;
   savingSettings: string;
-  settingsSaved: string;
+  loading: string;
+  loadError: string;
+};
+
+export type DeliveryZonesLabels = {
+  title: string;
+  subtitle: string;
+  loading: string;
+  loadError: string;
   sectionZones: string;
   district: string;
   districtPlaceholder: string;
@@ -68,19 +76,29 @@ export type DeliverySettingsLabels = {
   };
 };
 
-export type DeliverySettingsProps = {
+/** @deprecated Prefer DeliveryZonesLabels / DeliveryGlobalSettingsLabels */
+export type DeliverySettingsLabels = DeliveryZonesLabels &
+  DeliveryGlobalSettingsLabels & {
+    settingsSaved: string;
+  };
+
+export type DeliveryGlobalSettingsProps = {
   settings: DeliverySettingsValues;
+  labels: DeliveryGlobalSettingsLabels;
+  settingsSubmitting: boolean;
+  settingsError: string | null;
+  onSettingsChange: (values: DeliverySettingsValues) => void;
+  onSaveSettings: () => void;
+};
+
+export type DeliverySettingsProps = {
   zones: DeliveryZoneDTO[];
   zoneDraft: ZoneDraft;
   editingZone: ZoneEditDraft | null;
-  labels: DeliverySettingsLabels;
-  settingsSubmitting: boolean;
+  labels: DeliveryZonesLabels;
   zoneSubmitting: boolean;
   deletingZoneId: string | null;
-  settingsError: string | null;
   zoneError: string | null;
-  onSettingsChange: (values: DeliverySettingsValues) => void;
-  onSaveSettings: () => void;
   onZoneDraftChange: (draft: ZoneDraft) => void;
   onAddZone: () => void;
   onStartEditZone: (zone: DeliveryZoneDTO) => void;

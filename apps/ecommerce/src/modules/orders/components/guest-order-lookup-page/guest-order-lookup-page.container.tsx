@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
+import { getPublicBusinessSettingsAction } from "@/modules/business-settings/actions/get-public-business-settings";
 import { getGuestOrderAction } from "@/modules/orders/actions/get-guest-order";
 import { buildPaymentInstructionLabels } from "@/modules/orders/helpers/build-payment-instruction-labels";
 import {
@@ -12,6 +14,7 @@ import {
   resolveGuestOrderStatusLabel,
   resolveGuestPaymentStatusLabel,
 } from "@/modules/orders/helpers/guest-order-status-labels";
+import { queryKeys } from "@/shared/query/query-keys";
 import {
   buildGuestOrderLookupInitialForm,
   canSubmitGuestOrderLookup,
@@ -32,6 +35,16 @@ export function GuestOrderLookupPageContainer() {
   const [order, setOrder] = useState<GuestOrderDetail | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const businessSettingsQuery = useQuery({
+    queryKey: queryKeys.businessSettings.public(),
+    queryFn: async () => {
+      const result = await getPublicBusinessSettingsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const autoLookupOnMount = useMemo(
     () =>
@@ -100,23 +113,33 @@ export function GuestOrderLookupPageContainer() {
     [tConfirmation],
   );
 
-  const paymentLabels = useMemo(
-    () =>
-      buildPaymentInstructionLabels((key, values) =>
-        tConfirmation(key, values),
-      ),
-    [tConfirmation],
-  );
+  const paymentLabels = useMemo(() => {
+    if (!businessSettingsQuery.data) return null;
+    return buildPaymentInstructionLabels(
+      (key, values) => tConfirmation(key, values),
+      businessSettingsQuery.data,
+    );
+  }, [businessSettingsQuery.data, tConfirmation]);
+
+  const orderForView =
+    order && (order.status !== "pending_payment" || paymentLabels !== null)
+      ? order
+      : null;
 
   return (
     <GuestOrderLookupPage
       form={form}
-      order={order}
-      isSubmitting={isSubmitting}
+      order={orderForView}
+      isSubmitting={
+        isSubmitting || (order?.status === "pending_payment" && !paymentLabels)
+      }
       errorMessage={errorMessage}
       labels={{
         title: t("title"),
         subtitle: t("subtitle"),
+        lookupTitle: t("lookupTitle"),
+        lookupHint: t("lookupHint"),
+        secureNote: t("secureNote"),
         orderNumber: t("orderNumber"),
         email: t("email"),
         submit: t("submit"),
@@ -130,10 +153,19 @@ export function GuestOrderLookupPageContainer() {
           paymentStatus: tConfirmation("summary.paymentStatus"),
           deliveryTitle: tConfirmation("summary.deliveryTitle"),
           pickupTitle: tConfirmation("summary.pickupTitle"),
+          pickupPointTitle: tConfirmation("summary.pickupPointTitle"),
+          courierTitle: tConfirmation("summary.courierTitle"),
+          pickupInStoreNote: tConfirmation("summary.pickupInStoreNote"),
           bundleBadge: tConfirmation("summary.bundleBadge"),
           packBadge: tConfirmation("summary.packBadge"),
           bundleComponents: tConfirmation("summary.bundleComponents"),
           packComponents: tConfirmation("summary.packComponents"),
+          progressTitle: tConfirmation("summary.progressTitle"),
+          orderPlaced: tConfirmation("summary.orderPlaced"),
+          orderNumber: tConfirmation("summary.orderNumber"),
+          dateLabel: tConfirmation("summary.dateLabel"),
+          statusCurrent: tConfirmation("summary.statusCurrent"),
+          paymentPendingHint: tConfirmation("summary.paymentPendingHint"),
           formatBundlePersons: (count) =>
             tConfirmation("summary.bundlePersons", { count }),
           formatStatus: (status) =>
@@ -141,7 +173,14 @@ export function GuestOrderLookupPageContainer() {
           formatPaymentStatus: (paymentStatus) =>
             resolveGuestPaymentStatusLabel(paymentStatus, paymentStatusLabels),
         },
-        payment: paymentLabels,
+        payment: paymentLabels ?? {
+          title: "",
+          yapeLabel: "",
+          transferLabel: "",
+          yape: "",
+          transfer: "",
+          note: "",
+        },
       }}
       onChange={(field, value) => {
         setForm((current) => ({ ...current, [field]: value }));

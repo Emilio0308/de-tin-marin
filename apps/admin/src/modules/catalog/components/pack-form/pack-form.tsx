@@ -1,10 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import {
-  ChevronRight,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import {
   ImageIcon,
   Info,
   Minus,
@@ -16,17 +21,23 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { AdminFormPageHeader } from "@/shared/components/admin-form-page-header/admin-form-page-header";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
+import { SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH } from "@/modules/catalog/lib/include-inactive-products-switch";
+import { ProductSearchPickerContainer } from "@/modules/catalog/components/product-search-picker/product-search-picker.container";
 import {
   addPackItem,
   buildDefaultPackValues,
   canSubmitPackForm,
   computeLiveFinalPrice,
   computeLiveReference,
+  isAllowedCatalogImageFile,
   isValidImageUrl,
   removePackItem,
   setPackItemPackageQuantity,
+  setPackItemUnitQuantity,
 } from "./pack-form.helpers";
-import type { PackFormLabels, PackFormProps } from "./pack-form.types";
+import type { PackFormProps } from "./pack-form.types";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col gap-4 rounded-2xl border p-5 shadow-sm";
@@ -52,23 +63,25 @@ function SectionHeader({ icon, title }: { icon: ReactNode; title: string }) {
   );
 }
 
-function PackageStepper({
+function QuantityStepper({
   value,
   onDecrease,
   onIncrease,
-  labels,
+  decreaseLabel,
+  increaseLabel,
 }: {
   value: number;
   onDecrease: () => void;
   onIncrease: () => void;
-  labels: PackFormLabels;
+  decreaseLabel: string;
+  increaseLabel: string;
 }) {
   return (
     <div className="bg-surface-container-high flex items-center gap-3 rounded-full p-1">
       <button
         type="button"
         onClick={onDecrease}
-        aria-label={labels.decreasePackages}
+        aria-label={decreaseLabel}
         className="press-down text-secondary flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm"
       >
         <Minus className="h-[18px] w-[18px]" aria-hidden />
@@ -79,7 +92,7 @@ function PackageStepper({
       <button
         type="button"
         onClick={onIncrease}
-        aria-label={labels.increasePackages}
+        aria-label={increaseLabel}
         className="press-down bg-secondary flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm"
       >
         <Plus className="h-[18px] w-[18px]" aria-hidden />
@@ -92,22 +105,58 @@ export function PackForm({
   initial,
   products,
   campaigns,
+  backHref,
   labels,
+  includeInactiveProducts,
+  onIncludeInactiveProductsChange,
+  onEnsureProductOption,
+  productStatus,
   onSubmit,
   onCancel,
   submitting,
   error,
 }: PackFormProps) {
   const [values, setValues] = useState(() => buildDefaultPackValues(initial));
-  const [selectedProductId, setSelectedProductId] = useState("");
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
-  const availableProducts = useMemo(
-    () =>
-      products.filter(
-        (product) =>
-          !values.items.some((item) => item.productId === product.id),
-      ),
-    [products, values.items],
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+  }, [previewObjectUrl]);
+
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setImageError(null);
+
+    if (!isAllowedCatalogImageFile(file)) {
+      setImageError(labels.imageFileInvalid);
+      return;
+    }
+
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objectUrl);
+    setPendingImage(file);
+    setValues((current) => ({ ...current, imageUrl: objectUrl }));
+  }
+
+  function clearImage() {
+    setImageError(null);
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    setPreviewObjectUrl(null);
+    setPendingImage(null);
+    setValues((current) => ({ ...current, imageUrl: "" }));
+  }
+
+  const availableExcludeIds = useMemo(
+    () => values.items.map((item) => item.productId),
+    [values.items],
   );
 
   const referenceNetPrice = useMemo(
@@ -132,22 +181,31 @@ export function PackForm({
 
   const priceValid = values.normalNetPrice >= referenceNetPrice;
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      await onSubmit(values);
+      await onSubmit(values, pendingImage);
     } catch {
       // El container maneja errores.
     }
   }
 
-  function handleAddProduct() {
-    if (!selectedProductId) return;
+  function handlePickProduct(item: {
+    id: string;
+    name: string;
+    netPrice: number;
+    unitNetPrice: number;
+  }) {
+    onEnsureProductOption({
+      id: item.id,
+      name: item.name,
+      packageNetPrice: item.netPrice,
+      unitNetPrice: item.unitNetPrice,
+    });
     setValues((current) => ({
       ...current,
-      items: addPackItem(current.items, selectedProductId),
+      items: addPackItem(current.items, item.id),
     }));
-    setSelectedProductId("");
   }
 
   function handleRemoveProduct(productId: string) {
@@ -164,6 +222,13 @@ export function PackForm({
     }));
   }
 
+  function handleUnitQuantityChange(productId: string, quantity: number) {
+    setValues((current) => ({
+      ...current,
+      items: setPackItemUnitQuantity(current.items, productId, quantity),
+    }));
+  }
+
   const canSubmit =
     !submitting &&
     canSubmitPackForm(values) &&
@@ -172,16 +237,13 @@ export function PackForm({
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <nav className="font-label text-on-surface-variant flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide">
-          <span>{labels.breadcrumbParent}</span>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-          <span className="text-primary">{labels.breadcrumbCurrent}</span>
-        </nav>
-        <h1 className="font-display text-on-surface text-[32px] font-extrabold leading-10 tracking-tight lg:text-[40px]">
-          {labels.title}
-        </h1>
-      </div>
+      <AdminFormPageHeader
+        backHref={backHref}
+        backLabel={labels.back}
+        breadcrumbParent={labels.breadcrumbParent}
+        breadcrumbCurrent={labels.breadcrumbCurrent}
+        title={labels.title}
+      />
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
@@ -279,13 +341,23 @@ export function PackForm({
             />
             <div className="border-outline-variant/60 bg-surface-container-high relative aspect-video w-full overflow-hidden rounded-xl border">
               {isValidImageUrl(values.imageUrl) ? (
-                <Image
-                  src={values.imageUrl}
-                  alt={labels.imageAlt}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 400px"
-                  className="object-cover"
-                />
+                values.imageUrl.startsWith("blob:") ? (
+                  // Local preview before save — next/image does not optimize blob URLs.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={values.imageUrl}
+                    alt={labels.imageAlt}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={values.imageUrl}
+                    alt={labels.imageAlt}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 400px"
+                    className="object-cover"
+                  />
+                )
               ) : (
                 <div className="text-on-surface-variant/50 flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                   <span className="bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-full">
@@ -298,24 +370,39 @@ export function PackForm({
                 </div>
               )}
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass} htmlFor="imageUrl">
-                {labels.imageUrl}
+            <div className="flex flex-col gap-2">
+              <label className={labelClass} htmlFor="packImageFile">
+                {labels.imageUpload}
               </label>
               <input
-                id="imageUrl"
-                name="imageUrl"
-                type="url"
-                value={values.imageUrl}
-                onChange={(event) =>
-                  setValues((current) => ({
-                    ...current,
-                    imageUrl: event.target.value,
-                  }))
-                }
-                placeholder={labels.imageUrlPlaceholder}
-                className={fieldClass}
+                id="packImageFile"
+                name="packImageFile"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                disabled={submitting}
+                onChange={handleImageFileChange}
+                className="font-body text-body-sm text-on-surface file:bg-primary file:text-on-primary file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-2 file:text-sm"
               />
+              {submitting && pendingImage ? (
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  {labels.imageUploading}
+                </p>
+              ) : null}
+              {imageError ? (
+                <p className="font-body text-body-sm text-error" role="alert">
+                  {imageError}
+                </p>
+              ) : null}
+              {isValidImageUrl(values.imageUrl) ? (
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  disabled={submitting}
+                  className="text-on-surface-variant hover:text-error font-label text-label-bold self-start text-xs uppercase tracking-wide"
+                >
+                  {labels.imageClear}
+                </button>
+              ) : null}
             </div>
           </section>
 
@@ -330,30 +417,53 @@ export function PackForm({
               </span>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <select
-                aria-label={labels.productSelectPlaceholder}
-                value={selectedProductId}
-                onChange={(event) => setSelectedProductId(event.target.value)}
-                className={cn(fieldClass, "cursor-pointer appearance-none")}
-              >
-                <option value="">{labels.productSelectPlaceholder}</option>
-                {availableProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} · {formatPrice(product.packageNetPrice)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleAddProduct}
-                disabled={!selectedProductId}
-                className="border-secondary/40 text-secondary hover:bg-secondary/5 press-down font-label text-label-bold inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed px-5 py-3 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Plus className="h-5 w-5" aria-hidden />
-                {labels.addProduct}
-              </button>
-            </div>
+            {SHOW_INCLUDE_INACTIVE_PRODUCTS_SWITCH ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-label text-label-bold text-on-surface">
+                    {labels.includeInactiveProducts}
+                  </p>
+                  <p className="text-on-surface-variant/70 text-xs">
+                    {labels.includeInactiveProductsHint}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={includeInactiveProducts}
+                  aria-label={labels.includeInactiveProducts}
+                  onClick={() =>
+                    onIncludeInactiveProductsChange(!includeInactiveProducts)
+                  }
+                  className={cn(
+                    "inline-flex h-7 w-14 shrink-0 items-center rounded-full px-0.5 transition-colors duration-200",
+                    includeInactiveProducts
+                      ? "bg-primary"
+                      : "bg-surface-container-highest",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-6 w-6 rounded-full bg-white shadow transition-transform duration-200",
+                      includeInactiveProducts
+                        ? "translate-x-7"
+                        : "translate-x-0",
+                    )}
+                  />
+                </button>
+              </div>
+            ) : null}
+
+            <ProductSearchPickerContainer
+              status={productStatus}
+              excludeIds={availableExcludeIds}
+              onSelect={handlePickProduct}
+              formatPrice={formatPrice}
+              labels={{
+                searchPlaceholder: labels.productSelectPlaceholder,
+                searchAriaLabel: labels.productSelectPlaceholder,
+              }}
+            />
 
             {values.items.length === 0 ? (
               <p className="border-outline-variant/30 text-on-surface-variant font-body text-body-md rounded-xl border border-dashed px-4 py-6 text-center">
@@ -375,25 +485,59 @@ export function PackForm({
                         <p className="text-on-surface-variant/70 text-xs">
                           {labels.formatPackagePrice(
                             formatPrice(product?.packageNetPrice ?? 0),
+                          )}{" "}
+                          ·{" "}
+                          {labels.formatUnitPrice(
+                            formatPrice(product?.unitNetPrice ?? 0),
                           )}
                         </p>
                       </div>
-                      <PackageStepper
-                        value={item.packageQuantity}
-                        onDecrease={() =>
-                          handlePackageQuantityChange(
-                            item.productId,
-                            item.packageQuantity - 1,
-                          )
-                        }
-                        onIncrease={() =>
-                          handlePackageQuantityChange(
-                            item.productId,
-                            item.packageQuantity + 1,
-                          )
-                        }
-                        labels={labels}
-                      />
+                      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-on-surface-variant/70 text-[10px] uppercase tracking-wide">
+                            {labels.packagesLabel}
+                          </span>
+                          <QuantityStepper
+                            value={item.packageQuantity}
+                            onDecrease={() =>
+                              handlePackageQuantityChange(
+                                item.productId,
+                                item.packageQuantity - 1,
+                              )
+                            }
+                            onIncrease={() =>
+                              handlePackageQuantityChange(
+                                item.productId,
+                                item.packageQuantity + 1,
+                              )
+                            }
+                            decreaseLabel={labels.decreasePackages}
+                            increaseLabel={labels.increasePackages}
+                          />
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-on-surface-variant/70 text-[10px] uppercase tracking-wide">
+                            {labels.unitsLabel}
+                          </span>
+                          <QuantityStepper
+                            value={item.unitQuantity}
+                            onDecrease={() =>
+                              handleUnitQuantityChange(
+                                item.productId,
+                                item.unitQuantity - 1,
+                              )
+                            }
+                            onIncrease={() =>
+                              handleUnitQuantityChange(
+                                item.productId,
+                                item.unitQuantity + 1,
+                              )
+                            }
+                            decreaseLabel={labels.decreaseUnits}
+                            increaseLabel={labels.increaseUnits}
+                          />
+                        </div>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveProduct(item.productId)}
@@ -429,21 +573,18 @@ export function PackForm({
               <label className={labelClass} htmlFor="normalNetPrice">
                 {labels.normalPrice}
               </label>
-              <input
+              <GranularNumberInput
                 id="normalNetPrice"
                 name="normalNetPrice"
-                type="number"
-                min={referenceNetPrice}
-                step="0.01"
+                mode="decimal"
+                min={0}
+                emptyFallback={0}
                 required
                 value={values.normalNetPrice}
-                onChange={(event) =>
+                onValueChange={(next) =>
                   setValues((current) => ({
                     ...current,
-                    normalNetPrice: Math.max(
-                      0,
-                      Number(event.target.value) || 0,
-                    ),
+                    normalNetPrice: next ?? 0,
                   }))
                 }
                 className={cn(
@@ -535,21 +676,18 @@ export function PackForm({
                 <label className={labelClass} htmlFor="purchaseMinQuantity">
                   {labels.purchaseMin}
                 </label>
-                <input
+                <GranularNumberInput
                   id="purchaseMinQuantity"
                   name="purchaseMinQuantity"
-                  type="number"
+                  mode="integer"
                   min={1}
-                  step={1}
+                  emptyFallback={1}
                   required
                   value={values.purchaseMinQuantity}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setValues((current) => ({
                       ...current,
-                      purchaseMinQuantity: Math.max(
-                        1,
-                        Math.floor(Number(event.target.value) || 1),
-                      ),
+                      purchaseMinQuantity: next ?? 1,
                     }))
                   }
                   className={fieldClass}
@@ -559,21 +697,18 @@ export function PackForm({
                 <label className={labelClass} htmlFor="purchaseMaxQuantity">
                   {labels.purchaseMax}
                 </label>
-                <input
+                <GranularNumberInput
                   id="purchaseMaxQuantity"
                   name="purchaseMaxQuantity"
-                  type="number"
+                  mode="integer"
                   min={1}
-                  step={1}
+                  emptyFallback={1}
                   required
                   value={values.purchaseMaxQuantity}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setValues((current) => ({
                       ...current,
-                      purchaseMaxQuantity: Math.max(
-                        1,
-                        Math.floor(Number(event.target.value) || 1),
-                      ),
+                      purchaseMaxQuantity: next ?? 1,
                     }))
                   }
                   className={fieldClass}

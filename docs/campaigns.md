@@ -3,6 +3,8 @@
 > **Responsabilidad:** definir campañas promocionales y asignarlas 1:1 a **productos** o **packs** (DECISIONS #24 / #33). El **precio final** se calcula en listado (dominio Pricing).
 
 > **Acotación v1 (DECISIONS #24):** el esquema y el helper `computeFinalPrice` existen, pero **no hay campañas activas ni UI admin de campañas en v1**. Sin asignaciones → `finalPrice === netPrice`. La activación operativa (CRUD campañas) se implementará en una etapa posterior sin cambiar el contrato de DTOs. Admin de packs ya permite elegir `campaign_id` existente.
+>
+> **RLS (S3A-1-R / `00021`):** policy `campaigns_select_public` — `SELECT` público (necesario para `list_public_packs` y `finalPrice` en tienda). Mutaciones siguen siendo staff.
 
 ## Modelo v1
 

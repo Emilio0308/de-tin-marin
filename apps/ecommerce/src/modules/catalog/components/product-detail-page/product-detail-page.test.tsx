@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PublicProductDetail } from "@de-tin-marin/validations/public-catalog";
 import { ProductDetailPage } from "./product-detail-page";
+import { resolveProductTypeLabel } from "./product-detail-page.helpers";
 
 vi.mock(
   "@/modules/home/components/storefront-layout/storefront-layout",
@@ -27,21 +28,54 @@ const baseProduct: PublicProductDetail = {
   itemsPerPackage: 4,
   description: "Gomitas suaves con sabores frutales.",
   productType: "package",
-  packageLabel: "Paquete x4",
+  packageLabel: null,
   purchaseMinQuantity: 10,
   purchaseMaxQuantity: 100,
 };
 
+const suggestions = [
+  {
+    id: "33333333-3333-3333-3333-333333333333",
+    slug: "ositos",
+    name: "Ositos de Goma Mix",
+    imageUrl: "https://example.com/ositos.png",
+    finalPrice: 6.9,
+  },
+  {
+    id: "44444444-4444-4444-4444-444444444444",
+    slug: "paletas",
+    name: "Paletas Artesanales",
+    imageUrl: "https://example.com/paletas.png",
+    finalPrice: 4.5,
+  },
+];
+
 const defaultLabels = {
   back: "Volver al catálogo",
+  dulces: "Dulces",
   sku: "SKU",
   category: "Categoría",
-  stock: "Stock",
-  addToCart: "Añadir",
+  quantity: "Cantidad",
+  availability: "Disponibilidad",
+  inStock: "En stock (12 paquetes · 48 unidades)",
+  outOfStock: "Sin stock",
+  addToCart: "Añadir al carrito",
   description: "Descripción",
-  packageBadge: "Paquete x4",
+  productTypeLabel: "Paquete x4 unid.",
   decreaseQuantity: "Disminuir cantidad",
   increaseQuantity: "Aumentar cantidad",
+  relatedTitle: "También te encantará",
+  relatedSubtitle: "Descubre más dulces seleccionados para ti",
+  viewAll: "Ver todo",
+  completeGiftTitle: "Completa tu regalo",
+  whyTitle: "¿Por qué te encantará?",
+  highlightArtisanal: "Artesanal",
+  highlightFresh: "Fresco",
+  highlightShipping: "Envío rápido",
+  whyFruit: "Explosión Frutal",
+  whyTexture: "Textura Suave",
+  whyGift: "Ideal para Regalo",
+  whyLove: "Hecho con Amor",
 };
 
 function renderProductDetail(overrides?: {
@@ -52,14 +86,18 @@ function renderProductDetail(overrides?: {
   purchasable?: boolean;
   onDecreaseQuantity?: () => void;
   onIncreaseQuantity?: () => void;
+  product?: PublicProductDetail;
+  labels?: Partial<typeof defaultLabels>;
+  suggestions?: typeof suggestions;
 }) {
   const onDecreaseQuantity = overrides?.onDecreaseQuantity ?? vi.fn();
   const onIncreaseQuantity = overrides?.onIncreaseQuantity ?? vi.fn();
 
   render(
     <ProductDetailPage
-      product={baseProduct}
-      labels={defaultLabels}
+      product={overrides?.product ?? baseProduct}
+      suggestions={overrides?.suggestions ?? suggestions}
+      labels={{ ...defaultLabels, ...overrides?.labels }}
       quantity={overrides?.quantity ?? 10}
       minQuantity={overrides?.minQuantity ?? 10}
       maxQuantity={overrides?.maxQuantity ?? 12}
@@ -73,20 +111,78 @@ function renderProductDetail(overrides?: {
   return { onDecreaseQuantity, onIncreaseQuantity };
 }
 
+describe("resolveProductTypeLabel", () => {
+  it("devuelve Unitario para productos unit", () => {
+    expect(
+      resolveProductTypeLabel(
+        { productType: "unit", itemsPerPackage: 1, packageLabel: null },
+        {
+          productTypeUnit: "Unitario",
+          packageUnits: (count) => `Paquete x${count} unid.`,
+        },
+      ),
+    ).toBe("Unitario");
+  });
+
+  it("usa Paquete xN unid. para productos package", () => {
+    expect(
+      resolveProductTypeLabel(
+        {
+          productType: "package",
+          itemsPerPackage: 4,
+          packageLabel: "Caja",
+        },
+        {
+          productTypeUnit: "Unitario",
+          packageUnits: (count) => `Paquete x${count} unid.`,
+        },
+      ),
+    ).toBe("Paquete x4 unid.");
+
+    expect(
+      resolveProductTypeLabel(
+        {
+          productType: "package",
+          itemsPerPackage: 12,
+          packageLabel: null,
+        },
+        {
+          productTypeUnit: "Unitario",
+          packageUnits: (count) => `Paquete x${count} unid.`,
+        },
+      ),
+    ).toBe("Paquete x12 unid.");
+  });
+});
+
 describe("ProductDetailPage", () => {
-  it("renderiza nombre, precio, chips y enlace de regreso", () => {
+  it("renderiza nombre, precio, tipo y enlace de regreso", () => {
     renderProductDetail();
 
     expect(
-      screen.getByRole("heading", { name: "Gomitas Arcoíris" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("S/8.50")).toBeInTheDocument();
+      screen.getAllByRole("heading", { name: "Gomitas Arcoíris" }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("S/8.50").length).toBeGreaterThan(0);
     expect(screen.getByText("Haribo")).toBeInTheDocument();
-    expect(screen.getByText("Gomitas")).toBeInTheDocument();
-    expect(screen.getByText("Paquete x4")).toBeInTheDocument();
+    expect(screen.getAllByText("Gomitas").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Paquete x4 unid.").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("link", { name: /volver al catálogo/i }),
     ).toHaveAttribute("href", "/?tab=productos");
+  });
+
+  it("muestra disponibilidad, highlights y sugerencias", () => {
+    renderProductDetail();
+
+    expect(screen.getAllByText("Disponibilidad").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("En stock (12 paquetes · 48 unidades)").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("SKU-00123")).toBeInTheDocument();
+    expect(screen.getByText("Artesanal")).toBeInTheDocument();
+    expect(screen.getByText("También te encantará")).toBeInTheDocument();
+    expect(screen.getAllByText("Ositos de Goma Mix").length).toBeGreaterThan(0);
+    expect(screen.getByText("Completa tu regalo")).toBeInTheDocument();
   });
 
   it("muestra el selector de cantidad y dispara incremento", () => {
@@ -100,20 +196,12 @@ describe("ProductDetailPage", () => {
   });
 
   it("oculta el chip de marca cuando brand es null", () => {
-    render(
-      <ProductDetailPage
-        product={{ ...baseProduct, brand: null }}
-        labels={{ ...defaultLabels, packageBadge: null }}
-        quantity={10}
-        minQuantity={10}
-        maxQuantity={12}
-        purchasable
-        onDecreaseQuantity={vi.fn()}
-        onIncreaseQuantity={vi.fn()}
-        onAddToCart={vi.fn()}
-      />,
-    );
+    renderProductDetail({
+      product: { ...baseProduct, brand: null },
+      labels: { productTypeLabel: "Unitario" },
+    });
 
     expect(screen.queryByText("Haribo")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Unitario").length).toBeGreaterThan(0);
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   ChevronRight,
   ImageIcon,
@@ -11,15 +11,23 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { AdminFormPageHeader } from "@/shared/components/admin-form-page-header/admin-form-page-header";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import type { ProductFormProps, ProductFormValues } from "./product-form.types";
 import {
   applyProductTypeChange,
   buildInitialProductValues,
+  computeMarginPreview,
   computeStockTotalPreview,
   computeUnitNetPricePreview,
+  formatMarginPctDisplay,
+  isAllowedCatalogImageFile,
   isValidImageUrl,
   slugify,
 } from "./product-form.helpers";
+
+const stockInputClass =
+  "text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none focus:ring-0";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col gap-4 rounded-2xl border p-5 shadow-sm";
@@ -31,6 +39,7 @@ const fieldClass =
 export function ProductForm({
   initial,
   categories,
+  backHref,
   labels,
   onSubmit,
   onCancel,
@@ -41,12 +50,48 @@ export function ProductForm({
     buildInitialProductValues(initial),
   );
   const [slugEdited, setSlugEdited] = useState(Boolean(initial?.slug));
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+  }, [previewObjectUrl]);
 
   function setField<K extends keyof ProductFormValues>(
     key: K,
     value: ProductFormValues[K],
   ) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setImageError(null);
+
+    if (!isAllowedCatalogImageFile(file)) {
+      setImageError(labels.imageFileInvalid);
+      return;
+    }
+
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objectUrl);
+    setPendingImage(file);
+    setField("imageUrl", objectUrl);
+  }
+
+  function clearImage() {
+    setImageError(null);
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    setPreviewObjectUrl(null);
+    setPendingImage(null);
+    setField("imageUrl", "");
   }
 
   function handleNameChange(name: string) {
@@ -85,29 +130,31 @@ export function ProductForm({
     values.packageNetPrice,
     values.itemsPerPackage,
   );
+  const marginPreview = computeMarginPreview(
+    values.packageNetPrice,
+    values.costNetPrice,
+  );
+  const marginPctDisplay = formatMarginPctDisplay(marginPreview.marginPct);
   const stockTotalPreview = computeStockTotalPreview(
     values.stockSealedPackages,
     values.stockLooseBaseUnits,
     values.itemsPerPackage,
   );
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(values);
+    await onSubmit(values, pendingImage);
   }
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <nav className="font-label text-on-surface-variant flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide">
-          <span>{labels.breadcrumbParent}</span>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-          <span className="text-primary">{labels.breadcrumbCurrent}</span>
-        </nav>
-        <h1 className="font-display text-on-surface text-[32px] font-extrabold leading-10 tracking-tight lg:text-[40px]">
-          {labels.title}
-        </h1>
-      </div>
+      <AdminFormPageHeader
+        backHref={backHref}
+        backLabel={labels.back}
+        breadcrumbParent={labels.breadcrumbParent}
+        breadcrumbCurrent={labels.breadcrumbCurrent}
+        title={labels.title}
+      />
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
@@ -209,35 +256,66 @@ export function ProductForm({
           <span className={labelClass}>{labels.image}</span>
           <div className="border-outline-variant/60 bg-surface-container-high relative aspect-video w-full overflow-hidden rounded-xl border">
             {isValidImageUrl(values.imageUrl) ? (
-              <Image
-                src={values.imageUrl}
-                alt={labels.imageAlt}
-                fill
-                sizes="(max-width: 1024px) 100vw, 400px"
-                className="object-cover"
-              />
+              values.imageUrl.startsWith("blob:") ? (
+                // Local preview before save — next/image does not optimize blob URLs.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={values.imageUrl}
+                  alt={labels.imageAlt}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={values.imageUrl}
+                  alt={labels.imageAlt}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 400px"
+                  className="object-cover"
+                />
+              )
             ) : (
-              <div className="text-on-surface-variant/40 flex h-full flex-col items-center justify-center gap-2">
+              <div className="text-on-surface-variant/40 flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
                 <ImageIcon className="h-12 w-12" aria-hidden />
                 <span className="font-label text-label-bold">
                   {labels.imagePreview}
                 </span>
+                <span className="text-xs">{labels.imageEmptyHint}</span>
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass} htmlFor="imageUrl">
-              {labels.imageUrl}
+          <div className="flex flex-col gap-2">
+            <label className={labelClass} htmlFor="productImageFile">
+              {labels.imageUpload}
             </label>
             <input
-              id="imageUrl"
-              name="imageUrl"
-              type="url"
-              value={values.imageUrl}
-              onChange={(event) => setField("imageUrl", event.target.value)}
-              placeholder={labels.imageUrlPlaceholder}
-              className={fieldClass}
+              id="productImageFile"
+              name="productImageFile"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              disabled={submitting}
+              onChange={handleImageFileChange}
+              className="font-body text-body-sm text-on-surface file:bg-primary file:text-on-primary file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-2 file:text-sm"
             />
+            {submitting && pendingImage ? (
+              <p className="font-body text-body-sm text-on-surface-variant">
+                {labels.imageUploading}
+              </p>
+            ) : null}
+            {imageError ? (
+              <p className="font-body text-body-sm text-error" role="alert">
+                {imageError}
+              </p>
+            ) : null}
+            {isValidImageUrl(values.imageUrl) ? (
+              <button
+                type="button"
+                onClick={clearImage}
+                disabled={submitting}
+                className="text-on-surface-variant hover:text-error font-label text-label-bold self-start text-xs uppercase tracking-wide"
+              >
+                {labels.imageClear}
+              </button>
+            ) : null}
           </div>
         </section>
 
@@ -332,18 +410,16 @@ export function ProductForm({
                 <label className={labelClass} htmlFor="itemsPerPackage">
                   {labels.itemsPerPackage}
                 </label>
-                <input
+                <GranularNumberInput
                   id="itemsPerPackage"
                   name="itemsPerPackage"
-                  type="number"
+                  mode="integer"
                   min={2}
+                  emptyFallback={2}
                   required
                   value={values.itemsPerPackage}
-                  onChange={(event) =>
-                    setField(
-                      "itemsPerPackage",
-                      Math.max(2, Math.floor(Number(event.target.value) || 2)),
-                    )
+                  onValueChange={(next) =>
+                    setField("itemsPerPackage", next ?? 2)
                   }
                   className={fieldClass}
                 />
@@ -375,16 +451,16 @@ export function ProductForm({
                 <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
                   S/
                 </span>
-                <input
+                <GranularNumberInput
                   id="packageNetPrice"
                   name="packageNetPrice"
-                  type="number"
+                  mode="decimal"
                   min={0}
-                  step="0.01"
+                  emptyFallback={0}
                   required
                   value={values.packageNetPrice}
-                  onChange={(event) =>
-                    setField("packageNetPrice", Number(event.target.value) || 0)
+                  onValueChange={(next) =>
+                    setField("packageNetPrice", next ?? 0)
                   }
                   className={cn(
                     fieldClass,
@@ -403,6 +479,46 @@ export function ProductForm({
             ) : null}
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass} htmlFor="costNetPrice">
+                {labels.costNetPrice}
+              </label>
+              <div className="relative">
+                <span className="text-on-surface absolute left-4 top-1/2 -translate-y-1/2 font-bold">
+                  S/
+                </span>
+                <GranularNumberInput
+                  id="costNetPrice"
+                  name="costNetPrice"
+                  mode="decimal"
+                  min={0}
+                  allowEmpty
+                  value={values.costNetPrice}
+                  onValueChange={(next) => setField("costNetPrice", next)}
+                  className={cn(fieldClass, "pl-10")}
+                />
+              </div>
+              <p className="font-body text-on-surface-variant text-xs">
+                {labels.costNetPriceHint}
+              </p>
+            </div>
+            <div className="flex flex-col justify-end gap-1.5">
+              <span className={labelClass}>{labels.margin}</span>
+              <p className="font-body text-body-md text-on-surface">
+                {marginPreview.margin === null
+                  ? labels.marginEmpty
+                  : labels.formatMargin(marginPreview.margin.toFixed(2))}
+              </p>
+              <span className={labelClass}>{labels.marginPct}</span>
+              <p className="font-body text-body-md text-on-surface-variant">
+                {marginPctDisplay === null
+                  ? labels.marginEmpty
+                  : labels.formatMarginPct(marginPctDisplay)}
+              </p>
+            </div>
+          </div>
+
           <div className="bg-outline-variant/20 h-px w-full" />
 
           <span className={labelClass}>{labels.stock}</span>
@@ -419,23 +535,18 @@ export function ProductForm({
                   >
                     <Minus className="h-5 w-5" aria-hidden />
                   </button>
-                  <input
+                  <GranularNumberInput
                     id="stockSealedPackages"
                     name="stockSealedPackages"
-                    type="number"
+                    mode="integer"
                     min={0}
+                    emptyFallback={0}
                     required
                     value={values.stockSealedPackages}
-                    onChange={(event) =>
-                      setField(
-                        "stockSealedPackages",
-                        Math.max(
-                          0,
-                          Math.floor(Number(event.target.value) || 0),
-                        ),
-                      )
+                    onValueChange={(next) =>
+                      setField("stockSealedPackages", next ?? 0)
                     }
-                    className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className={stockInputClass}
                   />
                   <button
                     type="button"
@@ -458,23 +569,18 @@ export function ProductForm({
                   >
                     <Minus className="h-5 w-5" aria-hidden />
                   </button>
-                  <input
+                  <GranularNumberInput
                     id="stockLooseBaseUnits"
                     name="stockLooseBaseUnits"
-                    type="number"
+                    mode="integer"
                     min={0}
+                    emptyFallback={0}
                     required
                     value={values.stockLooseBaseUnits}
-                    onChange={(event) =>
-                      setField(
-                        "stockLooseBaseUnits",
-                        Math.max(
-                          0,
-                          Math.floor(Number(event.target.value) || 0),
-                        ),
-                      )
+                    onValueChange={(next) =>
+                      setField("stockLooseBaseUnits", next ?? 0)
                     }
-                    className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className={stockInputClass}
                   />
                   <button
                     type="button"
@@ -499,20 +605,18 @@ export function ProductForm({
                 >
                   <Minus className="h-5 w-5" aria-hidden />
                 </button>
-                <input
+                <GranularNumberInput
                   id="stockLooseBaseUnitsUnit"
                   name="stockLooseBaseUnits"
-                  type="number"
+                  mode="integer"
                   min={0}
+                  emptyFallback={0}
                   required
                   value={values.stockLooseBaseUnits}
-                  onChange={(event) =>
-                    setField(
-                      "stockLooseBaseUnits",
-                      Math.max(0, Math.floor(Number(event.target.value) || 0)),
-                    )
+                  onValueChange={(next) =>
+                    setField("stockLooseBaseUnits", next ?? 0)
                   }
-                  className="text-on-surface w-full flex-1 border-none bg-transparent text-center text-xl font-bold outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className={stockInputClass}
                 />
                 <button
                   type="button"
@@ -542,18 +646,16 @@ export function ProductForm({
               <label className={labelClass} htmlFor="purchaseMinQuantity">
                 {labels.purchaseMinQuantity}
               </label>
-              <input
+              <GranularNumberInput
                 id="purchaseMinQuantity"
                 name="purchaseMinQuantity"
-                type="number"
+                mode="integer"
                 min={1}
+                emptyFallback={1}
                 required
                 value={values.purchaseMinQuantity}
-                onChange={(event) =>
-                  setField(
-                    "purchaseMinQuantity",
-                    Math.max(1, Math.floor(Number(event.target.value) || 1)),
-                  )
+                onValueChange={(next) =>
+                  setField("purchaseMinQuantity", next ?? 1)
                 }
                 className={fieldClass}
               />
@@ -562,20 +664,18 @@ export function ProductForm({
               <label className={labelClass} htmlFor="purchaseMaxQuantity">
                 {labels.purchaseMaxQuantity}
               </label>
-              <input
+              <GranularNumberInput
                 id="purchaseMaxQuantity"
                 name="purchaseMaxQuantity"
-                type="number"
+                mode="integer"
                 min={values.purchaseMinQuantity}
+                emptyFallback={values.purchaseMinQuantity}
                 required
                 value={values.purchaseMaxQuantity}
-                onChange={(event) =>
+                onValueChange={(next) =>
                   setField(
                     "purchaseMaxQuantity",
-                    Math.max(
-                      values.purchaseMinQuantity,
-                      Math.floor(Number(event.target.value) || 1),
-                    ),
+                    next ?? values.purchaseMinQuantity,
                   )
                 }
                 className={fieldClass}

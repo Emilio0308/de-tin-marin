@@ -15,7 +15,10 @@
 - S1E ✅ — envases en `catalog.surprise_containers` (`stock_quantity` entero); líneas bundle congeladas llevan `container` (1 envase × sorpresa). Órdenes legacy con `serviceFee` sin `container` — **no migrar** (Regla 16).
 - S2C ✅ — `confirmPaymentService` inserta `payments` y marca orden `paid` vía RPC con deduct (DECISIONS #25 / #29).
 - **Regla 15** — deduct atómico al pasar a `paid`: productos por `product_type` + envases; rollback total si falta stock.
-- **Regla 18** — reembolso v1: reversión manual de productos **y** envases en admin.
+- **Regla 18** (histórica en este brief) — reembolso/restock manual. **Superseded**
+  por DECISIONS **#41** / S4-09: cancel post-pago = RPC atómica
+  `commerce.cancel_order_with_restock` (ver
+  [`S4/09-cancel-atomic-restock.md`](../S4/09-cancel-atomic-restock.md)).
 - Snapshot `shopping_cart` es la única fuente de cantidades a descontar — no re-leer plantillas bundle.
 
 ## Objetivo
@@ -44,7 +47,8 @@ Al confirmar pago manual (S2C), la orden pasa a `paid` **solo si** hay stock suf
 ## Scope OUT (traps)
 
 - **NO ledger `inventory` schema** — v2
-- **NO reversión automática al reembolsar** — Regla 18 manual v1
+- **NO reversión automática al reembolsar (scope S2A)** — restock atómico llegó
+  en S4-09 / DECISIONS #41 vía cancel, no vía refund suelto
 - **NO validación stock al crear orden** — opcional futuro; v1 solo pre-confirm + deduct atómico
 - **NO deduct en cancelación `pending_payment`** — sin stock reservado v1
 - **NO pasarela / webhooks** — S2C manual

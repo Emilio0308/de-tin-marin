@@ -16,11 +16,19 @@ export async function invalidateAdminCatalogLists(
   ...keys: AdminCatalogListKey[]
 ) {
   await Promise.all(
-    keys.map((key) =>
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.catalog[key](),
+    keys.map((key) => {
+      const baseKey = queryKeys.catalog[key]();
+      return queryClient.invalidateQueries({
+        queryKey: baseKey,
         refetchType: "all",
-      }),
-    ),
+      });
+    }),
   );
+}
+
+export async function invalidateAdminOrdersLists(queryClient: QueryClient) {
+  await queryClient.invalidateQueries({
+    queryKey: queryKeys.orders.all(),
+    refetchType: "all",
+  });
 }

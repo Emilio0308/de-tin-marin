@@ -32,15 +32,19 @@ export function createProductCartLine(
 ): OrderShoppingCartProductLine {
   const bounds = resolveProductPurchaseLimits(product);
   const safeQuantity = clampProductPurchaseQuantity(quantity, bounds);
-  const unitPrice = roundMoney(product.finalPrice);
+  const packagePrice = roundMoney(product.finalPrice);
+  const itemsPerPackage = Math.max(1, product.itemsPerPackage);
+  const unitPrice = roundMoney(packagePrice / itemsPerPackage);
   return {
     type: "product",
     productId: product.id,
     sku: product.sku,
     name: product.name,
-    quantity: safeQuantity,
+    packageQuantity: safeQuantity,
+    unitQuantity: 0,
+    packagePrice,
     unitPrice,
-    lineTotal: roundMoney(unitPrice * safeQuantity),
+    lineTotal: roundMoney(packagePrice * safeQuantity),
     imageUrl: normalizeCartImageUrl(product.imageUrl),
   };
 }
@@ -138,26 +142,30 @@ export function mergeProductCartLine(
   );
 
   if (!existing || existing.line.type !== "product") {
-    const quantity = clampProductPurchaseQuantity(line.quantity, bounds);
+    const packageQuantity = clampProductPurchaseQuantity(
+      line.packageQuantity,
+      bounds,
+    );
     return [
       ...lines,
       {
         cartLineId: crypto.randomUUID(),
         line: {
           ...line,
-          quantity,
-          lineTotal: roundMoney(line.unitPrice * quantity),
+          packageQuantity,
+          unitQuantity: 0,
+          lineTotal: roundMoney(line.packagePrice * packageQuantity),
         },
       },
     ];
   }
 
   const nextQuantity = mergeProductPurchaseQuantity(
-    existing.line.quantity,
-    line.quantity,
+    existing.line.packageQuantity,
+    line.packageQuantity,
     bounds,
   );
-  const unitPrice = existing.line.unitPrice;
+  const packagePrice = existing.line.packagePrice;
 
   return lines.map((entry) =>
     entry.cartLineId === existing.cartLineId
@@ -165,8 +173,9 @@ export function mergeProductCartLine(
           ...entry,
           line: {
             ...existing.line,
-            quantity: nextQuantity,
-            lineTotal: roundMoney(unitPrice * nextQuantity),
+            packageQuantity: nextQuantity,
+            unitQuantity: 0,
+            lineTotal: roundMoney(packagePrice * nextQuantity),
             imageUrl: existing.line.imageUrl ?? line.imageUrl,
           },
         }
@@ -199,21 +208,32 @@ export function updateStoredProductQuantity(
   if (nextQuantity < bounds.minQuantity) return lines;
 
   return lines.map((entry) => {
-    if (
-      entry.cartLineId !== cartLineId ||
-      (entry.line.type !== "product" && entry.line.type !== "pack")
-    ) {
-      return entry;
+    if (entry.cartLineId !== cartLineId) return entry;
+
+    if (entry.line.type === "product") {
+      return {
+        ...entry,
+        line: {
+          ...entry.line,
+          packageQuantity: nextQuantity,
+          unitQuantity: 0,
+          lineTotal: roundMoney(entry.line.packagePrice * nextQuantity),
+        },
+      };
     }
 
-    return {
-      ...entry,
-      line: {
-        ...entry.line,
-        quantity: nextQuantity,
-        lineTotal: roundMoney(entry.line.unitPrice * nextQuantity),
-      },
-    };
+    if (entry.line.type === "pack") {
+      return {
+        ...entry,
+        line: {
+          ...entry.line,
+          quantity: nextQuantity,
+          lineTotal: roundMoney(entry.line.unitPrice * nextQuantity),
+        },
+      };
+    }
+
+    return entry;
   });
 }
 
@@ -232,19 +252,22 @@ export function sanitizeStoredCartLine(entry: StoredCartLine): StoredCartLine {
   const { line } = entry;
 
   if (line.type === "product") {
+    const packagePrice = coerceMoney(line.packagePrice);
     const unitPrice = coerceMoney(line.unitPrice);
-    const quantity =
-      typeof line.quantity === "number" && line.quantity > 0
-        ? line.quantity
+    const packageQuantity =
+      typeof line.packageQuantity === "number" && line.packageQuantity > 0
+        ? line.packageQuantity
         : 1;
 
     return {
       ...entry,
       line: {
         ...line,
-        quantity,
+        packageQuantity,
+        unitQuantity: 0,
+        packagePrice,
         unitPrice,
-        lineTotal: roundMoney(unitPrice * quantity),
+        lineTotal: roundMoney(packagePrice * packageQuantity),
       },
     };
   }
@@ -305,7 +328,10 @@ export function applyServerCartPricing(
 
     if (entry.line.type === "product" && server.type === "product") {
       if (
+        entry.line.packagePrice === server.packagePrice &&
         entry.line.unitPrice === server.unitPrice &&
+        entry.line.packageQuantity === server.packageQuantity &&
+        entry.line.unitQuantity === server.unitQuantity &&
         entry.line.lineTotal === server.lineTotal
       ) {
         return entry;
@@ -315,6 +341,9 @@ export function applyServerCartPricing(
         ...entry,
         line: {
           ...entry.line,
+          packageQuantity: server.packageQuantity,
+          unitQuantity: server.unitQuantity,
+          packagePrice: coerceMoney(server.packagePrice),
           unitPrice: coerceMoney(server.unitPrice),
           lineTotal: coerceMoney(server.lineTotal),
         },
@@ -391,7 +420,15 @@ function cartPricingChanged(
       (entry.line.type === "product" || entry.line.type === "pack") &&
       (previous.line.type === "product" || previous.line.type === "pack")
     ) {
-      return entry.line.unitPrice !== previous.line.unitPrice;
+      if (entry.line.type === "product" && previous.line.type === "product") {
+        return (
+          entry.line.packagePrice !== previous.line.packagePrice ||
+          entry.line.unitPrice !== previous.line.unitPrice
+        );
+      }
+      if (entry.line.type === "pack" && previous.line.type === "pack") {
+        return entry.line.unitPrice !== previous.line.unitPrice;
+      }
     }
     return false;
   });

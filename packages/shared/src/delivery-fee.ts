@@ -6,16 +6,37 @@ export type DeliveryZone = {
   isActive: boolean;
 };
 
+export type PickupPointFeeSource = {
+  id: string;
+  fee: number;
+  isActive: boolean;
+};
+
 export type DeliverySettings = {
   pickupEnabled: boolean;
+  pickupPointsEnabled: boolean;
   deliveryEnabled: boolean;
+  courierEnabled: boolean;
   fallbackFee: number;
 };
 
-export type OrderFulfillmentMethod = "delivery" | "pickup";
+export type OrderFulfillmentMethod =
+  "delivery" | "pickup" | "pickup_point" | "courier";
 
 export function normalizeDistrict(value: string): string {
   return value.trim().toLowerCase();
+}
+
+export function resolvePickupPointFee(
+  pickupPointId: string | undefined,
+  points: PickupPointFeeSource[],
+): number | null {
+  if (!pickupPointId) return null;
+  const match = points.find(
+    (point) => point.isActive && point.id === pickupPointId,
+  );
+  if (!match) return null;
+  return roundMoney(match.fee);
 }
 
 export function resolveDeliveryFee(
@@ -23,8 +44,15 @@ export function resolveDeliveryFee(
   district: string | undefined,
   zones: DeliveryZone[],
   settings: DeliverySettings,
+  pickupPointId?: string,
+  points: PickupPointFeeSource[] = [],
 ): number {
-  if (method === "pickup") return 0;
+  if (method === "pickup" || method === "courier") return 0;
+
+  if (method === "pickup_point") {
+    const fee = resolvePickupPointFee(pickupPointId, points);
+    return fee ?? 0;
+  }
 
   if (!settings.deliveryEnabled) {
     return roundMoney(settings.fallbackFee);

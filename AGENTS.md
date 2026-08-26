@@ -9,7 +9,7 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 
 1. De Tin Marín = ecommerce de dulces y sorpresas · monorepo · Supabase · dominio-driven.
 2. Carga **solo** el dominio relevante (`docs/` + módulo + rules aplicables).
-3. **Pricing ≠ Orders ≠ Inventory ≠ Packs** — packs sin stock propio; precio reference/normal (DECISIONS #33).
+3. **Pricing ≠ Orders ≠ Inventory ≠ Packs** — packs sin stock propio; BOM `package_quantity` + `unit_quantity`; precio reference/normal (DECISIONS #33).
 4. Reglas de negocio en [`docs/business-rules.md`](docs/business-rules.md).
 5. Tablas canónicas en [`docs/database.md`](docs/database.md) — copiar nombres, no recordar.
 6. **Campaña 1:1** — `finalPrice` en backend; front no recalcula.
@@ -17,3 +17,7 @@ Ver [`CLAUDE.md`](CLAUDE.md) para el contenido completo: invariantes, comandos, 
 8. **Fetching / caché:** listados con `catalog_version` + Broadcast; carrito sync al montar; checkout validate al submit — [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md) · DECISIONS #32.
 9. **UI / i18n:** responsive, paleta, sin mocks — [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md).
 10. **Repo:** `de-tin-marin` · scope `@de-tin-marin/*`.
+11. **Media CDN:** S3 + CloudFront vía CDK — [`docs/infra.md`](docs/infra.md) · DECISIONS #34/#35.
+12. **Logging server:** `@de-tin-marin/logging` (JSON consola); shim `shared/errors/server-error.ts` — DECISIONS #37 · [`rules/40`](docs/rules/40-validation-and-boundaries.md).
+13. **Assets en Vercel:** no `readFileSync` de archivos sueltos en packages; embeber como módulos (p. ej. `*.template.ts`) — un `ENOENT` al import tumba el chunk entero — [`coding-guidelines.md`](docs/coding-guidelines.md) § Assets serverless.
+14. **Documentar / sync docs:** antes de editar docs, leer y seguir [`docs/DOC-WORKFLOW.md`](docs/DOC-WORKFLOW.md) (regla `.cursor/rules/doc-workflow.mdc`).

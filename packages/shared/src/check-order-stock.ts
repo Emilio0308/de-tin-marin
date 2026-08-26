@@ -36,9 +36,9 @@ export type OrderStockCheckResult =
 export type StockDemand = {
   sku: string;
   name?: string;
-  /** Cantidad en presentaciones vendidas (líneas `type: product`). */
+  /** Cantidad en presentaciones vendidas (líneas `type: product` packageQuantity). */
   presentationQuantity: number;
-  /** Unidades base consumidas (componentes de bundle). */
+  /** Unidades base (product unitQuantity, pack totalUnits, bundle components). */
   baseUnits: number;
 };
 
@@ -68,8 +68,8 @@ export function aggregateStockDemands(cart: OrderShoppingCart): {
       const existing = products.get(line.productId);
       products.set(line.productId, {
         presentationQuantity:
-          (existing?.presentationQuantity ?? 0) + line.quantity,
-        baseUnits: existing?.baseUnits ?? 0,
+          (existing?.presentationQuantity ?? 0) + line.packageQuantity,
+        baseUnits: (existing?.baseUnits ?? 0) + line.unitQuantity,
         sku: line.sku,
         name: line.name,
       });
@@ -79,10 +79,14 @@ export function aggregateStockDemands(cart: OrderShoppingCart): {
     if (line.type === "pack") {
       for (const component of line.components) {
         const existing = products.get(component.productId);
+        const totalPackages = component.totalPackages ?? 0;
+        const totalUnits =
+          component.totalUnits ??
+          (component.unitQuantity ?? 0) * (line.quantity ?? 0);
         products.set(component.productId, {
           presentationQuantity:
-            (existing?.presentationQuantity ?? 0) + component.totalPackages,
-          baseUnits: existing?.baseUnits ?? 0,
+            (existing?.presentationQuantity ?? 0) + totalPackages,
+          baseUnits: (existing?.baseUnits ?? 0) + totalUnits,
           sku: component.sku,
           name: component.productName,
         });

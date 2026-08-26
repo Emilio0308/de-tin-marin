@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getUser, createSupabaseServerClient } from "@de-tin-marin/db/server";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
@@ -14,7 +15,7 @@ export type RequireStaffResult =
   | { ok: true; staff: StaffSession }
   | { ok: false; error: "UNAUTHORIZED" | "FORBIDDEN" };
 
-export async function requireStaff(
+async function requireStaffImpl(
   config: SupabaseConfig,
 ): Promise<RequireStaffResult> {
   const user = await getUser(config);
@@ -48,6 +49,9 @@ export async function requireStaff(
     staff: { userId: user.id, role: data.role as StaffSession["role"] },
   };
 }
+
+/** Deduped within a single RSC request when the same config reference is passed. */
+export const requireStaff = cache(requireStaffImpl);
 
 export async function getSessionUser(
   config: SupabaseConfig,

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import {
   Box,
-  ChevronRight,
   ImageIcon,
   Info,
   Minus,
@@ -16,11 +15,14 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { AdminFormPageHeader } from "@/shared/components/admin-form-page-header/admin-form-page-header";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
   buildInitialContainerValues,
   CONTAINER_DESCRIPTION_MAX,
   CONTAINER_NAME_MAX,
   formatContainerPrice,
+  isAllowedCatalogImageFile,
   isValidImageUrl,
 } from "./container-form.helpers";
 import type { ContainerFormProps } from "./container-form.types";
@@ -45,8 +47,41 @@ function SectionHeader({ icon, title }: { icon: ReactNode; title: string }) {
   );
 }
 
+function ImagePreview({
+  imageUrl,
+  alt,
+  sizes,
+}: {
+  imageUrl: string;
+  alt: string;
+  sizes: string;
+}) {
+  if (imageUrl.startsWith("blob:")) {
+    // Local preview before save — next/image does not optimize blob URLs.
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- blob: preview
+      <img
+        src={imageUrl}
+        alt={alt}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={imageUrl}
+      alt={alt}
+      fill
+      sizes={sizes}
+      className="object-cover"
+    />
+  );
+}
+
 export function ContainerForm({
   initial,
+  backHref,
   labels,
   onSubmit,
   onCancel,
@@ -56,16 +91,48 @@ export function ContainerForm({
   const [values, setValues] = useState(() =>
     buildInitialContainerValues(initial),
   );
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+  }, [previewObjectUrl]);
 
   function setField<K extends keyof typeof values>(
     key: K,
     value: (typeof values)[K],
   ) {
     setValues((prev) => ({ ...prev, [key]: value }));
-    if (key === "imageUrl") {
-      setImageError(null);
+  }
+
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setImageError(null);
+
+    if (!isAllowedCatalogImageFile(file)) {
+      setImageError(labels.imageFileInvalid);
+      return;
     }
+
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objectUrl);
+    setPendingImage(file);
+    setField("imageUrl", objectUrl);
+  }
+
+  function clearImage() {
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    setPreviewObjectUrl(null);
+    setPendingImage(null);
+    setImageError(null);
+    setField("imageUrl", "");
   }
 
   function adjustStock(delta: number) {
@@ -75,19 +142,9 @@ export function ContainerForm({
     }));
   }
 
-  function handleVerifyImage() {
-    if (!values.imageUrl.trim()) {
-      setImageError(null);
-      return;
-    }
-    setImageError(
-      isValidImageUrl(values.imageUrl) ? null : labels.imageInvalid,
-    );
-  }
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(values);
+    await onSubmit(values, pendingImage);
   }
 
   const previewName = values.name.trim() || labels.previewFallback;
@@ -95,16 +152,13 @@ export function ContainerForm({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <nav className="font-label text-on-surface-variant flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide">
-          <span>{labels.breadcrumbParent}</span>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-          <span className="text-primary">{labels.breadcrumbCurrent}</span>
-        </nav>
-        <h1 className="font-display text-on-surface text-[32px] font-extrabold leading-10 tracking-tight lg:text-[40px]">
-          {labels.title}
-        </h1>
-      </div>
+      <AdminFormPageHeader
+        backHref={backHref}
+        backLabel={labels.back}
+        breadcrumbParent={labels.breadcrumbParent}
+        breadcrumbCurrent={labels.breadcrumbCurrent}
+        title={labels.title}
+      />
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
@@ -175,41 +229,12 @@ export function ContainerForm({
             icon={<ImageIcon className="h-5 w-5" aria-hidden />}
             title={labels.sectionImage}
           />
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass} htmlFor="imageUrl">
-              {labels.imageUrl}
-            </label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                id="imageUrl"
-                name="imageUrl"
-                type="url"
-                value={values.imageUrl}
-                onChange={(event) => setField("imageUrl", event.target.value)}
-                onBlur={handleVerifyImage}
-                placeholder={labels.imageUrlPlaceholder}
-                className={cn(fieldClass, "flex-1")}
-              />
-              <button
-                type="button"
-                onClick={handleVerifyImage}
-                className="border-secondary text-secondary hover:bg-secondary/5 press-down font-label text-label-bold min-h-12 rounded-full border-2 px-6 py-3 transition-colors"
-              >
-                {labels.imageVerify}
-              </button>
-            </div>
-            {imageError ? (
-              <p className="text-error text-sm">{imageError}</p>
-            ) : null}
-          </div>
           <div className="border-outline-variant/60 bg-surface-container-high relative aspect-square w-full max-w-sm overflow-hidden rounded-xl border">
             {showImagePreview ? (
-              <Image
-                src={values.imageUrl}
+              <ImagePreview
+                imageUrl={values.imageUrl}
                 alt={labels.imageAlt}
-                fill
                 sizes="(max-width: 1024px) 100vw, 400px"
-                className="object-cover"
               />
             ) : (
               <div className="text-on-surface-variant/40 flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
@@ -217,13 +242,44 @@ export function ContainerForm({
                 <span className="font-label text-label-bold">
                   {labels.imagePreview}
                 </span>
-                <span className="text-xs">{labels.imagePreviewEmpty}</span>
+                <span className="text-xs">{labels.imageEmptyHint}</span>
               </div>
             )}
           </div>
-          <p className="text-on-surface-variant/70 text-xs">
-            {labels.imageHint}
-          </p>
+          <div className="flex flex-col gap-2">
+            <label className={labelClass} htmlFor="containerImageFile">
+              {labels.imageUpload}
+            </label>
+            <input
+              id="containerImageFile"
+              name="containerImageFile"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              disabled={submitting}
+              onChange={handleImageFileChange}
+              className="font-body text-body-sm text-on-surface file:bg-primary file:text-on-primary file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-2 file:text-sm"
+            />
+            {submitting && pendingImage ? (
+              <p className="font-body text-body-sm text-on-surface-variant">
+                {labels.imageUploading}
+              </p>
+            ) : null}
+            {imageError ? (
+              <p className="font-body text-body-sm text-error" role="alert">
+                {imageError}
+              </p>
+            ) : null}
+            {showImagePreview ? (
+              <button
+                type="button"
+                onClick={clearImage}
+                disabled={submitting}
+                className="text-on-surface-variant hover:text-error font-label text-label-bold self-start text-xs uppercase tracking-wide"
+              >
+                {labels.imageClear}
+              </button>
+            ) : null}
+          </div>
         </section>
 
         <section className={cardClass}>
@@ -245,18 +301,16 @@ export function ContainerForm({
                 <span className="text-on-surface-variant font-body text-sm">
                   S/
                 </span>
-                <input
+                <GranularNumberInput
                   id="netPrice"
                   name="netPrice"
-                  type="number"
+                  mode="decimal"
                   min={0}
-                  step="0.01"
+                  emptyFallback={0}
                   required
                   value={values.netPrice}
-                  onChange={(event) =>
-                    setField("netPrice", Number(event.target.value) || 0)
-                  }
-                  className="text-primary font-body text-body-md ml-2 flex-1 border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  onValueChange={(next) => setField("netPrice", next ?? 0)}
+                  className="text-primary font-body text-body-md ml-2 flex-1 border-none bg-transparent p-0 outline-none"
                 />
               </div>
             </div>
@@ -281,21 +335,16 @@ export function ContainerForm({
                 >
                   <Minus className="h-5 w-5" aria-hidden />
                 </button>
-                <input
+                <GranularNumberInput
                   id="stockQuantity"
                   name="stockQuantity"
-                  type="number"
+                  mode="integer"
                   min={0}
-                  step={1}
+                  emptyFallback={0}
                   required
                   value={values.stockQuantity}
-                  onChange={(event) =>
-                    setField(
-                      "stockQuantity",
-                      Math.max(0, Math.floor(Number(event.target.value) || 0)),
-                    )
-                  }
-                  className="text-primary font-display text-headline-md w-full border-none bg-transparent text-center outline-none [appearance:textfield] focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  onValueChange={(next) => setField("stockQuantity", next ?? 0)}
+                  className="text-primary font-display text-headline-md w-full border-none bg-transparent text-center outline-none focus:ring-0"
                 />
                 <button
                   type="button"
@@ -381,12 +430,10 @@ export function ContainerForm({
           </div>
           <div className="relative h-48 overflow-hidden rounded-xl shadow-lg lg:col-span-2">
             {showImagePreview ? (
-              <Image
-                src={values.imageUrl}
+              <ImagePreview
+                imageUrl={values.imageUrl}
                 alt={labels.imageAlt}
-                fill
                 sizes="600px"
-                className="object-cover"
               />
             ) : (
               <div className="from-primary via-secondary to-tertiary h-full w-full bg-gradient-to-br" />

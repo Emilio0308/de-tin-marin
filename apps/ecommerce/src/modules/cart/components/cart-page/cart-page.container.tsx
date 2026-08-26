@@ -152,7 +152,7 @@ export function CartPageContainer() {
             meta[entry.cartLineId] = {
               bounds: {
                 minQuantity: 1,
-                maxQuantity: entry.line.quantity,
+                maxQuantity: entry.line.packageQuantity,
                 purchasable: false,
               },
             };
@@ -229,7 +229,10 @@ export function CartPageContainer() {
       bounds[entry.cartLineId] = quantityMetaQuery.data?.[entry.cartLineId]
         ?.bounds ?? {
         minQuantity: 1,
-        maxQuantity: entry.line.quantity,
+        maxQuantity:
+          entry.line.type === "product"
+            ? entry.line.packageQuantity
+            : entry.line.quantity,
         purchasable: true,
       };
     }
@@ -266,7 +269,10 @@ export function CartPageContainer() {
         if (entry.line.type === "product" || entry.line.type === "pack") {
           emptyBounds[entry.cartLineId] = {
             minQuantity: 1,
-            maxQuantity: entry.line.quantity,
+            maxQuantity:
+              entry.line.type === "product"
+                ? entry.line.packageQuantity
+                : entry.line.quantity,
             purchasable: true,
           };
         }
@@ -304,11 +310,15 @@ export function CartPageContainer() {
       formatBundlePersons={(count) => t("bundlePersons", { count })}
       labels={{
         title: t("title"),
+        subtitle: t("subtitle"),
         empty: t("empty"),
+        emptyHint: t("emptyHint"),
         continueShopping: t("continueShopping"),
         checkout: t("checkout"),
         remove: t("remove"),
         subtotal: t("subtotal"),
+        summaryTitle: t("summaryTitle"),
+        itemCount: t("itemCount", { count: lines.length }),
         unitPriceSuffix: t("unitPriceSuffix"),
         decreaseQuantity: t("decreaseQuantity"),
         increaseQuantity: t("increaseQuantity"),
@@ -320,6 +330,10 @@ export function CartPageContainer() {
         stockContainer: t("stockContainer"),
         bundleBadge: t("bundleBadge"),
         packBadge: t("packBadge"),
+        stepsLabel: t("steps.label"),
+        stepCart: t("steps.cart"),
+        stepCheckout: t("steps.checkout"),
+        stepDone: t("steps.done"),
       }}
       onUpdateQuantity={updateProductQuantity}
       onRemove={removeLine}

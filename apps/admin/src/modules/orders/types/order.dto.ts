@@ -50,6 +50,7 @@ export function parseOrderDetail(row: OrderRow): OrderDetail {
       : [],
     subtotal: Number(row.subtotal),
     discountTotal: Number(row.discount_total),
+    surchargeTotal: Number(row.surcharge_total ?? 0),
     shippingTotal: Number(row.shipping_total),
     total: Number(row.total),
     currencyCode: "PEN",

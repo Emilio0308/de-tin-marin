@@ -10,7 +10,11 @@ import {
   parsePackPricesJson,
   parseProductPricesJson,
 } from "@de-tin-marin/shared/prices";
-import { resolveStockInPresentations } from "@de-tin-marin/shared/product-purchase-limits";
+import {
+  computePackAvailableQuantity as computePackAvailableQuantityShared,
+  isActivePackAvailabilityComponent,
+  type PackAvailabilityComponent,
+} from "@de-tin-marin/shared/pack-availability";
 import {
   computeTotalBaseUnits,
   formatStockDisplay,
@@ -20,13 +24,9 @@ import {
   getPublicBundleInputSchema,
   getPublicPackInputSchema,
   getPublicProductInputSchema,
-  paginateItems,
   publicBundleListQuerySchema,
   publicPackListQuerySchema,
   publicProductListQuerySchema,
-  sortPublicBundles,
-  sortPublicPacks,
-  sortPublicProducts,
   type PublicBundleDetail,
   type PublicBundleListItem,
   type PublicCategoryItem,
@@ -208,11 +208,21 @@ export async function listPublicProductsService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, categoryId, search, sort } = parsed.data;
-  const rows = await listPublicProductsRepo(config, { categoryId, search });
-  const mapped = rows.map(toProductListItem);
-  const sorted = sortPublicProducts(mapped, sort) as PublicProductListItem[];
+  const { rows, total } = await listPublicProductsRepo(
+    config,
+    { categoryId, search },
+    { page, pageSize, sort },
+  );
 
-  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+  return {
+    ok: true,
+    data: {
+      items: rows.map(toProductListItem),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function listPublicBundlesService(
@@ -234,21 +244,25 @@ export async function listPublicBundlesService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, search, sort } = parsed.data;
-  const rows = await listPublicBundlesRepo(config, { search });
+  const { rows, total } = await listPublicBundlesRepo(config, {
+    page,
+    pageSize,
+    search,
+    sort,
+  });
   if (rows.length === 0) {
     return {
       ok: true,
-      data: { items: [], page, pageSize, total: 0 },
+      data: { items: [], page, pageSize, total },
     };
   }
 
   const containerIds = [...new Set(rows.map((row) => row.container_id))];
-  const containersById = await buildContainersMap(config, containerIds);
   const bundleIds = rows.map((row) => row.id);
-  const allItems = await listPublicBundleItemsByBundleIdsRepo(
-    config,
-    bundleIds,
-  );
+  const [containersById, allItems] = await Promise.all([
+    buildContainersMap(config, containerIds),
+    listPublicBundleItemsByBundleIdsRepo(config, bundleIds),
+  ]);
 
   const itemsByBundle = new Map<string, PublicBundleItemRow[]>();
   for (const item of allItems) {
@@ -257,12 +271,17 @@ export async function listPublicBundlesService(
     itemsByBundle.set(item.bundle_id, list);
   }
 
-  const mapped = rows.map((row) =>
-    toBundleListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
-  );
-  const sorted = sortPublicBundles(mapped, sort) as PublicBundleListItem[];
-
-  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+  return {
+    ok: true,
+    data: {
+      items: rows.map((row) =>
+        toBundleListItem(row, itemsByBundle.get(row.id) ?? [], containersById),
+      ),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function listPublicCategoriesService(
@@ -304,8 +323,10 @@ export async function getPublicBundleService(
   const row = await getPublicBundleByIdRepo(config, parsed.data.id);
   if (!row) return { ok: false, error: "NOT_FOUND" };
 
-  const containersById = await buildContainersMap(config, [row.container_id]);
-  const items = await listPublicBundleItemsByBundleIdsRepo(config, [row.id]);
+  const [containersById, items] = await Promise.all([
+    buildContainersMap(config, [row.container_id]),
+    listPublicBundleItemsByBundleIdsRepo(config, [row.id]),
+  ]);
 
   return {
     ok: true,
@@ -313,53 +334,68 @@ export async function getPublicBundleService(
   };
 }
 
-function isActivePackItem(item: PublicPackItemRow): boolean {
-  const product = item.products;
-  return Boolean(product?.is_active && product.deleted_at === null);
+function toPackAvailabilityComponents(
+  items: PublicPackItemRow[],
+): PackAvailabilityComponent[] {
+  return items.map((item) => {
+    const product = item.products;
+    return {
+      packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
+      product: product
+        ? {
+            isActive: product.is_active,
+            deletedAt: product.deleted_at,
+            productType: (product.product_type as "unit" | "package") ?? "unit",
+            itemsPerPackage: product.items_per_package ?? 1,
+            stockSealedPackages: product.stock_sealed_packages,
+            stockLooseBaseUnits: product.stock_loose_base_units,
+          }
+        : null,
+    };
+  });
 }
 
-function packComponentPresentations(
-  product: NonNullable<PublicPackItemRow["products"]>,
-): number {
-  const itemsPerPackage = Math.max(1, product.items_per_package ?? 1);
-  const productType = (product.product_type as "unit" | "package") ?? "unit";
-  const stockTotalBaseUnits =
-    productType === "unit"
-      ? product.stock_loose_base_units
-      : computeTotalBaseUnits(
-          product.stock_sealed_packages,
-          product.stock_loose_base_units,
-          itemsPerPackage,
-        );
-
-  return resolveStockInPresentations({
-    productType,
-    itemsPerPackage,
-    stockTotalBaseUnits,
+function isActivePackItem(item: PublicPackItemRow): boolean {
+  return isActivePackAvailabilityComponent({
+    packageQuantity: item.package_quantity,
+    unitQuantity: item.unit_quantity ?? 0,
+    product: item.products
+      ? {
+          isActive: item.products.is_active,
+          deletedAt: item.products.deleted_at,
+          productType:
+            (item.products.product_type as "unit" | "package") ?? "unit",
+          itemsPerPackage: item.products.items_per_package ?? 1,
+          stockSealedPackages: item.products.stock_sealed_packages,
+          stockLooseBaseUnits: item.products.stock_loose_base_units,
+        }
+      : null,
   });
 }
 
 function computePackAvailableQuantity(items: PublicPackItemRow[]): number {
-  const active = items.filter(isActivePackItem);
-  if (active.length === 0) return 0;
-
-  let min = Number.POSITIVE_INFINITY;
-  for (const item of active) {
-    const product = item.products;
-    if (!product) return 0;
-    const presentations = packComponentPresentations(product);
-    const packageQuantity = Math.max(1, item.package_quantity);
-    min = Math.min(min, Math.floor(presentations / packageQuantity));
-  }
-
-  return Number.isFinite(min) ? Math.max(0, min) : 0;
+  return computePackAvailableQuantityShared(
+    toPackAvailabilityComponents(items),
+  );
 }
 
 function buildPackItemsPreview(items: PublicPackItemRow[]) {
-  return items.filter(isActivePackItem).map((item) => ({
-    id: item.product_id,
-    label: `${item.products?.name ?? "—"} × ${item.package_quantity}`,
-  }));
+  return items.filter(isActivePackItem).map((item) => {
+    const name = item.products?.name ?? "—";
+    const pkg = item.package_quantity;
+    const units = item.unit_quantity ?? 0;
+    if (pkg > 0 && units > 0) {
+      return {
+        id: item.product_id,
+        label: `${name} × ${pkg} paq. + ${units} u.`,
+      };
+    }
+    if (units > 0 && pkg === 0) {
+      return { id: item.product_id, label: `${name} × ${units} u.` };
+    }
+    return { id: item.product_id, label: `${name} × ${pkg}` };
+  });
 }
 
 function toPackListItem(
@@ -405,6 +441,7 @@ function toPackDetail(
       description: item.products?.description ?? null,
       imageUrl: normalizeImageUrl(item.products?.image_url),
       packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
       itemsPerPackage: Math.max(1, item.products?.items_per_package ?? 1),
       productType:
         (item.products?.product_type as "unit" | "package") ?? "unit",
@@ -451,16 +488,24 @@ export async function listPublicPacksService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, search, sort } = parsed.data;
-  const rows = await listPublicPacksRepo(config, { search });
+  const { rows, total } = await listPublicPacksRepo(config, {
+    page,
+    pageSize,
+    search,
+    sort,
+  });
   if (rows.length === 0) {
     return {
       ok: true,
-      data: { items: [], page, pageSize, total: 0 },
+      data: { items: [], page, pageSize, total },
     };
   }
 
   const packIds = rows.map((row) => row.id);
-  const allItems = await listPublicPackItemsByPackIdsRepo(config, packIds);
+  const [allItems, campaignsById] = await Promise.all([
+    listPublicPackItemsByPackIdsRepo(config, packIds),
+    buildPackCampaignsById(config, rows),
+  ]);
   const itemsByPack = new Map<string, PublicPackItemRow[]>();
   for (const item of allItems) {
     const list = itemsByPack.get(item.pack_id) ?? [];
@@ -468,17 +513,21 @@ export async function listPublicPacksService(
     itemsByPack.set(item.pack_id, list);
   }
 
-  const campaignsById = await buildPackCampaignsById(config, rows);
-  const mapped = rows.map((row) =>
-    toPackListItem(
-      row,
-      itemsByPack.get(row.id) ?? [],
-      row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
-    ),
-  );
-  const sorted = sortPublicPacks(mapped, sort) as PublicPackListItem[];
-
-  return { ok: true, data: paginateItems(sorted, page, pageSize) };
+  return {
+    ok: true,
+    data: {
+      items: rows.map((row) =>
+        toPackListItem(
+          row,
+          itemsByPack.get(row.id) ?? [],
+          row.campaign_id ? (campaignsById.get(row.campaign_id) ?? null) : null,
+        ),
+      ),
+      page,
+      pageSize,
+      total,
+    },
+  };
 }
 
 export async function getPublicPackService(
@@ -497,8 +546,10 @@ export async function getPublicPackService(
       : await getPublicPackByIdRepo(config, parsed.data.id);
   if (!row) return { ok: false, error: "NOT_FOUND" };
 
-  const items = await listPublicPackItemsByPackIdsRepo(config, [row.id]);
-  const campaignsById = await buildPackCampaignsById(config, [row]);
+  const [items, campaignsById] = await Promise.all([
+    listPublicPackItemsByPackIdsRepo(config, [row.id]),
+    buildPackCampaignsById(config, [row]),
+  ]);
 
   return {
     ok: true,

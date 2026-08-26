@@ -10,9 +10,13 @@ export type ContainerFormValues = {
   isActive: boolean;
 };
 
+export type ContainerImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type ContainerFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionInfo: string;
   sectionImage: string;
@@ -26,13 +30,12 @@ export type ContainerFormLabels = {
   namePlaceholder: string;
   description: string;
   descriptionPlaceholder: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
-  imageVerify: string;
-  imageInvalid: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
+  imageEmptyHint: string;
+  imageFileInvalid: string;
   imagePreview: string;
-  imagePreviewEmpty: string;
-  imageHint: string;
   imageAlt: string;
   netPrice: string;
   netPriceRequired: string;
@@ -56,8 +59,12 @@ export type ContainerFormLabels = {
 
 export type ContainerFormProps = {
   initial?: SurpriseContainerFormDTO;
+  backHref: string;
   labels: ContainerFormLabels;
-  onSubmit: (values: ContainerFormValues) => Promise<void>;
+  onSubmit: (
+    values: ContainerFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

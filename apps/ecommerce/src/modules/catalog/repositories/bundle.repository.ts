@@ -3,6 +3,11 @@ import "server-only";
 import { createSupabaseServerClient } from "@de-tin-marin/db/server";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import type { Database, Json } from "@de-tin-marin/types/database";
+import type { PublicCatalogSort } from "@de-tin-marin/validations/public-catalog";
+import {
+  orderRowsByIds,
+  parseCatalogListRpcPayload,
+} from "../helpers/catalog-list-pagination.helpers";
 
 type BundleRow = Database["catalog"]["Tables"]["bundles"]["Row"];
 
@@ -21,34 +26,55 @@ export type PublicBundleItemRow = {
 
 export type PublicBundleRow = BundleRow;
 
-export type PublicBundleFilters = {
+export type PublicBundleListPagination = {
+  page: number;
+  pageSize: number;
+  sort: PublicCatalogSort;
   search?: string;
 };
 
-function escapeIlike(term: string): string {
-  return term.replace(/[%_\\]/g, "\\$&");
-}
+export type PublicBundleListResult = {
+  rows: PublicBundleRow[];
+  total: number;
+};
 
 export async function listPublicBundlesRepo(
   config: SupabaseConfig,
-  filters: PublicBundleFilters,
-): Promise<PublicBundleRow[]> {
+  pagination: PublicBundleListPagination,
+): Promise<PublicBundleListResult> {
   const supabase = await createSupabaseServerClient(config);
-  let query = supabase
+  const { page, pageSize, sort, search } = pagination;
+
+  const rpcResult = await supabase
+    .schema("catalog")
+    .rpc("list_public_bundles", {
+      p_page: page,
+      p_page_size: pageSize,
+      p_search: search ?? null,
+      p_sort: sort,
+    });
+
+  if (rpcResult.error) throw new Error(rpcResult.error.message);
+
+  const { ids, total } = parseCatalogListRpcPayload(rpcResult.data);
+  if (ids.length === 0) {
+    return { rows: [], total };
+  }
+
+  const { data, error } = await supabase
     .schema("catalog")
     .from("bundles")
     .select("*")
+    .in("id", ids)
     .eq("is_active", true)
     .is("deleted_at", null);
 
-  if (filters.search) {
-    const term = `%${escapeIlike(filters.search)}%`;
-    query = query.ilike("name", term);
-  }
-
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data ?? []) as PublicBundleRow[];
+
+  return {
+    rows: orderRowsByIds((data ?? []) as PublicBundleRow[], ids),
+    total,
+  };
 }
 
 export async function getPublicBundleByIdRepo(

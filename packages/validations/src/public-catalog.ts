@@ -122,6 +122,7 @@ export const publicPackDetailSchema = publicPackListItemSchema.extend({
       description: z.string().nullable(),
       imageUrl: z.string().nullable(),
       packageQuantity: z.number(),
+      unitQuantity: z.number(),
       itemsPerPackage: z.number().int().min(1),
       productType: z.enum(["unit", "package"]),
       packageLabel: z.string().nullable(),

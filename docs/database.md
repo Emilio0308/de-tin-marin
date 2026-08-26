@@ -57,7 +57,10 @@ En cada bloque (`normal`, `unit`): `subtotal + igv = netPrice` (tolerancia centa
 
 ```text
 |unit.netPrice × items_per_package − normal.netPrice| ≤ 0.01
+  OR unit.netPrice × items_per_package > normal.netPrice   // ceil al derivar unit
 ```
+
+`buildPricesFromPackageNetPrice` redondea `unit` **hacia arriba** (2 decimales) para que vender por unidad no sea más barato que el paquete.
 
 Si `items_per_package = 1`, `normal` y `unit` deben ser idénticos.
 
@@ -77,12 +80,105 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 ### Schema `core`
 
-| Tabla             | Descripción                         |
-| ----------------- | ----------------------------------- |
-| `core.profiles`   | Perfil extendido de auth.users      |
-| `core.user_roles` | Rol staff: `admin` \| `super_admin` |
-| `core.settings`   | Configuración global key-value      |
-| `core.audit_log`  | Auditoría de acciones sensibles     |
+| Tabla                           | Descripción                                             |
+| ------------------------------- | ------------------------------------------------------- |
+| `core.profiles`                 | Perfil extendido de auth.users                          |
+| `core.user_roles`               | Rol staff: `admin` \| `super_admin`                     |
+| `core.settings`                 | Configuración global key-value                          |
+| `core.audit_log`                | Auditoría de acciones sensibles                         |
+| `core.hero_settings`            | Singleton modo hero home (`static` \| `carousel`)       |
+| `core.hero_images`              | Slides del hero (URL, orden, vigencia)                  |
+| `core.about_page_settings`      | Singleton imagen de “Nuestra Historia” (`/nosotros`)    |
+| `core.public_business_settings` | Singleton contacto + instrucciones de pago públicas     |
+| `core.storefront_settings`      | Singleton reglas de tienda (promo envío, mínimo, aviso) |
+
+**`core.hero_settings`** (singleton, `singleton_key = 'default'`):
+
+| Columna         | Tipo        | Notas                                     |
+| --------------- | ----------- | ----------------------------------------- |
+| `singleton_key` | text unique | Solo `'default'`                          |
+| `display_mode`  | text        | `static` \| `carousel` (default `static`) |
+| `updated_at`    | timestamptz |                                           |
+
+**`core.hero_images`** (columnas clave):
+
+| Columna      | Tipo        | Notas                                       |
+| ------------ | ----------- | ------------------------------------------- |
+| `image_url`  | text        | URL CloudFront                              |
+| `alt_text`   | text        | Nullable; ecommerce usa i18n si vacío       |
+| `sort_order` | int         | Orden visualización                         |
+| `starts_at`  | timestamptz | Inicio vigencia                             |
+| `ends_at`    | timestamptz | Fin vigencia; `CHECK (ends_at > starts_at)` |
+| `deleted_at` | timestamptz | Soft-delete                                 |
+
+Vigencia (`now()` entre `starts_at` y `ends_at`) se filtra en **service de app**, no solo en RLS. Imágenes hero: **aspecto cuadrado 1:1** (±2 %), lado ≥ 600 px (validación admin). Folder S3: `hero/`.
+
+**`core.about_page_settings`** (singleton, `singleton_key = 'default'`;
+migración `00027_about_page_settings.sql`):
+
+| Columna         | Tipo        | Notas                                                    |
+| --------------- | ----------- | -------------------------------------------------------- |
+| `singleton_key` | text unique | Solo `'default'`                                         |
+| `image_url`     | text        | Nullable; `null` = ecommerce usa placeholder de Nosotros |
+| `updated_at`    | timestamptz |                                                          |
+
+Imagen Nosotros: **landscape ~16:9** (`aspect-[1.79]`, ±5 %), ancho ≥ 800 px (validación admin). Folder S3: `about/`.
+
+**`core.public_business_settings`** (singleton, `singleton_key = 'default'`;
+migración `00026_public_business_settings.sql`):
+
+| Columna                         | Tipo        | Notas                               |
+| ------------------------------- | ----------- | ----------------------------------- |
+| `id`                            | uuid        | PK                                  |
+| `singleton_key`                 | text unique | Solo `'default'`                    |
+| `whatsapp_e164`                 | text        | E.164 sin `+` (ej. `51980966238`)   |
+| `email`                         | text        | Correo de contacto público          |
+| `yape_phone`                    | text        | Móvil Yape `9XXXXXXXX` (≠ WhatsApp) |
+| `yape_holder_name`              | text        | Titular Yape                        |
+| `bank_name`                     | text        | Banco (ej. BCP)                     |
+| `bank_account_holder_name`      | text        | Titular de la cuenta                |
+| `bank_account_number`           | text        | Número de cuenta (texto libre)      |
+| `bank_interbank_account_number` | text        | CCI — 20 dígitos                    |
+| `updated_at`                    | timestamptz |                                     |
+
+Checks SQL: WhatsApp E.164 de 11–15 dígitos sin `+`, email con `@`, Yape
+`9XXXXXXXX` y CCI de 20 dígitos. La capa Zod mantiene la misma semántica y
+acota nombres, banco y cuenta.
+
+**Acceso/RLS:** `SELECT` público (`anon`, `authenticated`) porque WhatsApp,
+email e instrucciones de cobro se muestran en tienda. `UPDATE` solo
+`core.is_staff()` y no hay policy de `INSERT`/`DELETE`: la migración crea la
+única fila `singleton_key = 'default'`. No reutilizar `core.settings`
+(key-value staff-only).
+
+Es información **pública operativa**: no guardar secretos, tokens de pasarela
+ni credenciales bancarias fuera de los datos que se muestran al cliente.
+
+**`core.storefront_settings`** (singleton, `singleton_key = 'default'`;
+migración `00032_storefront_settings.sql`):
+
+| Columna                      | Tipo          | Notas                                           |
+| ---------------------------- | ------------- | ----------------------------------------------- |
+| `id`                         | uuid          | PK                                              |
+| `singleton_key`              | text unique   | Solo `'default'`                                |
+| `free_delivery`              | boolean       | Default `false` — overlay fee 0 si vigente      |
+| `free_pickup_point`          | boolean       | Default `false` — overlay fee 0 si vigente      |
+| `free_fulfillment_starts_at` | timestamptz   | Nullable; inicio ventana compartida             |
+| `free_fulfillment_ends_at`   | timestamptz   | Nullable; `CHECK` ends > starts si ambos set    |
+| `min_order_subtotal`         | numeric(12,2) | `0` = off; guest exige `subtotal >=` (Regla 32) |
+| `announcement_enabled`       | boolean       | Default `false`                                 |
+| `announcement_message`       | text          | Nullable; copy staff (Zod ~500 chars)           |
+| `updated_at`                 | timestamptz   | Trigger `core.set_updated_at()`                 |
+
+Vigencia de promo y overlay de fee se aplican en **service de app**
+(`applyStorefrontShippingFee` / `isFreeFulfillmentActive`), no reescribiendo
+fees de zona/punto. Ventana: bound null = sin tope en ese lado. Courier y
+`pickup` tienda no usan los flags de promo (courier ya es fee 0).
+No reutilizar `core.settings` (key-value staff-only).
+
+**Acceso/RLS:** `SELECT` público (`anon`, `authenticated`). `UPDATE` solo
+`core.is_staff()`. Sin `INSERT`/`DELETE` de app: la migración siembra la
+fila `default`.
 
 ### Schema `catalog`
 
@@ -94,7 +190,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `catalog.bundles`             | Plantilla de sorpresa (sin stock propio) |
 | `catalog.bundle_items`        | Composición base de la plantilla         |
 | `catalog.packs`               | Combo vendible (sin stock propio)        |
-| `catalog.pack_items`          | BOM fija en presentaciones/paquetes      |
+| `catalog.pack_items`          | BOM fija: presentaciones + unidades base |
 | `catalog.catalog_cache_meta`  | Singleton `version_at` (caché ecommerce) |
 
 **`catalog.categories`** (columnas clave):
@@ -109,25 +205,26 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 **`catalog.products`** (columnas clave):
 
-| Columna                  | Tipo          | Notas                                                               |
-| ------------------------ | ------------- | ------------------------------------------------------------------- |
-| `sku`                    | text unique   | Obligatorio                                                         |
-| `name`, `description`    | text          |                                                                     |
-| `slug`                   | text unique   | URL amigable                                                        |
-| `brand`                  | text          | Marca (texto libre)                                                 |
-| `image_url`              | text          | URL imagen principal (S1A)                                          |
-| `product_type`           | text          | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)               |
-| `items_per_package`      | int           | Unidades base por presentación (`>= 1`; default 1) (S1D)            |
-| `package_label`          | text nullable | Solo UX: `"tira"`, `"paquete"` (S1D)                                |
-| `prices`                 | jsonb         | Ver estructura arriba (`normal` + `unit`)                           |
-| `stock_sealed_packages`  | int           | Paquetes/tiras **cerrados** (`>= 0`) (S1D)                          |
-| `stock_loose_base_units` | int           | Unidades base sueltas de paquetes abiertos (S1D)                    |
-| `category_id`            | uuid          | → `categories`                                                      |
-| `campaign_id`            | uuid nullable | → `pricing.campaigns` (**1:1**, S1C)                                |
-| `is_active`              | boolean       |                                                                     |
-| `purchase_min_quantity`  | int           | Mín. presentaciones por pedido (default **10**) (DECISIONS #31)     |
-| `purchase_max_quantity`  | int           | Máx. presentaciones por pedido (default **100**); acotado por stock |
-| `deleted_at`             | timestamptz   | Soft-delete                                                         |
+| Columna                  | Tipo                   | Notas                                                                                   |
+| ------------------------ | ---------------------- | --------------------------------------------------------------------------------------- |
+| `sku`                    | text unique            | Obligatorio                                                                             |
+| `name`, `description`    | text                   |                                                                                         |
+| `slug`                   | text unique            | URL amigable                                                                            |
+| `brand`                  | text                   | Marca (texto libre)                                                                     |
+| `image_url`              | text                   | URL imagen principal (CDN CloudFront tras S0-03; texto libre)                           |
+| `product_type`           | text                   | `'package'` \| `'unit'` — v1 casi todo `'unit'` (S1D)                                   |
+| `items_per_package`      | int                    | Unidades base por presentación (`>= 1`; default 1) (S1D)                                |
+| `package_label`          | text nullable          | Solo UX: `"tira"`, `"paquete"` (S1D)                                                    |
+| `prices`                 | jsonb                  | Ver estructura arriba (`normal` + `unit`)                                               |
+| `stock_sealed_packages`  | int                    | Paquetes/tiras **cerrados** (`>= 0`) (S1D)                                              |
+| `stock_loose_base_units` | int                    | Unidades base sueltas de paquetes abiertos (S1D)                                        |
+| `category_id`            | uuid                   | → `categories`                                                                          |
+| `campaign_id`            | uuid nullable          | → `pricing.campaigns` (**1:1**, S1C)                                                    |
+| `is_active`              | boolean                |                                                                                         |
+| `purchase_min_quantity`  | int                    | Mín. presentaciones por pedido (default **10**) (DECISIONS #31)                         |
+| `purchase_max_quantity`  | int                    | Máx. presentaciones por pedido (default **100**); acotado por stock                     |
+| `cost_net_price`         | numeric(12,2) nullable | Costo proveedor (PEN; DECISIONS #36 / Regla 26). Margen/% derivados en app, no columnas |
+| `deleted_at`             | timestamptz            | Soft-delete                                                                             |
 
 > **Stock vendible (Regla 4 / DECISIONS #29):**
 >
@@ -142,31 +239,40 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 
 **`catalog.surprise_containers`** (insumo — S1E, **no** es producto vendible):
 
-| Columna          | Tipo        | Notas                                              |
-| ---------------- | ----------- | -------------------------------------------------- |
-| `sku`            | text unique | Entre activos (`deleted_at IS NULL`)               |
-| `name`           | text        | Ej. "Caja mediana", "Bolsa kraft"                  |
-| `description`    | text        | Opcional                                           |
-| `image_url`      | text        | URL texto (sin Storage v1)                         |
-| `prices`         | jsonb       | Bloque único `{ netPrice, igv, subtotal }`         |
-| `stock_quantity` | int         | `>= 0`; **1 envase = 1 unidad** (sin sealed/loose) |
-| `is_active`      | boolean     |                                                    |
-| `deleted_at`     | timestamptz | Soft-delete                                        |
+| Columna          | Tipo        | Notas                                                |
+| ---------------- | ----------- | ---------------------------------------------------- |
+| `sku`            | text unique | Entre activos (`deleted_at IS NULL`)                 |
+| `name`           | text        | Ej. "Caja mediana", "Bolsa kraft"                    |
+| `description`    | text        | Opcional                                             |
+| `image_url`      | text        | URL CDN / texto (upload admin S0-03 → `containers/`) |
+| `prices`         | jsonb       | Bloque único `{ netPrice, igv, subtotal }`           |
+| `stock_quantity` | int         | `>= 0`; **1 envase = 1 unidad** (sin sealed/loose)   |
+| `is_active`      | boolean     |                                                      |
+| `deleted_at`     | timestamptz | Soft-delete                                          |
 
 > Sin `product_type`, `items_per_package`, `prices.unit`, campañas ni categorías. El precio entra al total de la sorpresa vía bundle/orden; no hay línea `type: "product"` en carrito.
 
 **`catalog.bundles`** (plantilla — sin stock de dulces, sin precio persistido):
 
-| Columna               | Tipo        | Notas                                                      |
-| --------------------- | ----------- | ---------------------------------------------------------- |
-| `name`, `description` | text        |                                                            |
-| `image_url`           | text        | URL imagen principal (solo texto, sin Storage v1)          |
-| `container_id`        | uuid        | FK → `catalog.surprise_containers` (S1E)                   |
-| `quantity`            | int         | Nº de personas/porciones a las que apunta el pack (`>= 1`) |
-| `is_active`           | boolean     |                                                            |
-| `deleted_at`          | timestamptz |                                                            |
+| Columna                      | Tipo        | Notas                                                                                        |
+| ---------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `name`, `description`        | text        |                                                                                              |
+| `image_url`                  | text        | URL CDN / texto (upload admin S0-03 → `bundles/`)                                            |
+| `container_id`               | uuid        | FK → `catalog.surprise_containers` (S1E)                                                     |
+| `quantity`                   | int         | Cantidad de **sorpresas** de la plantilla (`>= 1`); default al personalizar                  |
+| `customization_min_products` | int         | Mín. productos **distintos** al personalizar (default **8**; `not null`; migración `00025`)  |
+| `customization_max_products` | int         | Máx. productos **distintos** al personalizar (default **20**; `not null`; techo app **100**) |
+| `is_active`                  | boolean     |                                                                                              |
+| `deleted_at`                 | timestamptz |                                                                                              |
 
 > ~~`service_fee`~~ eliminado en S1E (`00009`); reemplazado por envase referenciado.
+>
+> `00025_bundle_customization_limits.sql` agrega ambas columnas, hace
+> backfill de filas existentes a `8`/`20` y aplica checks
+> `customization_min_products >= 1`,
+> `customization_max_products >= 1` y `min <= max`. El límite superior de
+> 100 se protege en Zod/app (`BUNDLE_CUSTOMIZATION_ABSOLUTE_MAX`), no con un
+> `CHECK` de base de datos.
 >
 > **Sin columna `prices`.** Precio **dinámico** (DECISIONS #6):
 >
@@ -177,7 +283,11 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 >
 > Con campaña activa en preview: usar `finalUnitPrice` por componente.
 
-**`catalog.bundle_items`**: `bundle_id`, `product_id`, `units_per_person` (unidades **base** de ese producto por sorpresa/persona; **v1 fija en 1**). Unique `(bundle_id, product_id)`.
+**`catalog.bundle_items`**: `bundle_id`, `product_id`, `units_per_person`
+(unidades **base** de ese producto por sorpresa; default de plantilla ≥ 1;
+admin editable). En wizard ecommerce, con `enableUnitsPerPerson`, el cliente
+puede cambiar `quantityPerUnit` al personalizar (DECISIONS #22 / Regla 7).
+Unique `(bundle_id, product_id)`.
 
 **`catalog.packs`** (combo — sin stock propio; precio persistido):
 
@@ -186,7 +296,7 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `sku`                   | text unique   | Unique global (constraint `packs_sku_unique`)                  |
 | `name`, `description`   | text          |                                                                |
 | `slug`                  | text unique   | URL amigable                                                   |
-| `image_url`             | text          | URL texto (sin Storage v1)                                     |
+| `image_url`             | text          | URL CDN / texto (upload admin S0-03 → `packs/`)                |
 | `prices`                | jsonb         | `{ normal, reference }` cada uno `{ netPrice, igv, subtotal }` |
 | `campaign_id`           | uuid nullable | → `pricing.campaigns` (**1:1**, DECISIONS #33)                 |
 | `purchase_min_quantity` | int           | Default **1**                                                  |
@@ -194,12 +304,12 @@ Listado catálogo (producto suelto): `finalPrice` sobre presentación (`normal`)
 | `is_active`             | boolean       |                                                                |
 | `deleted_at`            | timestamptz   | Soft-delete                                                    |
 
-> **`reference`** = suma de `product.prices.normal.netPrice × package_quantity` (recalculada al guardar).
+> **`reference`** = Σ (`product.prices.normal.netPrice × package_quantity` + `product.prices.unit.netPrice × unit_quantity`) (recalculada al guardar).
 > **`normal`** = precio de venta del combo (admin). Invariante: `normal.netPrice >= reference.netPrice`.
 > Campaña aplica sobre `normal` → `finalPrice` en listado/orden.
-> Sin columnas de stock. Futuro: cantidades en unidad base / fracciones (no v1).
+> Sin columnas de stock.
 
-**`catalog.pack_items`**: `pack_id`, `product_id`, `package_quantity` (presentaciones/paquetes del producto por combo; `>= 1`). Unique `(pack_id, product_id)`. Solo productos (no packs anidados).
+**`catalog.pack_items`**: `pack_id`, `product_id`, `package_quantity` (presentaciones; `>= 0`), `unit_quantity` (unidades base sueltas; `>= 0`). Invariante: `package_quantity + unit_quantity >= 1`. Unique `(pack_id, product_id)` — una fila por producto; ambas cantidades pueden ser > 0 a la vez. Solo productos (no packs anidados).
 
 **`catalog.catalog_cache_meta`** (singleton — invalidación ecommerce, migraciones `00017`/`00018`):
 
@@ -246,13 +356,45 @@ Seed inicial (Piura): Piura, Castilla, 26 de Octubre, La Unión, Catacaos — mi
 
 **`pricing.delivery_settings`** (singleton, `singleton_key = 'default'`):
 
-| Columna            | Tipo          | Notas                         |
-| ------------------ | ------------- | ----------------------------- |
-| `pickup_enabled`   | boolean       | Recojo en tienda              |
-| `delivery_enabled` | boolean       | Delivery habilitado           |
-| `fallback_fee`     | numeric(12,2) | Tarifa si distrito no listado |
+| Columna                 | Tipo          | Notas                           |
+| ----------------------- | ------------- | ------------------------------- |
+| `pickup_enabled`        | boolean       | Recojo en tienda (admin manual) |
+| `pickup_points_enabled` | boolean       | Puntos de recojo en ecommerce   |
+| `courier_enabled`       | boolean       | Envío por agencia en ecommerce  |
+| `delivery_enabled`      | boolean       | Delivery habilitado             |
+| `fallback_fee`          | numeric(12,2) | Tarifa si distrito no listado   |
 
-Resolución al crear orden: `pickup` → `shipping_total = 0`; `delivery` → fee de zona o `fallback_fee` (Regla 19).
+Resolución al crear orden: `pickup` → `shipping_total = 0`; `pickup_point` → fee del punto activo congelado en snapshot; `courier` → `shipping_total = 0`; `delivery` → fee de zona o `fallback_fee` (Regla 19 / Regla 31).
+
+**`pricing.courier_departments`** (S4-11):
+
+| Columna      | Tipo        | Notas                                             |
+| ------------ | ----------- | ------------------------------------------------- |
+| `name`       | text unique | Departamento (Lima, Lambayeque, Piura, …)         |
+| `provinces`  | jsonb array | `{ slug, name, enabled }[]` — lista fija por seed |
+| `is_active`  | boolean     | Kill switch del departamento entero               |
+| `sort_order` | int         | Orden en UI admin / checkout                      |
+
+Seed inicial (inactivo): Lima (10 prov.), Lambayeque (3), Piura dept. **sin**
+provincia `piura` (cobertura local vía `delivery`). Lectura pública checkout:
+solo dept activos con ≥1 provincia `enabled`. Staff edita toggles; no borra
+provincias del JSON.
+
+**`pricing.pickup_points`** (S4-08):
+
+| Columna      | Tipo          | Notas                                     |
+| ------------ | ------------- | ----------------------------------------- |
+| `name`       | text unique   | Nombre del punto (mall, centro comercial) |
+| `lat`, `lng` | numeric       | Coordenadas centrales; bounds en check    |
+| `fee`        | numeric(12,2) | Tarifa configurable `>= 0`                |
+| `is_active`  | boolean       | Kill switch por punto                     |
+| `sort_order` | int           | Orden en UI admin / checkout              |
+
+Lectura pública: solo `is_active = true`. Staff ve y edita inactivos.
+Delete físico: las órdenes históricas conservan el JSONB snapshot.
+
+**`pricing.delivery_settings`** — `pickup_points_enabled` y `courier_enabled`
+(default `false` para courier) son kill switches globales de ecommerce.
 
 ### Schema `commerce`
 
@@ -264,20 +406,20 @@ Resolución al crear orden: `pickup` → `shipping_total = 0`; `delivery` → fe
 
 **`commerce.orders`**:
 
-| Columna / grupo                                         | Notas                                                                    |
-| ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `order_number`                                          | Código legible (`TM-YYYYMMDD-NNNN`)                                      |
-| `customer_id`                                           | → `crm.customers` nullable (guest v1)                                    |
-| `contact`                                               | jsonb — snapshot `name`, `lastName`, `phone`, `email`                    |
-| `fulfillment`                                           | jsonb — `method`, `deliveryAddress`, `notes`                             |
-| `shopping_cart`                                         | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)) |
-| `payment_methods`                                       | jsonb — array flexible; detalle interno → S2C                            |
-| `status`                                                | Ver [`orders.md`](orders.md)                                             |
-| `payment_status`                                        | `pending` \| `confirmed` \| `refunded`                                   |
-| `subtotal`, `discount_total`, `shipping_total`, `total` | Snapshots numéricos (`shipping_total` desde delivery zones en S1E)       |
-| `pricing_snapshot`                                      | jsonb — desglose al confirmar                                            |
-| `currency_code`                                         | default `'PEN'`                                                          |
-| `metadata`                                              | jsonb                                                                    |
+| Columna / grupo                                                            | Notas                                                                                                                                                                                   |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `order_number`                                                             | Código legible (`TM-YYYYMMDD-NNNN`)                                                                                                                                                     |
+| `customer_id`                                                              | → `crm.customers` nullable (guest v1)                                                                                                                                                   |
+| `contact`                                                                  | jsonb — snapshot `name`, `lastName`, `phone`, `email`                                                                                                                                   |
+| `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `pickupPoint`, `courier`, `notes`                                                                                                                  |
+| `shopping_cart`                                                            | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)): product dual `packageQuantity`/`unitQuantity`; pack BOM; bundle components. Migración dual histórica: `00024` |
+| `payment_methods`                                                          | jsonb — array flexible; detalle interno → S2C                                                                                                                                           |
+| `status`                                                                   | `pending_payment` \| `paid` \| `preparing` \| `ready` \| `awaiting_pickup` \| `in_transit` \| `delivered` \| `completed` \| `cancelled` — ver [`orders.md`](orders.md) · `00030` / #42  |
+| `payment_status`                                                           | `pending` \| `confirmed` \| `refunded`                                                                                                                                                  |
+| `subtotal`, `discount_total`, `surcharge_total`, `shipping_total`, `total` | Snapshots: `total = subtotal − discount + shipping + surcharge` (`00023`; surcharge admin-only)                                                                                         |
+| `pricing_snapshot`                                                         | jsonb — desglose al confirmar                                                                                                                                                           |
+| `currency_code`                                                            | default `'PEN'`                                                                                                                                                                         |
+| `metadata`                                                                 | jsonb                                                                                                                                                                                   |
 
 **`commerce.payments`** (v1 manual):
 
@@ -306,6 +448,8 @@ Sin pasarela en v1 — sin `external_payment_id` obligatorio.
 | `notes`           | text        | Opcional                              |
 
 Dirección de entrega: snapshot en `orders.fulfillment` — no duplicar en shipments.
+Al pasar `ready → in_transit` (`delivery` \| `pickup_point`), carrier + tracking
+son obligatorios (DECISIONS #42).
 
 ### Schema `crm`
 
@@ -345,28 +489,41 @@ erDiagram
 
 ## RLS (postura resumida)
 
-| Tabla                          | Lectura                       | Escritura                   |
-| ------------------------------ | ----------------------------- | --------------------------- |
-| `catalog.products` activos     | Público                       | Staff                       |
-| `catalog.surprise_containers`  | Público activos               | Staff                       |
-| `catalog.packs` / `pack_items` | Público activos               | Staff                       |
-| `pricing.campaigns`            | Staff                         | Staff                       |
-| `pricing.delivery_zones`       | Público activos               | Staff                       |
-| `pricing.delivery_settings`    | Público                       | Staff (update)              |
-| `catalog.catalog_cache_meta`   | Público                       | Staff (update / bump RPC)   |
-| `commerce.orders`              | Cliente propias / staff todas | Server + staff              |
-| `commerce.payments`            | Staff                         | Staff (confirmación manual) |
-| `commerce.shipments`           | Staff                         | Staff                       |
+| Tabla                           | Lectura                       | Escritura                   |
+| ------------------------------- | ----------------------------- | --------------------------- |
+| `catalog.products` activos      | Público                       | Staff                       |
+| `catalog.surprise_containers`   | Público activos               | Staff                       |
+| `catalog.packs` / `pack_items`  | Público activos               | Staff                       |
+| `pricing.campaigns`             | Público (SELECT)              | Staff                       |
+| `pricing.delivery_zones`        | Público activos               | Staff                       |
+| `pricing.pickup_points`         | Público activos               | Staff (CRUD)                |
+| `pricing.courier_departments`   | Público dept activos          | Staff (CRUD)                |
+| `pricing.delivery_settings`     | Público                       | Staff (update)              |
+| `core.hero_settings`            | Público                       | Staff (update)              |
+| `core.about_page_settings`      | Público                       | Staff (update)              |
+| `core.public_business_settings` | Público                       | Staff (update)              |
+| `core.storefront_settings`      | Público                       | Staff (update)              |
+| `core.hero_images`              | Público (no deleted)          | Staff                       |
+| `catalog.catalog_cache_meta`    | Público                       | Staff (update / bump RPC)   |
+| `commerce.orders`               | Cliente propias / staff todas | Server + staff              |
+| `commerce.payments`             | Staff                         | Staff (confirmación manual) |
+| `commerce.shipments`            | Staff                         | Staff                       |
 
 ---
 
 ## Queries planificadas
 
-| Query / RPC                                 | Uso                                                                                                 |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `catalog.list_products_with_final_price()`  | Listado con campaña y `finalPrice` calculado en backend                                             |
-| `catalog.bump_catalog_version()`            | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                 |
-| `commerce.deduct_stock_for_order(order_id)` | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid` |
+| Query / RPC                                       | Uso                                                                                                   |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `catalog.list_products_with_final_price()`        | Listado con campaña y `finalPrice` calculado en backend                                               |
+| `catalog.list_public_bundles(...)`                | S3A-1-R — page/sort/count público de sorpresas (`list_total` alineado a `computeBundleTotal`)         |
+| `catalog.list_public_packs(...)`                  | S3A-1-R — page/sort/count público de packs (`finalPrice` con campaña activa)                          |
+| `catalog.bump_catalog_version()`                  | Staff — `version_at = now()` + Broadcast Realtime `catalog-version`                                   |
+| `commerce.deduct_stock_for_order(order_id)`       | S2A (+ `00016`) — dulces por `product_type` + componentes pack (presentaciones) + envases al `paid`   |
+| `commerce.confirm_payment_with_stock_deduct(...)` | S2A/S2C — confirm pago manual + deduct atómico → `paid`                                               |
+| `commerce.restock_stock_for_order(order_id)`      | Inverso del deduct (cancel post-pago) — `00029` / S4-09                                               |
+| `commerce.cancel_order_with_restock(...)`         | Cancel atómico: refund payments + restock + `cancelled` — `00029`/`00030` / DECISIONS #41–#42 / S4-09 |
+| `commerce.insert_guest_order(...)`                | Guest create: `delivery` XOR `pickup_point`; no `pickup` (S4-08 / `00028`)                            |
 
 ---
 

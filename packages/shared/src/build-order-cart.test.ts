@@ -26,7 +26,7 @@ const productB = {
 describe("collectProductIdsFromOrderLines", () => {
   it("recoge ids de productos y componentes de bundle", () => {
     const ids = collectProductIdsFromOrderLines([
-      { type: "product", productId: "p1", quantity: 1 },
+      { type: "product", productId: "p1", packageQuantity: 1, unitQuantity: 0 },
       {
         type: "bundle",
         bundleId: "b1",
@@ -51,6 +51,7 @@ describe("resolveProductsForOrder", () => {
       name: "Producto A",
       unitPrice: 10,
       presentationPrice: 10,
+      itemsPerPackage: 1,
     });
   });
 
@@ -71,10 +72,18 @@ describe("resolveProductsForOrder", () => {
       name: "Paquete",
       unitPrice: 2,
       presentationPrice: 20,
+      itemsPerPackage: 10,
     });
 
     const result = buildOrderCart({
-      lines: [{ type: "product", productId: "p3", quantity: 2 }],
+      lines: [
+        {
+          type: "product",
+          productId: "p3",
+          packageQuantity: 2,
+          unitQuantity: 0,
+        },
+      ],
       products: [packageProduct],
       campaigns: [],
       bundlesById: new Map(),
@@ -86,7 +95,8 @@ describe("resolveProductsForOrder", () => {
     const line = result.shoppingCart.lines[0];
     expect(line?.type).toBe("product");
     if (line?.type === "product") {
-      expect(line.unitPrice).toBe(20);
+      expect(line.packagePrice).toBe(20);
+      expect(line.unitPrice).toBe(2);
       expect(line.lineTotal).toBe(40);
     }
   });
@@ -95,7 +105,14 @@ describe("resolveProductsForOrder", () => {
 describe("buildOrderCart", () => {
   it("construye carrito de producto simple", () => {
     const result = buildOrderCart({
-      lines: [{ type: "product", productId: "p1", quantity: 2 }],
+      lines: [
+        {
+          type: "product",
+          productId: "p1",
+          packageQuantity: 2,
+          unitQuantity: 0,
+        },
+      ],
       products: [productA],
       campaigns: [],
       bundlesById: new Map(),

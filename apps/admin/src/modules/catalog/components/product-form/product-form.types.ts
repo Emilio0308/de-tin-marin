@@ -11,6 +11,7 @@ export type ProductFormValues = {
   itemsPerPackage: number;
   packageLabel: string;
   packageNetPrice: number;
+  costNetPrice: number | null;
   stockSealedPackages: number;
   stockLooseBaseUnits: number;
   purchaseMinQuantity: number;
@@ -20,9 +21,13 @@ export type ProductFormValues = {
   isActive: boolean;
 };
 
+export type ProductImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type ProductFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   status: string;
   statusActive: string;
@@ -38,8 +43,11 @@ export type ProductFormLabels = {
   image: string;
   imagePreview: string;
   imageAlt: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
+  imageEmptyHint: string;
+  imageFileInvalid: string;
   brand: string;
   brandPlaceholder: string;
   category: string;
@@ -55,6 +63,13 @@ export type ProductFormLabels = {
   packagePrice: string;
   unitPrice: string;
   unitPricePreview: string;
+  costNetPrice: string;
+  costNetPriceHint: string;
+  margin: string;
+  marginPct: string;
+  marginEmpty: string;
+  formatMargin: (amount: string) => string;
+  formatMarginPct: (pct: string) => string;
   stock: string;
   stockSealed: string;
   stockLoose: string;
@@ -79,8 +94,12 @@ export type ProductFormLabels = {
 export type ProductFormProps = {
   initial?: ProductFormDTO;
   categories: CategoryListItem[];
+  backHref: string;
   labels: ProductFormLabels;
-  onSubmit: (values: ProductFormValues) => Promise<void>;
+  onSubmit: (
+    values: ProductFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

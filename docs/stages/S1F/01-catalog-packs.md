@@ -12,8 +12,10 @@
 ## Contexto (leer esto, no todo docs/)
 
 - Combos ≠ sorpresas: sin personas, sin envase, composición fija (DECISIONS #33).
-- Precio: JSONB `prices.reference` (suma de `normal` × `package_quantity`) + `prices.normal` (admin). **`normal >= reference`**.
-- Stock: sin columnas en `packs`; disponibilidad y deduct al `paid` sobre **presentaciones** de componentes.
+- Precio: JSONB `prices.reference` + `prices.normal` (admin). **`normal >= reference`**.
+  - **S1F (histórico):** `reference` = Σ(`normal` × `package_quantity`).
+  - **S4-04 (actual):** `reference` = Σ(`normal` × `package_quantity` + `unit` × `unit_quantity`); ver [S4/04](../S4/04-pack-dual-quantities.md).
+- Stock: sin columnas en `packs`; disponibilidad y deduct al `paid` vía componentes (S4-04: presentaciones **y** unidades base).
 - Campaña 1:1 (`campaign_id`) + `purchase_min_quantity` / `purchase_max_quantity`.
 - Patrón CRUD: Action → Service → Repository como bundles ([S1B](../S1B/01-bundles.md)).
 
@@ -37,8 +39,8 @@ Staff en admin (:3001) puede CRUD combos (packs) con composición de dulces en p
 - **NO stock propio en packs** → _doble inventario_
 - **NO `normal < reference`** — descuentos solo vía campaña → _bypass de pricing_
 - **NO personalización de BOM en orden** → _divergencia plantilla_
-- **NO UOM unidad base / fracciones** — solo documentar futuro → _scope creep_
 - **NO packs anidados** → _ciclos_
+- ~~NO UOM unidad base~~ — **superseded** por [S4-04](../S4/04-pack-dual-quantities.md) (`package_quantity` + `unit_quantity` en la misma fila)
 - **NO `index.ts` barrels**
 
 ## Tablas y RLS
@@ -50,13 +52,17 @@ Staff en admin (:3001) puede CRUD combos (packs) con composición de dulces en p
 
 ## Boundaries y DTOs
 
-| Boundary         | Tipo          | Input                   | Output DTO                                                                                    |
-| ---------------- | ------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
-| `listPacks`      | Server Action | —                       | `{ id, sku, name, imageUrl, normalPrice, referencePrice, finalPrice, itemCount, isActive }[]` |
-| `getPack`        | Server Action | `{ id }`                | FormDTO + items + reference/normal/final + campaign                                           |
-| `createPack`     | Server Action | `createPackInputSchema` | `{ ok, id? }`                                                                                 |
-| `updatePack`     | Server Action | `updatePackInputSchema` | `{ ok }`                                                                                      |
-| `softDeletePack` | Server Action | `{ id }`                | `{ ok }`                                                                                      |
+| Boundary         | Tipo          | Input                   | Output DTO                                                                                                                                                                 |
+| ---------------- | ------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listPacks`      | Server Action | —                       | `{ id, sku, name, imageUrl, normalPrice, referencePrice, finalPrice, itemCount, availableQuantity, stockShortages, purchaseMinQuantity, purchaseMaxQuantity, isActive }[]` |
+| `getPack`        | Server Action | `{ id }`                | FormDTO + items + reference/normal/final + campaign                                                                                                                        |
+| `createPack`     | Server Action | `createPackInputSchema` | `{ ok, id? }`                                                                                                                                                              |
+| `updatePack`     | Server Action | `updatePackInputSchema` | `{ ok }`                                                                                                                                                                   |
+| `softDeletePack` | Server Action | `{ id }`                | `{ ok }`                                                                                                                                                                   |
+
+Formulario Combos (`pack-form`): `ProductSearchPicker` + `listProductsPageAction({ status: "active" })`; al editar, `mergePackProductOptions` conserva ítems ya en la BOM. Persistencia solo productos activos (Regla 23 / `validatePackItems`).
+
+> **Post-S4-04:** cada ítem lleva `packageQuantity` + `unitQuantity` (suma ≥ 1). Contrato canónico: [S4/04-pack-dual-quantities.md](../S4/04-pack-dual-quantities.md).
 
 ## Rules que aplican
 
@@ -80,3 +86,4 @@ Staff en admin (:3001) puede CRUD combos (packs) con composición de dulces en p
 
 - [database.md](../../database.md) § packs
 - [DECISIONS.md](../../DECISIONS.md) #33
+- [S4/04-pack-dual-quantities.md](../S4/04-pack-dual-quantities.md) — BOM dual (actual)

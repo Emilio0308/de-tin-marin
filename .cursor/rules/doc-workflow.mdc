@@ -1,0 +1,17 @@
+---
+description: Al documentar o sync docs, leer y seguir docs/DOC-WORKFLOW.md
+alwaysApply: true
+---
+
+# Documentación — seguir DOC-WORKFLOW
+
+Si el usuario pide **documentar**, **actualizar documentación**, **sync de docs**, **alinear docs con el código** o cerrar una feature con docs:
+
+1. **Antes de editar**, leer [`docs/DOC-WORKFLOW.md`](docs/DOC-WORKFLOW.md) completo.
+2. Seguir su checklist (DECISIONS + Regla + database + roadmap/brief + dominio + READMEs).
+3. Documentar el **comportamiento del código**, no el plan ideal.
+4. Precedencia: `DECISIONS.md` gana; nombres de tablas solo desde `database.md`.
+5. Añadir bloque `## Docs sincronizados (fecha — tema)` en `DECISIONS.md` al cerrar.
+6. No commit de docs salvo que el usuario lo pida.
+
+No improvisar el flujo de docs: la guía canónica es `docs/DOC-WORKFLOW.md`.

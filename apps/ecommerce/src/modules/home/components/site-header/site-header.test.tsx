@@ -1,7 +1,36 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SiteHeader } from "./site-header";
 import type { HomeNavLink } from "@/modules/home/types/home.types";
+
+vi.mock("next-intl", () => ({
+  useTranslations:
+    (namespace: string) => (key: string, values?: { count?: number }) => {
+      const catalogs: Record<string, Record<string, string>> = {
+        nav: {
+          sweets: "Dulces",
+          surprises: "Sorpresas",
+          combos: "Combos",
+          myOrders: "Mis pedidos",
+          about: "Nosotros",
+          menuTitle: "Menú",
+          openMenu: "Abrir menú",
+          closeMenu: "Cerrar menú",
+          cart: "Carrito",
+          cartWithCount: "Ver carrito ({count})",
+          "sections.explore": "Explorar",
+          "sections.account": "Tu cuenta",
+        },
+      };
+
+      const template = catalogs[namespace]?.[key] ?? key;
+      if (values?.count !== undefined) {
+        return template.replace("{count}", String(values.count));
+      }
+
+      return template;
+    },
+}));
 
 const navLinks: HomeNavLink[] = [
   { label: "Dulces", href: "/?tab=productos" },
@@ -30,23 +59,21 @@ describe("SiteHeader", () => {
         name: "Mis pedidos",
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /ver carrito/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /carrito/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Mis pedidos")).toBeInTheDocument();
   });
 
-  it("no resalta ningún enlace cuando activeIndex es -1", () => {
+  it("resalta el enlace activo en desktop", () => {
     render(
       <SiteHeader
         navLinks={navLinks}
-        activeIndex={-1}
+        activeIndex={0}
         scrolled={false}
         cartCount={2}
       />,
     );
 
     const sweetsLink = screen.getByRole("link", { name: "Dulces" });
-    expect(sweetsLink.className).not.toMatch(/border-primary/);
+    expect(sweetsLink.className).toMatch(/bg-primary-fixed/);
   });
 });

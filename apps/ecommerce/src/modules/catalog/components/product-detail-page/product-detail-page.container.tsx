@@ -1,19 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ProductDetailPageLabels } from "./product-detail-page.types";
 import type { PublicProductDetail } from "@de-tin-marin/validations/public-catalog";
 import { useCart } from "@/modules/cart/hooks/use-cart";
 import { resolveProductPurchaseLimits } from "./product-detail-page.helpers";
 import { ProductDetailPage } from "./product-detail-page";
+import type {
+  ProductDetailPageLabels,
+  ProductDetailSuggestedItem,
+} from "./product-detail-page.types";
 
 export type ProductDetailPageContainerProps = {
   product: PublicProductDetail;
+  suggestions: ProductDetailSuggestedItem[];
   labels: ProductDetailPageLabels;
 };
 
 export function ProductDetailPageContainer({
   product,
+  suggestions,
   labels,
 }: ProductDetailPageContainerProps) {
   const { addProduct } = useCart();
@@ -40,6 +45,7 @@ export function ProductDetailPageContainer({
   return (
     <ProductDetailPage
       product={product}
+      suggestions={suggestions}
       labels={labels}
       quantity={quantity}
       minQuantity={bounds.minQuantity}

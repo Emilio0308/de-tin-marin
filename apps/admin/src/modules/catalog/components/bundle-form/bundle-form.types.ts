@@ -24,13 +24,19 @@ export type BundleFormValues = {
   imageUrl: string;
   containerId: string;
   quantity: number;
+  customizationMinProducts: number;
+  customizationMaxProducts: number;
   isActive: boolean;
   items: BundleFormItemValues[];
 };
 
+export type BundleImageUploadResult =
+  { ok: true; publicUrl: string } | { ok: false; error: string };
+
 export type BundleFormLabels = {
   breadcrumbParent: string;
   breadcrumbCurrent: string;
+  back: string;
   title: string;
   sectionGeneral: string;
   sectionImage: string;
@@ -40,12 +46,16 @@ export type BundleFormLabels = {
   namePlaceholder: string;
   description: string;
   descriptionPlaceholder: string;
-  imageUrl: string;
-  imageUrlPlaceholder: string;
+  imageUpload: string;
+  imageUploading: string;
+  imageClear: string;
   imageAlt: string;
   imageEmptyTitle: string;
   imageEmptyHint: string;
+  imageFileInvalid: string;
   productSelectPlaceholder: string;
+  includeInactiveProducts: string;
+  includeInactiveProductsHint: string;
   addProduct: string;
   emptyItems: string;
   decreaseUnits: string;
@@ -56,6 +66,9 @@ export type BundleFormLabels = {
   container: string;
   containerPlaceholder: string;
   persons: string;
+  customizationMin: string;
+  customizationMax: string;
+  customizationHint: string;
   subtotalLabel: string;
   containerLabel: string;
   totalLabel: string;
@@ -70,8 +83,16 @@ export type BundleFormProps = {
   initial?: BundleFormDTO;
   products: ProductOption[];
   containers: ContainerOption[];
+  backHref: string;
   labels: BundleFormLabels;
-  onSubmit: (values: BundleFormValues) => Promise<void>;
+  includeInactiveProducts: boolean;
+  onIncludeInactiveProductsChange: (value: boolean) => void;
+  onEnsureProductOption: (option: ProductOption) => void;
+  productStatus: "all" | "active" | "inactive";
+  onSubmit: (
+    values: BundleFormValues,
+    pendingImage: File | null,
+  ) => Promise<void>;
   onCancel: () => void;
   submitting: boolean;
   error: string | null;

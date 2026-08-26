@@ -3,6 +3,8 @@ export const GUEST_ORDER_STATUS_LABEL_KEYS = [
   "paid",
   "preparing",
   "ready",
+  "awaiting_pickup",
+  "in_transit",
   "delivered",
   "completed",
   "cancelled",

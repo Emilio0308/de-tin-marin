@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
+import { getPublicBusinessSettingsAction } from "@/modules/business-settings/actions/get-public-business-settings";
 import { getGuestOrderAction } from "@/modules/orders/actions/get-guest-order";
 import { buildPaymentInstructionLabels } from "@/modules/orders/helpers/build-payment-instruction-labels";
 import {
@@ -12,6 +14,7 @@ import {
   resolveGuestOrderStatusLabel,
   resolveGuestPaymentStatusLabel,
 } from "@/modules/orders/helpers/guest-order-status-labels";
+import { queryKeys } from "@/shared/query/query-keys";
 import {
   hasConfirmationLookupParams,
   resolveConfirmationLookupParams,
@@ -33,6 +36,16 @@ export function OrderConfirmationPageContainer() {
   const [order, setOrder] = useState<GuestOrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(canLookup);
   const [lookupFailed, setLookupFailed] = useState(false);
+
+  const businessSettingsQuery = useQuery({
+    queryKey: queryKeys.businessSettings.public(),
+    queryFn: async () => {
+      const result = await getPublicBusinessSettingsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     if (!canLookup || !orderNumber || !email) {
@@ -87,19 +100,24 @@ export function OrderConfirmationPageContainer() {
     [t],
   );
 
-  const paymentLabels = useMemo(
-    () => buildPaymentInstructionLabels((key, values) => t(key, values)),
-    [t],
-  );
+  const paymentLabels = useMemo(() => {
+    if (!businessSettingsQuery.data) return null;
+    return buildPaymentInstructionLabels(
+      (key, values) => t(key, values),
+      businessSettingsQuery.data,
+    );
+  }, [businessSettingsQuery.data, t]);
 
   const errorMessage = lookupFailed ? tLookup("notFound") : null;
+  const waitingPaymentLabels =
+    order?.status === "pending_payment" && !paymentLabels;
 
   return (
     <OrderConfirmationPage
       orderNumber={orderNumber}
       email={email}
       order={order}
-      isLoading={isLoading}
+      isLoading={isLoading || waitingPaymentLabels}
       errorMessage={errorMessage}
       labels={{
         title: t("title"),
@@ -119,17 +137,33 @@ export function OrderConfirmationPageContainer() {
           paymentStatus: t("summary.paymentStatus"),
           deliveryTitle: t("summary.deliveryTitle"),
           pickupTitle: t("summary.pickupTitle"),
+          pickupPointTitle: t("summary.pickupPointTitle"),
+          courierTitle: t("summary.courierTitle"),
+          pickupInStoreNote: t("summary.pickupInStoreNote"),
           bundleBadge: t("summary.bundleBadge"),
           packBadge: t("summary.packBadge"),
           bundleComponents: t("summary.bundleComponents"),
           packComponents: t("summary.packComponents"),
+          progressTitle: t("summary.progressTitle"),
+          orderPlaced: t("summary.orderPlaced"),
+          orderNumber: t("summary.orderNumber"),
+          dateLabel: t("summary.dateLabel"),
+          statusCurrent: t("summary.statusCurrent"),
+          paymentPendingHint: t("summary.paymentPendingHint"),
           formatBundlePersons: (count) => t("summary.bundlePersons", { count }),
           formatStatus: (status) =>
             resolveGuestOrderStatusLabel(status, statusLabels),
           formatPaymentStatus: (paymentStatus) =>
             resolveGuestPaymentStatusLabel(paymentStatus, paymentStatusLabels),
         },
-        payment: paymentLabels,
+        payment: paymentLabels ?? {
+          title: "",
+          yapeLabel: "",
+          transferLabel: "",
+          yape: "",
+          transfer: "",
+          note: "",
+        },
       }}
     />
   );

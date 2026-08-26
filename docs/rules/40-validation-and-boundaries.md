@@ -44,6 +44,8 @@ Tipos: `type X = z.infer<typeof XSchema>`.
 
 ## Env
 
+Al agregar una variable nueva: schema + `runtimeEnv` + `.env.example` + **`turbo.json` → `tasks.build.env`** (si no, Vercel no la inyecta al build). Ver [`coding-guidelines.md`](../coding-guidelines.md) § Variables de entorno.
+
 ```typescript
 // packages/config/src/env.ts
 import { createEnv } from "@t3-oss/env-nextjs";
@@ -63,26 +65,79 @@ export const env = createEnv({
 
 ## Manejo de errores y logging (obligatorio)
 
-Regla: **nunca tragar un error en silencio.** Un error de Supabase/RLS o un
-`throw` de repositorio que no se registra deja la terminal vacía y la UI con un
-mensaje genérico inútil (lección S1A).
+Regla: **nunca tragar un error en silencio.** Un error de Supabase/RLS, un `throw`
+de repositorio, o un `Failed to fetch` (CORS) que no se registra deja la terminal /
+Vercel vacíos y la UI con un mensaje genérico inútil (lección S1A + media upload).
 
-Servicio de logging/errores: `apps/admin/src/shared/errors/server-error.ts`.
+**Sink v1 (DECISIONS #37):** solo consola del servidor (`console.info` / `warn` /
+`error` → JSON en una línea). Visible en `pnpm dev:*` y **Vercel → Runtime Logs**.
+Sin persistencia en DB, archivos ni servicios externos.
 
-- `getErrorMessage(error: unknown): string` — mensaje legible de cualquier valor.
-- `logServerError(scope, error)` — `console.error` server-side con scope.
-- `guardAction(scope, run)` — envuelve el cuerpo del Server Action.
+Implementación canónica: **`@de-tin-marin/logging`**
+([README del package](../../packages/logging/README.md)). Shims por app:
+
+| Helper                                                                                 | Origen                                                                                                         | Uso                                                       |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `guardAction` / `withOperation` / `logServerError` / `logServerInfo` / `logServerWarn` | `apps/<app>/src/shared/errors/server-error.ts` → `createServerErrorHelpers({ app, includeUnexpectedMessage })` | Server Actions y código `server-only`                     |
+| `logClientError`                                                                       | `apps/admin/src/shared/errors/client-error.ts`                                                                 | Containers `'use client'` admin → **consola del browser** |
+
+Config del shim:
+
+| App       | `app`         | `includeUnexpectedMessage`                                 |
+| --------- | ------------- | ---------------------------------------------------------- |
+| admin     | `"admin"`     | `true` — `UNEXPECTED` puede llevar `message` al backoffice |
+| ecommerce | `"ecommerce"` | `false` — `UNEXPECTED` **sin** detalle interno al cliente  |
+
+### Eventos de operación
+
+Toda Server Action (y Route Handler futuro) pasa por `guardAction("scope", run)`
+(alias de `withOperation` sin meta extra):
+
+1. `started` — al entrar (`requestId` de 8 chars, `app`, `scope`, `meta` opcional)
+2. `completed` — al devolver `{ ok }` (`durationMs`, `errorCode` si `ok === false`)
+3. `failed` — si hay `throw` (`errorCode: "UNEXPECTED"`) + `logger.error` con el error
+
+Errores de negocio `{ ok: false, error: "VALIDATION" | … }` **también** dejan rastro
+vía `completed` + `errorCode` (no solo los throws).
+
+Forma del evento (campos relevantes):
+
+```text
+{ ts, level, app, scope, event?, requestId?, durationMs?, ok?, errorCode?, message?, meta? }
+```
+
+### Metadata segura (obligatorio)
+
+Loguear **resumen de request y response** (no dumps crudos):
+
+- `guardAction(scope, run, requestMeta?)` escribe en consola:
+  - `started.meta.request` — shape del input (`summarizeActionInput` / allowlist)
+  - `completed.meta.response` — resumen del resultado (`itemCount`, `districts`, ids, códigos)
+- **Prohibido** loguear: payloads `raw` / body completos, PII (`contact`, email, teléfono, dirección, `mapPin`), secrets, cookies, tokens, URLs firmadas (`uploadUrl`, `signedUrl`), `shopping_cart` completo, issues Zod crudos.
+
+`safeMeta` (`@de-tin-marin/logging/redact`) aplica denylist + truncado. En actions con
+input: pasar `summarizeActionInput(raw)` como 3er argumento de `guardAction`.
 
 ### Reglas
 
 1. **Toda Server Action** envuelve su cuerpo en `guardAction("scope", async () => { ... })`.
-   Captura los `throw` (Supabase/RLS), los loguea y devuelve
-   `{ ok: false, error: "UNEXPECTED", message }`.
-2. **Helpers server-only** (p. ej. `requireStaff`) que descartan un resultado por
-   error deben `logServerError(...)` antes de devolver el código de error.
-3. **Nunca** `catch {}` vacío ni descartar `error` de una respuesta Supabase sin loguear.
-4. El `message` de `UNEXPECTED` puede mostrarse en la UI del backoffice (herramienta
-   interna) para depurar; no exponer detalles crudos en superficies públicas.
+2. **Mutaciones críticas** (checkout, pagos, stock, media, create order) añaden
+   `logServerInfo` / `logServerError` (y `logServerWarn` si aplica) en el **service**
+   con meta segura, además del wrapper de la action.
+3. **Helpers server-only** (p. ej. `requireStaff`, `bumpCatalogVersionSafe`) que
+   descartan un resultado por error deben `logServerError(...)` antes de devolver
+   el código de error.
+4. **Nunca** `catch {}` vacío ni `catch { setError(genérico) }` sin loguear.
+   En client admin: `logClientError(scope, error)`.
+5. **UNEXPECTED al cliente:** admin puede incluir `message` acotado (backoffice);
+   ecommerce **no** expone mensaje interno de Supabase/stack.
+6. **PUT a S3 desde el browser** (presign) no genera logs en Vercel si falla por CORS —
+   solo en la consola del cliente (`putPresignedCatalogImage`).
+7. **Notificaciones SMTP:** al awaitar el envío best-effort tras persistir,
+   loguear `notify_start` / resultado con solo `orderId`, `orderNumber`,
+   origen, conteo `sent` y código de fallo. Nunca el input de correo
+   (contacto, líneas, dirección, URLs guest), destinatarios ni valores
+   `SMTP_*`.
 
 ```typescript
 export async function createCategoryAction(raw: unknown) {
@@ -97,8 +152,8 @@ export async function createCategoryAction(raw: unknown) {
 }
 ```
 
-> El servicio vive hoy en `apps/admin`. Si el ecommerce necesita el mismo patrón,
-> promover a un paquete compartido antes de duplicarlo.
+Al diseñar una feature nueva: incluir logging de operación desde el brief —
+no es un afterthought.
 
 ## Bug classes prevenidos
 
@@ -106,3 +161,4 @@ export async function createCategoryAction(raw: unknown) {
 - Mass assignment (campos extra ignorados por Zod)
 - Crashes por shape incorrecto en runtime
 - Errores silenciosos (terminal vacía + mensaje genérico en UI)
+- Fuga de PII/secrets o detalles internos de DB al cliente / a logs

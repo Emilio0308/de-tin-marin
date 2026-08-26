@@ -1,0 +1,106 @@
+# S4-06 · Notificaciones email al crear orden
+
+|                |                                                          |
+| -------------- | -------------------------------------------------------- |
+| **Etapa**      | S4 — Notifications ([roadmap.md](../../roadmap.md) § S4) |
+| **Owner**      | Equipo De Tin Marín                                      |
+| **App(s)**     | `apps/ecommerce`, `apps/admin`, `packages/notifications` |
+| **Schemas**    | `core` (lectura `public_business_settings`), `commerce`  |
+| **Depende de** | S3A-3 ✅, S3A-4 ✅, S4-05 ✅, S2B ✅                     |
+| **Estado**     | done                                                     |
+
+## Contexto (leer esto, no todo docs/)
+
+- Checkout guest crea orden vía `createGuestOrderService` → RPC `commerce.insert_guest_order`.
+- Admin crea orden vía `createOrderService` → `insertOrderRepo`.
+- Contacto guest/admin incluye `email` en `orders.contact` (jsonb).
+- Email administrativo operativo = `core.public_business_settings.email` (DECISIONS #38).
+- Briefs previos marcaron **NO notificaciones email** → este slice las introduce (best-effort).
+- El envío se hace con **await** en create-order (sin `after()`): puede alargar
+  latencia; el fallo SMTP no revierte la orden.
+
+## Objetivo
+
+Al crear una orden, el sistema envía correos SMTP (Nodemailer + Gmail App Password) sin condicionar el éxito de la creación: ecommerce notifica cliente + admin; admin solo notifica admin.
+
+## Scope IN
+
+- Paquete `@de-tin-marin/notifications` (`server-only`): SMTP, `notifyOrderCreated`, templates HTML **embebidos** en `*.template.ts` + text, resolución de destinatarios
+- Env server (ambas apps): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `ORDER_NOTIFY_EXTRA_EMAILS` (opcional), URLs base opcionales para links
+- Ecommerce: tras insert exitoso → **await** `scheduleOrderCreatedNotification` → cliente + admin(+extras)
+- Admin create: tras insert exitoso → **await** → solo admin(+extras)
+- Fallo SMTP → log server (sin PII) ; orden sigue `{ ok: true }`
+- Transporte: puerto **587**, `secure: false`, timeouts 60s
+- Vitest: recipients, templates, matriz source
+
+## Scope OUT (traps)
+
+- **NO outbox / cola / reintentos / webhooks** → _scope creep_
+- **NO correo al cliente desde create admin** → _matriz acordada_
+- **NO hardcodear email de prueba** — solo `ORDER_NOTIFY_EXTRA_EMAILS` → _fuga a prod_
+- **NO tablas/migraciones nuevas** → _sin RLS extra_
+- **NO `index.ts` barrels**
+- **NO fallar create order si falta SMTP** — skip + warn → _checkout roto_
+- **NO `readFileSync` de `*.html` sueltos** — en Vercel no van en el bundle
+  serverless (`ENOENT` al import); tumba rutas que importan el package (p. ej.
+  `/checkout`). Embeber en `*.template.ts`.
+
+## Tablas y RLS
+
+| Tabla (schema)                  | ¿Nueva? | Ops    | Política (prosa)    | Test |
+| ------------------------------- | ------- | ------ | ------------------- | ---- |
+| `core.public_business_settings` | no      | SELECT | Existente (público) | —    |
+| `commerce.orders`               | no      | —      | Sin cambio          | —    |
+
+## Boundaries y DTOs
+
+| Boundary             | Tipo        | Input                                            | Output                                  |
+| -------------------- | ----------- | ------------------------------------------------ | --------------------------------------- |
+| `notifyOrderCreated` | Package API | `SmtpConfig \| null` + `OrderCreatedNotifyInput` | `{ ok, sent }` / `{ ok: false, error }` |
+
+### `OrderCreatedNotifyInput` (allowlist)
+
+- `source`: `'ecommerce' \| 'admin'`
+- `orderId`, `orderNumber`, `total`, `currencyCode`
+- `contact`: `{ name, lastName, email, phone }`
+- `adminEmail` (desde settings)
+- `extraAdminEmails?`
+- `customerLookupUrl?`, `adminOrderUrl?`
+
+## Rules que aplican
+
+- Invariantes CLAUDE.md: 3, 5, 7, 8, 15
+- `docs/rules/00-architecture.md`, `40-validation-and-boundaries.md` (env Zod, logging sin PII)
+
+## Orden de implementación
+
+1. Brief + roadmap
+2. Package notifications + templates + tests
+3. Env ambas apps + `.env.example` + turbo env
+4. Await `scheduleOrderCreatedNotification` en services create (sin `after()`)
+5. `pnpm check` + `pnpm build`
+
+## Criterios de aceptación
+
+- [x] Vitest — `packages/notifications/src/**/*.test.ts`: matriz ecommerce/admin, dedupe extras, HTML/text con orderNumber
+- [x] Create order OK aunque `notifyOrderCreated` falle o SMTP sea `null`
+- [x] `pnpm check` + `pnpm build` verdes
+- [x] Extra emails vacío/ausente en prod → solo `public_business_settings.email`
+
+## Preguntas abiertas
+
+- Ninguna (SMTP Gmail App Password; extras vía env; templates HTML embebidos;
+  await en create-order, puerto 587).
+
+## Notas post-implementación
+
+- **Plantillas:** `order-customer.template.ts` / `order-admin.template.ts`
+  (constantes string). Se eliminó la lectura de `.html` con `readFileSync` y
+  el workaround `outputFileTracingIncludes` en `next.config`.
+- **Lección de build:** un fallo al **cargar** un módulo compartido afecta
+  todas las rutas que lo importan, no solo el envío de correo. Ver
+  [`coding-guidelines.md`](../../coding-guidelines.md) § Assets en serverless.
+- **Delta runtime (2026-08-22):** se retiró `after()` porque en Vercel el
+  trabajo post-respuesta podía cortarse sin log. Create-order awaita el SMTP;
+  transporte fijo en 587 / `secure: false` / `family: 4` / timeouts 60s.
+  Cross-ref DECISIONS #39 · Regla 28.

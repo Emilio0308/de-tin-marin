@@ -6,12 +6,18 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createSurpriseContainerAction } from "@/modules/catalog/actions/create-surprise-container";
 import { updateSurpriseContainerAction } from "@/modules/catalog/actions/update-surprise-container";
+import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
+import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { ContainerForm } from "./container-form";
+import { resolveContainerImageUrlForPersist } from "./container-form.helpers";
 import type {
   ContainerFormContainerProps,
   ContainerFormLabels,
   ContainerFormValues,
+  ContainerImageUploadResult,
 } from "./container-form.types";
 
 function containerErrorMessage(
@@ -29,6 +35,10 @@ function containerErrorMessage(
       return t("forbidden");
     case "NOT_FOUND":
       return t("notFound");
+    case "UNEXPECTED":
+      return result.message
+        ? t("defaultWithMessage", { message: result.message })
+        : t("default");
     default:
       return result.message
         ? t("defaultWithMessage", { message: result.message })
@@ -52,6 +62,7 @@ export function ContainerFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       sectionInfo: t("sectionInfo"),
       sectionImage: t("sectionImage"),
@@ -65,13 +76,12 @@ export function ContainerFormContainer({
       namePlaceholder: t("namePlaceholder"),
       description: t("description"),
       descriptionPlaceholder: t("descriptionPlaceholder"),
-      imageUrl: t("imageUrl"),
-      imageUrlPlaceholder: t("imageUrlPlaceholder"),
-      imageVerify: t("imageVerify"),
-      imageInvalid: t("imageInvalid"),
+      imageUpload: t("imageUpload"),
+      imageUploading: t("imageUploading"),
+      imageClear: t("imageClear"),
+      imageEmptyHint: t("imageEmptyHint"),
+      imageFileInvalid: t("imageFileInvalid"),
       imagePreview: t("imagePreview"),
-      imagePreviewEmpty: t("imagePreviewEmpty"),
-      imageHint: t("imageHint"),
       imageAlt: t("imageAlt"),
       netPrice: t("netPrice"),
       netPriceRequired: t("netPriceRequired"),
@@ -95,35 +105,102 @@ export function ContainerFormContainer({
     [t, mode],
   );
 
-  async function handleSubmit(values: ContainerFormValues) {
+  async function uploadContainerImage(
+    file: File,
+  ): Promise<ContainerImageUploadResult> {
+    const presign = await createCatalogImageUploadUrlAction({
+      folder: "containers",
+      contentType: file.type as CatalogImageContentType,
+      contentLength: file.size,
+      fileName: file.name,
+    });
+
+    if (!presign.ok) {
+      if (presign.error === "UNAUTHORIZED") {
+        return { ok: false, error: tErrors("unauthorized") };
+      }
+      if (presign.error === "FORBIDDEN") {
+        return { ok: false, error: tErrors("forbidden") };
+      }
+      if (presign.error === "VALIDATION") {
+        return { ok: false, error: t("imageFileInvalid") };
+      }
+      return {
+        ok: false,
+        error:
+          "message" in presign && presign.message
+            ? t("imageUploadFailedWithMessage", { message: presign.message })
+            : t("imageUploadFailed"),
+      };
+    }
+
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
+    }
+
+    return { ok: true, publicUrl: presign.data.publicUrl };
+  }
+
+  async function handleSubmit(
+    values: ContainerFormValues,
+    pendingImage: File | null,
+  ) {
     setSubmitting(true);
     setError(null);
 
-    const payload = {
-      ...values,
-      description: values.description || null,
-      imageUrl: values.imageUrl || null,
-    };
+    try {
+      let uploadedPublicUrl: string | null = null;
 
-    const result =
-      mode === "create"
-        ? await createSurpriseContainerAction(payload)
-        : await updateSurpriseContainerAction({
-            id: initial?.id,
-            ...payload,
-          });
+      if (pendingImage) {
+        const upload = await uploadContainerImage(pendingImage);
+        if (!upload.ok) {
+          setError(upload.error);
+          return;
+        }
+        uploadedPublicUrl = upload.publicUrl;
+      }
 
-    setSubmitting(false);
+      const imageUrl = resolveContainerImageUrlForPersist(
+        values.imageUrl,
+        pendingImage,
+        uploadedPublicUrl,
+      );
 
-    if (!result.ok) {
-      setError(containerErrorMessage(result, tErrors));
-      return;
+      const payload = {
+        ...values,
+        description: values.description || null,
+        imageUrl,
+      };
+
+      const result =
+        mode === "create"
+          ? await createSurpriseContainerAction(payload)
+          : await updateSurpriseContainerAction({
+              id: initial?.id,
+              ...payload,
+            });
+
+      if (!result.ok) {
+        setError(containerErrorMessage(result, tErrors));
+        return;
+      }
+
+      await invalidateAdminCatalogLists(queryClient, "surpriseContainers");
+
+      router.push("/containers");
+      router.refresh();
+    } catch (error) {
+      logClientError("ContainerFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    await invalidateAdminCatalogLists(queryClient, "surpriseContainers");
-
-    router.push("/containers");
-    router.refresh();
   }
 
   function handleCancel() {
@@ -134,6 +211,7 @@ export function ContainerFormContainer({
     <div className="px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-32 lg:p-8 lg:pb-8">
       <ContainerForm
         initial={initial}
+        backHref="/containers"
         labels={labels}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

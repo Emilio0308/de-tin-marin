@@ -1,13 +1,13 @@
 # S3A-1-R · Remediación — paginación y orden en catálogo público
 
-|                    |                                                                     |
-| ------------------ | ------------------------------------------------------------------- |
-| **Tipo**           | Defecto de implementación (no deuda técnica opcional)               |
-| **Severidad**      | Alta                                                                |
-| **Introducido en** | S3A-1 · Catálogo público (`01-catalog-products-bundles.md`)         |
-| **Estado**         | Abierto — documentado; corrección diferida para no bloquear roadmap |
-| **App(s)**         | `apps/ecommerce`                                                    |
-| **Bloquea**        | Calidad/escala del catálogo; no bloquea S3A-2…4 funcionalmente      |
+|                    |                                                                           |
+| ------------------ | ------------------------------------------------------------------------- |
+| **Tipo**           | Defecto de implementación (no deuda técnica opcional)                     |
+| **Severidad**      | Alta                                                                      |
+| **Introducido en** | S3A-1 · Catálogo público (`01-catalog-products-bundles.md`)               |
+| **Estado**         | Cerrado — paginación SQL (productos PostgREST; bundles/packs RPC `00021`) |
+| **App(s)**         | `apps/ecommerce`                                                          |
+| **Bloquea**        | Calidad/escala del catálogo; no bloquea S3A-2…4 funcionalmente            |
 
 ## Resumen ejecutivo
 
@@ -217,13 +217,13 @@ Orden sugerido para no bloquear S3A-2…4 del roadmap, pero **antes de producci�
 
 ## Criterios de aceptación de la remediación
 
-- [ ] `listPublicProductsRepo` no devuelve más filas que `pageSize` (salvo count query separada).
-- [ ] `total` proviene de `COUNT(*)` con los mismos filtros, no de `array.length` en memoria.
-- [ ] Orden `name_*` y `price_*` coincide con el listado admin para una muestra de productos activos.
-- [ ] `listPublicBundles` idem; `total` de bundle = `computeBundleTotal` admin para la misma plantilla.
-- [ ] Página 2 no repite IDs de página 1 **con datos reales en DB** (no solo array mock).
-- [ ] Sin regresión en DTO allowlist ni en RLS público.
-- [ ] `pnpm check` + `pnpm build` verdes.
+- [x] `listPublicProductsRepo` no devuelve más filas que `pageSize` (salvo count query separada).
+- [x] `total` proviene de `COUNT(*)` con los mismos filtros, no de `array.length` en memoria.
+- [x] Orden `name_*` y `price_*` en SQL (productos: columna / `prices->normal->netPrice`).
+- [x] `listPublicBundles` / `listPublicPacks` vía RPC; `list_total` / `finalPrice` alineados a shared.
+- [x] Página 2 no repite IDs de página 1 (pgTAP + helpers Vitest).
+- [x] Sin regresión en DTO allowlist; policy `campaigns_select_public` para sort/precio packs.
+- [x] `pnpm check` + `pnpm build` verdes.
 
 ---
 
@@ -249,6 +249,7 @@ Orden sugerido para no bloquear S3A-2…4 del roadmap, pero **antes de producci�
 
 ## Historial
 
-| Fecha      | Nota                                                                                      |
-| ---------- | ----------------------------------------------------------------------------------------- |
-| 2026-07-07 | Documento creado tras revisión post S3A-1; corrección diferida para continuar roadmap S3A |
+| Fecha      | Nota                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-07 | Documento creado tras revisión post S3A-1; corrección diferida para continuar roadmap S3A                                                 |
+| 2026-07-31 | Remediación implementada: productos count+range+order; RPCs `list_public_bundles` / `list_public_packs`; policy `campaigns_select_public` |

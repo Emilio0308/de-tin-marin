@@ -2,74 +2,162 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { getBundleAction } from "@/modules/catalog/actions/get-bundle";
-import { listBundlesAction } from "@/modules/catalog/actions/list-bundles";
-import { listPacksAction } from "@/modules/catalog/actions/list-packs";
-import { listProductsAction } from "@/modules/catalog/actions/list-products";
+import { getPackAction } from "@/modules/catalog/actions/get-pack";
+import { listBundlesPageAction } from "@/modules/catalog/actions/list-bundles";
+import { listPacksPageAction } from "@/modules/catalog/actions/list-packs";
 import {
   listDeliveryZonesAction,
   resolveDeliveryFeeAction,
 } from "@/modules/delivery/actions/delivery.actions";
+import { listPickupPointsAction } from "@/modules/delivery/actions/pickup-point.actions";
+import { listCourierDepartmentsAction } from "@/modules/delivery/actions/courier.actions";
 import { createOrderAction } from "@/modules/orders/actions/create-order";
 import { previewAdminBundleLineAction } from "@/modules/orders/actions/preview-admin-bundle-line";
 import { previewOrderCartAction } from "@/modules/orders/actions/preview-order-cart";
 import { freshQueryOptions } from "@/shared/query/query-cache";
-import { validateBundleCustomization } from "@de-tin-marin/validations/customize-bundle";
-import { OrderForm } from "./order-form";
-import { buildInitialBundleComponents } from "./order-form-bundle.helpers";
+import { queryKeys } from "@/shared/query/query-keys";
 import {
+  validateBundleCustomization,
+  resolveBundleCustomizationBounds,
+} from "@de-tin-marin/validations/customize-bundle";
+import { OrderForm } from "./order-form";
+import {
+  addBundleComponent,
+  buildInitialBundleComponents,
+} from "./order-form-bundle.helpers";
+import type { CartCompositionItem } from "./order-form-cart-lines";
+import {
+  clampOrderFormPackQuantity,
   mergeOrAddProductLine,
-  updateProductLineQuantity,
+  resolveOrderFormPackBounds,
+  updateProductLineDualQuantity,
 } from "./order-form-product.helpers";
 import {
   estimateOrderFormLineTotal,
   previewOrderTotals,
-  toCreateOrderPayload,
 } from "./order-form.helpers";
 import {
   emptyOrderFormValues,
   type OrderFormBundleDraft,
+  type OrderFormFieldErrors,
   type OrderFormLabels,
   type OrderFormValues,
+  type ProductOption,
 } from "./order-form.types";
+import {
+  mapOrderFormFieldErrorKeys,
+  sanitizeOrderFormValues,
+  validateCreateOrderField,
+  validateCreateOrderForm,
+  type CustomerDeliveryFieldPath,
+  type OrderFormFieldErrorKeys,
+  type OrderFormValidationKey,
+} from "../../helpers/order-form-validation";
 
-function orderErrorMessage(result: {
-  error: string;
-  message?: string;
-}): string {
-  switch (result.error) {
-    case "VALIDATION":
-      return "Revisa los campos del formulario";
-    case "PRODUCT_NOT_FOUND":
-      return "Uno o más productos no existen o están inactivos";
-    case "BUNDLE_NOT_FOUND":
-      return "La plantilla de sorpresa no existe o está inactiva";
-    case "PACK_NOT_FOUND":
-      return "El combo no existe o está inactivo";
-    case "DUPLICATE_PRODUCT_IN_BUNDLE":
-      return "No puedes repetir el mismo producto en una sorpresa";
-    case "UNAUTHORIZED":
-      return "Tu sesión expiró. Inicia sesión de nuevo.";
-    case "FORBIDDEN":
-      return "No tienes permisos de administrador.";
-    default:
-      return result.message
-        ? `No se pudo crear la orden: ${result.message}`
-        : "No se pudo crear la orden";
+type PackDetailCache = {
+  components: Array<{
+    productId: string;
+    packageQuantity: number;
+    unitQuantity: number;
+  }>;
+  composition: CartCompositionItem[];
+};
+
+const ORDER_FORM_VALIDATION_KEYS = new Set<OrderFormValidationKey>([
+  "requiredName",
+  "requiredLastName",
+  "requiredPhone",
+  "invalidEmail",
+  "requiredDeliveryAddress",
+  "requiredRecipient",
+  "requiredLine1",
+  "requiredDistrict",
+  "requiredCity",
+  "requiredProvince",
+  "requiredDeliveryPhone",
+  "requiredLines",
+  "invalidName",
+  "tooShortName",
+  "invalidPhone",
+  "tooShortAddress",
+  "invalidField",
+  "reviewForm",
+]);
+
+function isOrderFormValidationKey(
+  value: string,
+): value is OrderFormValidationKey {
+  return ORDER_FORM_VALIDATION_KEYS.has(value as OrderFormValidationKey);
+}
+
+function toFieldErrorKeys(
+  value: Record<string, string>,
+): OrderFormFieldErrorKeys {
+  const keys: OrderFormFieldErrorKeys = {};
+  for (const [path, maybeKey] of Object.entries(value)) {
+    if (isOrderFormValidationKey(maybeKey)) {
+      keys[path] = maybeKey;
+    }
   }
+  return keys;
 }
 
 export function OrderFormContainer() {
   const router = useRouter();
   const t = useTranslations("orders");
   const tDashboard = useTranslations("dashboard.orderStatus");
+
+  function translateValidation(key: OrderFormValidationKey): string {
+    return t(`form.validation.${key}`);
+  }
+
+  function translateFieldErrors(
+    keys: OrderFormFieldErrorKeys,
+  ): OrderFormFieldErrors {
+    return mapOrderFormFieldErrorKeys(keys, translateValidation);
+  }
+
+  function orderErrorMessage(result: {
+    error: string;
+    message?: string;
+  }): string {
+    switch (result.error) {
+      case "VALIDATION":
+        return t("form.errors.validation");
+      case "PRODUCT_NOT_FOUND":
+        return t("form.errors.productNotFound");
+      case "BUNDLE_NOT_FOUND":
+        return t("form.errors.bundleNotFound");
+      case "PACK_NOT_FOUND":
+        return t("form.errors.packNotFound");
+      case "DUPLICATE_PRODUCT_IN_BUNDLE":
+        return t("form.errors.duplicateProductInBundle");
+      case "INVALID_BUNDLE_CUSTOMIZATION":
+        return t("form.errors.invalidBundleCustomization");
+      case "UNAUTHORIZED":
+        return t("form.errors.unauthorized");
+      case "FORBIDDEN":
+        return t("form.errors.forbidden");
+      default:
+        return result.message
+          ? t("form.errors.unexpectedWithMessage", {
+              message: result.message,
+            })
+          : t("form.errors.unexpected");
+    }
+  }
   const [values, setValues] = useState<OrderFormValues>(emptyOrderFormValues);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<OrderFormFieldErrors>({});
+  const touchedCustomerDeliveryFields = useRef(
+    new Set<CustomerDeliveryFieldPath>(),
+  );
   const [bundleDraft, setBundleDraft] = useState<OrderFormBundleDraft | null>(
     null,
   );
@@ -92,6 +180,16 @@ export function OrderFormContainer() {
       email: t("form.email"),
       delivery: t("form.delivery"),
       pickup: t("form.pickup"),
+      pickupPoint: t("form.pickupPoint"),
+      courier: t("form.courier"),
+      selectPickupPoint: t("form.selectPickupPoint"),
+      courierDepartment: t("form.courierDepartment"),
+      selectCourierDepartment: t("form.selectCourierDepartment"),
+      courierProvince: t("form.courierProvince"),
+      selectCourierProvince: t("form.selectCourierProvince"),
+      courierDni: t("form.courierDni"),
+      courierFullName: t("form.courierFullName"),
+      courierAgencyAddress: t("form.courierAgencyAddress"),
       recipientName: t("form.recipientName"),
       address: t("form.address"),
       district: t("form.district"),
@@ -113,6 +211,11 @@ export function OrderFormContainer() {
       shipping: t("form.shipping"),
       shippingHint: t("form.shippingHint"),
       discount: t("form.discount"),
+      surcharge: t("form.surcharge"),
+      finalPrice: t("form.finalPrice"),
+      finalPriceHint: t("form.finalPriceHint"),
+      tabFinalPrice: t("form.tabFinalPrice"),
+      tabAdjustments: t("form.tabAdjustments"),
       subtotal: t("form.subtotal"),
       total: t("form.total"),
       createOrder: t("form.createOrder"),
@@ -120,22 +223,41 @@ export function OrderFormContainer() {
       productLine: t("form.productLine"),
       surpriseLine: t("form.surpriseLine"),
       formatComponents: (count) => t("form.formatComponents", { count }),
+      viewComponents: (count) => t("form.viewComponents", { count }),
+      formatPackComponentQty: (packages, units) =>
+        units > 0
+          ? t("form.formatPackComponentQtyWithUnits", { packages, units })
+          : t("form.formatPackComponentPackages", { packages }),
+      formatProductDualQty: (packages, units) =>
+        units > 0
+          ? t("form.formatPackComponentQtyWithUnits", { packages, units })
+          : t("form.formatPackComponentPackages", { packages }),
       formatQuantityLabel: (quantity) => t("form.quantityLabel", { quantity }),
+      packagesLabel: t("form.packagesLabel"),
+      unitsLabel: t("form.unitsLabel"),
       quantityBounds: (min, max) => t("form.quantityBounds", { min, max }),
       configureSurprise: t("form.configureSurprise"),
+      addingSurprise: t("form.addingSurprise"),
+      tabProducts: t("form.tabProducts"),
+      tabCombos: t("form.tabCombos"),
+      tabSurprises: t("form.tabSurprises"),
+      selectProductFirst: t("form.selectProductFirst"),
+      productOutOfStock: (min, available) =>
+        t("form.productOutOfStock", { min, available }),
       customizeTitle: t("form.customizeTitle"),
-      customizeSubtitle: t("form.customizeSubtitle"),
+      customizeSubtitle: (min, max) =>
+        t("form.customizeSubtitle", { min, max }),
       candyCount: t("form.candyCount"),
       customizationProgress: t("form.customizationProgress"),
-      minCandiesReached: t("form.minCandiesReached"),
-      maxCandiesReached: t("form.maxCandiesReached"),
+      minCandiesReached: (min) => t("form.minCandiesReached", { min }),
+      maxCandiesReached: (max) => t("form.maxCandiesReached", { max }),
       removeCandy: t("form.removeCandy"),
       addCandy: t("form.addCandy"),
       selectCandy: t("form.selectCandy"),
       confirmSurprise: t("form.confirmSurprise"),
       cancelCustomize: t("form.cancelCustomize"),
-      validationMinCandies: t("form.validationMinCandies"),
-      validationMaxCandies: t("form.validationMaxCandies"),
+      validationMinCandies: (min) => t("form.validationMinCandies", { min }),
+      validationMaxCandies: (max) => t("form.validationMaxCandies", { max }),
       editSurprise: t("form.editSurprise"),
       candiesSubtotal: t("form.candiesSubtotal"),
       containerSubtotal: t("form.containerSubtotal"),
@@ -154,34 +276,49 @@ export function OrderFormContainer() {
       surpriseQuantityHint: t("form.surpriseQuantityHint"),
       combo: t("form.combo"),
       selectCombo: t("form.selectCombo"),
+      selectComboFirst: t("form.selectComboFirst"),
       addCombo: t("form.addCombo"),
       comboLine: t("form.comboLine"),
+      packOutOfStock: (available) => t("form.packOutOfStock", { available }),
+      packStockShortages: (names) => t("form.packStockShortages", { names }),
     }),
     [t],
   );
 
-  const productsQuery = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const result = await listProductsAction();
-      if (!result.ok) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const [pickedProducts, setPickedProducts] = useState<ProductOption[]>([]);
+  const [packDetailsById, setPackDetailsById] = useState<
+    Record<string, PackDetailCache>
+  >({});
 
   const bundlesQuery = useQuery({
-    queryKey: ["bundles"],
+    queryKey: queryKeys.catalog.bundlesPage({
+      page: 1,
+      pageSize: 50,
+      status: "active",
+    }),
     queryFn: async () => {
-      const result = await listBundlesAction();
+      const result = await listBundlesPageAction({
+        page: 1,
+        pageSize: 50,
+        status: "active",
+      });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
   });
 
   const packsQuery = useQuery({
-    queryKey: ["packs"],
+    queryKey: queryKeys.catalog.packsPage({
+      page: 1,
+      pageSize: 50,
+      status: "active",
+    }),
     queryFn: async () => {
-      const result = await listPacksAction();
+      const result = await listPacksPageAction({
+        page: 1,
+        pageSize: 50,
+        status: "active",
+      });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
@@ -196,27 +333,61 @@ export function OrderFormContainer() {
     },
   });
 
-  const productOptions = useMemo(
+  const pickupPointsQuery = useQuery({
+    queryKey: ["pickup-points"],
+    queryFn: async () => {
+      const result = await listPickupPointsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  const pickupPointOptions = useMemo(
     () =>
-      (productsQuery.data ?? []).map((product) => ({
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        finalPrice: product.finalPrice,
-        finalUnitPrice: product.finalUnitPrice,
-        imageUrl: product.imageUrl,
-        productType: product.productType,
-        itemsPerPackage: product.itemsPerPackage,
-        stockTotalBaseUnits: product.stockTotalBaseUnits,
-        purchaseMinQuantity: product.purchaseMinQuantity,
-        purchaseMaxQuantity: product.purchaseMaxQuantity,
+      (pickupPointsQuery.data ?? []).map((point) => ({
+        id: point.id,
+        name: point.name,
+        lat: point.lat,
+        lng: point.lng,
+        fee: point.fee,
+        isActive: point.isActive,
       })),
-    [productsQuery.data],
+    [pickupPointsQuery.data],
   );
+
+  const courierDepartmentsQuery = useQuery({
+    queryKey: ["courier-departments"],
+    queryFn: async () => {
+      const result = await listCourierDepartmentsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  const courierDepartmentOptions = useMemo(
+    () =>
+      (courierDepartmentsQuery.data ?? [])
+        .filter((department) => department.isActive)
+        .map((department) => ({
+          id: department.id,
+          name: department.name,
+          provinces: department.provinces,
+        })),
+    [courierDepartmentsQuery.data],
+  );
+
+  const productOptions = pickedProducts;
+
+  function handleEnsureProductOption(product: ProductOption) {
+    setPickedProducts((current) => {
+      if (current.some((item) => item.id === product.id)) return current;
+      return [...current, product];
+    });
+  }
 
   const bundleOptions = useMemo(
     () =>
-      (bundlesQuery.data ?? []).map((bundle) => ({
+      (bundlesQuery.data?.items ?? []).map((bundle) => ({
         id: bundle.id,
         name: bundle.name,
         containerId: bundle.containerId,
@@ -229,17 +400,17 @@ export function OrderFormContainer() {
 
   const packOptions = useMemo(
     () =>
-      (packsQuery.data ?? [])
-        .filter((pack) => pack.isActive)
-        .map((pack) => ({
-          id: pack.id,
-          name: pack.name,
-          sku: pack.sku,
-          finalPrice: pack.finalPrice,
-          purchaseMinQuantity: pack.purchaseMinQuantity,
-          purchaseMaxQuantity: pack.purchaseMaxQuantity,
-          itemCount: pack.itemCount,
-        })),
+      (packsQuery.data?.items ?? []).map((pack) => ({
+        id: pack.id,
+        name: pack.name,
+        sku: pack.sku,
+        finalPrice: pack.finalPrice,
+        availableQuantity: pack.availableQuantity,
+        stockShortages: pack.stockShortages,
+        purchaseMinQuantity: pack.purchaseMinQuantity,
+        purchaseMaxQuantity: pack.purchaseMaxQuantity,
+        itemCount: pack.itemCount,
+      })),
     [packsQuery.data],
   );
 
@@ -253,15 +424,20 @@ export function OrderFormContainer() {
             sku: pack.sku,
             name: pack.name,
             unitPrice: pack.finalPrice,
-            components: [] as Array<{
-              productId: string;
-              packageQuantity: number;
-            }>,
+            components: packDetailsById[pack.id]?.components ?? [],
           },
         ]),
       ),
-    [packOptions],
+    [packOptions, packDetailsById],
   );
+
+  const packCompositionsById = useMemo(() => {
+    const map = new Map<string, CartCompositionItem[]>();
+    for (const [packId, detail] of Object.entries(packDetailsById)) {
+      map.set(packId, detail.composition);
+    }
+    return map;
+  }, [packDetailsById]);
 
   const bundlesById = useMemo(
     () =>
@@ -282,17 +458,24 @@ export function OrderFormContainer() {
     [bundleOptions],
   );
 
-  const activeProductIds = useMemo(
-    () => new Set(productOptions.map((product) => product.id)),
-    [productOptions],
-  );
-
   useEffect(() => {
     void (async () => {
-      const result = await resolveDeliveryFeeAction({
-        method: values.fulfillment.method,
-        district: values.fulfillment.deliveryAddress.district,
-      });
+      const feeInput =
+        values.fulfillment.method === "courier"
+          ? {
+              method: "courier" as const,
+              departmentId: values.fulfillment.courierDepartmentId || undefined,
+              provinceSlug: values.fulfillment.courierProvinceSlug || undefined,
+            }
+          : {
+              method: values.fulfillment.method,
+              district: values.fulfillment.deliveryAddress.district,
+              pickupPointId:
+                values.fulfillment.method === "pickup_point"
+                  ? values.fulfillment.pickupPointId || undefined
+                  : undefined,
+            };
+      const result = await resolveDeliveryFeeAction(feeInput);
       if (!result.ok) return;
       setValues((current) =>
         current.shippingTotal === result.fee
@@ -300,7 +483,13 @@ export function OrderFormContainer() {
           : { ...current, shippingTotal: result.fee },
       );
     })();
-  }, [values.fulfillment.method, values.fulfillment.deliveryAddress.district]);
+  }, [
+    values.fulfillment.method,
+    values.fulfillment.deliveryAddress.district,
+    values.fulfillment.pickupPointId,
+    values.fulfillment.courierDepartmentId,
+    values.fulfillment.courierProvinceSlug,
+  ]);
 
   useEffect(() => {
     if (!bundleDraft) {
@@ -337,7 +526,11 @@ export function OrderFormContainer() {
     },
     enabled:
       debouncedBundlePreview !== null &&
-      validateBundleCustomization(debouncedBundlePreview.components).ok,
+      bundleDraft !== null &&
+      validateBundleCustomization(debouncedBundlePreview.components, {
+        minProducts: bundleDraft.customizationMinProducts,
+        maxProducts: bundleDraft.customizationMaxProducts,
+      }).ok,
   });
 
   const cartPreviewPayload = useMemo(
@@ -360,8 +553,14 @@ export function OrderFormContainer() {
       }),
       shippingTotal: values.shippingTotal,
       discountTotal: values.discountTotal,
+      surchargeTotal: values.surchargeTotal,
     }),
-    [values.discountTotal, values.lines, values.shippingTotal],
+    [
+      values.discountTotal,
+      values.surchargeTotal,
+      values.lines,
+      values.shippingTotal,
+    ],
   );
 
   const cartPreviewQuery = useQuery({
@@ -372,6 +571,7 @@ export function OrderFormContainer() {
       cartPreviewPayload.lines,
       cartPreviewPayload.shippingTotal,
       cartPreviewPayload.discountTotal,
+      cartPreviewPayload.surchargeTotal,
     ],
     queryFn: async () => {
       const result = await previewOrderCartAction(cartPreviewPayload);
@@ -417,17 +617,31 @@ export function OrderFormContainer() {
     );
   }
 
-  function handleAddProductLine(productId: string, quantity: number) {
+  function handleAddProductLine(
+    productId: string,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) {
     const product = productsById.get(productId);
     if (!product) return;
 
     setValues((current) => ({
       ...current,
-      lines: mergeOrAddProductLine(current.lines, productId, quantity, product),
+      lines: mergeOrAddProductLine(
+        current.lines,
+        productId,
+        packageQuantity,
+        unitQuantity,
+        product,
+      ),
     }));
   }
 
-  function handleUpdateProductLineQuantity(index: number, quantity: number) {
+  function handleUpdateProductLineQuantity(
+    index: number,
+    packageQuantity: number,
+    unitQuantity: number,
+  ) {
     const line = values.lines[index];
     if (!line || line.type !== "product") return;
 
@@ -436,21 +650,67 @@ export function OrderFormContainer() {
 
     setValues((current) => ({
       ...current,
-      lines: updateProductLineQuantity(current.lines, index, quantity, product),
+      lines: updateProductLineDualQuantity(
+        current.lines,
+        index,
+        packageQuantity,
+        unitQuantity,
+        product,
+      ),
     }));
+  }
+
+  async function ensurePackDetails(
+    packId: string,
+  ): Promise<PackDetailCache | null> {
+    const cached = packDetailsById[packId];
+    if (cached) return cached;
+
+    const result = await getPackAction(packId);
+    if (!result.ok) {
+      setError(t("form.loadPackCompositionError"));
+      return null;
+    }
+
+    const detail: PackDetailCache = {
+      components: result.data.items.map((item) => ({
+        productId: item.productId,
+        packageQuantity: item.packageQuantity,
+        unitQuantity: item.unitQuantity,
+      })),
+      composition: result.data.items.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantityLabel:
+          item.unitQuantity > 0
+            ? t("form.formatPackComponentQtyWithUnits", {
+                packages: item.packageQuantity,
+                units: item.unitQuantity,
+              })
+            : t("form.formatPackComponentPackages", {
+                packages: item.packageQuantity,
+              }),
+      })),
+    };
+
+    setPackDetailsById((current) => ({ ...current, [packId]: detail }));
+    return detail;
   }
 
   function handleAddPackLine(packId: string, quantity: number) {
     const pack = packOptions.find((item) => item.id === packId);
     if (!pack) return;
-    const qty = Math.min(
-      Math.max(quantity, pack.purchaseMinQuantity),
-      pack.purchaseMaxQuantity,
-    );
-    setValues((current) => ({
-      ...current,
-      lines: [...current.lines, { type: "pack", packId, quantity: qty }],
-    }));
+    const bounds = resolveOrderFormPackBounds(pack);
+    if (!bounds.purchasable) return;
+    const qty = clampOrderFormPackQuantity(quantity, pack);
+
+    void (async () => {
+      await ensurePackDetails(packId);
+      setValues((current) => ({
+        ...current,
+        lines: [...current.lines, { type: "pack", packId, quantity: qty }],
+      }));
+    })();
   }
 
   async function loadBundleDraft(
@@ -467,16 +727,39 @@ export function OrderFormContainer() {
     try {
       const result = await getBundleAction(bundleId);
       if (!result.ok) {
-        setError("No se pudo cargar la plantilla de sorpresa");
+        setError(t("form.loadBundleTemplateError"));
         return;
       }
 
       const bundleOption = bundleOptions.find(
         (bundle) => bundle.id === bundleId,
       );
-      const activeItems = result.data.items.filter((item) =>
-        activeProductIds.has(item.productId),
-      );
+      const activeItems = result.data.items.filter((item) => item.isActive);
+      const bounds = resolveBundleCustomizationBounds({
+        customizationMinProducts: result.data.customizationMinProducts,
+        customizationMaxProducts: result.data.customizationMaxProducts,
+      });
+      const templateProducts: ProductOption[] = activeItems.map((item) => ({
+        id: item.productId,
+        name: item.productName,
+        sku: item.sku,
+        finalPrice: item.netPrice,
+        finalUnitPrice: item.unitNetPrice,
+        imageUrl: item.imageUrl,
+        productType: item.productType,
+        itemsPerPackage: item.itemsPerPackage,
+        stockTotalBaseUnits: item.stockTotalBaseUnits,
+        purchaseMinQuantity: 1,
+        purchaseMaxQuantity: 9999,
+      }));
+
+      setPickedProducts((current) => {
+        const byId = new Map(current.map((product) => [product.id, product]));
+        for (const product of templateProducts) {
+          byId.set(product.id, product);
+        }
+        return [...byId.values()];
+      });
 
       setBundleDraft({
         bundleId,
@@ -485,6 +768,8 @@ export function OrderFormContainer() {
         containerNetPrice:
           bundleOption?.containerNetPrice ?? result.data.containerNetPrice,
         templateQuantity: result.data.quantity,
+        customizationMinProducts: bounds.minProducts,
+        customizationMaxProducts: bounds.maxProducts,
         templateItems: activeItems.map((item) => ({
           productId: item.productId,
           productName: item.productName,
@@ -497,6 +782,7 @@ export function OrderFormContainer() {
               unitsPerPerson: item.unitsPerPerson,
               isActive: true,
             })),
+            bounds,
           ),
         quantity: options?.quantity ?? result.data.quantity,
         editingLineIndex: options?.editingLineIndex ?? null,
@@ -506,8 +792,92 @@ export function OrderFormContainer() {
     }
   }
 
+  function handleAddBundleCandy(product: ProductOption) {
+    handleEnsureProductOption(product);
+    setBundleDraft((current) => {
+      if (!current) return current;
+      const bounds = {
+        minProducts: current.customizationMinProducts,
+        maxProducts: current.customizationMaxProducts,
+      };
+      return {
+        ...current,
+        components: addBundleComponent(current.components, product.id, bounds),
+      };
+    });
+  }
+
   function handleStartBundleDraft(bundleId: string) {
     void loadBundleDraft(bundleId);
+  }
+
+  async function handleAddBundleAsTemplate(bundleId: string) {
+    setBundleDraftLoading(true);
+    setError(null);
+
+    try {
+      const result = await getBundleAction(bundleId);
+      if (!result.ok) {
+        setError(t("form.loadBundleTemplateError"));
+        return;
+      }
+
+      const activeItems = result.data.items.filter((item) => item.isActive);
+      const bounds = resolveBundleCustomizationBounds({
+        customizationMinProducts: result.data.customizationMinProducts,
+        customizationMaxProducts: result.data.customizationMaxProducts,
+      });
+      const templateProducts: ProductOption[] = activeItems.map((item) => ({
+        id: item.productId,
+        name: item.productName,
+        sku: item.sku,
+        finalPrice: item.netPrice,
+        finalUnitPrice: item.unitNetPrice,
+        imageUrl: item.imageUrl,
+        productType: item.productType,
+        itemsPerPackage: item.itemsPerPackage,
+        stockTotalBaseUnits: item.stockTotalBaseUnits,
+        purchaseMinQuantity: 1,
+        purchaseMaxQuantity: 9999,
+      }));
+
+      setPickedProducts((current) => {
+        const byId = new Map(current.map((product) => [product.id, product]));
+        for (const product of templateProducts) {
+          byId.set(product.id, product);
+        }
+        return [...byId.values()];
+      });
+
+      const components = buildInitialBundleComponents(
+        activeItems.map((item) => ({
+          productId: item.productId,
+          unitsPerPerson: item.unitsPerPerson,
+          isActive: true,
+        })),
+        bounds,
+      );
+      const validation = validateBundleCustomization(components, bounds);
+      if (!validation.ok) {
+        setError(t("form.bundleTemplateInvalid"));
+        return;
+      }
+
+      setValues((current) => ({
+        ...current,
+        lines: [
+          ...current.lines,
+          {
+            type: "bundle" as const,
+            bundleId,
+            quantity: result.data.quantity,
+            components: validation.data,
+          },
+        ],
+      }));
+    } finally {
+      setBundleDraftLoading(false);
+    }
   }
 
   function handleEditBundleLine(index: number) {
@@ -524,9 +894,12 @@ export function OrderFormContainer() {
   function handleConfirmBundleDraft() {
     if (!bundleDraft) return;
 
-    const validation = validateBundleCustomization(bundleDraft.components);
+    const validation = validateBundleCustomization(bundleDraft.components, {
+      minProducts: bundleDraft.customizationMinProducts,
+      maxProducts: bundleDraft.customizationMaxProducts,
+    });
     if (!validation.ok) {
-      setError("La sorpresa no cumple las reglas de personalización");
+      setError(t("form.bundleCustomizationInvalid"));
       return;
     }
 
@@ -564,13 +937,35 @@ export function OrderFormContainer() {
   }
 
   function handleSubmit() {
+    const validation = validateCreateOrderForm(
+      values,
+      pickupPointOptions,
+      courierDepartmentOptions,
+    );
+    if (!validation.ok) {
+      setFieldErrors(translateFieldErrors(validation.fieldErrorKeys));
+      setError(translateValidation(validation.formErrorKey));
+      return;
+    }
+
     void (async () => {
       setSubmitting(true);
       setError(null);
+      setFieldErrors({});
 
       try {
-        const result = await createOrderAction(toCreateOrderPayload(values));
+        const result = await createOrderAction(validation.payload);
         if (!result.ok) {
+          if (
+            result.error === "VALIDATION" &&
+            "fieldErrors" in result &&
+            result.fieldErrors &&
+            typeof result.fieldErrors === "object"
+          ) {
+            setFieldErrors(
+              translateFieldErrors(toFieldErrorKeys(result.fieldErrors)),
+            );
+          }
           setError(orderErrorMessage(result));
           return;
         }
@@ -579,15 +974,46 @@ export function OrderFormContainer() {
           router.push(`/orders/${result.data.id}`);
         });
       } catch {
-        setError("No se pudo crear la orden");
+        setError(t("form.errors.unexpected"));
       } finally {
         setSubmitting(false);
       }
     })();
   }
 
+  function updateTouchedFieldErrors(nextValues: OrderFormValues) {
+    if (touchedCustomerDeliveryFields.current.size === 0) return;
+
+    setFieldErrors((current) => {
+      const next = { ...current };
+      for (const path of touchedCustomerDeliveryFields.current) {
+        const key = validateCreateOrderField(nextValues, path);
+        if (key) {
+          next[path] = translateValidation(key);
+        } else {
+          delete next[path];
+        }
+      }
+      return next;
+    });
+  }
+
+  function handleCustomerDeliveryFieldBlur(path: CustomerDeliveryFieldPath) {
+    touchedCustomerDeliveryFields.current.add(path);
+    const key = validateCreateOrderField(values, path);
+
+    setFieldErrors((current) => {
+      const next = { ...current };
+      if (key) {
+        next[path] = translateValidation(key);
+      } else {
+        delete next[path];
+      }
+      return next;
+    });
+  }
+
   if (
-    productsQuery.isLoading ||
     bundlesQuery.isLoading ||
     packsQuery.isLoading ||
     deliveryZonesQuery.isLoading
@@ -634,9 +1060,12 @@ export function OrderFormContainer() {
         products={productOptions}
         bundles={bundleOptions}
         packs={packOptions}
+        packCompositionsById={packCompositionsById}
         deliveryDistricts={(deliveryZonesQuery.data ?? [])
           .filter((zone) => zone.isActive)
           .map((zone) => zone.district)}
+        pickupPoints={pickupPointOptions}
+        courierDepartments={courierDepartmentOptions}
         bundleDraft={bundleDraft}
         bundleDraftLoading={bundleDraftLoading}
         bundlePriceSummary={bundlePriceSummary}
@@ -650,12 +1079,26 @@ export function OrderFormContainer() {
         totals={totals}
         submitting={submitting}
         error={error}
+        fieldErrors={fieldErrors}
         labels={labels}
-        onChange={setValues}
+        onChange={(next) => {
+          const sanitized = sanitizeOrderFormValues(next);
+          setError(null);
+          setValues(sanitized);
+          updateTouchedFieldErrors(sanitized);
+        }}
+        onFieldBlur={(path) =>
+          handleCustomerDeliveryFieldBlur(path as CustomerDeliveryFieldPath)
+        }
+        onEnsureProductOption={handleEnsureProductOption}
         onAddProductLine={handleAddProductLine}
         onUpdateProductLineQuantity={handleUpdateProductLineQuantity}
         onAddPackLine={handleAddPackLine}
         onStartBundleDraft={handleStartBundleDraft}
+        onAddBundleAsTemplate={(bundleId) => {
+          void handleAddBundleAsTemplate(bundleId);
+        }}
+        onAddBundleCandy={handleAddBundleCandy}
         onBundleDraftComponentsChange={(components) =>
           setBundleDraft((current) =>
             current ? { ...current, components } : current,

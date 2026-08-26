@@ -47,6 +47,38 @@ components/<nombre>/
 - Reutilizar types exportados; no tipar dos veces la misma firma en distintos `*.types.ts`.
 - Detalle: [`rules/85-react-components.md`](rules/85-react-components.md) · [`rules/88-ui-design-i18n.md`](rules/88-ui-design-i18n.md).
 
+## Inputs numéricos controlados
+
+**Prohibido** ligar `value={number}` a un `onChange` que haga `Number(raw) || fallback` (o `Math.max(..., Number(raw) || min)`) en cada tecla. Eso impide borrar el `0` y produce valores como `04`.
+
+**Obligatorio:**
+
+- Mientras se edita, el draft es **string** (vacío permitido).
+- **No** coerción `Number(raw) || fallback` en cada tecla (impide borrar el `0`).
+- Clamp / fallback definitivo en **blur** (y validación Zod al submit). Mientras se escribe, se puede emitir un `number` intermedio solo si el draft parsea; vacío no debe forzar `0` hasta blur (salvo `allowEmpty` → `null`).
+- Preferir `type="text"` + `inputMode="numeric"` | `"decimal"` (evitar spinners nativos de `type="number"`).
+- Enteros: solo dígitos. Decimales: dígitos + un separador `.` (p. ej. `"12."` válido mientras se escribe).
+- El contrato de dominio / Server Action sigue siendo `number` (o `null` si el campo es opcional). El draft de UI **no** sustituye Zod.
+
+```tsx
+// ❌ Anti-patrón
+<input
+  type="number"
+  value={price}
+  onChange={(e) => setPrice(Number(e.target.value) || 0)}
+/>
+
+// ✅ Draft string + commit en blur (usar GranularNumberInput en admin)
+<GranularNumberInput
+  mode="decimal"
+  value={price}
+  min={0}
+  onValueChange={setPrice}
+/>
+```
+
+En admin: helpers en `apps/admin/src/shared/forms/number-draft.helpers.ts` y componente `granular-number-input.tsx` (también [`rules/85-react-components.md`](rules/85-react-components.md) § Inputs numéricos).
+
 ## Capas
 
 ```text
@@ -69,6 +101,69 @@ repositories/→ queries Supabase
 - Zod en cada boundary — ver [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md)
 - `safeParse` en actions; devolver `Result` tipado
 
+## Assets en serverless / Vercel (cuidado)
+
+Los lambdas de Next.js en Vercel **solo** incluyen lo que el bundler traza o lo
+que el JS empaqueta. Un archivo suelto leído en runtime con `fs` suele **no**
+estar en el deploy.
+
+**Incidente (notificaciones):** las plantillas de email se leían con
+`readFileSync` desde `*.html`. En local pasaba; en Vercel → `ENOENT` al
+**importar** el módulo. Ese crash al cargar `@de-tin-marin/notifications`
+rompía el chunk de `/checkout` (distritos y resto del funnel), no solo el
+envío de correo.
+
+**Reglas:**
+
+1. Preferir assets como **módulo importable** (p. ej. `*.template.ts` con el
+   HTML embebido) para que viajen con webpack.
+2. **No** asumir que `readFileSync` / `path.join(__dirname, …)` funciona en
+   prod solo porque funciona en `pnpm dev`.
+3. `outputFileTracingIncludes` es un parche frágil; no es la solución por
+   defecto para plantillas o datos estáticos de packages.
+4. Un fallo en **top-level** de un módulo `server-only` compartido puede tumbar
+   cualquier route que lo importe (aunque el feature “secundario” no se use).
+5. Gate: `pnpm build` local + verificar el path en deploy; el typecheck **no**
+   detecta `ENOENT` de assets faltantes.
+
+Detalle del caso email: [`packages/notifications/README.md`](../packages/notifications/README.md) ·
+[`rules/95-guardrails-lint-ci.md`](rules/95-guardrails-lint-ci.md).
+
+## Variables de entorno
+
+Al **agregar una variable de entorno nueva**, completar **todos** estos pasos (si falta uno, Vercel/Turbo falla aunque la var exista en el dashboard):
+
+1. Schema + `runtimeEnv` en `apps/<app>/src/config/env.ts` (o el paquete `config` canónico).
+2. Entrada documentada en [`.env.example`](../.env.example) (sin valores secretos reales).
+3. **Obligatorio:** listarla en [`turbo.json`](../turbo.json) → `tasks.build.env`.
+   - Turbo **no** inyecta al build las vars de Vercel que no estén ahí — el deploy falla con Zod/`createEnv` o con el warning de Turborepo sobre platform env vars.
+4. Si es `NEXT_PUBLIC_*`, confirmar que no filtra secrets (nunca AWS keys ni service role).
+
+Detalle de boundaries: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md) · media: [`infra.md`](infra.md).
+
+## Errores y logging (obligatorio)
+
+**Nunca tragar un error en silencio.** Un `catch {}` vacío o un `Result` fallido sin log deja la UI con mensaje genérico y Vercel/terminal sin causa.
+
+**Sink v1:** solo consola del servidor (JSON una línea vía `@de-tin-marin/logging`). Sin guardar registros. Detalle: DECISIONS #37 · [`rules/40`](rules/40-validation-and-boundaries.md) · [`packages/logging/README.md`](../packages/logging/README.md).
+
+| Dónde                   | Qué usar                                                            | Dónde se ve                                |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
+| Server Action / service | `guardAction` + `logServerError` / `Info` / `Warn` (shim → package) | **Vercel → Runtime Logs** / terminal local |
+| Container client admin  | `logClientError` (`shared/errors/client-error.ts`)                  | **Consola del browser** (DevTools)         |
+
+Reglas:
+
+1. Toda Server Action envuelve el cuerpo en `guardAction("scope", …)` → eventos `started` / `completed` / `failed`.
+2. Mutaciones críticas también loguean en el **service** (resumen seguro).
+3. Metadata = resumen (IDs, códigos, conteos); nunca PII, secrets ni payloads crudos (`safeMeta`).
+4. Todo `catch` en containers admin debe `logClientError(scope, error)`.
+5. Fallos de PUT a S3 (CORS/red) ocurren en el **browser** — no aparecen en Vercel.
+6. Tras un deploy, si Vercel no muestra logs al fallar: o el fallo es client-side, o el action no llegó a ejecutarse.
+7. Admin: `UNEXPECTED` puede incluir `message`. Ecommerce: **sin** mensaje interno.
+
+Detalle: [`rules/40-validation-and-boundaries.md`](rules/40-validation-and-boundaries.md) § Manejo de errores.
+
 ## Supabase
 
 - Cliente server en actions/services
@@ -90,6 +185,8 @@ repositories/→ queries Supabase
 | Vitest        | `packages/`, `services/`            | Pricing pipeline, transiciones, validadores |
 | Playwright    | `apps/*/e2e/`                       | Checkout, admin CRUD                        |
 | pgTAP         | `supabase/tests/`                   | RLS, deduct inventory                       |
+
+`pnpm test` usa `NODE_OPTIONS=--no-webstorage` (compat Node 25+) y `vitest.setup.ts` con fallback de `localStorage` — ver [`rules/95-guardrails-lint-ci.md`](rules/95-guardrails-lint-ci.md).
 
 ## Nombres
 
@@ -115,7 +212,11 @@ repositories/→ queries Supabase
 
 - [ ] `pnpm check` verde
 - [ ] `pnpm build` verde
+- [ ] Assets runtime de packages: embebidos / importados (no `readFileSync` de archivos sueltos en Vercel)
+- [ ] Variable de entorno nueva → schema `env.ts` + `.env.example` + `turbo.json` `tasks.build.env`
+- [ ] Errores: `guardAction` / `logServer*` (server JSON vía `@de-tin-marin/logging`) o `logClientError` (client admin) — sin `catch` vacío; meta sin PII
 - [ ] Componente nuevo: container + presentational + types + helpers (si aplica) + test de render
+- [ ] Inputs numéricos: draft string, sin coerción `Number(raw) || fallback` por keystroke
 - [ ] Sin `index.ts` / barrels en imports
 - [ ] Docs del dominio actualizados si cambió contrato
 - [ ] Regla de negocio nueva → `business-rules.md`

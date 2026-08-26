@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { ChevronDown, Candy, Search, X } from "lucide-react";
+import { ChevronDown, Candy, X } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import { Button } from "@de-tin-marin/ui/button";
+import { ProductSearchPickerContainer } from "@/modules/catalog/components/product-search-picker/product-search-picker.container";
+import type { ProductSearchPickerItem } from "@/modules/catalog/components/product-search-picker/product-search-picker.types";
+import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import {
-  addBundleComponent,
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
   canAddBundleComponent,
   canRemoveBundleComponent,
   removeBundleComponent,
@@ -33,11 +33,29 @@ function formatPrice(value: number): string {
   return `S/ ${value.toFixed(2)}`;
 }
 
+function toProductOption(item: ProductSearchPickerItem): ProductOption {
+  return {
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    finalPrice: item.finalPrice,
+    finalUnitPrice: item.finalUnitPrice,
+    imageUrl: item.imageUrl,
+    productType: item.productType,
+    itemsPerPackage: item.itemsPerPackage,
+    stockTotalBaseUnits: item.stockTotalBaseUnits,
+    purchaseMinQuantity: item.purchaseMinQuantity,
+    purchaseMaxQuantity: item.purchaseMaxQuantity,
+  };
+}
+
 export type OrderFormBundleCustomizeProps = {
   bundleName: string;
   containerName: string;
   containerNetPrice: number;
   templateQuantity: number;
+  customizationMinProducts: number;
+  customizationMaxProducts: number;
   components: OrderFormBundleComponent[];
   quantity: number;
   products: ProductOption[];
@@ -75,6 +93,7 @@ export type OrderFormBundleCustomizeProps = {
     collapsePicker: string;
   };
   onComponentsChange: (components: OrderFormBundleComponent[]) => void;
+  onAddCandy: (product: ProductOption) => void;
   onQuantityChange: (quantity: number) => void;
   onConfirm: () => void;
   onCancel: () => void;
@@ -82,21 +101,24 @@ export type OrderFormBundleCustomizeProps = {
 
 function CustomizationProgress({
   current,
+  minProducts,
+  maxProducts,
   label,
 }: {
   current: number;
+  minProducts: number;
+  maxProducts: number;
   label: string;
 }) {
-  const fillPercent = Math.min(100, (current / BUNDLE_CUSTOMIZATION_MAX) * 100);
-  const minMarkerPercent =
-    (BUNDLE_CUSTOMIZATION_MIN / BUNDLE_CUSTOMIZATION_MAX) * 100;
+  const fillPercent = Math.min(100, (current / maxProducts) * 100);
+  const minMarkerPercent = (minProducts / maxProducts) * 100;
 
   return (
     <div
       role="progressbar"
       aria-valuenow={current}
-      aria-valuemin={BUNDLE_CUSTOMIZATION_MIN}
-      aria-valuemax={BUNDLE_CUSTOMIZATION_MAX}
+      aria-valuemin={minProducts}
+      aria-valuemax={maxProducts}
       aria-label={label}
       className="bg-surface-container relative h-2.5 overflow-hidden rounded-full"
     >
@@ -149,6 +171,8 @@ export function OrderFormBundleCustomize({
   containerName,
   containerNetPrice,
   templateQuantity,
+  customizationMinProducts,
+  customizationMaxProducts,
   components,
   quantity,
   products,
@@ -158,36 +182,30 @@ export function OrderFormBundleCustomize({
   isPricePending,
   labels,
   onComponentsChange,
+  onAddCandy,
   onQuantityChange,
   onConfirm,
   onCancel,
 }: OrderFormBundleCustomizeProps) {
   const [pickerExpanded, setPickerExpanded] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  const bounds = {
+    minProducts: customizationMinProducts,
+    maxProducts: customizationMaxProducts,
+  };
 
-  const validation = validateBundleCustomization(components);
-  const canRemove = canRemoveBundleComponent(components);
-  const canAdd = canAddBundleComponent(components);
+  const validation = validateBundleCustomization(components, bounds);
+  const canRemove = canRemoveBundleComponent(components, bounds);
+  const canAdd = canAddBundleComponent(components, bounds);
 
   const productsById = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
     [products],
   );
 
-  const filteredProducts = useMemo(() => {
-    const selectedIds = new Set(
-      components.map((component) => component.productId),
-    );
-    const query = searchValue.trim().toLowerCase();
-    return products
-      .filter((product) => !selectedIds.has(product.id))
-      .filter((product) =>
-        query.length === 0
-          ? true
-          : product.name.toLowerCase().includes(query) ||
-            product.sku.toLowerCase().includes(query),
-      );
-  }, [components, products, searchValue]);
+  const excludeIds = useMemo(
+    () => components.map((component) => component.productId),
+    [components],
+  );
 
   const canConfirm = validation.ok && !isPricePending && priceSummary !== null;
 
@@ -225,11 +243,13 @@ export function OrderFormBundleCustomize({
             {labels.candyCount}
           </p>
           <p className="text-on-surface-variant text-sm" aria-live="polite">
-            {components.length} / {BUNDLE_CUSTOMIZATION_MAX}
+            {components.length} / {customizationMaxProducts}
           </p>
         </div>
         <CustomizationProgress
           current={components.length}
+          minProducts={customizationMinProducts}
+          maxProducts={customizationMaxProducts}
           label={labels.progressLabel}
         />
       </div>
@@ -278,7 +298,11 @@ export function OrderFormBundleCustomize({
                 className="text-primary font-label text-label-bold shrink-0 text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() =>
                   onComponentsChange(
-                    removeBundleComponent(components, component.productId),
+                    removeBundleComponent(
+                      components,
+                      component.productId,
+                      bounds,
+                    ),
                   )
                 }
               >
@@ -319,71 +343,16 @@ export function OrderFormBundleCustomize({
               <p className="text-on-surface-variant text-sm">
                 {labels.maxReached}
               </p>
-            ) : null}
-
-            <label className="flex flex-col">
-              <span className="sr-only">{labels.searchCandies}</span>
-              <div className="relative">
-                <Search
-                  className="text-on-surface-variant pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2"
-                  aria-hidden
-                />
-                <input
-                  type="search"
-                  value={searchValue}
-                  onChange={(event) => setSearchValue(event.target.value)}
-                  placeholder={labels.searchCandiesPlaceholder}
-                  disabled={!canAdd}
-                  className="border-outline-variant/40 focus:border-secondary bg-surface w-full rounded-full border-2 py-2.5 pl-11 pr-4 text-sm outline-none transition-colors disabled:opacity-60"
-                />
-              </div>
-            </label>
-
-            {filteredProducts.length === 0 ? (
-              <p className="text-on-surface-variant py-2 text-center text-sm">
-                {labels.searchCandiesPlaceholder}
-              </p>
             ) : (
-              <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                {filteredProducts.map((product) => (
-                  <li
-                    key={product.id}
-                    className="border-outline-variant/30 bg-surface-container-low flex items-center gap-3 rounded-xl border px-3 py-2.5"
-                  >
-                    <ProductThumb
-                      imageUrl={product.imageUrl}
-                      name={product.name}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-label text-label-bold text-on-surface truncate text-sm">
-                        {product.name}
-                      </p>
-                      <p className="text-on-surface-variant truncate text-xs">
-                        {product.sku}
-                      </p>
-                      <p className="font-label text-label-bold text-primary text-sm">
-                        {formatPrice(product.finalUnitPrice)}{" "}
-                        <span className="text-on-surface-variant font-body text-body-sm font-normal">
-                          {labels.unitPriceSuffix}
-                        </span>
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={!canAdd}
-                      className="shrink-0 px-4"
-                      onClick={() =>
-                        onComponentsChange(
-                          addBundleComponent(components, product.id),
-                        )
-                      }
-                    >
-                      {labels.addCandyAction}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              <ProductSearchPickerContainer
+                status="active"
+                excludeIds={excludeIds}
+                onSelect={(item) => onAddCandy(toProductOption(item))}
+                labels={{
+                  searchPlaceholder: labels.searchCandiesPlaceholder,
+                  searchAriaLabel: labels.searchCandies,
+                }}
+              />
             )}
           </div>
         ) : null}
@@ -391,14 +360,13 @@ export function OrderFormBundleCustomize({
 
       <label className="flex flex-col">
         <span className={labelClass}>{labels.surpriseQuantity}</span>
-        <input
-          type="number"
+        <GranularNumberInput
+          mode="integer"
           min={1}
+          emptyFallback={1}
           className={cn(fieldClass, "max-w-32")}
           value={quantity}
-          onChange={(event) =>
-            onQuantityChange(Math.max(1, Number(event.target.value) || 1))
-          }
+          onValueChange={(next) => onQuantityChange(next ?? 1)}
         />
         <p className="text-on-surface-variant mt-1.5 text-xs">
           {labels.surpriseQuantityHint}

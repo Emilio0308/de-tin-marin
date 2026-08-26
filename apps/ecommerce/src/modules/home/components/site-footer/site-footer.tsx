@@ -1,65 +1,90 @@
+"use client";
+
+import Link from "next/link";
 import { Send } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { HOME_NAV_ROUTES } from "@/modules/home/data/home.data";
 
-const EXPLORE_LINKS = [
-  { label: "Sweets", href: "#sweets" },
-  { label: "Surprises", href: "#surprises" },
-  { label: "Bundles", href: "#bundles" },
-];
-
-const HELP_LINKS = [
-  { label: "Order Tracking", href: "#tracking" },
-  { label: "Contact Us", href: "#contact" },
-];
-
-const LEGAL_LINKS = [
-  { label: "Privacy Policy", href: "#privacy" },
-  { label: "Terms of Service", href: "#terms" },
-];
+const EXPLORE_HREFS = new Set([
+  "/?tab=productos",
+  "/?tab=sorpresas",
+  "/?tab=combos",
+]);
 
 export function SiteFooter() {
+  const t = useTranslations("footer");
+  const tNav = useTranslations("nav");
+
+  const exploreLinks = HOME_NAV_ROUTES.filter((route) =>
+    EXPLORE_HREFS.has(route.href),
+  ).map((route) => ({
+    href: route.href,
+    label: tNav(route.labelKey),
+  }));
+
+  const helpLinks = [
+    {
+      href: "/mis-pedidos",
+      label: tNav("myOrders"),
+    },
+    {
+      href: "/nosotros",
+      label: t("contact"),
+    },
+  ] as const;
+
+  const legalLinks = [
+    { label: t("privacy"), href: "/politica-de-privacidad" },
+    { label: t("terms"), href: "/terminos-y-condiciones" },
+  ] as const;
+
   return (
     <footer className="bg-surface-container-high">
       <div className="container-max px-gutter py-stack-lg">
         <div className="mb-stack-md gap-stack-md border-outline-variant/30 pb-stack-md flex flex-col items-start justify-between border-b md:flex-row">
           <div className="space-y-4">
-            <div className="font-display text-headline-md text-primary">
+            <Link
+              href="/"
+              aria-label={t("homeAria")}
+              className="font-display text-headline-md text-primary hover:text-primary-container inline-block cursor-pointer transition-colors"
+            >
               De Tin Marín
-            </div>
+            </Link>
             <p className="font-body text-body-md text-tertiary max-w-xs">
-              Endulzamos cada mañana de cumpleaños con magia y sabor.
+              {t("tagline")}
             </p>
           </div>
 
           <div className="gap-stack-md grid grid-cols-2">
             <div className="space-y-3">
               <h3 className="font-label text-label-bold text-on-surface">
-                Explora
+                {t("explore")}
               </h3>
               <div className="flex flex-col gap-2">
-                {EXPLORE_LINKS.map((link) => (
-                  <a
+                {exploreLinks.map((link) => (
+                  <Link
                     key={link.href}
                     href={link.href}
-                    className="font-label text-label-bold text-on-surface-variant hover:text-secondary transition-colors"
+                    className="font-label text-label-bold text-on-surface-variant hover:text-secondary cursor-pointer transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </div>
             <div className="space-y-3">
               <h3 className="font-label text-label-bold text-on-surface">
-                Ayuda
+                {t("help")}
               </h3>
               <div className="flex flex-col gap-2">
-                {HELP_LINKS.map((link) => (
-                  <a
+                {helpLinks.map((link) => (
+                  <Link
                     key={link.href}
                     href={link.href}
-                    className="font-label text-label-bold text-on-surface-variant hover:text-secondary transition-colors"
+                    className="font-label text-label-bold text-on-surface-variant hover:text-secondary cursor-pointer transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -67,21 +92,21 @@ export function SiteFooter() {
 
           <div className="space-y-4">
             <h3 className="font-label text-label-bold text-on-surface">
-              Suscríbete
+              {t("subscribe")}
             </h3>
             <form className="flex">
               <input
                 type="email"
-                placeholder="Tu email"
-                aria-label="Correo para suscripción"
+                placeholder={t("subscribeEmailPlaceholder")}
+                aria-label={t("subscribeEmailAria")}
                 className="bg-surface-container-lowest focus:ring-primary w-48 rounded-l-full border-none px-4 py-2 focus:outline-none focus:ring-2"
               />
               <button
                 type="submit"
-                aria-label="Suscribirse"
-                className="press-down bg-primary text-on-primary rounded-r-full px-4 py-2"
+                aria-label={t("subscribeSubmitAria")}
+                className="press-down bg-primary text-on-primary cursor-pointer rounded-r-full px-4 py-2"
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-5 w-5" aria-hidden />
               </button>
             </form>
           </div>
@@ -89,17 +114,17 @@ export function SiteFooter() {
 
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="font-body text-body-md text-on-surface-variant text-center md:text-left">
-            © 2024 De Tin Marín. Endulzando cada mañana de cumpleaños.
+            {t("copyright")}
           </p>
           <div className="gap-stack-md flex">
-            {LEGAL_LINKS.map((link) => (
-              <a
+            {legalLinks.map((link) => (
+              <Link
                 key={link.href}
                 href={link.href}
-                className="font-label text-label-bold text-on-surface-variant hover:text-secondary transition-colors"
+                className="font-label text-label-bold text-on-surface-variant hover:text-secondary cursor-pointer transition-colors"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
         </div>

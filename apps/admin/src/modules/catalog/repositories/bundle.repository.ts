@@ -13,12 +13,22 @@ type BundleItemInsert = Database["catalog"]["Tables"]["bundle_items"]["Insert"];
 
 export type BundleItemWithProduct = BundleItemRow & {
   products: {
+    sku: string;
     name: string;
     prices: Json;
+    image_url: string | null;
     is_active: boolean;
     deleted_at: string | null;
+    product_type: string;
+    items_per_package: number;
+    package_label: string | null;
+    stock_sealed_packages: number;
+    stock_loose_base_units: number;
   } | null;
 };
+
+const BUNDLE_ITEM_PRODUCT_SELECT =
+  "sku, name, prices, image_url, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units";
 
 export type BundleContainer = {
   id: string;
@@ -47,6 +57,56 @@ export async function listBundlesRepo(
   return (data ?? []) as BundleRow[];
 }
 
+export type BundleListFilters = {
+  search?: string;
+  status?: "all" | "active" | "inactive";
+};
+
+export type BundleListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+function escapeIlike(term: string): string {
+  return term.replace(/[%_\\]/g, "\\$&");
+}
+
+export async function listBundlesPageRepo(
+  config: SupabaseConfig,
+  filters: BundleListFilters,
+  pagination: BundleListPagination,
+): Promise<{ rows: BundleRow[]; total: number }> {
+  const supabase = await createSupabaseServerClient(config);
+  const { page, pageSize } = pagination;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .schema("catalog")
+    .from("bundles")
+    .select("*", { count: "exact" })
+    .is("deleted_at", null);
+
+  if (filters.status === "active") {
+    query = query.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  if (filters.search) {
+    const term = `%${escapeIlike(filters.search)}%`;
+    query = query.ilike("name", term);
+  }
+
+  const { data, error, count } = await query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) throw new Error(error.message);
+  return { rows: (data ?? []) as BundleRow[], total: count ?? 0 };
+}
+
 export async function getBundleByIdRepo(
   config: SupabaseConfig,
   id: string,
@@ -56,7 +116,7 @@ export async function getBundleByIdRepo(
     .schema("catalog")
     .from("bundles")
     .select(
-      "*, surprise_containers(id, sku, name, prices), bundle_items(*, products(name, prices, is_active, deleted_at))",
+      `*, surprise_containers(id, sku, name, prices), bundle_items(*, products(${BUNDLE_ITEM_PRODUCT_SELECT}))`,
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -76,7 +136,7 @@ export async function listBundleItemsByBundleIdsRepo(
   const { data, error } = await supabase
     .schema("catalog")
     .from("bundle_items")
-    .select("*, products(name, prices, is_active, deleted_at)")
+    .select(`*, products(${BUNDLE_ITEM_PRODUCT_SELECT})`)
     .in("bundle_id", bundleIds);
 
   if (error) throw new Error(error.message);

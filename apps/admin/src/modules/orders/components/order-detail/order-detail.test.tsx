@@ -28,6 +28,8 @@ const labels: OrderDetailLabels = {
   customer: "Cliente",
   delivery: "Entrega",
   pickupMethod: "Recojo en tienda",
+  pickupPointMethod: "Punto de recojo",
+  courierMethod: "Envío por agencia",
   deliveryMethod: "Delivery",
   mapTitle: "Ubicación de entrega",
   mapHint: "Ubicación seleccionada por el cliente",
@@ -35,6 +37,8 @@ const labels: OrderDetailLabels = {
   summaryTitle: "Resumen",
   surpriseLine: "Sorpresa",
   formatQuantityLabel: (quantity) => `Cantidad: ${quantity}`,
+  formatProductDualQty: (packages, units) =>
+    units > 0 ? `${packages} paq. + ${units} u.` : `${packages} paq.`,
   formatComponentsLabel: (count) => `Ver componentes (${count})`,
   componentSku: "SKU",
   componentName: "Nombre",
@@ -45,6 +49,7 @@ const labels: OrderDetailLabels = {
   cart: "Carrito",
   subtotal: "Subtotal",
   discount: "Descuento",
+  surcharge: "Recargo",
   shipping: "Envío",
   total: "Total",
   paymentStatus: "Pago",
@@ -64,10 +69,12 @@ const labels: OrderDetailLabels = {
   shipmentNotes: "Notas envío",
   saveShipment: "Guardar",
   savingShipment: "Guardando…",
+  shipmentRequiredHint: "Indica transportista y seguimiento",
   statusActionsTitle: "Avanzar estado",
   cancelOrder: "Cancelar",
   cancelling: "Cancelando…",
   cancelConfirm: "¿Cancelar?",
+  cancelConfirmPaid: "¿Cancelar pagada?",
   referencePrefix: "Ref",
   paymentReferencePlaceholder: "Yape…",
   statusLabels: {
@@ -75,6 +82,11 @@ const labels: OrderDetailLabels = {
     paid: "Pagado",
     preparing: "Preparando",
     ready: "Listo",
+    awaiting_pickup: "Listo para recojo",
+    in_transit: "En camino",
+    delivered: "Entregada",
+    completed: "Completada",
+    cancelled: "Cancelada",
   },
   paymentStatusLabels: { pending: "Pendiente" },
   shipmentStatusLabels: { pending: "Pendiente" },
@@ -83,12 +95,16 @@ const labels: OrderDetailLabels = {
     paid: "Pagado",
     preparing: "Preparando",
     ready: "Listo",
+    awaiting_pickup: "Listo para recojo",
+    in_transit: "En camino",
     delivered: "Entregado",
     completed: "Completado",
   },
   stockWarningTitle: "Stock insuficiente",
-  formatStockWarningItem: ({ sku, required, available }) =>
-    `${sku}: ${required} / ${available}`,
+  stockWarningColName: "Nombre",
+  stockWarningColSku: "SKU",
+  stockWarningColRequired: "Items requeridos",
+  stockWarningColAvailable: "Items disponibles",
   insufficientStockError: "Stock insuficiente",
 };
 
@@ -110,7 +126,9 @@ const baseOrder: OrderDetail = {
         productId: "00000000-0000-0000-0000-000000000002",
         sku: "SKU-1",
         name: "Gomitas",
-        quantity: 2,
+        packageQuantity: 2,
+        unitQuantity: 0,
+        packagePrice: 5,
         unitPrice: 5,
         lineTotal: 10,
       },
@@ -121,6 +139,7 @@ const baseOrder: OrderDetail = {
   paymentMethods: [],
   subtotal: 10,
   discountTotal: 0,
+  surchargeTotal: 0,
   shippingTotal: 0,
   total: 10,
   currencyCode: "PEN",
@@ -135,6 +154,8 @@ function renderDetail(
   options?: {
     nextStatuses?: OrderStatus[];
     onTransitionStatus?: (status: OrderStatus) => void;
+    onCancel?: () => void;
+    onConfirmPayment?: () => void;
   },
 ) {
   return render(
@@ -145,7 +166,7 @@ function renderDetail(
       paymentNotes=""
       onPaymentReferenceChange={vi.fn()}
       onPaymentNotesChange={vi.fn()}
-      onConfirmPayment={vi.fn()}
+      onConfirmPayment={options?.onConfirmPayment ?? vi.fn()}
       shipmentStatus="pending"
       shipmentTracking=""
       shipmentCarrier=""
@@ -156,6 +177,7 @@ function renderDetail(
       onShipmentNotesChange={vi.fn()}
       nextStatuses={options?.nextStatuses ?? []}
       onTransitionStatus={options?.onTransitionStatus}
+      onCancel={options?.onCancel}
     />,
   );
 }
@@ -165,6 +187,51 @@ describe("OrderDetailView", () => {
     renderDetail(baseOrder);
     expect(screen.getByText("Confirmar pago")).toBeInTheDocument();
     expect(screen.getByText("TM-20260703-0001")).toBeInTheDocument();
+  });
+
+  it("shows stock shortage as a table and disables confirm", () => {
+    renderDetail(
+      {
+        ...baseOrder,
+        stockCheck: {
+          ok: false,
+          shortages: [
+            {
+              kind: "product",
+              id: "00000000-0000-0000-0000-000000000002",
+              sku: "SKU-1",
+              name: "Gomitas",
+              required: 20,
+              available: 5,
+            },
+          ],
+        },
+      },
+      { onConfirmPayment: vi.fn() },
+    );
+
+    expect(
+      screen.getByRole("alert", { name: "Stock insuficiente" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Nombre" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "SKU" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Items requeridos" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Items disponibles" }),
+    ).toBeInTheDocument();
+    const shortageRow = screen.getByRole("row", { name: /Gomitas/ });
+    expect(shortageRow).toHaveTextContent("SKU-1");
+    expect(shortageRow).toHaveTextContent("20");
+    expect(shortageRow).toHaveTextContent("5");
+    expect(
+      screen.getByRole("button", { name: "Confirmar pago" }),
+    ).toBeDisabled();
   });
 
   it("does not render map for pickup orders", () => {
@@ -246,5 +313,69 @@ describe("OrderDetailView", () => {
     expect(screen.getByText("GOM-01").closest("li")?.textContent).toContain(
       "2",
     );
+  });
+
+  it("shows cancel for paid orders when onCancel is provided", () => {
+    renderDetail(
+      { ...baseOrder, status: "paid", paymentStatus: "confirmed" },
+      { onCancel: vi.fn() },
+    );
+    expect(
+      screen.getByRole("button", { name: "Cancelar" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show shipment panel on paid orders", () => {
+    renderDetail({
+      ...baseOrder,
+      status: "paid",
+      paymentStatus: "confirmed",
+      fulfillment: { method: "delivery" },
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Envío" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Transportista")).not.toBeInTheDocument();
+  });
+
+  it("requires shipment fields before in_transit transition", () => {
+    const onTransitionStatus = vi.fn();
+    renderDetail(
+      {
+        ...baseOrder,
+        status: "ready",
+        paymentStatus: "confirmed",
+        fulfillment: { method: "delivery" },
+      },
+      {
+        nextStatuses: ["in_transit"],
+        onTransitionStatus,
+      },
+    );
+
+    expect(
+      screen.getByText("Indica transportista y seguimiento"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "En camino" })).toBeDisabled();
+  });
+
+  it("does not show refund action on confirmed payments", () => {
+    renderDetail({
+      ...baseOrder,
+      status: "paid",
+      paymentStatus: "confirmed",
+      payments: [
+        {
+          id: "00000000-0000-0000-0000-000000000099",
+          amount: 10,
+          status: "confirmed",
+          method: "internal",
+          notes: "Yape",
+          confirmedAt: "2026-07-03T01:00:00.000Z",
+          confirmedBy: null,
+        },
+      ],
+    });
+    expect(screen.queryByText("Reembolsar")).not.toBeInTheDocument();
   });
 });

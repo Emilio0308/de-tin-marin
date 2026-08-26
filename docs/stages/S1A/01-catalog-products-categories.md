@@ -35,7 +35,7 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 - **NO `product_images`** — S1A usa `image_url` → _scope creep_
 - **NO `catalog.brands`** — marca es texto → _over-engineering_
 - **NO `campaign_id` / `finalPrice`** → S1C → _pricing boundary violation_
-- **NO Supabase Storage upload** — solo URL texto → _scope creep_
+- **NO Supabase Storage upload** — ~~solo URL texto~~; upload vía **S3 + CloudFront** (S0-03 / DECISIONS #34–#35), `image_url` sigue siendo texto URL
 - **NO ecommerce UI** → S3A
 - **NO bundles** → S1B
 - **NO deduct stock** → S2A (columna `stock_quantity` sí se edita)
@@ -50,16 +50,16 @@ Un usuario staff autenticado en admin (:3001) puede crear, listar, editar y soft
 
 ## Boundaries y DTOs
 
-| Boundary             | Tipo          | Input (Zod)                 | Output DTO (allowlist)                                                                                    |
-| -------------------- | ------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `listCategories`     | Server Action | —                           | `{ id, name, slug, isActive, sortOrder }[]`                                                               |
-| `createCategory`     | Server Action | `createCategoryInputSchema` | `{ ok, id? }`                                                                                             |
-| `updateCategory`     | Server Action | `updateCategoryInputSchema` | `{ ok }`                                                                                                  |
-| `softDeleteCategory` | Server Action | `{ id: uuid }`              | `{ ok }`                                                                                                  |
-| `listProducts`       | Server Action | —                           | `{ id, sku, name, slug, brand, categoryId, categoryName, netPrice, stockQuantity, isActive, imageUrl }[]` |
-| `createProduct`      | Server Action | `createProductInputSchema`  | `{ ok, id? }`                                                                                             |
-| `updateProduct`      | Server Action | `updateProductInputSchema`  | `{ ok }`                                                                                                  |
-| `softDeleteProduct`  | Server Action | `{ id: uuid }`              | `{ ok }`                                                                                                  |
+| Boundary             | Tipo          | Input (Zod)                                                                                  | Output DTO (allowlist)                                               |
+| -------------------- | ------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `listCategories`     | Server Action | —                                                                                            | `{ id, name, slug, isActive, sortOrder }[]`                          |
+| `createCategory`     | Server Action | `createCategoryInputSchema`                                                                  | `{ ok, id? }`                                                        |
+| `updateCategory`     | Server Action | `updateCategoryInputSchema`                                                                  | `{ ok }`                                                             |
+| `softDeleteCategory` | Server Action | `{ id: uuid }`                                                                               | `{ ok }`                                                             |
+| `listProductsPage`   | Server Action | `{ page?, pageSize?, search?, categoryId?, status? }` (`admin-list`; default pageSize **5**) | `{ items, page, pageSize, total }` — items con allowlist de producto |
+| `createProduct`      | Server Action | `createProductInputSchema`                                                                   | `{ ok, id? }`                                                        |
+| `updateProduct`      | Server Action | `updateProductInputSchema`                                                                   | `{ ok }`                                                             |
+| `softDeleteProduct`  | Server Action | `{ id: uuid }`                                                                               | `{ ok }`                                                             |
 
 ## Rules que aplican
 

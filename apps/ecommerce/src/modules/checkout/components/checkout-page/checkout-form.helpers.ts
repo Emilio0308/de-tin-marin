@@ -18,19 +18,210 @@ export type CheckoutFormValues = Record<CheckoutFormField, string>;
 
 export type CheckoutFieldErrors = Partial<Record<CheckoutFormField, string>>;
 
-export type CheckoutFieldErrorKey = "required" | "invalidEmail";
+export type GuestCheckoutFulfillmentMethod =
+  "delivery" | "pickup_point" | "courier";
 
-export const checkoutFormSchema = z.object({
-  name: z.string().trim().min(1, "required"),
-  lastName: z.string().trim().min(1, "required"),
-  phone: z.string().trim().min(1, "required").max(50),
-  email: z.string().trim().min(1, "required").email("invalidEmail"),
-  line1: z.string().trim().min(1, "required").max(300),
+export const courierFormFields = [
+  "courierDepartmentId",
+  "courierProvinceSlug",
+  "courierDni",
+  "courierFullName",
+  "courierAgencyAddress",
+] as const;
+
+export type CourierFormField = (typeof courierFormFields)[number];
+
+export type CourierFormValues = Record<CourierFormField, string>;
+
+export type CourierFieldErrors = Partial<Record<CourierFormField, string>>;
+
+export type CheckoutFieldErrorKey =
+  "required" | "invalidEmail" | "invalidName" | "invalidPhone" | "tooShort";
+
+export type CheckoutValidationLabels = Record<CheckoutFieldErrorKey, string>;
+
+/** Letras (incl. tildes), espacios, guion y apóstrofe — p. ej. María José, Ana-María. */
+const PERSON_NAME_RE = /^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u;
+
+/** Celular Perú: 9 dígitos empezando en 9. */
+const PERU_MOBILE_RE = /^9\d{8}$/;
+
+const MIN_NAME_LENGTH = 2;
+const MIN_ADDRESS_LENGTH = 5;
+
+export function sanitizePersonName(value: string): string {
+  return value.replace(/[^\p{L} '\-]/gu, "").replace(/ {2,}/g, " ");
+}
+
+export function sanitizePhone(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 9);
+}
+
+export function sanitizeEmail(value: string): string {
+  return value.replace(/\s/g, "");
+}
+
+export function sanitizePlaceName(value: string): string {
+  return sanitizePersonName(value);
+}
+
+export function sanitizeDni(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 8);
+}
+
+export function sanitizeCheckoutField(
+  field: CheckoutFormField,
+  value: string,
+): string {
+  switch (field) {
+    case "name":
+    case "lastName":
+      return sanitizePersonName(value);
+    case "phone":
+      return sanitizePhone(value);
+    case "email":
+      return sanitizeEmail(value);
+    case "city":
+    case "province":
+      return sanitizePlaceName(value);
+    default:
+      return value;
+  }
+}
+
+export function sanitizeCourierField(
+  field: CourierFormField,
+  value: string,
+): string {
+  switch (field) {
+    case "courierDni":
+      return sanitizeDni(value);
+    case "courierFullName":
+      return sanitizePersonName(value);
+    default:
+      return value;
+  }
+}
+
+function personNameField() {
+  return z
+    .string()
+    .trim()
+    .min(1, "required")
+    .min(MIN_NAME_LENGTH, "tooShort")
+    .max(200)
+    .regex(PERSON_NAME_RE, "invalidName");
+}
+
+const checkoutContactSchema = z.object({
+  name: personNameField(),
+  lastName: personNameField(),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "required")
+    .regex(PERU_MOBILE_RE, "invalidPhone"),
+  email: z.string().trim().min(1, "required").email("invalidEmail").max(320),
+});
+
+const checkoutDeliveryAddressSchema = z.object({
+  line1: z
+    .string()
+    .trim()
+    .min(1, "required")
+    .min(MIN_ADDRESS_LENGTH, "tooShort")
+    .max(300),
   district: z.string().trim().min(1, "required"),
-  city: z.string().trim().min(1, "required").max(120),
-  province: z.string().trim().min(1, "required").max(120),
+  city: personNameField(),
+  province: personNameField(),
   reference: z.string().max(500),
-}) satisfies z.ZodType<CheckoutFormValues>;
+});
+
+export const checkoutFormSchema = checkoutContactSchema
+  .merge(checkoutDeliveryAddressSchema)
+  .strict() satisfies z.ZodType<CheckoutFormValues>;
+
+export function getCheckoutFormSchema(
+  method: GuestCheckoutFulfillmentMethod,
+): z.ZodType<CheckoutFormValues> {
+  if (method === "pickup_point" || method === "courier") {
+    return checkoutContactSchema.extend({
+      line1: z.string(),
+      district: z.string(),
+      city: z.string(),
+      province: z.string(),
+      reference: z.string(),
+    }) as z.ZodType<CheckoutFormValues>;
+  }
+  return checkoutFormSchema;
+}
+
+const courierFormSchema = z.object({
+  courierDepartmentId: z.string().trim().min(1, "required"),
+  courierProvinceSlug: z.string().trim().min(1, "required"),
+  courierDni: z
+    .string()
+    .trim()
+    .regex(/^\d{8}$/, "invalidDni"),
+  courierFullName: z
+    .string()
+    .trim()
+    .min(3, "tooShort")
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)+$/u, "invalidName"),
+  courierAgencyAddress: z.string().trim().min(10, "tooShort").max(500),
+});
+
+export type CourierFieldErrorKey = CheckoutFieldErrorKey | "invalidDni";
+
+export function getCourierFieldErrorKeys(
+  values: CourierFormValues,
+): Partial<Record<CourierFormField, CourierFieldErrorKey>> {
+  const result = courierFormSchema.safeParse(values);
+  if (result.success) return {};
+
+  const errors: Partial<Record<CourierFormField, CourierFieldErrorKey>> = {};
+  for (const issue of result.error.issues) {
+    const field = issue.path[0];
+    if (
+      typeof field !== "string" ||
+      !courierFormFields.includes(field as CourierFormField) ||
+      errors[field as CourierFormField]
+    ) {
+      continue;
+    }
+    const message = issue.message;
+    if (message === "invalidDni") {
+      errors[field as CourierFormField] = "invalidDni";
+    } else {
+      errors[field as CourierFormField] = toErrorKey(message);
+    }
+  }
+  return errors;
+}
+
+export function mapCourierFieldErrors(
+  errorKeys: Partial<Record<CourierFormField, CourierFieldErrorKey>>,
+  labels: CheckoutValidationLabels & { invalidDni: string },
+): CourierFieldErrors {
+  const mapped: CourierFieldErrors = {};
+  for (const field of courierFormFields) {
+    const key = errorKeys[field];
+    if (!key) continue;
+    mapped[field] =
+      key === "invalidDni"
+        ? labels.invalidDni
+        : (labels[key] ?? labels.required);
+  }
+  return mapped;
+}
+
+export function getPickupPointErrorKey(
+  pickupPointId: string,
+): "required" | undefined {
+  if (!pickupPointId.trim()) return "required";
+  return undefined;
+}
 
 export function hasCheckoutFieldError(
   errors: CheckoutFieldErrors,
@@ -39,10 +230,23 @@ export function hasCheckoutFieldError(
   return Object.hasOwn(errors, field);
 }
 
+function toErrorKey(message: string): CheckoutFieldErrorKey {
+  switch (message) {
+    case "invalidEmail":
+    case "invalidName":
+    case "invalidPhone":
+    case "tooShort":
+      return message;
+    default:
+      return "required";
+  }
+}
+
 export function getCheckoutFieldErrorKeys(
   values: CheckoutFormValues,
+  method: GuestCheckoutFulfillmentMethod = "delivery",
 ): Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>> {
-  const result = checkoutFormSchema.safeParse(values);
+  const result = getCheckoutFormSchema(method).safeParse(values);
   if (result.success) return {};
 
   const errors: Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>> = {};
@@ -55,8 +259,7 @@ export function getCheckoutFieldErrorKeys(
     ) {
       continue;
     }
-    errors[field] =
-      issue.message === "invalidEmail" ? "invalidEmail" : "required";
+    errors[field] = toErrorKey(issue.message);
   }
   return errors;
 }
@@ -64,38 +267,88 @@ export function getCheckoutFieldErrorKeys(
 export function getCheckoutFieldErrorKey(
   values: CheckoutFormValues,
   field: CheckoutFormField,
+  method: GuestCheckoutFulfillmentMethod = "delivery",
 ): CheckoutFieldErrorKey | undefined {
-  const errorKeys = getCheckoutFieldErrorKeys(values);
+  const errorKeys = getCheckoutFieldErrorKeys(values, method);
   return errorKeys[field];
 }
 
 export function mapCheckoutFieldErrors(
   errorKeys: Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>>,
-  labels: {
-    required: string;
-    invalidEmail: string;
-  },
+  labels: CheckoutValidationLabels,
 ): CheckoutFieldErrors {
   const mapped: CheckoutFieldErrors = {};
   for (const field of checkoutFormFields) {
     const key = errorKeys[field];
     if (!key) continue;
-    mapped[field] =
-      key === "invalidEmail" ? labels.invalidEmail : labels.required;
+    mapped[field] = labels[key];
   }
   return mapped;
 }
 
 export function mapCheckoutFieldError(
-  field: CheckoutFormField,
+  _field: CheckoutFormField,
   key: CheckoutFieldErrorKey | undefined,
-  labels: {
-    required: string;
-    invalidEmail: string;
-  },
+  labels: CheckoutValidationLabels,
 ): string | undefined {
   if (!key) return undefined;
-  return key === "invalidEmail" ? labels.invalidEmail : labels.required;
+  return labels[key];
+}
+
+/** Orden DOM del formulario: primer error = primer campo inválido visible. */
+export const checkoutFieldDomOrder: readonly CheckoutFormField[] = [
+  "name",
+  "lastName",
+  "phone",
+  "email",
+  "line1",
+  "district",
+  "city",
+  "province",
+  "reference",
+] as const;
+
+export type CheckoutFieldSection = "contact" | "address";
+
+export function getCheckoutFieldSection(
+  field: CheckoutFormField,
+): CheckoutFieldSection {
+  switch (field) {
+    case "name":
+    case "lastName":
+    case "phone":
+    case "email":
+      return "contact";
+    default:
+      return "address";
+  }
+}
+
+export function getFirstInvalidCheckoutField(
+  errorKeys: Partial<Record<CheckoutFormField, CheckoutFieldErrorKey>>,
+): CheckoutFormField | undefined {
+  return checkoutFieldDomOrder.find((field) => Boolean(errorKeys[field]));
+}
+
+/** Id del control a enfocar (incluye pickup fuera del schema de campos). */
+export function getCheckoutFocusTargetId(
+  field: CheckoutFormField | "pickupPointId" | CourierFormField,
+): string {
+  return field;
+}
+
+export function scrollToCheckoutField(
+  field: CheckoutFormField | "pickupPointId" | CourierFormField,
+): void {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById(getCheckoutFocusTargetId(field));
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.setTimeout(() => {
+    if (el instanceof HTMLElement) {
+      el.focus({ preventScroll: true });
+    }
+  }, 280);
 }
 
 function isCheckoutFormField(value: string): value is CheckoutFormField {

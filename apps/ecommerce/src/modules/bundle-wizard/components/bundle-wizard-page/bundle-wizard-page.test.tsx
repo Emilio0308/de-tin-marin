@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_CUSTOMIZATION_MIN,
+  BUNDLE_LINE_QUANTITY_MAX,
+  BUNDLE_LINE_QUANTITY_MIN,
   type BundleWizardTemplate,
 } from "@de-tin-marin/validations/customize-bundle";
 import { BundleWizardPage } from "./bundle-wizard-page";
@@ -34,6 +36,8 @@ vi.mock("next-intl", () => ({
         progressLabel: "{current} de {max} dulces seleccionados",
         quantityBreakdown:
           "{perPerson} × {surprises} = {total} unidades - S/ {price}",
+        decreaseUnits: "Disminuir unidades de {name} por sorpresa",
+        increaseUnits: "Aumentar unidades de {name} por sorpresa",
       };
       let result = templates[key] ?? key;
       if (values) {
@@ -48,8 +52,11 @@ vi.mock("next-intl", () => ({
 const baseTemplate: BundleWizardTemplate = {
   bundleId: "33333333-3333-3333-3333-333333333333",
   name: "Combo Cumpleaños Arcoíris",
+  description: "La combinación perfecta para celebrar.",
   imageUrl: "https://example.com/combo.png",
   personCount: 10,
+  customizationMinProducts: BUNDLE_CUSTOMIZATION_MIN,
+  customizationMaxProducts: 20,
   container: {
     containerId: "22222222-2222-2222-2222-222222222222",
     sku: "CAJA-M",
@@ -80,6 +87,10 @@ const defaultLabels: BundleWizardPageLabels = {
   back: "Volver al combo",
   title: "Personaliza tu sorpresa",
   personCount: "Para 10 personas",
+  surpriseQuantity: "Cantidad de sorpresas",
+  surpriseQuantityHint: `Mín. ${BUNDLE_LINE_QUANTITY_MIN} · Máx. ${BUNDLE_LINE_QUANTITY_MAX}`,
+  decreaseQuantity: "Disminuir cantidad de sorpresas",
+  increaseQuantity: "Aumentar cantidad de sorpresas",
   addToCart: "Agregar al carrito",
   addToCartLoading: "Agregando…",
   validationMin: `Agrega al menos ${BUNDLE_CUSTOMIZATION_MIN} dulces para continuar.`,
@@ -118,6 +129,9 @@ const defaultLabels: BundleWizardPageLabels = {
 const defaultProps = {
   template: baseTemplate,
   components: baseTemplate.initialComponents,
+  quantity: BUNDLE_LINE_QUANTITY_MIN,
+  minQuantity: BUNDLE_LINE_QUANTITY_MIN,
+  maxQuantity: BUNDLE_LINE_QUANTITY_MAX,
   searchValue: "",
   products: [],
   selectedProductIds: new Set(
@@ -158,6 +172,7 @@ const defaultProps = {
   isValid: true,
   canRemove: true,
   canAdd: true,
+  enableUnitsPerPerson: true,
   isPreviewLoading: false,
   isPreviewError: false,
   isProductsLoading: false,
@@ -168,6 +183,8 @@ const defaultProps = {
   labels: defaultLabels,
   onRemove: vi.fn(),
   onAdd: vi.fn(),
+  onQuantityPerUnitChange: vi.fn(),
+  onQuantityChange: vi.fn(),
   onSearchChange: vi.fn(),
   onSearchSubmit: vi.fn(),
   onProductsRetry: vi.fn(),
@@ -184,8 +201,12 @@ describe("BundleWizardPage", () => {
       screen.getByRole("heading", { name: "Personaliza tu sorpresa" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Combo Cumpleaños Arcoíris")).toBeInTheDocument();
+    expect(
+      screen.getByText("La combinación perfecta para celebrar."),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Caja mediana").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Para 10 personas").length).toBeGreaterThan(0);
+    expect(screen.getByText("Cantidad de sorpresas")).toBeInTheDocument();
     expect(screen.getByText("8 de 20 dulces")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /volver al combo/i }),
@@ -240,5 +261,47 @@ describe("BundleWizardPage", () => {
     );
 
     expect(onAddToCart).toHaveBeenCalledTimes(1);
+  });
+
+  it("invoca onQuantityChange al aumentar la cantidad de sorpresas", () => {
+    const onQuantityChange = vi.fn();
+
+    render(
+      <BundleWizardPage
+        {...defaultProps}
+        quantity={BUNDLE_LINE_QUANTITY_MIN}
+        onQuantityChange={onQuantityChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /aumentar cantidad de sorpresas/i }),
+    );
+
+    expect(onQuantityChange).toHaveBeenCalledWith(BUNDLE_LINE_QUANTITY_MIN + 1);
+  });
+
+  it("deshabilita disminuir en el mínimo y aumentar en el máximo", () => {
+    const { rerender } = render(
+      <BundleWizardPage
+        {...defaultProps}
+        quantity={BUNDLE_LINE_QUANTITY_MIN}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /disminuir cantidad de sorpresas/i }),
+    ).toBeDisabled();
+
+    rerender(
+      <BundleWizardPage
+        {...defaultProps}
+        quantity={BUNDLE_LINE_QUANTITY_MAX}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /aumentar cantidad de sorpresas/i }),
+    ).toBeDisabled();
   });
 });

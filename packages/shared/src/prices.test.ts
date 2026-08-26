@@ -22,9 +22,12 @@ describe("buildPricesFromPackageNetPrice", () => {
     expect(prices.unit.netPrice * 10).toBeCloseTo(prices.normal.netPrice, 2);
   });
 
-  it("keeps normal and unit coherent when package price does not divide evenly", () => {
+  it("rounds unit net price up when package price does not divide evenly", () => {
     const prices = buildPricesFromPackageNetPrice(1, 12);
-    expect(prices.unit.netPrice * 12).toBeCloseTo(prices.normal.netPrice, 2);
+    // 1/12 → 0.0833… → ceil to 0.09 (vende por unidad no más barato que el paquete)
+    expect(prices.normal.netPrice).toBe(1);
+    expect(prices.unit.netPrice).toBe(0.09);
+    expect(prices.unit.netPrice * 12).toBeGreaterThan(prices.normal.netPrice);
   });
 
   it("sets identical blocks when itemsPerPackage is 1", () => {

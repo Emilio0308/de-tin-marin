@@ -10,7 +10,9 @@ const productLine = (
   productId,
   sku: `SKU-${productId}`,
   name: `Product ${productId}`,
-  quantity,
+  packageQuantity: quantity,
+  unitQuantity: 0,
+  packagePrice: 10,
   unitPrice: 10,
   lineTotal: 10 * quantity,
 });
@@ -29,7 +31,7 @@ describe("localStorageCartRepository", () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]?.line.type).toBe("product");
     if (lines[0]?.line.type === "product") {
-      expect(lines[0].line.quantity).toBe(2);
+      expect(lines[0].line.packageQuantity).toBe(2);
       expect(lines[0].line.lineTotal).toBe(20);
     }
   });
@@ -69,7 +71,7 @@ describe("localStorageCartRepository", () => {
     const updated = localStorageCartRepository.getLines()[0];
     expect(updated?.line.type).toBe("product");
     if (updated?.line.type === "product") {
-      expect(updated.line.quantity).toBe(3);
+      expect(updated.line.packageQuantity).toBe(3);
     }
 
     localStorageCartRepository.removeLine(cartLineId!);

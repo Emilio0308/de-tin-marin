@@ -1,6 +1,13 @@
 import type { OrderStatus } from "@de-tin-marin/shared/order-cart";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { OrderDetail } from "@de-tin-marin/validations/order";
 import type { ShipmentStatus } from "@de-tin-marin/validations/shipment";
+
+export type TransitionShipmentInput = {
+  carrier: string;
+  trackingNumber: string;
+  notes?: string | null;
+};
 
 export type OrderDetailLabels = {
   title: string;
@@ -8,6 +15,8 @@ export type OrderDetailLabels = {
   customer: string;
   delivery: string;
   pickupMethod: string;
+  pickupPointMethod: string;
+  courierMethod: string;
   deliveryMethod: string;
   mapTitle: string;
   mapHint: string;
@@ -15,6 +24,7 @@ export type OrderDetailLabels = {
   summaryTitle: string;
   surpriseLine: string;
   formatQuantityLabel: (quantity: number) => string;
+  formatProductDualQty: (packages: number, units: number) => string;
   formatComponentsLabel: (count: number) => string;
   componentSku: string;
   componentName: string;
@@ -25,6 +35,7 @@ export type OrderDetailLabels = {
   cart: string;
   subtotal: string;
   discount: string;
+  surcharge: string;
   shipping: string;
   total: string;
   paymentStatus: string;
@@ -44,10 +55,12 @@ export type OrderDetailLabels = {
   shipmentNotes: string;
   saveShipment: string;
   savingShipment: string;
+  shipmentRequiredHint: string;
   statusActionsTitle: string;
   cancelOrder: string;
   cancelling: string;
   cancelConfirm: string;
+  cancelConfirmPaid: string;
   referencePrefix: string;
   paymentReferencePlaceholder: string;
   statusLabels: Record<string, string>;
@@ -55,11 +68,10 @@ export type OrderDetailLabels = {
   shipmentStatusLabels: Record<string, string>;
   stepperLabels: Record<string, string>;
   stockWarningTitle: string;
-  formatStockWarningItem: (params: {
-    sku: string;
-    required: number;
-    available: number;
-  }) => string;
+  stockWarningColName: string;
+  stockWarningColSku: string;
+  stockWarningColRequired: string;
+  stockWarningColAvailable: string;
   insufficientStockError: string;
 };
 
@@ -85,7 +97,10 @@ export type OrderDetailViewProps = {
   onSaveShipment?: () => void;
   savingShipment?: boolean;
   nextStatuses: OrderStatus[];
-  onTransitionStatus?: (status: OrderStatus) => void;
+  onTransitionStatus?: (
+    status: OrderStatus,
+    shipment?: TransitionShipmentInput,
+  ) => void;
   transitioningTo?: OrderStatus | null;
   onCancel?: () => void;
   cancelling?: boolean;
@@ -97,11 +112,34 @@ export const SHIPMENT_STATUSES: ShipmentStatus[] = [
   "delivered",
 ];
 
-export const ORDER_STEPPER_STATUSES: OrderStatus[] = [
-  "pending_payment",
-  "paid",
-  "preparing",
-  "ready",
-  "delivered",
-  "completed",
-];
+export function buildOrderStepperStatuses(
+  method: OrderFulfillmentMethod,
+): OrderStatus[] {
+  const logistic: OrderStatus =
+    method === "pickup" ? "awaiting_pickup" : "in_transit";
+  return [
+    "pending_payment",
+    "paid",
+    "preparing",
+    "ready",
+    logistic,
+    "delivered",
+    "completed",
+  ];
+}
+
+export function orderNeedsShipmentForTransit(
+  method: OrderFulfillmentMethod,
+): boolean {
+  return (
+    method === "delivery" || method === "pickup_point" || method === "courier"
+  );
+}
+
+export function showShipmentPanel(
+  status: OrderStatus,
+  method: OrderFulfillmentMethod,
+): boolean {
+  if (!orderNeedsShipmentForTransit(method)) return false;
+  return status === "in_transit";
+}

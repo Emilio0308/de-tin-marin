@@ -1,4 +1,9 @@
 import { roundMoney } from "@de-tin-marin/shared/prices";
+import { computeProductMargin } from "@de-tin-marin/shared/product-margin";
+import {
+  CATALOG_IMAGE_CONTENT_TYPES,
+  CATALOG_IMAGE_MAX_BYTES,
+} from "@/modules/media/schemas/presign-catalog-image.schema";
 import type { ProductFormDTO } from "@/modules/catalog/types/product.dto";
 import type { ProductFormValues } from "./product-form.types";
 
@@ -15,6 +20,7 @@ export function buildDefaultProductValues(): ProductFormValues {
     itemsPerPackage: 1,
     packageLabel: "",
     packageNetPrice: 0,
+    costNetPrice: null,
     stockSealedPackages: 0,
     stockLooseBaseUnits: 0,
     purchaseMinQuantity: 10,
@@ -40,6 +46,7 @@ export function buildInitialProductValues(
     itemsPerPackage: initial.itemsPerPackage,
     packageLabel: initial.packageLabel ?? "",
     packageNetPrice: initial.packageNetPrice,
+    costNetPrice: initial.costNetPrice,
     stockSealedPackages: initial.stockSealedPackages,
     stockLooseBaseUnits: initial.stockLooseBaseUnits,
     purchaseMinQuantity: initial.purchaseMinQuantity,
@@ -102,6 +109,23 @@ export function computeUnitNetPricePreview(
   return roundMoney(packageNetPrice / safeItems);
 }
 
+export function computeMarginPreview(
+  packageNetPrice: number,
+  costNetPrice: number | null,
+) {
+  return computeProductMargin({
+    saleNetPrice: packageNetPrice,
+    costNetPrice,
+  });
+}
+
+export function formatMarginPctDisplay(
+  marginPct: number | null,
+): string | null {
+  if (marginPct === null) return null;
+  return roundMoney(marginPct * 100).toFixed(1);
+}
+
 export function computeStockTotalPreview(
   sealedPackages: number,
   looseBaseUnits: number,
@@ -126,8 +150,33 @@ export function isValidImageUrl(value: string): boolean {
   if (!value.trim()) return false;
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return (
+      url.protocol === "http:" ||
+      url.protocol === "https:" ||
+      url.protocol === "blob:"
+    );
   } catch {
     return false;
   }
+}
+
+export function isAllowedCatalogImageFile(file: File): boolean {
+  return (
+    (CATALOG_IMAGE_CONTENT_TYPES as readonly string[]).includes(file.type) &&
+    file.size > 0 &&
+    file.size <= CATALOG_IMAGE_MAX_BYTES
+  );
+}
+
+export function resolveProductImageUrlForPersist(
+  imageUrl: string,
+  pendingImage: File | null,
+  uploadedPublicUrl: string | null,
+): string | null {
+  if (pendingImage) {
+    return uploadedPublicUrl;
+  }
+  const trimmed = imageUrl.trim();
+  if (!trimmed || trimmed.startsWith("blob:")) return null;
+  return trimmed;
 }

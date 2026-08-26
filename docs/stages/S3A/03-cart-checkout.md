@@ -13,7 +13,13 @@
 
 - Carrito v1: **localStorage** con interfaz `CartRepository` intercambiable (futuro `customer_id` / sesión S4).
 - Checkout crea orden `pending_payment` — DECISIONS #8 sin pasarela.
-- **Regla 19** — delivery: tarifa por distrito Piura o `fallback_fee`; pickup desactivado v1 (`pickupEnabled=false`).
+- **Regla 19** — delivery: tarifa por distrito Piura o cobertura bbox +
+  `fallback_fee`. Recojo en tienda (`pickup`) desactivado en storefront
+  (`pickupEnabled=false`). **Puntos de recojo** (`pickup_point`) → S4-08
+  (catálogo + kill switch DB; no usar el flag `pickupEnabled`).
+  **Courier** (`courier`, fee 0) → S4-11 / Regla 31 / DECISIONS #43.
+  **Reglas de tienda** (overlay fee / mínimo / aviso) → S4-12 / Regla 32 /
+  DECISIONS #44.
 - **Regla 15** — stock: `strictStockValidationOnCheckout=false` → warnings; `true` → rechazar submit.
 - Hoy `commerce.orders` RLS = **solo staff** → migración con **política guest INSERT** (+ SELECT limitado o RPC lookup en S3A-4).
 - Mapa: proveedor **gratuito** (recomendado **Leaflet + OpenStreetMap**); pin guarda `lat`/`lng` + texto referencia en `fulfillment` / `metadata` — **no** geocoding de pago por ahora.
@@ -41,22 +47,34 @@ interface CartRepository {
 // v2: customerSessionCartRepository (S4)
 ```
 
-- Líneas: `type: 'product' | 'bundle'` — bundle lleva `components` + `container` congelados del wizard
+- Líneas: `type: 'product' | 'bundle'` — bundle lleva `components` +
+  `container` congelados del wizard. En ecommerce/guest,
+  `bundle.quantity` es un entero **15–100** (sorpresas pedidas); multiplica
+  componentes/envases. Parte del default `bundles.quantity` de la plantilla
+  (también cantidad de sorpresas), acotado con `clamp(..., 15, 100)`.
 - Totales en cliente vía `computeOrderTotals` (validar de nuevo en server al submit)
 - Rutas: `/carrito`, acciones editar cantidad producto, eliminar línea
 
 ### Checkout (`/checkout`)
 
 - Formulario: nombre, apellido, teléfono, email (Zod `orderContactSchema`)
-- Delivery único v1 (`method: 'delivery'`); pickup oculto si `pickupEnabled=false`
+- Delivery único en el brief original (`method: 'delivery'`); pickup **en
+  tienda** oculto si `pickupEnabled=false`. **S4-08** añade `pickup_point`
+  (puntos externos) independiente de ese flag. **S4-11** añade `courier`
+  (agencia nacional, `shipping_total = 0`).
 - Dirección: línea, distrito (select zonas Piura seed S1E), ciudad, provincia, referencia
 - **Mapa Leaflet/OSM:** pin arrastrable; guardar `{ lat, lng }` en `fulfillment.metadata` o `deliveryAddress`
 - Validación cobertura:
   - Distrito debe existir en `pricing.delivery_zones` activas **o** estar dentro de bounding box Piura acordado
-  - Si fuera → mensaje “sin cobertura”, **botón submit disabled**
+  - Si fuera → mensaje “sin cobertura”; **no se crea la orden** (el botón
+    submit **no** se deshabilita por cobertura/fee/pricing: al click, toast +
+    bloqueo lógico; ver nota UX abajo)
 - `shipping_total` = `resolveDeliveryFee(district)` (mismo helper S1E)
 - Stock: banner warnings; si `strictStockValidationOnCheckout` → service retorna `INSUFFICIENT_STOCK` y no crea orden
 - Server Action `createGuestOrder` — reutiliza lógica extraída S3A-0 (mismo path que admin `createOrderService`)
+- Validación guest: `createGuestOrderInputSchema` rechaza líneas bundle con
+  `quantity < 15` o `quantity > 100`, además de revalidar la personalización
+  contra los límites configurados en la plantilla.
 
 ### Migración `00011_guest_orders_rls.sql` (nombre provisional)
 
@@ -69,17 +87,18 @@ interface CartRepository {
 
 ### Feature flags (recap)
 
-| Flag                              | v1      | Efecto               |
-| --------------------------------- | ------- | -------------------- |
-| `pickupEnabled`                   | `false` | Oculta opción recojo |
-| `strictStockValidationOnCheckout` | `false` | Solo warnings        |
-| `enableUnitsPerPerson`            | `false` | (wizard)             |
+| Flag                              | v1      | Efecto                                                         |
+| --------------------------------- | ------- | -------------------------------------------------------------- |
+| `pickupEnabled`                   | `false` | Oculta recojo **en tienda** (`pickup`); no afecta puntos S4-08 |
+| `strictStockValidationOnCheckout` | `false` | Solo warnings (código puede forzar `true`)                     |
+| `enableUnitsPerPerson`            | `true`  | Wizard: editar unidades base **por sorpresa** por dulce (#22)  |
 
 ## Scope OUT (traps)
 
 - **NO pasarela / cobro online** → operador confirma S2C
 - **NO login** → S4
-- **NO pickup UI** si flag false
+- **NO pickup UI de tienda** si `pickupEnabled` false. Puntos de recojo
+  (`pickup_point`) se documentan en S4-08.
 - **NO fallback_fee fuera de Piura** — bloqueo total
 - **NO Google Maps de pago** — solo OSM gratis
 - **NO reserva de stock** al crear orden
@@ -105,8 +124,9 @@ Errores: `VALIDATION`, `PRODUCT_NOT_FOUND`, `BUNDLE_NOT_FOUND`, `OUT_OF_COVERAGE
 
 ## Rules que aplican
 
-- Reglas **3, 7, 8, 13, 15, 16, 19, 20**
-- DECISIONS **#8, #26**
+- Reglas **3, 7, 8, 13, 15, 16, 19, 20** (+ overlay/mínimo: Regla **32** /
+  S4-12)
+- DECISIONS **#8, #26** (+ **#44** storefront settings)
 - [`orders.md`](../../orders.md), [`pricing.md`](../../pricing.md)
 
 ## Orden de implementación
@@ -124,13 +144,21 @@ Errores: `VALIDATION`, `PRODUCT_NOT_FOUND`, `BUNDLE_NOT_FOUND`, `OUT_OF_COVERAGE
 
 - [ ] Agregar producto y sorpresa personalizada al carrito persiste en refresh
 - [ ] Checkout con distrito Piura válido → `shipping_total` correcto
-- [ ] Pin/distrito fuera de cobertura → no se puede enviar
+- [ ] Pin/distrito fuera de cobertura → no se crea la orden (toast; botón
+      sigue clicable salvo `isSubmitting`)
 - [ ] Orden creada en DB: `pending_payment`, `shopping_cart` congelado, `customer_id` null
 - [ ] Admin ve la orden en listado
 - [ ] `strictStockValidationOnCheckout=false` permite crear con warning
 - [ ] `pickupEnabled=false` → sin opción pickup
 - [ ] Playwright — happy path carrito → checkout → confirmación URL
 - [ ] `pnpm check` + `pnpm build` verdes
+
+## Nota UX (2026-08-22 — validación formulario)
+
+Delta post-brief: validación **on blur** por campo; submit siempre habilitado
+(salvo enviando). Fallo de schema → scroll al input + toast con campo/sección.
+Cobertura / fee / pricing pendientes → toast al click, no botón gris. Canónico
+operativo: [`apps/ecommerce/src/modules/checkout/README.md`](../../../apps/ecommerce/src/modules/checkout/README.md).
 
 ## Preguntas abiertas
 

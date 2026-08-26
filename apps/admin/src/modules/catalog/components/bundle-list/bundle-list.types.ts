@@ -10,21 +10,34 @@ export type BundleListLabels = {
   };
   statusActive: string;
   statusDraft: string;
+  ariaActivate: string;
+  ariaDeactivate: string;
   containerShort: string;
   edit: string;
   empty: string;
   emptyFiltered: string;
   formatItemCount: (count: number) => string;
   formatPersons: (count: number) => string;
-  formatPagination: (shown: number, total: number) => string;
+  pagination: {
+    summary: string;
+    previous: string;
+    next: string;
+    page: string;
+  };
   formatAriaEdit: (name: string) => string;
   formatAriaDelete: (name: string) => string;
 };
 
 export type BundleListProps = {
   bundles: BundleListItem[];
-  totalCount: number;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasActiveFilters: boolean;
   labels: BundleListLabels;
   onDelete: (id: string) => void;
+  onPageChange: (page: number) => void;
   deletingId: string | null;
+  onToggleActive: (bundle: BundleListItem) => void;
+  togglingId: string | null;
 };

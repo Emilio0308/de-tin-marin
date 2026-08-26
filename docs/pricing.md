@@ -46,7 +46,11 @@ type ProductPriceDTO = {
 };
 ```
 
+**Línea orden `type: product` (DECISIONS #27):** al congelar, `packagePrice = finalPrice`, `unitPrice = finalUnitPrice`, `lineTotal = packagePrice × packageQuantity + unitPrice × unitQuantity`. Admin puede aportar ambos qty; ecommerce solo presentaciones (`unitQuantity = 0`). Ajustes de cabecera (`discount`/`surcharge`) **no** entran en esta línea — ver [`orders.md`](orders.md) § Totales.
+
 **Reglas:** 2, 9, 10, 11, 12.
+
+> **Costo / margen (admin, DECISIONS #36 / Regla 26):** `cost_net_price` es dato de adquisición; **no** forma parte del pipeline de `finalPrice` ni de DTOs públicos. Margen = `normal.netPrice − cost` (derivado en app vía `computeProductMargin`).
 
 ### B) Sorpresas (bundles) — al crear la orden
 
@@ -67,12 +71,12 @@ Preview en admin (sin campaña): `prices.unit.netPrice × units_per_person`.
 ### C) Packs / combos — precio persistido
 
 ```text
-reference = Σ (product.prices.normal.netPrice × package_quantity)   // al guardar
+reference = Σ (normal × package_quantity + unit × unit_quantity)   // al guardar
 normal    = precio admin  (≥ reference)
 finalPrice = computeFinalPrice(normal, campaign)                     // listado / orden
 ```
 
-Línea orden: `unitPrice = finalPrice` congelado; BOM congelada para deduct.
+Línea orden: `unitPrice = finalPrice` congelado; BOM congelada (`packageQuantity` + `unitQuantity`) para deduct.
 
 **Reglas:** 22–25. DECISIONS #33.
 
@@ -83,6 +87,7 @@ Línea orden: `unitPrice = finalPrice` congelado; BOM congelada para deduct.
 - Pipeline multi-paso (campaña → cupón → VIP)
 - Tipos `suggested`, `fantasy` (estructura JSONB lista, sin lógica)
 - Envases de sorpresa como ítem inventariado (DECISIONS #30)
+- Margen/costo en packs, bundles o DTOs públicos ecommerce
 
 ## Estructura `prices` en BD
 
@@ -101,7 +106,7 @@ Línea orden: `unitPrice = finalPrice` congelado; BOM congelada para deduct.
 | `unit`   | Precio **unidad base**; bundles; costeo por sorpresa |
 
 - `normal.netPrice` y `unit.netPrice` = precio final con IGV incluido.
-- Al guardar: operador ingresa precio presentación → backend calcula `unit`.
+- Al guardar: operador ingresa precio presentación → backend calcula `unit` con **ceil a 2 decimales** (`buildPricesFromPackageNetPrice`) — Regla 2.
 - Campañas operan sobre `normal.netPrice`; `finalUnitPrice` derivado.
 
 ## Integración con Orders
@@ -132,8 +137,9 @@ src/modules/pricing/
 
 ## Reglas relacionadas
 
-Reglas 2, 8–12 en [`business-rules.md`](business-rules.md).
+Reglas 2, 8–12, 26 en [`business-rules.md`](business-rules.md).
 
-## Brief refactor precios/stock
+## Briefs
 
-[S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
+- [S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
+- [S4/02-product-cost-margin.md](stages/S4/02-product-cost-margin.md)

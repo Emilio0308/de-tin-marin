@@ -11,6 +11,10 @@ vi.mock(
   }),
 );
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 describe("GuestOrderLookupPage", () => {
   it("renderiza formulario de búsqueda", () => {
     render(
@@ -22,6 +26,9 @@ describe("GuestOrderLookupPage", () => {
         labels={{
           title: "Mis pedidos",
           subtitle: "Consulta tu pedido",
+          lookupTitle: "Seguimiento de pedido",
+          lookupHint: "Ingresa los datos de tu confirmación",
+          secureNote: "Solo usamos estos datos para mostrarte tu pedido.",
           orderNumber: "Número de pedido",
           email: "Correo electrónico",
           submit: "Buscar pedido",
@@ -35,10 +42,19 @@ describe("GuestOrderLookupPage", () => {
             paymentStatus: "Pago",
             deliveryTitle: "Entrega",
             pickupTitle: "Recojo",
+            pickupPointTitle: "Punto de recojo",
+            courierTitle: "Envío por agencia",
+            pickupInStoreNote: "Recojo en tienda",
             bundleBadge: "Sorpresa",
             packBadge: "Combo",
             bundleComponents: "dulces",
             packComponents: "productos",
+            progressTitle: "Seguimiento del pedido",
+            orderPlaced: "Pedido registrado",
+            orderNumber: "Número de pedido",
+            dateLabel: "Creado",
+            statusCurrent: "Estado actual",
+            paymentPendingHint: "Te avisaremos cuando confirmemos tu pago.",
             formatBundlePersons: (count) => `Para ${count} personas`,
             formatStatus: (status) => status,
             formatPaymentStatus: (paymentStatus) => paymentStatus,

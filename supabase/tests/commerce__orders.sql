@@ -14,7 +14,7 @@ select throws_ok(
        total
      ) values (
        'TM-TEST-0001',
-       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","quantity":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
        1,
        1
      ) $$,

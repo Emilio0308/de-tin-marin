@@ -33,6 +33,13 @@ components/product-list/
 
 **Duplicar antes de acoplar** — promover a `packages/` solo con necesidad probada.
 
+Assets estáticos que un package necesita en **runtime** (plantillas email,
+JSON grandes, etc.) deben viajar como **módulos importables** (p. ej. string
+en `*.template.ts`). En Vercel/serverless, `readFileSync` sobre archivos
+sueltos suele fallar con `ENOENT` y un crash al **cargar** el módulo puede
+tumbar cualquier route que lo importe. Detalle:
+[`coding-guidelines.md`](../coding-guidelines.md) § Assets en serverless.
+
 ### DAL = repositories + services
 
 Solo el DAL puede:

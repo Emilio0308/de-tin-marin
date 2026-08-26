@@ -18,15 +18,24 @@ export type CategoryListLabels = {
   emptyFiltered: string;
   formatOrder: (order: number) => string;
   formatSlug: (slug: string) => string;
-  formatPagination: (shown: number, total: number) => string;
+  pagination: {
+    summary: string;
+    previous: string;
+    next: string;
+    page: string;
+  };
   formatAriaEdit: (name: string) => string;
   formatAriaDelete: (name: string) => string;
 };
 
 export type CategoryListProps = {
   categories: CategoryListItem[];
-  totalCount: number;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasActiveFilters: boolean;
   labels: CategoryListLabels;
   onDelete: (id: string) => void;
+  onPageChange: (page: number) => void;
   deletingId: string | null;
 };

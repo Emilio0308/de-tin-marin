@@ -13,10 +13,16 @@ type PackItemInsert = Database["catalog"]["Tables"]["pack_items"]["Insert"];
 
 export type PackItemWithProduct = PackItemRow & {
   products: {
+    sku: string;
     name: string;
     prices: Json;
     is_active: boolean;
     deleted_at: string | null;
+    product_type: string;
+    items_per_package: number;
+    package_label: string | null;
+    stock_sealed_packages: number;
+    stock_loose_base_units: number;
   } | null;
 };
 
@@ -39,6 +45,56 @@ export async function listPacksRepo(
   return (data ?? []) as PackRow[];
 }
 
+export type PackListFilters = {
+  search?: string;
+  status?: "all" | "active" | "inactive";
+};
+
+export type PackListPagination = {
+  page: number;
+  pageSize: number;
+};
+
+function escapeIlike(term: string): string {
+  return term.replace(/[%_\\]/g, "\\$&");
+}
+
+export async function listPacksPageRepo(
+  config: SupabaseConfig,
+  filters: PackListFilters,
+  pagination: PackListPagination,
+): Promise<{ rows: PackRow[]; total: number }> {
+  const supabase = await createSupabaseServerClient(config);
+  const { page, pageSize } = pagination;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .schema("catalog")
+    .from("packs")
+    .select("*", { count: "exact" })
+    .is("deleted_at", null);
+
+  if (filters.status === "active") {
+    query = query.eq("is_active", true);
+  } else if (filters.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  if (filters.search) {
+    const term = `%${escapeIlike(filters.search)}%`;
+    query = query.or(`name.ilike.${term},sku.ilike.${term}`);
+  }
+
+  const { data, error, count } = await query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) throw new Error(error.message);
+  return { rows: (data ?? []) as PackRow[], total: count ?? 0 };
+}
+
 export async function getPackByIdRepo(
   config: SupabaseConfig,
   id: string,
@@ -47,7 +103,9 @@ export async function getPackByIdRepo(
   const result = await supabase
     .schema("catalog")
     .from("packs")
-    .select("*, pack_items(*, products(name, prices, is_active, deleted_at))")
+    .select(
+      "*, pack_items(*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units))",
+    )
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -66,7 +124,9 @@ export async function listPackItemsByPackIdsRepo(
   const { data, error } = await supabase
     .schema("catalog")
     .from("pack_items")
-    .select("*, products(name, prices, is_active, deleted_at)")
+    .select(
+      "*, products(sku, name, prices, is_active, deleted_at, product_type, items_per_package, package_label, stock_sealed_packages, stock_loose_base_units)",
+    )
     .in("pack_id", packIds);
 
   if (error) throw new Error(error.message);
@@ -135,7 +195,10 @@ export async function hardDeletePackRepo(
 export async function replacePackItemsRepo(
   config: SupabaseConfig,
   packId: string,
-  items: Pick<PackItemInsert, "product_id" | "package_quantity">[],
+  items: Pick<
+    PackItemInsert,
+    "product_id" | "package_quantity" | "unit_quantity"
+  >[],
 ): Promise<void> {
   const supabase = await createSupabaseServerClient(config);
 
@@ -153,6 +216,7 @@ export async function replacePackItemsRepo(
     pack_id: packId,
     product_id: item.product_id,
     package_quantity: item.package_quantity,
+    unit_quantity: item.unit_quantity ?? 0,
   }));
 
   const { error: insertError } = await supabase

@@ -11,7 +11,11 @@ export async function transitionOrderStatusAction(raw: unknown) {
     const auth = await requireStaff(supabaseConfig);
     if (!auth.ok) return { ok: false as const, error: auth.error };
 
-    const result = await transitionOrderStatusService(supabaseConfig, raw);
+    const result = await transitionOrderStatusService(
+      supabaseConfig,
+      auth.staff.userId,
+      raw,
+    );
 
     if (result.ok) {
       revalidatePath("/orders");

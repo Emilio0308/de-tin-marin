@@ -65,15 +65,21 @@ Ejemplo Lay’s (`product_type = package`, `items_per_package = 10`, `package_la
 
 ### Agregación desde `shopping_cart`
 
-| Origen                       | Campo en demanda       | Unidad                                    |
-| ---------------------------- | ---------------------- | ----------------------------------------- |
-| Línea `type: product`        | `presentationQuantity` | Presentaciones vendidas                   |
-| Componente de línea `pack`   | `presentationQuantity` | `totalPackages` (= packageQty × line.qty) |
-| Componente de línea `bundle` | `baseUnits`            | Unidades base                             |
+| Origen                       | Campo en demanda       | Unidad                                                    |
+| ---------------------------- | ---------------------- | --------------------------------------------------------- |
+| Línea `type: product`        | `presentationQuantity` | `packageQuantity` (presentaciones)                        |
+| Línea `type: product`        | `baseUnits`            | `unitQuantity` (unidades base; ecommerce siempre 0)       |
+| Componente de línea `pack`   | `presentationQuantity` | `totalPackages` (= packageQty × line.qty)                 |
+| Componente de línea `pack`   | `baseUnits`            | `totalUnits` (= unitQty × line.qty; legacy sin campo → 0) |
+| Componente de línea `bundle` | `baseUnits`            | Unidades base                                             |
 
 ```text
 need = presentationQuantity × items_per_package + baseUnits
+# línea product equivalente:
+# need = packageQuantity × items_per_package + unitQuantity
 ```
+
+**Antes del snapshot:** `normalizeProductLineQuantities` convierte `unitQuantity >= ipp` en paquetes (`packageQuantity += floor(unitQuantity / ipp)`; resto en `unitQuantity`). Migración histórica: `00024_product_line_dual_quantity.sql` (legacy `quantity` → dual). Detalle canal admin vs ecommerce: [`orders.md`](orders.md) § Línea product.
 
 ### `package` — sealed/loose
 
@@ -129,9 +135,11 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 
 ## Packs / combos
 
-- **Sin stock propio** en `packs` (DECISIONS #33).
-- Disponibilidad = mínimo de `floor(stock_presentaciones / package_quantity)`.
-- Al `paid`: componentes aportan `totalPackages` a `presentationQuantity` (igual que líneas product).
+- **Sin stock propio** en `packs` (DECISIONS #33 / Regla 22).
+- BOM dual: `package_quantity` + `unit_quantity` (suma ≥ 1). Disponibilidad = mínimo de `floor(availableBase / needBase)` con `needBase = package_quantity × ipp + unit_quantity`.
+- Helper canónico: `@de-tin-marin/shared/pack-availability` (`computePackAvailableQuantity`, `listPackStockShortages`).
+- Listados admin: `availableQuantity` + `stockShortages` en `PackListItem` cuando no se puede armar ≥ 1 combo.
+- Al `paid`: `totalPackages` → `presentationQuantity`; `totalUnits` → `baseUnits`. Branch bundle intacto.
 
 ## Admin (v1)
 
@@ -142,7 +150,7 @@ SQL: `catalog._deduct_product_base_units`, `catalog._deduct_unit_product_loose`.
 
 ## Reembolso / cancelación (v1)
 
-Reversión de stock **manual** por operador — incrementar sealed/loose en admin. Ledger automático → v2.
+Cancelación post-pago: **`commerce.cancel_order_with_restock`** restaura stock atómicamente con el refund del payment (Regla 18 / DECISIONS #41 / [S4-09](stages/S4/09-cancel-atomic-restock.md)). Restock usa la misma agregación de demanda que el deduct y devuelve unidades base a loose (+ normalize). Ledger de movimientos → v2.
 
 ## Migración desde `stock_quantity`
 
@@ -189,3 +197,4 @@ Reglas 4, 15, 18, 21, 22–24 en [`business-rules.md`](business-rules.md).
 - [S1D/01-products-packages-stock.md](stages/S1D/01-products-packages-stock.md)
 - [S2A/01-stock-deduct-on-payment.md](stages/S2A/01-stock-deduct-on-payment.md)
 - [S1F/01-catalog-packs.md](stages/S1F/01-catalog-packs.md)
+- [S4/01-catalog-status-excel.md](stages/S4/01-catalog-status-excel.md) _(export + `pack-availability`)_

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WizardComponentList } from "./wizard-component-list";
 
@@ -20,6 +20,8 @@ vi.mock("next-intl", () => ({
         progressLabel: "{current} de {max} dulces seleccionados",
         quantityBreakdown:
           "{perPerson} × {surprises} = {total} unidades - S/ {price}",
+        decreaseUnits: "Disminuir unidades de {name} por sorpresa",
+        increaseUnits: "Aumentar unidades de {name} por sorpresa",
       };
       let result = templates[key] ?? key;
       if (values) {
@@ -37,11 +39,15 @@ describe("WizardComponentList", () => {
       <WizardComponentList
         components={[{ productId: "p1", quantityPerUnit: 1 }]}
         personCount={30}
+        minProducts={1}
+        maxProducts={20}
         labelsByProductId={{ p1: "Gomitas" }}
         imagesByProductId={{ p1: "https://example.com/gomitas.png" }}
         unitPricesByProductId={{ p1: 1.5 }}
         canRemove
+        enableUnitsPerPerson={false}
         onRemove={() => undefined}
+        onQuantityPerUnitChange={() => undefined}
       />,
     );
 
@@ -52,5 +58,72 @@ describe("WizardComponentList", () => {
     expect(
       document.querySelector('img[src="https://example.com/gomitas.png"]'),
     ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", {
+        name: /aumentar unidades de gomitas por sorpresa/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("permite editar unidades por sorpresa cuando el flag está activo", () => {
+    const onQuantityPerUnitChange = vi.fn();
+
+    render(
+      <WizardComponentList
+        components={[{ productId: "p1", quantityPerUnit: 2 }]}
+        personCount={15}
+        minProducts={1}
+        maxProducts={20}
+        labelsByProductId={{ p1: "Galletas" }}
+        imagesByProductId={{ p1: "https://example.com/galletas.png" }}
+        unitPricesByProductId={{ p1: 1 }}
+        canRemove
+        enableUnitsPerPerson
+        onRemove={() => undefined}
+        onQuantityPerUnitChange={onQuantityPerUnitChange}
+      />,
+    );
+
+    expect(
+      screen.getByText("2 × 15 = 30 unidades - S/ 30.00"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /aumentar unidades de galletas por sorpresa/i,
+      }),
+    );
+    expect(onQuantityPerUnitChange).toHaveBeenCalledWith("p1", 3);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /disminuir unidades de galletas por sorpresa/i,
+      }),
+    );
+    expect(onQuantityPerUnitChange).toHaveBeenCalledWith("p1", 1);
+  });
+
+  it("deshabilita disminuir unidades en el mínimo (1)", () => {
+    render(
+      <WizardComponentList
+        components={[{ productId: "p1", quantityPerUnit: 1 }]}
+        personCount={15}
+        minProducts={1}
+        maxProducts={20}
+        labelsByProductId={{ p1: "Galletas" }}
+        imagesByProductId={{}}
+        unitPricesByProductId={{ p1: 1 }}
+        canRemove
+        enableUnitsPerPerson
+        onRemove={() => undefined}
+        onQuantityPerUnitChange={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: /disminuir unidades de galletas por sorpresa/i,
+      }),
+    ).toBeDisabled();
   });
 });

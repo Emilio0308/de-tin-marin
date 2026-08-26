@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Plus_Jakarta_Sans, Quicksand } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const displayFont = Plus_Jakarta_Sans({
@@ -50,6 +51,7 @@ export default async function RootLayout({
       <body className="bg-background font-body text-on-surface min-h-screen antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
+          <Toaster position="top-center" richColors closeButton />
         </NextIntlClientProvider>
       </body>
     </html>

@@ -19,11 +19,11 @@ Confirmación post-compra y consulta de pedido guest (S3A-4).
 
 ## Componentes
 
-| Carpeta                    | Rol                                                     |
-| -------------------------- | ------------------------------------------------------- |
-| `guest-order-detail/`      | Resumen readonly compartido + instrucciones pago        |
-| `order-confirmation-page/` | Post-checkout (instrucciones solo si `pending_payment`) |
-| `guest-order-lookup-page/` | Formulario Mis pedidos + auto-lookup con query params   |
+| Carpeta                    | Rol                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| `guest-order-detail/`      | Resumen readonly + instrucciones pago; fulfillment delivery / pickup / pickup_point |
+| `order-confirmation-page/` | Post-checkout (instrucciones solo si `pending_payment`)                             |
+| `guest-order-lookup-page/` | Formulario Mis pedidos + auto-lookup con query params                               |
 
 ## Carrito
 

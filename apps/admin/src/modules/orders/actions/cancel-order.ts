@@ -11,7 +11,11 @@ export async function cancelOrderAction(id: string) {
     const auth = await requireStaff(supabaseConfig);
     if (!auth.ok) return { ok: false as const, error: auth.error };
 
-    const result = await cancelOrderService(supabaseConfig, id);
+    const result = await cancelOrderService(
+      supabaseConfig,
+      auth.staff.userId,
+      id,
+    );
     if (result.ok) {
       revalidatePath("/orders");
       revalidatePath(`/orders/${id}`);

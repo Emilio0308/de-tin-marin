@@ -7,13 +7,19 @@ import { useTranslations } from "next-intl";
 import { createProductAction } from "@/modules/catalog/actions/create-product";
 import { listCategoriesAction } from "@/modules/catalog/actions/list-categories";
 import { updateProductAction } from "@/modules/catalog/actions/update-product";
+import { createCatalogImageUploadUrlAction } from "@/modules/media/actions/create-catalog-image-upload-url";
+import { putPresignedCatalogImage } from "@/modules/media/lib/put-presigned-catalog-image";
+import type { CatalogImageContentType } from "@/modules/media/schemas/presign-catalog-image.schema";
+import { getErrorMessage, logClientError } from "@/shared/errors/client-error";
 import { invalidateAdminCatalogLists } from "@/shared/query/query-cache";
 import { queryKeys } from "@/shared/query/query-keys";
 import type { ProductFormDTO } from "@/modules/catalog/types/product.dto";
 import { ProductForm } from "./product-form";
+import { resolveProductImageUrlForPersist } from "./product-form.helpers";
 import type {
   ProductFormLabels,
   ProductFormValues,
+  ProductImageUploadResult,
 } from "./product-form.types";
 
 type ProductFormContainerProps = {
@@ -67,6 +73,7 @@ export function ProductFormContainer({
       breadcrumbParent: t("breadcrumbParent"),
       breadcrumbCurrent:
         mode === "create" ? t("breadcrumbNew") : t("breadcrumbEdit"),
+      back: t("back"),
       title: mode === "create" ? t("titleCreate") : t("titleEdit"),
       status: t("status"),
       statusActive: t("statusActive"),
@@ -82,8 +89,11 @@ export function ProductFormContainer({
       image: t("image"),
       imagePreview: t("imagePreview"),
       imageAlt: t("imageAlt"),
-      imageUrl: t("imageUrl"),
-      imageUrlPlaceholder: t("imageUrlPlaceholder"),
+      imageUpload: t("imageUpload"),
+      imageUploading: t("imageUploading"),
+      imageClear: t("imageClear"),
+      imageEmptyHint: t("imageEmptyHint"),
+      imageFileInvalid: t("imageFileInvalid"),
       brand: t("brand"),
       brandPlaceholder: t("brandPlaceholder"),
       category: t("category"),
@@ -99,6 +109,13 @@ export function ProductFormContainer({
       packagePrice: t("packagePrice"),
       unitPrice: t("unitPrice"),
       unitPricePreview: t("unitPricePreview"),
+      costNetPrice: t("costNetPrice"),
+      costNetPriceHint: t("costNetPriceHint"),
+      margin: t("margin"),
+      marginPct: t("marginPct"),
+      marginEmpty: t("marginEmpty"),
+      formatMargin: (amount) => t("formatMargin", { amount }),
+      formatMarginPct: (pct) => t("formatMarginPct", { pct }),
       stock: t("stock"),
       stockSealed: t("stockSealed"),
       stockLoose: t("stockLoose"),
@@ -133,34 +150,106 @@ export function ProductFormContainer({
     },
   });
 
-  async function handleSubmit(values: ProductFormValues) {
+  async function uploadProductImage(
+    file: File,
+  ): Promise<ProductImageUploadResult> {
+    const presign = await createCatalogImageUploadUrlAction({
+      folder: "products",
+      contentType: file.type as CatalogImageContentType,
+      contentLength: file.size,
+      fileName: file.name,
+    });
+
+    if (!presign.ok) {
+      if (presign.error === "UNAUTHORIZED") {
+        return { ok: false, error: tErrors("unauthorized") };
+      }
+      if (presign.error === "FORBIDDEN") {
+        return { ok: false, error: tErrors("forbidden") };
+      }
+      if (presign.error === "VALIDATION") {
+        return { ok: false, error: t("imageFileInvalid") };
+      }
+      return {
+        ok: false,
+        error:
+          "message" in presign && presign.message
+            ? t("imageUploadFailedWithMessage", { message: presign.message })
+            : t("imageUploadFailed"),
+      };
+    }
+
+    const put = await putPresignedCatalogImage(presign.data.uploadUrl, file);
+    if (!put.ok) {
+      return {
+        ok: false,
+        error: t("imageUploadFailedWithMessage", { message: put.message }),
+      };
+    }
+
+    return { ok: true, publicUrl: presign.data.publicUrl };
+  }
+
+  async function handleSubmit(
+    values: ProductFormValues,
+    pendingImage: File | null,
+  ) {
     setSubmitting(true);
     setError(null);
 
-    const payload =
-      mode === "create"
-        ? values
-        : {
-            id: initial?.id,
-            ...values,
-          };
+    try {
+      let uploadedPublicUrl: string | null = null;
 
-    const result =
-      mode === "create"
-        ? await createProductAction(payload)
-        : await updateProductAction(payload);
+      if (pendingImage) {
+        const upload = await uploadProductImage(pendingImage);
+        if (!upload.ok) {
+          setError(upload.error);
+          return;
+        }
+        uploadedPublicUrl = upload.publicUrl;
+      }
 
-    setSubmitting(false);
+      const imageUrl = resolveProductImageUrlForPersist(
+        values.imageUrl,
+        pendingImage,
+        uploadedPublicUrl,
+      );
 
-    if (!result.ok) {
-      setError(productErrorMessage(result, tErrors));
-      return;
+      const base = {
+        ...values,
+        imageUrl,
+      };
+
+      const payload =
+        mode === "create"
+          ? base
+          : {
+              id: initial?.id,
+              ...base,
+            };
+
+      const result =
+        mode === "create"
+          ? await createProductAction(payload)
+          : await updateProductAction(payload);
+
+      if (!result.ok) {
+        setError(productErrorMessage(result, tErrors));
+        return;
+      }
+
+      await invalidateAdminCatalogLists(queryClient, "products");
+
+      router.push("/products");
+      router.refresh();
+    } catch (error) {
+      logClientError("ProductFormContainer.handleSubmit", error);
+      setError(
+        tErrors("defaultWithMessage", { message: getErrorMessage(error) }),
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    await invalidateAdminCatalogLists(queryClient, "products");
-
-    router.push("/products");
-    router.refresh();
   }
 
   function handleCancel() {
@@ -185,6 +274,7 @@ export function ProductFormContainer({
         <ProductForm
           initial={initial}
           categories={categoriesQuery.data}
+          backHref="/products"
           labels={labels}
           onSubmit={handleSubmit}
           onCancel={handleCancel}

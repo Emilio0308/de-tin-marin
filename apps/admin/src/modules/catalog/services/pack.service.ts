@@ -4,7 +4,15 @@ import {
   createPackInputSchema,
   updatePackInputSchema,
 } from "@de-tin-marin/validations/pack";
+import {
+  adminPackListQuerySchema,
+  type AdminListPage,
+} from "@de-tin-marin/validations/admin-list";
 import { computePackReference } from "@de-tin-marin/shared/pack-price";
+import {
+  computePackAvailableQuantity,
+  listPackStockShortages,
+} from "@de-tin-marin/shared/pack-availability";
 import {
   buildPackPrices,
   parsePackPricesJson,
@@ -20,7 +28,7 @@ import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { getActiveProductsByIdsRepo } from "../repositories/bundle.repository";
 import {
   listCampaignsByIdsRepo,
-  listProductsRepo,
+  getProductsByIdsRepo,
   type CampaignPricingRow,
 } from "../repositories/product.repository";
 import {
@@ -30,6 +38,7 @@ import {
   isPackSkuTakenRepo,
   isPackSlugTakenRepo,
   listPackItemsByPackIdsRepo,
+  listPacksPageRepo,
   listPacksRepo,
   replacePackItemsRepo,
   softDeletePackRepo,
@@ -47,26 +56,37 @@ function normalizeImageUrl(imageUrl: string | null | undefined): string | null {
 }
 
 function toPriceItems(items: PackItemWithProduct[]) {
-  return items.map((item) => ({
-    packageNetPrice: parseProductPricesJson(item.products?.prices ?? {})
-      .packageNetPrice,
-    packageQuantity: item.package_quantity,
-  }));
+  return items.map((item) => {
+    const prices = parseProductPricesJson(item.products?.prices ?? {});
+    return {
+      packageNetPrice: prices.packageNetPrice,
+      unitNetPrice: prices.unitNetPrice,
+      packageQuantity: item.package_quantity,
+      unitQuantity: item.unit_quantity ?? 0,
+    };
+  });
 }
 
 function computeReferenceFromItems(
-  items: { packageNetPrice: number; packageQuantity: number }[],
+  items: {
+    packageNetPrice: number;
+    unitNetPrice: number;
+    packageQuantity: number;
+    unitQuantity: number;
+  }[],
 ): number {
   return computePackReference(items).referenceNetPrice;
 }
 
 function toFormItemDTO(item: PackItemWithProduct): PackFormItemDTO {
+  const prices = parseProductPricesJson(item.products?.prices ?? {});
   return {
     productId: item.product_id,
     productName: item.products?.name ?? "—",
-    packageNetPrice: parseProductPricesJson(item.products?.prices ?? {})
-      .packageNetPrice,
+    packageNetPrice: prices.packageNetPrice,
+    unitNetPrice: prices.unitNetPrice,
     packageQuantity: item.package_quantity,
+    unitQuantity: item.unit_quantity ?? 0,
   };
 }
 
@@ -86,6 +106,29 @@ function toListItem(
   const { normalNetPrice, referenceNetPrice } = parsePackPricesJson(row.prices);
   const finalPrice = resolveFinalPrice(normalNetPrice, campaign);
   const campaignForPricing = campaign ? toCampaignForPricing(campaign) : null;
+  const availabilityComponents = items.map((item) => ({
+    productId: item.product_id,
+    productName: item.products?.name ?? "—",
+    sku: item.products?.sku ?? "—",
+    packageQuantity: item.package_quantity,
+    unitQuantity: item.unit_quantity ?? 0,
+    product: item.products
+      ? {
+          isActive: item.products.is_active,
+          deletedAt: item.products.deleted_at,
+          productType:
+            (item.products.product_type as "unit" | "package") ?? "unit",
+          itemsPerPackage: item.products.items_per_package ?? 1,
+          stockSealedPackages: item.products.stock_sealed_packages,
+          stockLooseBaseUnits: item.products.stock_loose_base_units,
+        }
+      : null,
+  }));
+  const availableQuantity = computePackAvailableQuantity(
+    availabilityComponents,
+  );
+  const stockShortages =
+    availableQuantity < 1 ? listPackStockShortages(availabilityComponents) : [];
 
   return {
     id: row.id,
@@ -96,6 +139,8 @@ function toListItem(
     referencePrice: referenceNetPrice,
     finalPrice,
     itemCount: items.length,
+    availableQuantity,
+    stockShortages,
     purchaseMinQuantity: row.purchase_min_quantity,
     purchaseMaxQuantity: row.purchase_max_quantity,
     isActive: row.is_active,
@@ -174,7 +219,13 @@ async function validateCampaign(
 
 async function resolveReferenceNetPrice(
   config: SupabaseConfig,
-  itemsInput: { productId: string; packageQuantity: number }[] | undefined,
+  itemsInput:
+    | {
+        productId: string;
+        packageQuantity: number;
+        unitQuantity: number;
+      }[]
+    | undefined,
   existingItems: PackItemWithProduct[],
 ): Promise<
   | { ok: true; referenceNetPrice: number }
@@ -186,19 +237,35 @@ async function resolveReferenceNetPrice(
       return { ok: false, error: itemsCheck.error };
     }
 
-    const allProducts = await listProductsRepo(config);
+    const productIds = [...new Set(itemsInput.map((item) => item.productId))];
+    const products = await getProductsByIdsRepo(config, productIds);
+    if (products.length !== productIds.length) {
+      return { ok: false, error: "PRODUCT_NOT_FOUND" };
+    }
+
     const priceById = new Map(
-      allProducts.map((product) => [
-        product.id,
-        parseProductPricesJson(product.prices).packageNetPrice,
-      ]),
+      products.map((product) => {
+        const prices = parseProductPricesJson(product.prices);
+        return [
+          product.id,
+          {
+            packageNetPrice: prices.packageNetPrice,
+            unitNetPrice: prices.unitNetPrice,
+          },
+        ] as const;
+      }),
     );
 
     const referenceNetPrice = computeReferenceFromItems(
-      itemsInput.map((item) => ({
-        packageNetPrice: priceById.get(item.productId) ?? 0,
-        packageQuantity: item.packageQuantity,
-      })),
+      itemsInput.map((item) => {
+        const prices = priceById.get(item.productId);
+        return {
+          packageNetPrice: prices?.packageNetPrice ?? 0,
+          unitNetPrice: prices?.unitNetPrice ?? 0,
+          packageQuantity: item.packageQuantity,
+          unitQuantity: item.unitQuantity,
+        };
+      }),
     );
 
     return { ok: true, referenceNetPrice };
@@ -247,6 +314,60 @@ export async function listPacksService(
   );
 }
 
+export async function listPacksPageService(
+  config: SupabaseConfig,
+  raw: unknown,
+): Promise<
+  | { ok: true; data: AdminListPage<PackListItem> }
+  | { ok: false; error: "VALIDATION" }
+> {
+  const parsed = adminPackListQuerySchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "VALIDATION" };
+
+  const { page, pageSize, search, status } = parsed.data;
+  const { rows, total } = await listPacksPageRepo(
+    config,
+    { search, status },
+    { page, pageSize },
+  );
+
+  if (rows.length === 0) {
+    return { ok: true, data: { items: [], page, pageSize, total } };
+  }
+
+  const campaignIds = [
+    ...new Set(
+      rows
+        .map((row) => row.campaign_id)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const campaigns = await listCampaignsByIdsRepo(config, campaignIds);
+  const campaignById = new Map(
+    campaigns.map((campaign) => [campaign.id, campaign]),
+  );
+
+  const packIds = rows.map((row) => row.id);
+  const allItems = await listPackItemsByPackIdsRepo(config, packIds);
+
+  const itemsByPack = new Map<string, PackItemWithProduct[]>();
+  for (const item of allItems) {
+    const list = itemsByPack.get(item.pack_id) ?? [];
+    list.push(item);
+    itemsByPack.set(item.pack_id, list);
+  }
+
+  const items = rows.map((row) =>
+    toListItem(
+      row,
+      itemsByPack.get(row.id) ?? [],
+      row.campaign_id ? (campaignById.get(row.campaign_id) ?? null) : null,
+    ),
+  );
+
+  return { ok: true, data: { items, page, pageSize, total } };
+}
+
 export async function getPackService(
   config: SupabaseConfig,
   id: string,
@@ -282,19 +403,35 @@ export async function createPackService(config: SupabaseConfig, raw: unknown) {
     return { ok: false as const, error: campaignCheck.error };
   }
 
-  const allProducts = await listProductsRepo(config);
+  const productIds = [...new Set(data.items.map((item) => item.productId))];
+  const products = await getProductsByIdsRepo(config, productIds);
+  if (products.length !== productIds.length) {
+    return { ok: false as const, error: "PRODUCT_NOT_FOUND" as const };
+  }
+
   const priceById = new Map(
-    allProducts.map((product) => [
-      product.id,
-      parseProductPricesJson(product.prices).packageNetPrice,
-    ]),
+    products.map((product) => {
+      const prices = parseProductPricesJson(product.prices);
+      return [
+        product.id,
+        {
+          packageNetPrice: prices.packageNetPrice,
+          unitNetPrice: prices.unitNetPrice,
+        },
+      ] as const;
+    }),
   );
 
   const referenceNetPrice = computeReferenceFromItems(
-    data.items.map((item) => ({
-      packageNetPrice: priceById.get(item.productId) ?? 0,
-      packageQuantity: item.packageQuantity,
-    })),
+    data.items.map((item) => {
+      const prices = priceById.get(item.productId);
+      return {
+        packageNetPrice: prices?.packageNetPrice ?? 0,
+        unitNetPrice: prices?.unitNetPrice ?? 0,
+        packageQuantity: item.packageQuantity,
+        unitQuantity: item.unitQuantity,
+      };
+    }),
   );
 
   if (data.normalNetPrice < referenceNetPrice) {
@@ -335,6 +472,7 @@ export async function createPackService(config: SupabaseConfig, raw: unknown) {
       data.items.map((item) => ({
         product_id: item.productId,
         package_quantity: item.packageQuantity,
+        unit_quantity: item.unitQuantity,
       })),
     );
   } catch (error) {
@@ -441,6 +579,7 @@ export async function updatePackService(config: SupabaseConfig, raw: unknown) {
       fields.items.map((item) => ({
         product_id: item.productId,
         package_quantity: item.packageQuantity,
+        unit_quantity: item.unitQuantity,
       })),
     );
   }

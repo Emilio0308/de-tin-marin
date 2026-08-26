@@ -17,7 +17,12 @@ import {
 } from "./prices";
 
 export type OrderLineInput =
-  | { type: "product"; productId: string; quantity: number }
+  | {
+      type: "product";
+      productId: string;
+      packageQuantity: number;
+      unitQuantity: number;
+    }
   | {
       type: "bundle";
       bundleId: string;
@@ -65,7 +70,11 @@ export type OrderPackSource = {
   image_url: string | null;
   is_active: boolean;
   deleted_at: string | null;
-  items: Array<{ product_id: string; package_quantity: number }>;
+  items: Array<{
+    product_id: string;
+    package_quantity: number;
+    unit_quantity: number;
+  }>;
 };
 
 export type BuildOrderCartError =
@@ -151,6 +160,7 @@ export function resolveProductsForOrder(
           name: product.name,
           unitPrice,
           presentationPrice,
+          itemsPerPackage,
         },
       ] as const;
     }),
@@ -213,6 +223,7 @@ function buildEnrichedCartLines(
         components: pack.items.map((item) => ({
           productId: item.product_id,
           packageQuantity: item.package_quantity,
+          unitQuantity: item.unit_quantity ?? 0,
         })),
       });
       continue;
@@ -302,6 +313,7 @@ export function buildOrderCartWithTotals(input: {
   bundlesById: Map<string, OrderBundleSource>;
   packsById?: Map<string, OrderPackSource>;
   discountTotal?: number;
+  surchargeTotal?: number;
   shippingTotal?: number;
 }):
   | { ok: true; shoppingCart: OrderShoppingCart; totals: OrderTotals }
@@ -313,6 +325,7 @@ export function buildOrderCartWithTotals(input: {
 
   const totals = computeOrderTotals(cartResult.shoppingCart, {
     discountTotal: input.discountTotal,
+    surchargeTotal: input.surchargeTotal,
     shippingTotal: input.shippingTotal,
   });
 

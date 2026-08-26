@@ -29,7 +29,11 @@ type PackMeta = {
   sku: string;
   name: string;
   unitPrice: number;
-  components: Array<{ productId: string; packageQuantity: number }>;
+  components: Array<{
+    productId: string;
+    packageQuantity: number;
+    unitQuantity: number;
+  }>;
 };
 
 function buildProductsByIdForLine(
@@ -48,6 +52,7 @@ function buildProductsByIdForLine(
         name: product.name,
         unitPrice: product.finalUnitPrice,
         presentationPrice: product.finalPrice,
+        itemsPerPackage: product.itemsPerPackage,
       });
     }
     return map;
@@ -65,6 +70,7 @@ function buildProductsByIdForLine(
         name: product.name,
         unitPrice: product.finalUnitPrice,
         presentationPrice: product.finalPrice,
+        itemsPerPackage: product.itemsPerPackage,
       });
     }
     return map;
@@ -81,6 +87,7 @@ function buildProductsByIdForLine(
       name: product.name,
       unitPrice: product.finalUnitPrice,
       presentationPrice: product.finalPrice,
+      itemsPerPackage: product.itemsPerPackage,
     });
   }
 
@@ -157,7 +164,10 @@ export function estimateOrderFormLineTotal(
 
 /** Fallback cliente cuando el preview server no está disponible. */
 export function previewOrderTotals(
-  values: Pick<OrderFormValues, "lines" | "shippingTotal" | "discountTotal">,
+  values: Pick<
+    OrderFormValues,
+    "lines" | "shippingTotal" | "discountTotal" | "surchargeTotal"
+  >,
   products: ProductOption[],
   bundlesById: Map<string, BundleMeta>,
   packsById: Map<string, PackMeta> = new Map(),
@@ -203,6 +213,7 @@ export function previewOrderTotals(
       {
         shippingTotal: values.shippingTotal,
         discountTotal: values.discountTotal,
+        surchargeTotal: values.surchargeTotal,
       },
     );
   } catch {
@@ -210,7 +221,45 @@ export function previewOrderTotals(
   }
 }
 
-export function toCreateOrderPayload(values: OrderFormValues) {
+export type PickupPointFormOption = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  fee: number;
+};
+
+export type CourierDepartmentFormOption = {
+  id: string;
+  name: string;
+  provinces: Array<{ slug: string; name: string; enabled: boolean }>;
+};
+
+export function toCreateOrderPayload(
+  values: OrderFormValues,
+  pickupPoints: PickupPointFormOption[] = [],
+  courierDepartments: CourierDepartmentFormOption[] = [],
+) {
+  const selectedPickupPoint =
+    values.fulfillment.method === "pickup_point"
+      ? pickupPoints.find(
+          (point) => point.id === values.fulfillment.pickupPointId,
+        )
+      : undefined;
+
+  const selectedCourierDepartment =
+    values.fulfillment.method === "courier"
+      ? courierDepartments.find(
+          (department) =>
+            department.id === values.fulfillment.courierDepartmentId,
+        )
+      : undefined;
+  const selectedCourierProvince = selectedCourierDepartment?.provinces.find(
+    (province) =>
+      province.slug === values.fulfillment.courierProvinceSlug &&
+      province.enabled,
+  );
+
   return {
     contact: values.contact,
     fulfillment: {
@@ -220,6 +269,34 @@ export function toCreateOrderPayload(values: OrderFormValues) {
           ? {
               ...values.fulfillment.deliveryAddress,
               reference: values.fulfillment.deliveryAddress.reference || null,
+            }
+          : undefined,
+      pickupPoint:
+        values.fulfillment.method === "pickup_point" && selectedPickupPoint
+          ? {
+              id: selectedPickupPoint.id,
+              name: selectedPickupPoint.name,
+              lat: selectedPickupPoint.lat,
+              lng: selectedPickupPoint.lng,
+              fee: selectedPickupPoint.fee,
+            }
+          : undefined,
+      courier:
+        values.fulfillment.method === "courier" &&
+        selectedCourierDepartment &&
+        selectedCourierProvince
+          ? {
+              destination: {
+                departmentId: selectedCourierDepartment.id,
+                departmentName: selectedCourierDepartment.name,
+                provinceSlug: selectedCourierProvince.slug,
+                provinceName: selectedCourierProvince.name,
+              },
+              recipient: {
+                dni: values.fulfillment.courierDni.trim(),
+                fullName: values.fulfillment.courierFullName.trim(),
+                agencyAddress: values.fulfillment.courierAgencyAddress.trim(),
+              },
             }
           : undefined,
       notes: values.fulfillment.notes || null,
@@ -242,6 +319,7 @@ export function toCreateOrderPayload(values: OrderFormValues) {
     }),
     shippingTotal: values.shippingTotal,
     discountTotal: values.discountTotal,
+    surchargeTotal: values.surchargeTotal,
   };
 }
 

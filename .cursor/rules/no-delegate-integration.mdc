@@ -1,0 +1,21 @@
+---
+description: Nunca delegar implementación/integración a subagentes que no sean Composer
+alwaysApply: true
+---
+
+# No delegar integración a subagentes no-Composer
+
+- **Prohibido** usar el tool `Task` / subagentes para **implementar, editar, integrar, refactorizar o terminar** features, fixes, migraciones, tests o docs del repo.
+- **Prohibido** en concreto delegar a modelos que no sean **Composer** (p. ej. Claude, GPT u otros slugs del Task tool).
+- El agente principal debe **escribir y verificar el código él mismo** (Read / Edit / Shell), archivo a archivo.
+- `Task` / subagentes solo para **exploración o investigación de solo lectura** cuando haga falta mapa rápido del codebase — nunca para “terminar la implementación”.
+- Si el usuario pide implementación, **no** externalices el trabajo de integración; hazlo tú.
+
+## Ejemplos
+
+```text
+❌ BAD: Task(subagent_type=generalPurpose, model=claude-...) "Implementa listProductsPageRepo y actualiza la UI"
+❌ BAD: Task(...) "Completa packs, bundles y orders según el plan"
+✅ GOOD: Editar tú product.repository.ts, product.service.ts, container, tests y build
+✅ GOOD (solo lectura): Task(explore) "¿Dónde se filtra el listado de productos en admin?"
+```

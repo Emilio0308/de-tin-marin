@@ -11,8 +11,9 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
-  BUNDLE_CUSTOMIZATION_MAX,
-  BUNDLE_CUSTOMIZATION_MIN,
+  BUNDLE_LINE_QUANTITY_MAX,
+  BUNDLE_LINE_QUANTITY_MIN,
+  clampBundleLineQuantity,
   validateBundleCustomization,
   type BundleWizardTemplate,
   type CustomizeBundleComponent,
@@ -26,10 +27,12 @@ import {
   canAddComponent,
   canRemoveComponent,
   removeComponent,
+  setComponentQuantityPerUnit,
 } from "@/modules/bundle-wizard/helpers/wizard-state";
 import { clearPendingCartLines } from "@/modules/bundle-wizard/helpers/pending-cart";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { useCart } from "@/modules/cart/hooks/use-cart";
+import { storeFeatures } from "@/config/store";
 import { queryKeys } from "@/shared/query/query-keys";
 import { freshQueryOptions } from "@/shared/query/query-cache";
 import { WIZARD_PRODUCT_PICKER_PAGE_SIZE } from "../wizard-product-picker/wizard-product-picker.constants";
@@ -51,11 +54,22 @@ export function BundleWizardPageContainer({
   const router = useRouter();
   const { addBundleLine } = useCart();
   const [, startTransition] = useTransition();
+  const bounds = useMemo(
+    () => ({
+      minProducts: template.customizationMinProducts,
+      maxProducts: template.customizationMaxProducts,
+    }),
+    [template.customizationMaxProducts, template.customizationMinProducts],
+  );
   const [components, setComponents] = useState<CustomizeBundleComponent[]>(
     () => template.initialComponents,
   );
+  const [quantity, setQuantity] = useState(() =>
+    clampBundleLineQuantity(template.personCount),
+  );
   const [debouncedComponents, setDebouncedComponents] =
     useState<CustomizeBundleComponent[]>(components);
+  const [debouncedQuantity, setDebouncedQuantity] = useState(quantity);
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pickerLabels, setPickerLabels] = useState<Record<string, string>>({});
@@ -69,11 +83,21 @@ export function BundleWizardPageContainer({
     return () => window.clearTimeout(timeout);
   }, [components]);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuantity(quantity);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [quantity]);
+
   const validation = useMemo(
-    () => validateBundleCustomization(components),
-    [components],
+    () => validateBundleCustomization(components, bounds),
+    [bounds, components],
   );
-  const isValid = validation.ok;
+  const isQuantityValid =
+    quantity >= BUNDLE_LINE_QUANTITY_MIN &&
+    quantity <= BUNDLE_LINE_QUANTITY_MAX;
+  const isValid = validation.ok && isQuantityValid;
 
   const selectedProductIds = useMemo(
     () => new Set(components.map((component) => component.productId)),
@@ -126,18 +150,29 @@ export function BundleWizardPageContainer({
     void fetchNextPage();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
+  const isDebouncedQuantityValid =
+    debouncedQuantity >= BUNDLE_LINE_QUANTITY_MIN &&
+    debouncedQuantity <= BUNDLE_LINE_QUANTITY_MAX;
+
   const previewQuery = useQuery({
     ...freshQueryOptions,
-    queryKey: queryKeys.wizard.preview(template.bundleId, debouncedComponents),
+    queryKey: queryKeys.wizard.preview(
+      template.bundleId,
+      debouncedQuantity,
+      debouncedComponents,
+    ),
     queryFn: async () => {
       const result = await previewBundleLineAction({
         bundleId: template.bundleId,
+        quantity: debouncedQuantity,
         components: debouncedComponents,
       });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
-    enabled: validateBundleCustomization(debouncedComponents).ok,
+    enabled:
+      validateBundleCustomization(debouncedComponents, bounds).ok &&
+      isDebouncedQuantityValid,
   });
 
   const unitPricesByProductId = useMemo(() => {
@@ -151,7 +186,7 @@ export function BundleWizardPageContainer({
   }, [previewQuery.data?.line.components]);
 
   const handleRemove = (productId: string) => {
-    setComponents((current) => removeComponent(current, productId));
+    setComponents((current) => removeComponent(current, productId, bounds));
   };
 
   const handleAdd = (product: {
@@ -164,7 +199,21 @@ export function BundleWizardPageContainer({
       ...current,
       [product.id]: product.imageUrl ?? CATALOG_PLACEHOLDER_IMAGE,
     }));
-    setComponents((current) => addComponent(current, product.id));
+    setComponents((current) => addComponent(current, product.id, bounds));
+  };
+
+  const handleQuantityPerUnitChange = (
+    productId: string,
+    quantityPerUnit: number,
+  ) => {
+    if (!storeFeatures.enableUnitsPerPerson) return;
+    setComponents((current) =>
+      setComponentQuantityPerUnit(current, productId, quantityPerUnit),
+    );
+  };
+
+  const handleQuantityChange = (next: number) => {
+    setQuantity(clampBundleLineQuantity(next));
   };
 
   const handleAddToCart = () => {
@@ -179,6 +228,9 @@ export function BundleWizardPageContainer({
     <BundleWizardPage
       template={template}
       components={components}
+      quantity={quantity}
+      minQuantity={BUNDLE_LINE_QUANTITY_MIN}
+      maxQuantity={BUNDLE_LINE_QUANTITY_MAX}
       searchValue={searchDraft}
       products={pickerProducts}
       selectedProductIds={selectedProductIds}
@@ -188,8 +240,9 @@ export function BundleWizardPageContainer({
       lineTotal={previewQuery.data?.lineTotal ?? null}
       stockCheck={previewQuery.data?.stockCheck ?? null}
       isValid={isValid}
-      canRemove={canRemoveComponent(components)}
-      canAdd={canAddComponent(components)}
+      canRemove={canRemoveComponent(components, bounds)}
+      canAdd={canAddComponent(components, bounds)}
+      enableUnitsPerPerson={storeFeatures.enableUnitsPerPerson}
       isPreviewLoading={previewQuery.isFetching}
       isPreviewError={previewQuery.isError}
       isProductsLoading={isProductsLoading}
@@ -201,10 +254,17 @@ export function BundleWizardPageContainer({
         back: t("back"),
         title: t("title"),
         personCount: t("personCount", { count: template.personCount }),
+        surpriseQuantity: t("surpriseQuantity"),
+        surpriseQuantityHint: t("surpriseQuantityHint", {
+          min: BUNDLE_LINE_QUANTITY_MIN,
+          max: BUNDLE_LINE_QUANTITY_MAX,
+        }),
+        decreaseQuantity: t("decreaseQuantity"),
+        increaseQuantity: t("increaseQuantity"),
         addToCart: t("addToCart"),
         addToCartLoading: t("addToCartLoading"),
-        validationMin: t("validation.min", { min: BUNDLE_CUSTOMIZATION_MIN }),
-        validationMax: t("validation.max", { max: BUNDLE_CUSTOMIZATION_MAX }),
+        validationMin: t("validation.min", { min: bounds.minProducts }),
+        validationMax: t("validation.max", { max: bounds.maxProducts }),
         validationDuplicate: t("validation.duplicate"),
         picker: {
           title: t("picker.title"),
@@ -212,7 +272,7 @@ export function BundleWizardPageContainer({
           searchAriaLabel: t("picker.searchAriaLabel"),
           add: t("picker.add"),
           empty: t("picker.empty"),
-          maxReached: t("picker.maxReached", { max: BUNDLE_CUSTOMIZATION_MAX }),
+          maxReached: t("picker.maxReached", { max: bounds.maxProducts }),
           alreadyAdded: t("picker.alreadyAdded"),
           loading: tCommon("loading"),
           loadingMore: t("picker.loadingMore"),
@@ -237,6 +297,8 @@ export function BundleWizardPageContainer({
       }}
       onRemove={handleRemove}
       onAdd={handleAdd}
+      onQuantityPerUnitChange={handleQuantityPerUnitChange}
+      onQuantityChange={handleQuantityChange}
       onSearchChange={setSearchDraft}
       onSearchSubmit={() => {
         startTransition(() => {

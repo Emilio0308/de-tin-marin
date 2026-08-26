@@ -86,9 +86,9 @@ Los productos modelan presentación + unidad base: precios `normal` (paquete) y 
 | `normal` | Precio de la **presentación** (tira/paquete)     |
 | `unit`   | Precio por **unidad base** (bolsa) — bundles/S2A |
 
-**Escritura:** el operador ingresa precio de presentación (`normal.netPrice`). Backend calcula `unit` con `buildPricesFromPackageNetPrice(packageNetPrice, itemsPerPackage)`.
+**Escritura:** el operador ingresa precio de presentación (`normal.netPrice`). Backend calcula `unit` con `buildPricesFromPackageNetPrice(packageNetPrice, itemsPerPackage)` — **ceil** a 2 decimales de `normal / itemsPerPackage` (unidad no más barata que el paquete).
 
-**Validación (Regla 2):** ambos bloques pasan `priceNormalSchema` y `|unit.netPrice × items_per_package − normal.netPrice| ≤ 0.01`.
+**Validación (Regla 2):** ambos bloques pasan `priceNormalSchema`; coherencia: `|unit × ipp − normal| ≤ 0.01` **o** `unit × ipp > normal` (ceil).
 
 Si `items_per_package = 1`, `normal` y `unit` deben ser idénticos.
 
@@ -164,12 +164,12 @@ stock_loose_base_units >= 0
 
 ## Boundaries y DTOs
 
-| Boundary        | Tipo          | Input (Zod)                | Output DTO (allowlist)                                                                                                                                     |
-| --------------- | ------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listProducts`  | Server Action | —                          | `{ ..., netPrice, unitNetPrice, itemsPerPackage, productType, packageLabel, stockSealedPackages, stockLooseBaseUnits, stockTotalBaseUnits, finalPrice }[]` |
-| `getProduct`    | Server Action | `{ id }`                   | Igual detalle + `prices` normal/unit                                                                                                                       |
-| `createProduct` | Server Action | `createProductInputSchema` | `{ ok, id? }`                                                                                                                                              |
-| `updateProduct` | Server Action | `updateProductInputSchema` | `{ ok }`                                                                                                                                                   |
+| Boundary           | Tipo          | Input (Zod)                                                                    | Output DTO (allowlist)                                              |
+| ------------------ | ------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `listProductsPage` | Server Action | `{ page?, pageSize?, search?, categoryId?, status? }` (default pageSize **5**) | `{ items, page, pageSize, total }` — items con precios dual + stock |
+| `getProduct`       | Server Action | `{ id }`                                                                       | Igual detalle + `prices` normal/unit                                |
+| `createProduct`    | Server Action | `createProductInputSchema`                                                     | `{ ok, id? }`                                                       |
+| `updateProduct`    | Server Action | `updateProductInputSchema`                                                     | `{ ok }`                                                            |
 
 **Input producto (nuevo):**
 

@@ -16,7 +16,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
-import type { OrderStatus } from "@de-tin-marin/shared/order-cart";
+import {
+  canTransitionOrderStatus,
+  type OrderStatus,
+} from "@de-tin-marin/shared/order-cart";
 import { Button } from "@de-tin-marin/ui/button";
 import { OrderLocationMap } from "../order-location-map/order-location-map.dynamic";
 import { parseOrderMapPin } from "../order-location-map/order-location-map.helpers";
@@ -26,10 +29,13 @@ import {
   statusBadgeClassName,
 } from "../order-status-badge/order-status-badge.helpers";
 import {
-  ORDER_STEPPER_STATUSES,
+  buildOrderStepperStatuses,
+  orderNeedsShipmentForTransit,
+  showShipmentPanel,
   SHIPMENT_STATUSES,
   type OrderDetailViewProps,
 } from "./order-detail.types";
+import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 
 const cardClass =
   "bg-surface-container-lowest border-outline-variant/40 flex flex-col rounded-xl border p-5 shadow-sm md:p-6";
@@ -69,29 +75,32 @@ function SectionHeader({
   );
 }
 
-function stepperIndex(status: OrderStatus): number {
+function stepperIndex(status: OrderStatus, steps: OrderStatus[]): number {
   if (status === "cancelled") return -1;
-  const index = ORDER_STEPPER_STATUSES.indexOf(status);
+  const index = steps.indexOf(status);
   return index >= 0 ? index : 0;
 }
 
 function OrderStatusStepper({
   currentStatus,
+  method,
   labels,
 }: {
   currentStatus: OrderStatus;
+  method: OrderFulfillmentMethod;
   labels: Record<string, string>;
 }) {
   if (currentStatus === "cancelled") return null;
 
-  const activeIndex = stepperIndex(currentStatus);
+  const steps = buildOrderStepperStatuses(method);
+  const activeIndex = stepperIndex(currentStatus, steps);
 
   return (
     <ol className="flex flex-wrap items-center gap-2 md:gap-0">
-      {ORDER_STEPPER_STATUSES.map((status, index) => {
+      {steps.map((status, index) => {
         const isActive = index === activeIndex;
         const isComplete = index < activeIndex;
-        const isLast = index === ORDER_STEPPER_STATUSES.length - 1;
+        const isLast = index === steps.length - 1;
 
         return (
           <li
@@ -147,8 +156,6 @@ export function OrderDetailView({
   onPaymentNotesChange,
   onConfirmPayment,
   confirmingPayment,
-  onRefundPayment,
-  refundingPaymentId,
   shipmentStatus,
   shipmentTracking,
   shipmentCarrier,
@@ -165,10 +172,22 @@ export function OrderDetailView({
   onCancel,
   cancelling,
 }: OrderDetailViewProps) {
-  const confirmedPayment = order.payments.find(
-    (payment) => payment.status === "confirmed",
-  );
-  const mapPin = parseOrderMapPin(order.metadata);
+  const status = order.status as OrderStatus;
+  const method = order.fulfillment.method;
+  const canCancel = canTransitionOrderStatus(status, "cancelled", method);
+  const shipmentVisible = showShipmentPanel(status, method);
+  const requiresShipmentForTransit =
+    status === "ready" && orderNeedsShipmentForTransit(method);
+  const shipmentReady =
+    shipmentCarrier.trim().length > 0 && shipmentTracking.trim().length > 0;
+  const mapPin =
+    parseOrderMapPin(order.metadata) ??
+    (order.fulfillment.pickupPoint
+      ? {
+          lat: order.fulfillment.pickupPoint.lat,
+          lng: order.fulfillment.pickupPoint.lng,
+        }
+      : null);
 
   return (
     <div className="flex flex-col gap-8">
@@ -206,7 +225,7 @@ export function OrderDetailView({
               {labels.back}
             </Button>
           </Link>
-          {order.status === "pending_payment" && onCancel ? (
+          {canCancel && onCancel ? (
             <Button
               variant="secondary"
               disabled={cancelling}
@@ -224,7 +243,8 @@ export function OrderDetailView({
           {order.status !== "cancelled" ? (
             <section className={cardClass}>
               <OrderStatusStepper
-                currentStatus={order.status as OrderStatus}
+                currentStatus={status}
+                method={method}
                 labels={labels.stepperLabels}
               />
             </section>
@@ -235,18 +255,71 @@ export function OrderDetailView({
               <h2 className="font-display text-on-surface mb-4 text-lg font-bold">
                 {labels.statusActionsTitle}
               </h2>
+              {requiresShipmentForTransit ? (
+                <div className="mb-4 space-y-4">
+                  <p className="text-on-surface-variant text-sm">
+                    {labels.shipmentRequiredHint}
+                  </p>
+                  <Field label={labels.shipmentCarrier}>
+                    <input
+                      className={fieldClass}
+                      value={shipmentCarrier}
+                      onChange={(event) =>
+                        onShipmentCarrierChange(event.target.value)
+                      }
+                      required
+                    />
+                  </Field>
+                  <Field label={labels.shipmentTracking}>
+                    <input
+                      className={fieldClass}
+                      value={shipmentTracking}
+                      onChange={(event) =>
+                        onShipmentTrackingChange(event.target.value)
+                      }
+                      required
+                    />
+                  </Field>
+                  <Field label={labels.shipmentNotes}>
+                    <textarea
+                      className={cn(fieldClass, "min-h-[4.5rem] resize-none")}
+                      rows={2}
+                      value={shipmentNotes}
+                      onChange={(event) =>
+                        onShipmentNotesChange(event.target.value)
+                      }
+                    />
+                  </Field>
+                </div>
+              ) : null}
               <div className="flex flex-wrap gap-2">
-                {nextStatuses.map((status) => (
-                  <Button
-                    key={status}
-                    disabled={transitioningTo === status}
-                    onClick={() => onTransitionStatus(status)}
-                  >
-                    {transitioningTo === status
-                      ? "…"
-                      : (labels.statusLabels[status] ?? status)}
-                  </Button>
-                ))}
+                {nextStatuses.map((nextStatus) => {
+                  const needsShipment = nextStatus === "in_transit";
+                  const disabled =
+                    transitioningTo === nextStatus ||
+                    (needsShipment && !shipmentReady);
+                  return (
+                    <Button
+                      key={nextStatus}
+                      disabled={disabled}
+                      onClick={() => {
+                        if (needsShipment) {
+                          onTransitionStatus(nextStatus, {
+                            carrier: shipmentCarrier.trim(),
+                            trackingNumber: shipmentTracking.trim(),
+                            notes: shipmentNotes.trim() || null,
+                          });
+                          return;
+                        }
+                        onTransitionStatus(nextStatus);
+                      }}
+                    >
+                      {transitioningTo === nextStatus
+                        ? "…"
+                        : (labels.statusLabels[nextStatus] ?? nextStatus)}
+                    </Button>
+                  );
+                })}
               </div>
             </section>
           ) : null}
@@ -269,8 +342,30 @@ export function OrderDetailView({
               <p className="font-label text-label-bold text-on-surface text-sm">
                 {order.fulfillment.method === "pickup"
                   ? labels.pickupMethod
-                  : labels.deliveryMethod}
+                  : order.fulfillment.method === "pickup_point"
+                    ? labels.pickupPointMethod
+                    : order.fulfillment.method === "courier"
+                      ? labels.courierMethod
+                      : labels.deliveryMethod}
               </p>
+              {order.fulfillment.pickupPoint ? (
+                <p className="text-on-surface-variant mt-2 text-sm">
+                  {order.fulfillment.pickupPoint.name}
+                </p>
+              ) : null}
+              {order.fulfillment.courier ? (
+                <div className="text-on-surface-variant mt-2 space-y-1 text-sm">
+                  <p>
+                    {order.fulfillment.courier.destination.departmentName},{" "}
+                    {order.fulfillment.courier.destination.provinceName}
+                  </p>
+                  <p>
+                    {order.fulfillment.courier.recipient.fullName} · DNI{" "}
+                    {order.fulfillment.courier.recipient.dni}
+                  </p>
+                  <p>{order.fulfillment.courier.recipient.agencyAddress}</p>
+                </div>
+              ) : null}
               {order.fulfillment.deliveryAddress ? (
                 <div className="text-on-surface-variant mt-2 space-y-1 text-sm">
                   <p>{order.fulfillment.deliveryAddress.recipientName}</p>
@@ -321,7 +416,10 @@ export function OrderDetailView({
                           {line.name}
                         </p>
                         <p className="text-on-surface-variant text-sm">
-                          {labels.formatQuantityLabel(line.quantity)}
+                          {labels.formatProductDualQty(
+                            line.packageQuantity,
+                            line.unitQuantity,
+                          )}
                         </p>
                       </div>
                     </div>
@@ -356,7 +454,9 @@ export function OrderDetailView({
                             {line.components.map((component) => (
                               <li key={component.productId}>
                                 {component.productName} ×{" "}
-                                {component.totalPackages}
+                                {(component.totalUnits ?? 0) > 0
+                                  ? `${component.totalPackages} paq. + ${component.totalUnits} u.`
+                                  : component.totalPackages}
                               </li>
                             ))}
                           </ul>
@@ -493,6 +593,14 @@ export function OrderDetailView({
                   S/ {order.discountTotal.toFixed(2)}
                 </span>
               </div>
+              {order.surchargeTotal > 0 ? (
+                <div className="flex justify-between">
+                  <span>{labels.surcharge}</span>
+                  <span className="font-label text-label-bold text-on-surface">
+                    S/ {order.surchargeTotal.toFixed(2)}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex justify-between">
                 <span>{labels.shipping}</span>
                 <span className="font-label text-label-bold text-on-surface">
@@ -534,23 +642,73 @@ export function OrderDetailView({
               <SectionHeader icon={Receipt} title={labels.paymentPanelTitle} />
               {order.stockCheck && !order.stockCheck.ok ? (
                 <div
-                  className="border-error/30 bg-error-container/40 text-on-error-container mb-4 rounded-lg border p-3 text-sm"
+                  className="border-error/30 bg-error-container/40 text-on-error-container mb-4 rounded-lg border p-3"
                   role="alert"
+                  tabIndex={-1}
+                  aria-labelledby="order-stock-warning-title"
                 >
-                  <p className="font-label text-label-bold">
+                  <p
+                    id="order-stock-warning-title"
+                    className="font-label text-label-bold text-sm"
+                  >
                     {labels.stockWarningTitle}
                   </p>
-                  <ul className="mt-2 list-disc pl-5">
-                    {order.stockCheck.shortages.map((shortage) => (
-                      <li key={`${shortage.kind}-${shortage.id}`}>
-                        {labels.formatStockWarningItem({
-                          sku: shortage.sku,
-                          required: shortage.required,
-                          available: shortage.available,
-                        })}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full min-w-[20rem] border-collapse text-left text-sm">
+                      <caption className="sr-only">
+                        {labels.stockWarningTitle}
+                      </caption>
+                      <thead>
+                        <tr className="border-error/20 border-b">
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 pr-3"
+                          >
+                            {labels.stockWarningColName}
+                          </th>
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 pr-3"
+                          >
+                            {labels.stockWarningColSku}
+                          </th>
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 pr-3 text-right"
+                          >
+                            {labels.stockWarningColRequired}
+                          </th>
+                          <th
+                            scope="col"
+                            className="font-label text-label-bold px-2 py-1.5 text-right"
+                          >
+                            {labels.stockWarningColAvailable}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.stockCheck.shortages.map((shortage) => (
+                          <tr
+                            key={`${shortage.kind}-${shortage.id}`}
+                            className="border-error/15 border-b last:border-b-0"
+                          >
+                            <td className="max-w-[10rem] truncate px-2 py-1.5 pr-3 font-medium">
+                              {shortage.name?.trim() || "—"}
+                            </td>
+                            <td className="px-2 py-1.5 pr-3 font-mono text-xs">
+                              {shortage.sku}
+                            </td>
+                            <td className="px-2 py-1.5 pr-3 text-right tabular-nums">
+                              {shortage.required}
+                            </td>
+                            <td className="px-2 py-1.5 text-right tabular-nums">
+                              {shortage.available}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : null}
               <div className="space-y-4">
@@ -576,7 +734,10 @@ export function OrderDetailView({
                 </Field>
                 <Button
                   variant="secondary"
-                  disabled={confirmingPayment}
+                  disabled={
+                    confirmingPayment ||
+                    Boolean(order.stockCheck && !order.stockCheck.ok)
+                  }
                   className="w-full"
                   onClick={onConfirmPayment}
                 >
@@ -621,20 +782,6 @@ export function OrderDetailView({
                       <p className="font-label text-label-bold text-secondary text-sm">
                         S/ {payment.amount.toFixed(2)}
                       </p>
-                      {payment.status === "confirmed" &&
-                      onRefundPayment &&
-                      confirmedPayment?.id === payment.id ? (
-                        <button
-                          type="button"
-                          className="text-primary mt-1 text-xs font-bold hover:underline disabled:opacity-50"
-                          disabled={refundingPaymentId === payment.id}
-                          onClick={() => onRefundPayment(payment.id)}
-                        >
-                          {refundingPaymentId === payment.id
-                            ? labels.refundingPayment
-                            : labels.refundPayment}
-                        </button>
-                      ) : null}
                     </div>
                   </li>
                 ))}
@@ -642,28 +789,33 @@ export function OrderDetailView({
             )}
           </section>
 
-          {order.status !== "pending_payment" &&
-          order.status !== "cancelled" ? (
+          {shipmentVisible ? (
             <section className={cardClass}>
               <SectionHeader icon={Truck} title={labels.shipmentPanelTitle} />
               <div className="space-y-4">
-                <Field label={labels.shipmentStatus}>
-                  <select
-                    className={fieldClass}
-                    value={shipmentStatus}
-                    onChange={(event) =>
-                      onShipmentStatusChange(
-                        event.target.value as typeof shipmentStatus,
-                      )
-                    }
-                  >
-                    {SHIPMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {labels.shipmentStatusLabels[status] ?? status}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                {status === "in_transit" ? (
+                  <Field label={labels.shipmentStatus}>
+                    <select
+                      className={fieldClass}
+                      value={shipmentStatus}
+                      onChange={(event) =>
+                        onShipmentStatusChange(
+                          event.target.value as typeof shipmentStatus,
+                        )
+                      }
+                    >
+                      {SHIPMENT_STATUSES.map((shipmentStatusOption) => (
+                        <option
+                          key={shipmentStatusOption}
+                          value={shipmentStatusOption}
+                        >
+                          {labels.shipmentStatusLabels[shipmentStatusOption] ??
+                            shipmentStatusOption}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
                 <Field label={labels.shipmentCarrier}>
                   <input
                     className={fieldClass}
@@ -692,7 +844,7 @@ export function OrderDetailView({
                     }
                   />
                 </Field>
-                {onSaveShipment ? (
+                {status === "in_transit" && onSaveShipment ? (
                   <Button
                     variant="secondary"
                     disabled={savingShipment}

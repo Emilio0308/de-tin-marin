@@ -34,8 +34,9 @@ De Tin Marín es un **ecommerce de dulces y sorpresas** con backoffice administr
 
 - **Contexto mínimo:** carga solo el dominio relevante — `CLAUDE.md` + el brief de etapa (si existe) + `docs/` del dominio + `docs/rules/*` aplicables. No leas todo el monorepo.
 - **Documentación primero:** si falta una regla de negocio o un contrato DTO, documéntala antes de codear.
+- **Al documentar / sync docs:** leer y seguir [`docs/DOC-WORKFLOW.md`](docs/DOC-WORKFLOW.md) **antes** de editar (checklist DECISIONS, Reglas, `database.md`, briefs, READMEs). Regla Cursor: `.cursor/rules/doc-workflow.mdc`.
 - **Commits:** solo cuando el usuario lo pida. No hacer push a producción sin autorización.
-- **El gate no es el build:** `pnpm check` no sustituye a `pnpm build`. El build detecta fugas client/server que el typecheck no ve.
+- **El gate no es el build:** `pnpm check` no sustituye a `pnpm build`. El build detecta fugas client/server que el typecheck no ve. Tampoco asumas que `readFileSync` de assets sueltos funciona en Vercel — embeber como módulos importables (ver trampas / `coding-guidelines.md`).
 - **Imports en client:** usa `import type { … }` desde módulos server; un import de valor arrastra `import "server-only"` al bundle del cliente.
 - **Secrets:** nunca pegues valores reales de `.env` en el chat. Lee env solo vía `@de-tin-marin/config/env`.
 - **Nombres de tablas:** cópialos de [`docs/database.md`](docs/database.md) § Catálogo — nunca los recuerdes de memoria.
@@ -83,14 +84,14 @@ Cada línea indica el **bug class** que previene.
 
 ## Separación de responsabilidades crítica
 
-| Dominio            | Responsabilidad                                                    | NO hace                         |
-| ------------------ | ------------------------------------------------------------------ | ------------------------------- |
-| **Pricing**        | `finalPrice` en listado + total línea sorpresa                     | Gestionar órdenes               |
-| **Orders**         | Ciclo de vida, snapshot, personalización bundle                    | Recalcular precios              |
-| **Inventory (v1)** | `product_type` + sealed/loose; `unit` solo loose; deduct al `paid` | Calcular precios                |
-| **Bundles**        | Plantillas sin stock, `service_fee` editable                       | Tener stock propio              |
-| **Packs**          | Combos BOM fija; `prices.reference`+`normal`; sin stock propio     | Personalizar BOM / stock propio |
-| **Campaigns**      | Definir % y asignar 1:1 a producto (y pack)                        | Calcular en frontend            |
+| Dominio            | Responsabilidad                                                                  | NO hace                         |
+| ------------------ | -------------------------------------------------------------------------------- | ------------------------------- |
+| **Pricing**        | `finalPrice` en listado + total línea sorpresa                                   | Gestionar órdenes               |
+| **Orders**         | Ciclo de vida, snapshot, personalización bundle                                  | Recalcular precios              |
+| **Inventory (v1)** | `product_type` + sealed/loose; `unit` solo loose; deduct al `paid`               | Calcular precios                |
+| **Bundles**        | Plantillas sin stock, `service_fee` editable                                     | Tener stock propio              |
+| **Packs**          | Combos BOM fija (`package` + `unit` qty); `reference`+`normal`; sin stock propio | Personalizar BOM / stock propio |
+| **Campaigns**      | Definir % y asignar 1:1 a producto (y pack)                                      | Calcular en frontend            |
 
 Pipeline de precios: ver [`docs/pricing.md`](docs/pricing.md).
 
@@ -100,16 +101,16 @@ Máquina de estados de órdenes: ver [`docs/orders.md`](docs/orders.md).
 
 ## Docs de reglas (una fuente canónica cada una)
 
-| Doc                                                                                        | Alcance                                                     |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| [`docs/rules/00-architecture.md`](docs/rules/00-architecture.md)                           | Capas, DAL, boundaries de import, no-barrels                |
-| [`docs/rules/10-auth-and-authorization.md`](docs/rules/10-auth-and-authorization.md)       | Auth, ownership, roles admin vs customer                    |
-| [`docs/rules/30-rls-and-postgres.md`](docs/rules/30-rls-and-postgres.md)                   | RLS, policies, SECURITY DEFINER                             |
-| [`docs/rules/40-validation-and-boundaries.md`](docs/rules/40-validation-and-boundaries.md) | Zod, parse-don't-validate, env                              |
-| [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md)     | SSR vs CSR, React Query, staleTime, query keys              |
-| [`docs/rules/95-guardrails-lint-ci.md`](docs/rules/95-guardrails-lint-ci.md)               | ESLint, CI, pre-commit                                      |
-| [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md)                       | Responsive, i18n, paleta, no mocks en UI                    |
-| [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md)                   | Container/presentational, orden de archivo, tests de render |
+| Doc                                                                                        | Alcance                                                           |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| [`docs/rules/00-architecture.md`](docs/rules/00-architecture.md)                           | Capas, DAL, boundaries de import, no-barrels                      |
+| [`docs/rules/10-auth-and-authorization.md`](docs/rules/10-auth-and-authorization.md)       | Auth, ownership, roles admin vs customer                          |
+| [`docs/rules/30-rls-and-postgres.md`](docs/rules/30-rls-and-postgres.md)                   | RLS, policies, SECURITY DEFINER                                   |
+| [`docs/rules/40-validation-and-boundaries.md`](docs/rules/40-validation-and-boundaries.md) | Zod, parse-don't-validate, env, logging (`@de-tin-marin/logging`) |
+| [`docs/rules/50-data-fetching-cache-ssr.md`](docs/rules/50-data-fetching-cache-ssr.md)     | SSR vs CSR, React Query, staleTime, query keys                    |
+| [`docs/rules/95-guardrails-lint-ci.md`](docs/rules/95-guardrails-lint-ci.md)               | ESLint, CI, pre-commit                                            |
+| [`docs/rules/88-ui-design-i18n.md`](docs/rules/88-ui-design-i18n.md)                       | Responsive, i18n, paleta, no mocks en UI                          |
+| [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md)                   | Container/presentational, orden de archivo, tests de render       |
 
 ## Docs de dominio y arquitectura
 
@@ -117,6 +118,7 @@ Máquina de estados de órdenes: ver [`docs/orders.md`](docs/orders.md).
 | -------------------------------------------------------- | --------------------------------------------- |
 | [`docs/vision.md`](docs/vision.md)                       | Visión y objetivos                            |
 | [`docs/architecture.md`](docs/architecture.md)           | Monorepo, dominios, capas                     |
+| [`docs/infra.md`](docs/infra.md)                         | Media CDN (S3 + CloudFront), staging/prod     |
 | [`docs/database.md`](docs/database.md)                   | Modelo de datos canónico (catálogo de tablas) |
 | [`docs/pricing.md`](docs/pricing.md)                     | Pipeline de precios                           |
 | [`docs/campaigns.md`](docs/campaigns.md)                 | Promociones                                   |
@@ -152,11 +154,13 @@ Detalle: [`docs/rules/85-react-components.md`](docs/rules/85-react-components.md
 
 ## Trampas comunes (triage rápido)
 
-| Síntoma                                | Causa probable                                                         |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| `permission denied for table`          | Cliente Supabase incorrecto o RLS sin policy                           |
-| Precio distinto en checkout vs carrito | Orders recalculando en lugar de usar snapshot de Pricing               |
-| Stock negativo en producción           | Regla 14 no atómica o bundle sin descontar componentes                 |
-| Hydration mismatch                     | Valor no determinístico en render (fecha, random, localStorage)        |
-| Secret en bundle del cliente           | Import de valor desde módulo `server-only` en `'use client'`           |
-| Usuarios deslogueados al azar          | Código entre `createServerClient` y primera llamada auth en middleware |
+| Síntoma                                              | Causa probable                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permission denied for table`                        | Cliente Supabase incorrecto o RLS sin policy                                                                                                                                                                                                                           |
+| Precio distinto en checkout vs carrito               | Orders recalculando en lugar de usar snapshot de Pricing                                                                                                                                                                                                               |
+| Stock negativo en producción                         | Regla 14 no atómica o bundle sin descontar componentes                                                                                                                                                                                                                 |
+| Hydration mismatch                                   | Valor no determinístico en render (fecha, random, localStorage)                                                                                                                                                                                                        |
+| Secret en bundle del cliente                         | Import de valor desde módulo `server-only` en `'use client'`                                                                                                                                                                                                           |
+| Usuarios deslogueados al azar                        | Código entre `createServerClient` y primera llamada auth en middleware                                                                                                                                                                                                 |
+| UI genérica + Vercel/terminal sin causa              | Action sin `guardAction` o `catch` vacío — ver `@de-tin-marin/logging`                                                                                                                                                                                                 |
+| Checkout / route rota en Vercel (`ENOENT` al import) | `readFileSync` u asset suelto fuera del bundle serverless; fallar al **cargar** un package tumba todo el chunk que lo importa (p. ej. plantillas email → distritos) — embeber como `*.template.ts` / módulo importable; ver `coding-guidelines.md` § Assets serverless |

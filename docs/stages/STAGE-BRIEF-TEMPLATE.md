@@ -1,6 +1,8 @@
 # Stage brief template — `docs/stages/<stage>/<nn>-<feature>.md`
 
 > **Propósito:** Contrato que la IA implementa **sin leer todo el blueprint**. Escribir antes de cada feature. Aprobar con el equipo.
+>
+> Al **cerrar** la feature y sync docs: seguir [`DOC-WORKFLOW.md`](../DOC-WORKFLOW.md).
 
 **Barra de calidad:** Un brief está listo cuando una sesión IA con solo `CLAUDE.md` + este brief + rules listadas puede implementar la feature y los **tests nombrados** bloquean invariantes rotas.
 
