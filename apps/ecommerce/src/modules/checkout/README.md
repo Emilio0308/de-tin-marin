@@ -25,7 +25,9 @@ Canónico fulfillment: Reglas 19/30/31/32 · DECISIONS #40, #43, #44 ·
 
 `listCheckoutPickupPointsAction` → `[]` si el kill switch está off o no hay
 activos → el presentational oculta la opción. `listCheckoutCourierDestinationsAction`
-→ `[]` si `courier_enabled` off o sin provincias habilitadas. Fee vía
+→ `[]` si `courier_enabled` off o sin provincias habilitadas. Mientras **ambas**
+queries están pendientes, el bloque “Método de entrega” muestra skeleton
+(evita flash: oculto → solo pickup → + courier). Fee vía
 `resolveCheckoutFulfillmentFee` (`queryKeys.checkout.deliveryFee` incluye
 método, `pickupPointId` o `departmentId` + `provinceSlug`). Tras el fee base,
 `applyStorefrontShippingFee` (Regla 32 / `core.storefront_settings`) puede

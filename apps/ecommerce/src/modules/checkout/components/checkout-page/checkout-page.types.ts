@@ -23,6 +23,7 @@ export type CheckoutPageLabels = {
   secureNote: string;
   contactTitle: string;
   fulfillmentTitle: string;
+  fulfillmentLoading: string;
   fulfillmentDelivery: string;
   fulfillmentPickupPoint: string;
   fulfillmentCourier: string;
@@ -115,6 +116,7 @@ export type CheckoutPageProps = {
   showValidationSummary: boolean;
   fulfillmentMethod: GuestCheckoutFulfillmentMethod;
   showFulfillmentSelector: boolean;
+  isFulfillmentOptionsPending: boolean;
   showPickupPointOption: boolean;
   showCourierOption: boolean;
   pickupPointId: string;

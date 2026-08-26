@@ -208,6 +208,7 @@
     "secureNote": "Revisamos stock y cobertura antes de confirmar.",
     "contactTitle": "Datos de contacto",
     "fulfillmentTitle": "Método de entrega",
+    "fulfillmentLoading": "Cargando métodos de entrega…",
     "fulfillmentDelivery": "Delivery",
     "fulfillmentPickupPoint": "Punto de recojo",
     "fulfillmentCourier": "Envío por agencia",

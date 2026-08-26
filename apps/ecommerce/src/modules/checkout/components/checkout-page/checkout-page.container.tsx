@@ -351,7 +351,12 @@ export function CheckoutPageContainer() {
 
   const courierDepartments = courierDestinationsQuery.data ?? [];
   const showCourierOption = courierDepartments.length > 0;
-  const showFulfillmentSelector = showPickupPointOption || showCourierOption;
+  const isFulfillmentOptionsPending =
+    pickupPointsQuery.isPending || courierDestinationsQuery.isPending;
+  // Keep the section mounted while either catalog loads to avoid
+  // hide → partial pills → full pills layout flash.
+  const showFulfillmentSelector =
+    isFulfillmentOptionsPending || showPickupPointOption || showCourierOption;
 
   const storefrontSettings = storefrontSettingsQuery.data ?? null;
   const announcementMessage = storefrontSettings
@@ -717,6 +722,7 @@ export function CheckoutPageContainer() {
       showValidationSummary={showValidationSummary}
       fulfillmentMethod={fulfillmentMethod}
       showFulfillmentSelector={showFulfillmentSelector}
+      isFulfillmentOptionsPending={isFulfillmentOptionsPending}
       showPickupPointOption={showPickupPointOption}
       showCourierOption={showCourierOption}
       pickupPointId={pickupPointId}
@@ -746,6 +752,7 @@ export function CheckoutPageContainer() {
         secureNote: t("secureNote"),
         contactTitle: t("contactTitle"),
         fulfillmentTitle: t("fulfillmentTitle"),
+        fulfillmentLoading: t("fulfillmentLoading"),
         fulfillmentDelivery: t("fulfillmentDelivery"),
         fulfillmentPickupPoint: t("fulfillmentPickupPoint"),
         fulfillmentCourier: t("fulfillmentCourier"),

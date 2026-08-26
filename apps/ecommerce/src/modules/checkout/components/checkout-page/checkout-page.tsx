@@ -205,12 +205,30 @@ function CheckoutSummaryPanel({
   );
 }
 
+function FulfillmentOptionsSkeleton({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label={label}
+      className="flex flex-wrap gap-3"
+    >
+      <span className="sr-only">{label}</span>
+      <div className="bg-surface-container h-11 w-28 animate-pulse rounded-full" />
+      <div className="bg-surface-container h-11 w-36 animate-pulse rounded-full" />
+      <div className="bg-surface-container h-11 w-40 animate-pulse rounded-full" />
+    </div>
+  );
+}
+
 export function CheckoutPage({
   form,
   fieldErrors,
   showValidationSummary,
   fulfillmentMethod,
   showFulfillmentSelector,
+  isFulfillmentOptionsPending,
   showPickupPointOption,
   showCourierOption,
   pickupPointId,
@@ -429,30 +447,36 @@ export function CheckoutPage({
                   step="2"
                   icon={<Truck className="h-5 w-5" strokeWidth={2} />}
                 >
-                  <div
-                    role="tablist"
-                    aria-label={labels.fulfillmentTitle}
-                    className="flex flex-wrap gap-3"
-                  >
-                    {fulfillmentOptions.map(({ method, label }) => (
-                      <label
-                        key={method}
-                        className={fulfillmentPillClass(
-                          fulfillmentMethod === method,
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          name="fulfillmentMethod"
-                          value={method}
-                          checked={fulfillmentMethod === method}
-                          className="sr-only"
-                          onChange={() => onFulfillmentMethodChange(method)}
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
+                  {isFulfillmentOptionsPending ? (
+                    <FulfillmentOptionsSkeleton
+                      label={labels.fulfillmentLoading}
+                    />
+                  ) : (
+                    <div
+                      role="tablist"
+                      aria-label={labels.fulfillmentTitle}
+                      className="flex flex-wrap gap-3"
+                    >
+                      {fulfillmentOptions.map(({ method, label }) => (
+                        <label
+                          key={method}
+                          className={fulfillmentPillClass(
+                            fulfillmentMethod === method,
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="fulfillmentMethod"
+                            value={method}
+                            checked={fulfillmentMethod === method}
+                            className="sr-only"
+                            onChange={() => onFulfillmentMethodChange(method)}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </CheckoutFormSection>
               ) : null}
 

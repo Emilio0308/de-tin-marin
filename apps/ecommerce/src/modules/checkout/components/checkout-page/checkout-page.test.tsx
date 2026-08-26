@@ -27,6 +27,7 @@ const defaultLabels: CheckoutPageLabels = {
   secureNote: "Revisamos stock y cobertura antes de confirmar.",
   contactTitle: "Datos de contacto",
   fulfillmentTitle: "Método de entrega",
+  fulfillmentLoading: "Cargando métodos de entrega…",
   fulfillmentDelivery: "Delivery",
   fulfillmentPickupPoint: "Punto de recojo",
   fulfillmentCourier: "Envío por agencia",
@@ -122,6 +123,7 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
       showValidationSummary={false}
       fulfillmentMethod="delivery"
       showFulfillmentSelector={false}
+      isFulfillmentOptionsPending={false}
       showPickupPointOption={false}
       showCourierOption={false}
       pickupPointId=""
@@ -295,6 +297,19 @@ describe("CheckoutPage", () => {
 
     expect(screen.getByText("Método de entrega")).toBeInTheDocument();
     expect(screen.getByText("Punto de recojo")).toBeInTheDocument();
+  });
+
+  it("muestra skeleton de métodos mientras cargan opciones", () => {
+    renderCheckout({
+      showFulfillmentSelector: true,
+      isFulfillmentOptionsPending: true,
+    });
+
+    expect(screen.getByText("Método de entrega")).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Cargando métodos de entrega…" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Delivery")).not.toBeInTheDocument();
   });
 
   it("muestra selector de punto en rama pickup_point", () => {
