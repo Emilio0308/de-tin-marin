@@ -1,32 +1,35 @@
 # Módulo `checkout`
 
 Formulario de checkout, mapa de entrega y creación de orden `pending_payment`
-(S3A-3 + S4-08).
+(S3A-3 + S4-08 + S4-11).
 
 Lee flags desde `@/config/store` (`storeFeatures`). El recojo **en tienda**
-sigue oculto (`pickupEnabled: false`). Los **puntos de recojo** no usan ese
-flag: dependen de `pricing.delivery_settings.pickup_points_enabled` y de que
-existan puntos activos.
+sigue oculto (`pickupEnabled: false`). Los **puntos de recojo** dependen de
+`pricing.delivery_settings.pickup_points_enabled`. **Courier** depende de
+`courier_enabled` y destinos activos.
 
 Reglas de fetching: [`docs/rules/50-data-fetching-cache-ssr.md`](../../../../docs/rules/50-data-fetching-cache-ssr.md) · DECISIONS #32.
-Canónico fulfillment: Reglas 19/30 · DECISIONS #40 ·
-[`docs/stages/S4/08-pickup-points.md`](../../../../docs/stages/S4/08-pickup-points.md).
+Canónico fulfillment: Reglas 19/30/31 · DECISIONS #40, #43 ·
+[`docs/stages/S4/08-pickup-points.md`](../../../../docs/stages/S4/08-pickup-points.md) ·
+[`docs/stages/S4/11-courier-shipping.md`](../../../../docs/stages/S4/11-courier-shipping.md).
 
 ## Fulfillment guest
 
-| Método         | UI                                              | Persistencia                                     |
-| -------------- | ----------------------------------------------- | ------------------------------------------------ |
-| `delivery`     | Dirección + mapa Piura                          | `deliveryAddress` + `metadata.mapPin`            |
-| `pickup_point` | Select + mapa del punto (si hay puntos activos) | Snapshot `pickupPoint` rehidratado en el service |
+| Método         | UI                                              | Persistencia                                         |
+| -------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| `delivery`     | Dirección + mapa Piura                          | `deliveryAddress` + `metadata.mapPin`                |
+| `pickup_point` | Select + mapa del punto (si hay puntos activos) | Snapshot `pickupPoint` rehidratado en el service     |
+| `courier`      | Dept/provincia + DNI/nombre/dirección agencia   | Snapshot `courier` rehidratado; `shipping_total = 0` |
 
 `listCheckoutPickupPointsAction` → `[]` si el kill switch está off o no hay
-activos → el presentational oculta la opción. Fee vía
+activos → el presentational oculta la opción. `listCheckoutCourierDestinationsAction`
+→ `[]` si `courier_enabled` off o sin provincias habilitadas. Fee vía
 `resolveCheckoutFulfillmentFee` (`queryKeys.checkout.deliveryFee` incluye
-método y `pickupPointId`).
+método, `pickupPointId` o `departmentId` + `provinceSlug`).
 
-Al submit, `createGuestOrderService` vuelve a leer el punto en DB (nombre,
-coords, fee). Errores: `PICKUP_POINT_REQUIRED` / `NOT_FOUND` / `INACTIVE`,
-`OUT_OF_COVERAGE`, `SHIPPING_FEE_MISMATCH`. El RPC
+Al submit, `createGuestOrderService` rehidrata fulfillment desde DB (punto o
+destino courier). Errores: `PICKUP_POINT_*`, `OUT_OF_COVERAGE`,
+`SHIPPING_FEE_MISMATCH`. Courier exige `shippingTotal === 0`. El RPC
 `insert_guest_order` rechaza `pickup` y XOR inválido.
 
 ## Validación del formulario (cliente)

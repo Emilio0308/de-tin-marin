@@ -15,6 +15,7 @@ import { StorefrontLayout } from "@/modules/home/components/storefront-layout/st
 import { createGuestOrderAction } from "@/modules/checkout/actions/create-guest-order";
 import { listCheckoutDeliveryZonesAction } from "@/modules/checkout/actions/list-checkout-delivery-zones";
 import { listCheckoutPickupPointsAction } from "@/modules/checkout/actions/list-checkout-pickup-points";
+import { listCheckoutCourierDestinationsAction } from "@/modules/checkout/actions/list-checkout-courier-destinations";
 import { resolveCheckoutDeliveryFeeAction } from "@/modules/checkout/actions/resolve-checkout-delivery-fee";
 import { validateGuestCheckoutCartAction } from "@/modules/checkout/actions/validate-guest-checkout-cart";
 import { queryKeys } from "@/shared/query/query-keys";
@@ -25,18 +26,23 @@ import { defaultMapPin } from "../delivery-map/delivery-map.constants";
 import {
   getCheckoutFieldErrorKey,
   getCheckoutFieldErrorKeys,
+  getCourierFieldErrorKeys,
   getCheckoutFieldSection,
   getFirstInvalidCheckoutField,
   getPickupPointErrorKey,
   hasCheckoutFieldError,
   mapCheckoutFieldError,
   mapCheckoutFieldErrors,
+  mapCourierFieldErrors,
   sanitizeCheckoutField,
+  sanitizeCourierField,
   scrollToCheckoutField,
   type CheckoutFieldErrorKey,
   type CheckoutFieldErrors,
   type CheckoutFormField,
   type CheckoutFormValues,
+  type CourierFieldErrors,
+  type CourierFormValues,
   type GuestCheckoutFulfillmentMethod,
 } from "./checkout-form.helpers";
 import { CheckoutPage } from "./checkout-page";
@@ -69,6 +75,14 @@ const initialForm: CheckoutFormValues = {
   reference: "",
 };
 
+const initialCourierForm: CourierFormValues = {
+  courierDepartmentId: "",
+  courierProvinceSlug: "",
+  courierDni: "",
+  courierFullName: "",
+  courierAgencyAddress: "",
+};
+
 export function CheckoutPageContainer() {
   const t = useTranslations("checkout");
   const router = useRouter();
@@ -91,11 +105,26 @@ export function CheckoutPageContainer() {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<CheckoutFieldErrors>({});
+  const [courierForm, setCourierForm] =
+    useState<CourierFormValues>(initialCourierForm);
+  const [courierFieldErrors, setCourierFieldErrors] =
+    useState<CourierFieldErrors>({});
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [touchedFields, setTouchedFields] = useState<
     Partial<Record<CheckoutFormField, boolean>>
   >({});
+
+  const courierFieldLabels = useMemo(
+    () => ({
+      courierDepartmentId: t("courierDepartment"),
+      courierProvinceSlug: t("courierProvince"),
+      courierDni: t("courierDni"),
+      courierFullName: t("courierFullName"),
+      courierAgencyAddress: t("courierAgencyAddress"),
+    }),
+    [t],
+  );
 
   const validationLabels = useMemo(
     () => ({
@@ -103,6 +132,7 @@ export function CheckoutPageContainer() {
       invalidEmail: t("validation.invalidEmail"),
       invalidName: t("validation.invalidName"),
       invalidPhone: t("validation.invalidPhone"),
+      invalidDni: t("validation.invalidDni"),
       tooShort: t("validation.tooShort"),
     }),
     [t],
@@ -188,10 +218,47 @@ export function CheckoutPageContainer() {
         }
       }
 
+      if (method === "courier") {
+        const courierErrorKeys = getCourierFieldErrorKeys(courierForm);
+        const mappedCourierErrors = mapCourierFieldErrors(
+          courierErrorKeys,
+          validationLabels,
+        );
+        setCourierFieldErrors(mappedCourierErrors);
+        const firstCourierField = (
+          [
+            "courierDepartmentId",
+            "courierProvinceSlug",
+            "courierDni",
+            "courierFullName",
+            "courierAgencyAddress",
+          ] as const
+        ).find((field) => Boolean(courierErrorKeys[field]));
+        if (firstCourierField) {
+          setShowValidationSummary(true);
+          scrollToCheckoutField(firstCourierField);
+          toast.error(
+            t("validation.invalidFieldToast", {
+              field: courierFieldLabels[firstCourierField],
+              section: t("validation.courierSection"),
+            }),
+          );
+          return false;
+        }
+      }
+
       setShowValidationSummary(false);
       return true;
     },
-    [pickupPointId, toastForFieldIssue, validationLabels, validatePickupPoint],
+    [
+      courierFieldLabels,
+      courierForm,
+      pickupPointId,
+      toastForFieldIssue,
+      t,
+      validationLabels,
+      validatePickupPoint,
+    ],
   );
 
   const validateField = useCallback(
@@ -250,20 +317,49 @@ export function CheckoutPageContainer() {
   const pickupPoints = pickupPointsQuery.data ?? [];
   const showPickupPointOption = pickupPoints.length > 0;
 
-  const feeQueryInput = useMemo(
-    () =>
-      fulfillmentMethod === "pickup_point"
-        ? {
-            method: "pickup_point" as const,
-            pickupPointId: pickupPointId || undefined,
-          }
-        : {
-            method: "delivery" as const,
-            district: form.district,
-            mapPin,
-          },
-    [form.district, fulfillmentMethod, mapPin, pickupPointId],
-  );
+  const courierDestinationsQuery = useQuery({
+    queryKey: queryKeys.checkout.courierDestinations(),
+    queryFn: async () => {
+      const result = await listCheckoutCourierDestinationsAction();
+      if (!result.ok) {
+        logClientError("listCheckoutCourierDestinationsAction", result.error);
+        throw new Error(result.error);
+      }
+      return result.data;
+    },
+  });
+
+  const courierDepartments = courierDestinationsQuery.data ?? [];
+  const showCourierOption = courierDepartments.length > 0;
+  const showFulfillmentSelector = showPickupPointOption || showCourierOption;
+
+  const feeQueryInput = useMemo(() => {
+    if (fulfillmentMethod === "pickup_point") {
+      return {
+        method: "pickup_point" as const,
+        pickupPointId: pickupPointId || undefined,
+      };
+    }
+    if (fulfillmentMethod === "courier") {
+      return {
+        method: "courier" as const,
+        departmentId: courierForm.courierDepartmentId || undefined,
+        provinceSlug: courierForm.courierProvinceSlug || undefined,
+      };
+    }
+    return {
+      method: "delivery" as const,
+      district: form.district,
+      mapPin,
+    };
+  }, [
+    courierForm.courierDepartmentId,
+    courierForm.courierProvinceSlug,
+    form.district,
+    fulfillmentMethod,
+    mapPin,
+    pickupPointId,
+  ]);
 
   const feeQuery = useQuery({
     ...freshQueryOptions,
@@ -276,7 +372,12 @@ export function CheckoutPageContainer() {
     enabled:
       fulfillmentMethod === "pickup_point"
         ? Boolean(pickupPointId)
-        : Boolean(form.district),
+        : fulfillmentMethod === "courier"
+          ? Boolean(
+              courierForm.courierDepartmentId &&
+              courierForm.courierProvinceSlug,
+            )
+          : Boolean(form.district),
   });
 
   useEffect(() => {
@@ -292,12 +393,22 @@ export function CheckoutPageContainer() {
     }
   }, [fulfillmentMethod, showPickupPointOption]);
 
+  useEffect(() => {
+    if (!showCourierOption && fulfillmentMethod === "courier") {
+      setFulfillmentMethod("delivery");
+    }
+  }, [fulfillmentMethod, showCourierOption]);
+
   const shippingTotal = feeQuery.data?.fee ?? 0;
   const covered = feeQuery.data?.covered ?? false;
   const total = subtotal + shippingTotal - totals.discountTotal;
   const isDeliveryPending =
     (fulfillmentMethod === "delivery" && Boolean(form.district)) ||
-    (fulfillmentMethod === "pickup_point" && Boolean(pickupPointId))
+    (fulfillmentMethod === "pickup_point" && Boolean(pickupPointId)) ||
+    (fulfillmentMethod === "courier" &&
+      Boolean(
+        courierForm.courierDepartmentId && courierForm.courierProvinceSlug,
+      ))
       ? feeQuery.isLoading || feeQuery.isFetching
       : false;
 
@@ -411,16 +522,25 @@ export function CheckoutPageContainer() {
     const selectedPickupPoint = pickupPoints.find(
       (point) => point.id === pickupPointId,
     );
+    const selectedCourierDepartment = courierDepartments.find(
+      (department) => department.id === courierForm.courierDepartmentId,
+    );
+    const selectedCourierProvince = selectedCourierDepartment?.provinces.find(
+      (province) => province.slug === courierForm.courierProvinceSlug,
+    );
+
+    const contact = {
+      name: form.name.trim(),
+      lastName: form.lastName.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+    };
+    const orderLines = cartLinesToOrderInput(lines);
 
     const result = await createGuestOrderAction(
       fulfillmentMethod === "pickup_point" && selectedPickupPoint
         ? {
-            contact: {
-              name: form.name.trim(),
-              lastName: form.lastName.trim(),
-              phone: form.phone.trim(),
-              email: form.email.trim(),
-            },
+            contact,
             fulfillment: {
               method: "pickup_point",
               pickupPoint: {
@@ -432,36 +552,57 @@ export function CheckoutPageContainer() {
               },
               notes: null,
             },
-            lines: cartLinesToOrderInput(lines),
+            lines: orderLines,
             shippingTotal,
             discountTotal: 0,
           }
-        : {
-            contact: {
-              name: form.name.trim(),
-              lastName: form.lastName.trim(),
-              phone: form.phone.trim(),
-              email: form.email.trim(),
-            },
-            fulfillment: {
-              method: "delivery",
-              deliveryAddress: {
-                recipientName:
-                  `${form.name.trim()} ${form.lastName.trim()}`.trim(),
-                line1: form.line1.trim(),
-                district: form.district.trim(),
-                city: form.city.trim(),
-                province: form.province.trim(),
-                reference: form.reference.trim() || null,
-                phone: form.phone.trim(),
+        : fulfillmentMethod === "courier" &&
+            selectedCourierDepartment &&
+            selectedCourierProvince
+          ? {
+              contact,
+              fulfillment: {
+                method: "courier",
+                courier: {
+                  destination: {
+                    departmentId: selectedCourierDepartment.id,
+                    departmentName: selectedCourierDepartment.name,
+                    provinceSlug: selectedCourierProvince.slug,
+                    provinceName: selectedCourierProvince.name,
+                  },
+                  recipient: {
+                    dni: courierForm.courierDni.trim(),
+                    fullName: courierForm.courierFullName.trim(),
+                    agencyAddress: courierForm.courierAgencyAddress.trim(),
+                  },
+                },
+                notes: null,
               },
-              notes: null,
+              lines: orderLines,
+              shippingTotal: 0,
+              discountTotal: 0,
+            }
+          : {
+              contact,
+              fulfillment: {
+                method: "delivery",
+                deliveryAddress: {
+                  recipientName:
+                    `${form.name.trim()} ${form.lastName.trim()}`.trim(),
+                  line1: form.line1.trim(),
+                  district: form.district.trim(),
+                  city: form.city.trim(),
+                  province: form.province.trim(),
+                  reference: form.reference.trim() || null,
+                  phone: form.phone.trim(),
+                },
+                notes: null,
+              },
+              lines: orderLines,
+              shippingTotal,
+              discountTotal: 0,
+              mapPin,
             },
-            lines: cartLinesToOrderInput(lines),
-            shippingTotal,
-            discountTotal: 0,
-            mapPin,
-          },
     );
 
     setIsSubmitting(false);
@@ -518,13 +659,18 @@ export function CheckoutPageContainer() {
   return (
     <CheckoutPage
       form={form}
+      courierForm={courierForm}
       fieldErrors={fieldErrors}
+      courierFieldErrors={courierFieldErrors}
       showValidationSummary={showValidationSummary}
       fulfillmentMethod={fulfillmentMethod}
+      showFulfillmentSelector={showFulfillmentSelector}
       showPickupPointOption={showPickupPointOption}
+      showCourierOption={showCourierOption}
       pickupPointId={pickupPointId}
       pickupPointError={pickupPointError}
       pickupPoints={pickupPoints}
+      courierDepartments={courierDepartments}
       districts={zonesQuery.data ?? []}
       mapPin={mapPin}
       subtotal={subtotal}
@@ -547,6 +693,16 @@ export function CheckoutPageContainer() {
         fulfillmentTitle: t("fulfillmentTitle"),
         fulfillmentDelivery: t("fulfillmentDelivery"),
         fulfillmentPickupPoint: t("fulfillmentPickupPoint"),
+        fulfillmentCourier: t("fulfillmentCourier"),
+        courierTitle: t("courierTitle"),
+        courierDepartment: t("courierDepartment"),
+        courierDepartmentPlaceholder: t("courierDepartmentPlaceholder"),
+        courierProvince: t("courierProvince"),
+        courierProvincePlaceholder: t("courierProvincePlaceholder"),
+        courierDni: t("courierDni"),
+        courierFullName: t("courierFullName"),
+        courierAgencyAddress: t("courierAgencyAddress"),
+        courierFeeNote: t("courierFeeNote"),
         addressTitle: t("addressTitle"),
         pickupPointTitle: t("pickupPointTitle"),
         pickupPointPlaceholder: t("pickupPointPlaceholder"),
@@ -590,6 +746,7 @@ export function CheckoutPageContainer() {
           invalidEmail: t("validation.invalidEmail"),
           invalidName: t("validation.invalidName"),
           invalidPhone: t("validation.invalidPhone"),
+          invalidDni: t("validation.invalidDni"),
           tooShort: t("validation.tooShort"),
         },
       }}
@@ -599,6 +756,27 @@ export function CheckoutPageContainer() {
           const next = { ...current, [field]: sanitized };
           if (shouldValidateLive(field)) {
             validateField(field, next, fulfillmentMethod);
+          }
+          return next;
+        });
+        if (errorMessage) setErrorMessage(null);
+      }}
+      onCourierChange={(field, value) => {
+        const sanitized = sanitizeCourierField(field, value);
+        setCourierForm((current) => {
+          const next =
+            field === "courierDepartmentId"
+              ? {
+                  ...current,
+                  courierDepartmentId: sanitized,
+                  courierProvinceSlug: "",
+                }
+              : { ...current, [field]: sanitized };
+          if (hasAttemptedSubmit) {
+            const errorKeys = getCourierFieldErrorKeys(next);
+            setCourierFieldErrors(
+              mapCourierFieldErrors(errorKeys, validationLabels),
+            );
           }
           return next;
         });
@@ -616,9 +794,16 @@ export function CheckoutPageContainer() {
         setTouchedFields((current) => ({ ...current, [field]: true }));
         validateField(field, next, fulfillmentMethod);
       }}
+      onCourierFieldBlur={(values) => {
+        const errorKeys = getCourierFieldErrorKeys(values);
+        setCourierFieldErrors(
+          mapCourierFieldErrors(errorKeys, validationLabels),
+        );
+      }}
       onFulfillmentMethodChange={(method) => {
         setFulfillmentMethod(method);
         setFieldErrors({});
+        setCourierFieldErrors({});
         setPickupPointError(null);
         setShowValidationSummary(false);
         if (errorMessage) setErrorMessage(null);

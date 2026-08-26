@@ -16,6 +16,7 @@ export type OrderDetailLabels = {
   delivery: string;
   pickupMethod: string;
   pickupPointMethod: string;
+  courierMethod: string;
   deliveryMethod: string;
   mapTitle: string;
   mapHint: string;
@@ -130,7 +131,9 @@ export function buildOrderStepperStatuses(
 export function orderNeedsShipmentForTransit(
   method: OrderFulfillmentMethod,
 ): boolean {
-  return method === "delivery" || method === "pickup_point";
+  return (
+    method === "delivery" || method === "pickup_point" || method === "courier"
+  );
 }
 
 export function showShipmentPanel(

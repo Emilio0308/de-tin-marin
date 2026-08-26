@@ -9,6 +9,8 @@ type DeliveryZoneRow = Database["pricing"]["Tables"]["delivery_zones"]["Row"];
 type DeliverySettingsRow =
   Database["pricing"]["Tables"]["delivery_settings"]["Row"];
 type PickupPointRow = Database["pricing"]["Tables"]["pickup_points"]["Row"];
+type CourierDepartmentRow =
+  Database["pricing"]["Tables"]["courier_departments"]["Row"];
 
 export async function listActiveDeliveryZonesRepo(
   config: SupabaseConfig,
@@ -140,4 +142,55 @@ export async function getPickupPointByIdRepo(
   }
 
   return data as PickupPointRow | null;
+}
+
+export async function listActiveCourierDepartmentsRepo(
+  config: SupabaseConfig,
+): Promise<CourierDepartmentRow[]> {
+  const scope = "listActiveCourierDepartmentsRepo";
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("pricing")
+    .from("courier_departments")
+    .select("id, name, provinces, is_active, sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) {
+    logServerError(scope, {
+      message: error.message,
+      code: error.code,
+    });
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as CourierDepartmentRow[];
+  logServerInfo(scope, "query.ok", { rowCount: rows.length });
+  return rows;
+}
+
+export async function getCourierDepartmentByIdRepo(
+  config: SupabaseConfig,
+  id: string,
+): Promise<CourierDepartmentRow | null> {
+  const scope = "getCourierDepartmentByIdRepo";
+  const supabase = await createSupabaseServerClient(config);
+  const { data, error } = await supabase
+    .schema("pricing")
+    .from("courier_departments")
+    .select("id, name, provinces, is_active, sort_order")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    logServerError(scope, {
+      message: error.message,
+      code: error.code,
+      departmentId: id,
+    });
+    throw new Error(error.message);
+  }
+
+  return data as CourierDepartmentRow | null;
 }

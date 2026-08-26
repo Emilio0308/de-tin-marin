@@ -32,6 +32,7 @@ function fulfillmentMethodLabel(
 ): string {
   if (method === "pickup") return "Recojo en tienda";
   if (method === "pickup_point") return "Punto de recojo";
+  if (method === "courier") return "Envío por agencia";
   return "Entrega a domicilio";
 }
 
@@ -41,6 +42,9 @@ function fulfillmentSummaryText(input: OrderCreatedNotifyInput): string {
   if (input.fulfillment.method === "pickup") return "Recojo en tienda";
   if (input.fulfillment.method === "pickup_point") {
     return "Punto de recojo no indicado";
+  }
+  if (input.fulfillment.method === "courier") {
+    return "Destino por agencia no indicado";
   }
   return "Dirección no indicada";
 }

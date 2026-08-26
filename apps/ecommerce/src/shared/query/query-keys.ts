@@ -61,11 +61,15 @@ export const queryKeys = {
   checkout: {
     all: ["checkout"] as const,
     pickupPoints: () => [...queryKeys.checkout.all, "pickup-points"] as const,
+    courierDestinations: () =>
+      [...queryKeys.checkout.all, "courier-destinations"] as const,
     fulfillmentFee: (input: {
-      method: "delivery" | "pickup_point";
+      method: "delivery" | "pickup_point" | "courier";
       district?: string;
       mapPin?: { lat: number; lng: number };
       pickupPointId?: string;
+      departmentId?: string;
+      provinceSlug?: string;
     }) => [...queryKeys.checkout.all, "fulfillment-fee", input] as const,
     /** @deprecated Use fulfillmentFee */
     deliveryFee: (district: string, mapPin: { lat: number; lng: number }) =>

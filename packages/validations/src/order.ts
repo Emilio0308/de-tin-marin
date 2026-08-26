@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { courierSnapshotSchema } from "./courier";
 import { paymentSummarySchema } from "./payment";
 import { pickupPointSnapshotSchema } from "./pickup-point";
 import { shipmentDtoSchema } from "./shipment";
@@ -7,6 +8,7 @@ export const orderFulfillmentMethodSchema = z.enum([
   "delivery",
   "pickup",
   "pickup_point",
+  "courier",
 ]);
 
 export const orderContactSchema = z.object({
@@ -67,6 +69,7 @@ function refineOrderFulfillment(
     method: z.infer<typeof orderFulfillmentMethodSchema>;
     deliveryAddress?: z.infer<typeof deliveryAddressSchema>;
     pickupPoint?: z.infer<typeof pickupPointSnapshotSchema>;
+    courier?: z.infer<typeof courierSnapshotSchema>;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -83,6 +86,13 @@ function refineOrderFulfillment(
         code: z.ZodIssueCode.custom,
         message: "pickupPoint is not allowed for delivery",
         path: ["pickupPoint"],
+      });
+    }
+    if (value.courier) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "courier is not allowed for delivery",
+        path: ["courier"],
       });
     }
     return;
@@ -103,6 +113,38 @@ function refineOrderFulfillment(
         path: ["deliveryAddress"],
       });
     }
+    if (value.courier) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "courier is not allowed for pickup_point",
+        path: ["courier"],
+      });
+    }
+    return;
+  }
+
+  if (value.method === "courier") {
+    if (!value.courier) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "courier is required for courier method",
+        path: ["courier"],
+      });
+    }
+    if (value.deliveryAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "deliveryAddress is not allowed for courier",
+        path: ["deliveryAddress"],
+      });
+    }
+    if (value.pickupPoint) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pickupPoint is not allowed for courier",
+        path: ["pickupPoint"],
+      });
+    }
     return;
   }
 
@@ -120,6 +162,13 @@ function refineOrderFulfillment(
       path: ["pickupPoint"],
     });
   }
+  if (value.courier) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "courier is not allowed for pickup",
+      path: ["courier"],
+    });
+  }
 }
 
 export const orderFulfillmentSchema = z
@@ -127,15 +176,17 @@ export const orderFulfillmentSchema = z
     method: orderFulfillmentMethodSchema,
     deliveryAddress: deliveryAddressSchema.optional(),
     pickupPoint: pickupPointSnapshotSchema.optional(),
+    courier: courierSnapshotSchema.optional(),
     notes: z.string().max(1000).optional().nullable(),
   })
   .superRefine(refineOrderFulfillment);
 
 export const guestOrderFulfillmentSchema = z
   .object({
-    method: z.enum(["delivery", "pickup_point"]),
+    method: z.enum(["delivery", "pickup_point", "courier"]),
     deliveryAddress: deliveryAddressSchema.optional(),
     pickupPoint: pickupPointSnapshotSchema.optional(),
+    courier: courierSnapshotSchema.optional(),
     notes: z.string().max(1000).optional().nullable(),
   })
   .superRefine(refineOrderFulfillment);

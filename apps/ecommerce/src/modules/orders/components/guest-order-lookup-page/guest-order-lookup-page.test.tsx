@@ -43,6 +43,7 @@ describe("GuestOrderLookupPage", () => {
             deliveryTitle: "Entrega",
             pickupTitle: "Recojo",
             pickupPointTitle: "Punto de recojo",
+            courierTitle: "Envío por agencia",
             pickupInStoreNote: "Recojo en tienda",
             bundleBadge: "Sorpresa",
             packBadge: "Combo",

@@ -29,6 +29,16 @@ const defaultLabels: CheckoutPageLabels = {
   fulfillmentTitle: "Método de entrega",
   fulfillmentDelivery: "Delivery",
   fulfillmentPickupPoint: "Punto de recojo",
+  fulfillmentCourier: "Envío por agencia",
+  courierTitle: "Envío por agencia",
+  courierDepartment: "Departamento",
+  courierDepartmentPlaceholder: "Selecciona departamento",
+  courierProvince: "Provincia",
+  courierProvincePlaceholder: "Selecciona provincia",
+  courierDni: "DNI de quien retira",
+  courierFullName: "Nombre completo de quien retira",
+  courierAgencyAddress: "Dirección de la agencia",
+  courierFeeNote: "El flete se paga en la agencia según peso y destino.",
   addressTitle: "Dirección de entrega",
   pickupPointTitle: "Punto de recojo",
   pickupPointPlaceholder: "Selecciona un punto de recojo",
@@ -72,8 +82,17 @@ const defaultLabels: CheckoutPageLabels = {
     invalidEmail: "Ingresa un correo electrónico válido",
     invalidName: "Solo letras (puedes usar tildes, espacios o guion)",
     invalidPhone: "Ingresa un celular de 9 dígitos que empiece con 9",
+    invalidDni: "Ingresa un DNI válido de 8 dígitos",
     tooShort: "Escribe un poco más de detalle",
   },
+};
+
+const defaultCourierForm: CheckoutPageProps["courierForm"] = {
+  courierDepartmentId: "",
+  courierProvinceSlug: "",
+  courierDni: "",
+  courierFullName: "",
+  courierAgencyAddress: "",
 };
 
 const defaultForm: CheckoutPageProps["form"] = {
@@ -93,13 +112,18 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
   render(
     <CheckoutPage
       form={defaultForm}
+      courierForm={defaultCourierForm}
       fieldErrors={{}}
+      courierFieldErrors={{}}
       showValidationSummary={false}
       fulfillmentMethod="delivery"
+      showFulfillmentSelector={false}
       showPickupPointOption={false}
+      showCourierOption={false}
       pickupPointId=""
       pickupPointError={null}
       pickupPoints={[]}
+      courierDepartments={[]}
       districts={[{ id: "1", district: "Piura", fee: 8 }]}
       mapPin={{ lat: -5.1783, lng: -80.6328 }}
       subtotal={89.9}
@@ -114,7 +138,9 @@ function renderCheckout(overrides: Partial<CheckoutPageProps> = {}) {
       stockMessages={[]}
       labels={defaultLabels}
       onChange={vi.fn()}
+      onCourierChange={vi.fn()}
       onFieldBlur={vi.fn()}
+      onCourierFieldBlur={vi.fn()}
       onFulfillmentMethodChange={vi.fn()}
       onPickupPointChange={vi.fn()}
       onPickupPointBlur={vi.fn()}
@@ -228,6 +254,7 @@ describe("CheckoutPage", () => {
 
   it("muestra selector de método cuando hay puntos de recojo", () => {
     renderCheckout({
+      showFulfillmentSelector: true,
       showPickupPointOption: true,
       pickupPoints: [
         {

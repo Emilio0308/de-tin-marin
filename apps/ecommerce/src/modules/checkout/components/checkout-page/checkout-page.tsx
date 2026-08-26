@@ -186,10 +186,15 @@ export function CheckoutPage({
   fieldErrors,
   showValidationSummary,
   fulfillmentMethod,
+  showFulfillmentSelector,
   showPickupPointOption,
+  showCourierOption,
   pickupPointId,
   pickupPointError,
   pickupPoints,
+  courierForm,
+  courierFieldErrors,
+  courierDepartments,
   districts,
   mapPin,
   subtotal,
@@ -204,7 +209,9 @@ export function CheckoutPage({
   stockMessages,
   labels,
   onChange,
+  onCourierChange,
   onFieldBlur,
+  onCourierFieldBlur,
   onFulfillmentMethodChange,
   onPickupPointChange,
   onPickupPointBlur,
@@ -223,8 +230,23 @@ export function CheckoutPage({
     label: string;
   }[] = [
     { method: "delivery", label: labels.fulfillmentDelivery },
-    { method: "pickup_point", label: labels.fulfillmentPickupPoint },
+    ...(showPickupPointOption
+      ? [
+          {
+            method: "pickup_point" as const,
+            label: labels.fulfillmentPickupPoint,
+          },
+        ]
+      : []),
+    ...(showCourierOption
+      ? [{ method: "courier" as const, label: labels.fulfillmentCourier }]
+      : []),
   ];
+
+  const selectedCourierDepartment = courierDepartments.find(
+    (department) => department.id === courierForm.courierDepartmentId,
+  );
+  const courierProvinceOptions = selectedCourierDepartment?.provinces ?? [];
 
   return (
     <StorefrontLayout>
@@ -360,7 +382,7 @@ export function CheckoutPage({
                 </div>
               </CheckoutFormSection>
 
-              {showPickupPointOption ? (
+              {showFulfillmentSelector ? (
                 <CheckoutFormSection
                   title={labels.fulfillmentTitle}
                   step="2"
@@ -397,7 +419,7 @@ export function CheckoutPage({
                 <>
                   <CheckoutFormSection
                     title={labels.addressTitle}
-                    step={showPickupPointOption ? "3" : "2"}
+                    step={showFulfillmentSelector ? "3" : "2"}
                     icon={<Truck className="h-5 w-5" strokeWidth={2} />}
                   >
                     <CheckoutTextField
@@ -472,7 +494,7 @@ export function CheckoutPage({
 
                   <CheckoutFormSection
                     title={labels.mapSectionTitle}
-                    step={showPickupPointOption ? "4" : "3"}
+                    step={showFulfillmentSelector ? "4" : "3"}
                     icon={<MapPinned className="h-5 w-5" strokeWidth={2} />}
                   >
                     <DeliveryMap
@@ -490,10 +512,12 @@ export function CheckoutPage({
                     />
                   </CheckoutFormSection>
                 </>
-              ) : (
+              ) : null}
+
+              {fulfillmentMethod === "pickup_point" ? (
                 <CheckoutFormSection
                   title={labels.pickupPointTitle}
-                  step="3"
+                  step={showFulfillmentSelector ? "3" : "2"}
                   icon={<MapPinned className="h-5 w-5" strokeWidth={2} />}
                 >
                   <div className="space-y-2">
@@ -553,7 +577,98 @@ export function CheckoutPage({
                     />
                   ) : null}
                 </CheckoutFormSection>
-              )}
+              ) : null}
+
+              {fulfillmentMethod === "courier" ? (
+                <CheckoutFormSection
+                  title={labels.courierTitle}
+                  step={showFulfillmentSelector ? "3" : "2"}
+                  icon={<Truck className="h-5 w-5" strokeWidth={2} />}
+                >
+                  <p className="font-body text-body-sm text-on-surface-variant">
+                    {labels.courierFeeNote}
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <CheckoutSelectField
+                      id="courierDepartmentId"
+                      label={labels.courierDepartment}
+                      value={courierForm.courierDepartmentId}
+                      required
+                      error={courierFieldErrors.courierDepartmentId}
+                      requiredHint={labels.requiredHint}
+                      placeholder={labels.courierDepartmentPlaceholder}
+                      options={courierDepartments.map((department) => ({
+                        value: department.id,
+                        label: department.name,
+                      }))}
+                      onChange={(value) =>
+                        onCourierChange("courierDepartmentId", value)
+                      }
+                      onBlur={() => onCourierFieldBlur(courierForm)}
+                    />
+                    <CheckoutSelectField
+                      id="courierProvinceSlug"
+                      label={labels.courierProvince}
+                      value={courierForm.courierProvinceSlug}
+                      required
+                      error={courierFieldErrors.courierProvinceSlug}
+                      requiredHint={labels.requiredHint}
+                      placeholder={labels.courierProvincePlaceholder}
+                      options={courierProvinceOptions.map((province) => ({
+                        value: province.slug,
+                        label: province.name,
+                      }))}
+                      onChange={(value) =>
+                        onCourierChange("courierProvinceSlug", value)
+                      }
+                      onBlur={() => onCourierFieldBlur(courierForm)}
+                    />
+                    <CheckoutTextField
+                      id="courierDni"
+                      label={labels.courierDni}
+                      value={courierForm.courierDni}
+                      required
+                      error={courierFieldErrors.courierDni}
+                      requiredHint={labels.requiredHint}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      maxLength={8}
+                      onChange={(value) => onCourierChange("courierDni", value)}
+                      onBlur={() => onCourierFieldBlur(courierForm)}
+                    />
+                    <CheckoutTextField
+                      id="courierFullName"
+                      label={labels.courierFullName}
+                      value={courierForm.courierFullName}
+                      required
+                      error={courierFieldErrors.courierFullName}
+                      requiredHint={labels.requiredHint}
+                      autoCapitalize="words"
+                      autoComplete="name"
+                      spellCheck={false}
+                      maxLength={200}
+                      onChange={(value) =>
+                        onCourierChange("courierFullName", value)
+                      }
+                      onBlur={() => onCourierFieldBlur(courierForm)}
+                    />
+                  </div>
+                  <CheckoutTextField
+                    id="courierAgencyAddress"
+                    label={labels.courierAgencyAddress}
+                    value={courierForm.courierAgencyAddress}
+                    required
+                    error={courierFieldErrors.courierAgencyAddress}
+                    requiredHint={labels.requiredHint}
+                    autoComplete="street-address"
+                    maxLength={500}
+                    onChange={(value) =>
+                      onCourierChange("courierAgencyAddress", value)
+                    }
+                    onBlur={() => onCourierFieldBlur(courierForm)}
+                  />
+                </CheckoutFormSection>
+              ) : null}
 
               <div className="space-y-4 lg:hidden">
                 <StockBannerSection

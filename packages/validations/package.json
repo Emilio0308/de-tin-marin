@@ -12,6 +12,7 @@
     "./pack": "./src/pack.ts",
     "./delivery": "./src/delivery.ts",
     "./pickup-point": "./src/pickup-point.ts",
+    "./courier": "./src/courier.ts",
     "./order": "./src/order.ts",
     "./payment": "./src/payment.ts",
     "./shipment": "./src/shipment.ts",

@@ -60,6 +60,7 @@ export type PickupPointsProps = {
   points: PickupPointDTO[];
   pointDraft: PickupPointDraft;
   editingPoint: PickupPointEditDraft | null;
+  isMapVisible: boolean;
   labels: PickupPointsLabels;
   pointSubmitting: boolean;
   deletingPointId: string | null;

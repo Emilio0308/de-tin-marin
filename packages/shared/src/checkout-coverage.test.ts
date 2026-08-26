@@ -15,6 +15,7 @@ const settings = {
   pickupEnabled: false,
   pickupPointsEnabled: true,
   deliveryEnabled: true,
+  courierEnabled: true,
   fallbackFee: 20,
 };
 
@@ -117,5 +118,28 @@ describe("resolveCheckoutDeliveryFee", () => {
       points,
     );
     expect(result).toEqual({ covered: false, fee: 0 });
+  });
+
+  it("courier devuelve fee 0 cuando destino está habilitado", () => {
+    const result = resolveCheckoutFulfillmentFee(
+      "courier",
+      undefined,
+      undefined,
+      zones,
+      settings,
+      undefined,
+      points,
+      "dept-piura",
+      "sullana",
+      [
+        {
+          id: "dept-piura",
+          name: "Piura",
+          isActive: true,
+          provinces: [{ slug: "sullana", name: "Sullana", enabled: true }],
+        },
+      ],
+    );
+    expect(result).toEqual({ covered: true, fee: 0 });
   });
 });

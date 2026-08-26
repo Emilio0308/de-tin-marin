@@ -8,6 +8,6 @@ export type OrderLocationMapLabels = {
 
 export type OrderLocationMapProps = {
   mapPin: MapPin | null;
-  fulfillmentMethod: "delivery" | "pickup" | "pickup_point";
+  fulfillmentMethod: "delivery" | "pickup" | "pickup_point" | "courier";
   labels: OrderLocationMapLabels;
 };

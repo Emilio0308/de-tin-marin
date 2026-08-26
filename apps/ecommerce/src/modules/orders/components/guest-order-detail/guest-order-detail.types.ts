@@ -18,6 +18,7 @@ export type GuestOrderDetailLabels = {
   deliveryTitle: string;
   pickupTitle: string;
   pickupPointTitle: string;
+  courierTitle: string;
   pickupInStoreNote: string;
   bundleBadge: string;
   packBadge: string;

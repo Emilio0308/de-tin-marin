@@ -56,10 +56,12 @@ export function resolveFulfillmentTitle(
     deliveryTitle: string;
     pickupTitle: string;
     pickupPointTitle: string;
+    courierTitle: string;
   },
 ): string {
   if (method === "pickup") return labels.pickupTitle;
   if (method === "pickup_point") return labels.pickupPointTitle;
+  if (method === "courier") return labels.courierTitle;
   return labels.deliveryTitle;
 }
 
@@ -84,12 +86,28 @@ export function formatPickupPoint(order: GuestOrderDetail): string | null {
   return point.name;
 }
 
+export function formatCourierFulfillment(
+  order: GuestOrderDetail,
+): string | null {
+  const courier = order.fulfillment.courier;
+  if (!courier) return null;
+
+  return [
+    `${courier.destination.departmentName}, ${courier.destination.provinceName}`,
+    `${courier.recipient.fullName} · DNI ${courier.recipient.dni}`,
+    courier.recipient.agencyAddress,
+  ].join("\n");
+}
+
 export function resolveFulfillmentDetail(
   order: GuestOrderDetail,
   labels: { pickupInStoreNote: string },
 ): string | null {
   if (order.fulfillment.method === "pickup_point") {
     return formatPickupPoint(order);
+  }
+  if (order.fulfillment.method === "courier") {
+    return formatCourierFulfillment(order);
   }
   if (order.fulfillment.method === "delivery") {
     return formatDeliveryAddress(order);

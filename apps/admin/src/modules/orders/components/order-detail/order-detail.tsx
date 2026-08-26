@@ -30,6 +30,7 @@ import {
 } from "../order-status-badge/order-status-badge.helpers";
 import {
   buildOrderStepperStatuses,
+  orderNeedsShipmentForTransit,
   showShipmentPanel,
   SHIPMENT_STATUSES,
   type OrderDetailViewProps,
@@ -176,7 +177,7 @@ export function OrderDetailView({
   const canCancel = canTransitionOrderStatus(status, "cancelled", method);
   const shipmentVisible = showShipmentPanel(status, method);
   const requiresShipmentForTransit =
-    status === "ready" && (method === "delivery" || method === "pickup_point");
+    status === "ready" && orderNeedsShipmentForTransit(method);
   const shipmentReady =
     shipmentCarrier.trim().length > 0 && shipmentTracking.trim().length > 0;
   const mapPin =
@@ -343,12 +344,27 @@ export function OrderDetailView({
                   ? labels.pickupMethod
                   : order.fulfillment.method === "pickup_point"
                     ? labels.pickupPointMethod
-                    : labels.deliveryMethod}
+                    : order.fulfillment.method === "courier"
+                      ? labels.courierMethod
+                      : labels.deliveryMethod}
               </p>
               {order.fulfillment.pickupPoint ? (
                 <p className="text-on-surface-variant mt-2 text-sm">
                   {order.fulfillment.pickupPoint.name}
                 </p>
+              ) : null}
+              {order.fulfillment.courier ? (
+                <div className="text-on-surface-variant mt-2 space-y-1 text-sm">
+                  <p>
+                    {order.fulfillment.courier.destination.departmentName},{" "}
+                    {order.fulfillment.courier.destination.provinceName}
+                  </p>
+                  <p>
+                    {order.fulfillment.courier.recipient.fullName} · DNI{" "}
+                    {order.fulfillment.courier.recipient.dni}
+                  </p>
+                  <p>{order.fulfillment.courier.recipient.agencyAddress}</p>
+                </div>
               ) : null}
               {order.fulfillment.deliveryAddress ? (
                 <div className="text-on-surface-variant mt-2 space-y-1 text-sm">

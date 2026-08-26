@@ -947,6 +947,7 @@ export type Database = {
       }
       delivery_settings: {
         Row: {
+          courier_enabled: boolean
           delivery_enabled: boolean
           fallback_fee: number
           id: string
@@ -956,6 +957,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          courier_enabled?: boolean
           delivery_enabled?: boolean
           fallback_fee?: number
           id?: string
@@ -965,12 +967,43 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          courier_enabled?: boolean
           delivery_enabled?: boolean
           fallback_fee?: number
           id?: string
           pickup_enabled?: boolean
           pickup_points_enabled?: boolean
           singleton_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      courier_departments: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          provinces: Json
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          provinces?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          provinces?: Json
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

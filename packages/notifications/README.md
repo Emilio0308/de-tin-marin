@@ -29,7 +29,7 @@ cola, reintento ni webhook en v1. Helpers loguean `notify_start` /
 
 `OrderCreatedNotifyInput` es un DTO explícito, no una fila cruda. Incluye
 identificadores/totales, contacto, resumen de fulfillment (`delivery` /
-`pickup` / `pickup_point`) y líneas congeladas de producto/pack/bundle. El
+`pickup` / `pickup_point` / `courier`) y líneas congeladas de producto/pack/bundle. El
 correo administrativo puede mostrar ese detalle operativo; no registrarlo en
 logs. Los helpers de app solo loguean `orderId`, `orderNumber`, origen,
 `sent` y código de fallo.

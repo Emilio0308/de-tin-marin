@@ -19,7 +19,7 @@ export function OrderLocationMap({
   fulfillmentMethod,
   labels,
 }: OrderLocationMapProps) {
-  if (fulfillmentMethod === "pickup" || !mapPin) {
+  if (fulfillmentMethod !== "delivery" || !mapPin) {
     return (
       <div className="border-outline-variant/30 bg-surface-container-low rounded-2xl border p-6">
         <h3 className="font-label text-label-bold text-on-surface">

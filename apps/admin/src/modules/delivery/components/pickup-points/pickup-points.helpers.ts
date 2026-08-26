@@ -8,6 +8,21 @@ export const DEFAULT_PICKUP_MAP_PIN = {
   lng: -80.6328,
 } as const;
 
+export function isValidMapPin(pin: { lat: number; lng: number }): boolean {
+  return (
+    Number.isFinite(pin.lat) &&
+    Number.isFinite(pin.lng) &&
+    pin.lat >= -90 &&
+    pin.lat <= 90 &&
+    pin.lng >= -180 &&
+    pin.lng <= 180
+  );
+}
+
+export function resolveMapPin(pin: { lat: number; lng: number }) {
+  return isValidMapPin(pin) ? pin : DEFAULT_PICKUP_MAP_PIN;
+}
+
 export function buildDefaultPickupPointDraft(): PickupPointDraft {
   return {
     name: "",

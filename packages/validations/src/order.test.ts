@@ -98,4 +98,64 @@ describe("createOrderInputSchema", () => {
 
     expect(result.success).toBe(true);
   });
+
+  it("requires courier snapshot when method is courier", () => {
+    const result = createOrderInputSchema.safeParse({
+      contact: {
+        name: "María",
+        lastName: "García",
+        phone: "999888777",
+        email: "maria@test.com",
+      },
+      fulfillment: { method: "courier" },
+      lines: [
+        {
+          type: "product",
+          productId: crypto.randomUUID(),
+          packageQuantity: 1,
+          unitQuantity: 0,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts courier with snapshot", () => {
+    const result = createOrderInputSchema.safeParse({
+      contact: {
+        name: "María",
+        lastName: "García",
+        phone: "999888777",
+        email: "maria@test.com",
+      },
+      fulfillment: {
+        method: "courier",
+        courier: {
+          destination: {
+            departmentId: crypto.randomUUID(),
+            departmentName: "Piura",
+            provinceSlug: "sullana",
+            provinceName: "Sullana",
+          },
+          recipient: {
+            dni: "12345678",
+            fullName: "María García López",
+            agencyAddress: "Olva Courier Av. Principal 123",
+          },
+        },
+      },
+      lines: [
+        {
+          type: "product",
+          productId: crypto.randomUUID(),
+          packageQuantity: 1,
+          unitQuantity: 0,
+        },
+      ],
+      shippingTotal: 0,
+    });
+
+    expect(result.success).toBe(true);
+  });
 });

@@ -273,7 +273,7 @@ export function GuestOrderDetailView({ order, labels }: GuestOrderDetailProps) {
         <div className="space-y-5">
           {fulfillmentDetail ? (
             <OrderDetailCard title={fulfillmentTitle} icon={MapPin}>
-              <p className="font-body text-body-md text-on-surface-variant leading-relaxed">
+              <p className="font-body text-body-md text-on-surface-variant whitespace-pre-line leading-relaxed">
                 {fulfillmentDetail}
               </p>
             </OrderDetailCard>

@@ -3,6 +3,9 @@ import type {
   CheckoutFieldErrors,
   CheckoutFormField,
   CheckoutFormValues,
+  CourierFieldErrors,
+  CourierFormField,
+  CourierFormValues,
   GuestCheckoutFulfillmentMethod,
 } from "./checkout-form.helpers";
 
@@ -22,6 +25,16 @@ export type CheckoutPageLabels = {
   fulfillmentTitle: string;
   fulfillmentDelivery: string;
   fulfillmentPickupPoint: string;
+  fulfillmentCourier: string;
+  courierTitle: string;
+  courierDepartment: string;
+  courierDepartmentPlaceholder: string;
+  courierProvince: string;
+  courierProvincePlaceholder: string;
+  courierDni: string;
+  courierFullName: string;
+  courierAgencyAddress: string;
+  courierFeeNote: string;
   addressTitle: string;
   pickupPointTitle: string;
   pickupPointPlaceholder: string;
@@ -65,6 +78,7 @@ export type CheckoutPageLabels = {
     invalidEmail: string;
     invalidName: string;
     invalidPhone: string;
+    invalidDni: string;
     tooShort: string;
   };
 };
@@ -83,15 +97,26 @@ export type CheckoutPickupPointOption = {
   fee: number;
 };
 
+export type CheckoutCourierDepartmentOption = {
+  id: string;
+  name: string;
+  provinces: Array<{ slug: string; name: string }>;
+};
+
 export type CheckoutPageProps = {
   form: CheckoutFormValues;
+  courierForm: CourierFormValues;
   fieldErrors: CheckoutFieldErrors;
+  courierFieldErrors: CourierFieldErrors;
   showValidationSummary: boolean;
   fulfillmentMethod: GuestCheckoutFulfillmentMethod;
+  showFulfillmentSelector: boolean;
   showPickupPointOption: boolean;
+  showCourierOption: boolean;
   pickupPointId: string;
   pickupPointError: string | null;
   pickupPoints: CheckoutPickupPointOption[];
+  courierDepartments: CheckoutCourierDepartmentOption[];
   districts: CheckoutDistrictOption[];
   mapPin: MapPin;
   subtotal: number;
@@ -106,7 +131,9 @@ export type CheckoutPageProps = {
   stockMessages: string[];
   labels: CheckoutPageLabels;
   onChange: (field: CheckoutFormField, value: string) => void;
+  onCourierChange: (field: CourierFormField, value: string) => void;
   onFieldBlur: (field: CheckoutFormField, values: CheckoutFormValues) => void;
+  onCourierFieldBlur: (values: CourierFormValues) => void;
   onFulfillmentMethodChange: (method: GuestCheckoutFulfillmentMethod) => void;
   onPickupPointChange: (pickupPointId: string) => void;
   onPickupPointBlur: () => void;

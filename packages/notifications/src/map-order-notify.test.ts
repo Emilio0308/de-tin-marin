@@ -142,4 +142,29 @@ describe("mapFulfillmentToNotify", () => {
       summary: "Punto de recojo: Real Plaza",
     });
   });
+
+  it("courier con destino y recipient", () => {
+    expect(
+      mapFulfillmentToNotify({
+        method: "courier",
+        courier: {
+          destination: {
+            departmentId: "11111111-1111-4111-8111-111111111111",
+            departmentName: "Piura",
+            provinceSlug: "sullana",
+            provinceName: "Sullana",
+          },
+          recipient: {
+            dni: "12345678",
+            fullName: "María García",
+            agencyAddress: "Olva Courier - Av. Ugarte 123",
+          },
+        },
+      }),
+    ).toEqual({
+      method: "courier",
+      summary:
+        "Piura, Sullana · María García · DNI 12345678 · Olva Courier - Av. Ugarte 123",
+    });
+  });
 });

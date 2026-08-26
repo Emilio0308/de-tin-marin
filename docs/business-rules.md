@@ -162,11 +162,11 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
   1. Solo aristas de [`orders.md`](orders.md) /
      `canTransitionOrderStatus(from, to, method)` (shared).
   2. Tras `ready`, el destino logístico **depende de**
-     `fulfillment.method` (DECISIONS **#42** / S4-10):
+     `fulfillment.method` (DECISIONS **#42** / S4-10; courier: **#43**):
      - `pickup` → `awaiting_pickup` (sin shipment)
-     - `delivery` \| `pickup_point` → `in_transit` (**exige** carrier +
-       tracking en `commerce.shipments` en la misma mutation; si falla el
-       upsert, la orden no cambia)
+     - `delivery` \| `pickup_point` \| `courier` → `in_transit`
+       (**exige** carrier + tracking en `commerce.shipments` en la misma
+       mutation; si falla el upsert, la orden no cambia)
   3. `delivered` = el cliente **ya tiene** el producto (solo desde
      `awaiting_pickup` \| `in_transit`).
   4. Cancel: Regla 18 (incluye `awaiting_pickup` / `in_transit`).
@@ -247,7 +247,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 ### Regla 19 — Delivery configurable
 
 - **Trigger:** Crear orden (`fulfillment.method` = `delivery` \| `pickup` \|
-  `pickup_point`).
+  `pickup_point` \| `courier`).
 - **Pasos:**
   1. `delivery`: tarifa desde `pricing.delivery_zones` (`district`
      case-insensitive, `is_active`). Sin match: guest exige cobertura
@@ -255,14 +255,18 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
      cobertura → no crear orden.
   2. `pickup` → `shipping_total = 0` (recojo **en tienda**; **solo admin**).
   3. `pickup_point` → fee del punto **activo** (Regla 30); congelar snapshot
-     en `fulfillment.pickupPoint`. XOR: no mezclar con `deliveryAddress`.
-  4. Congelar `shipping_total` al crear. Guest revalida el fee enviado
-     (`SHIPPING_FEE_MISMATCH` si no coincide).
-- **Guest ecommerce:** solo `delivery` o `pickup_point`. Flag
+     en `fulfillment.pickupPoint`. XOR: no mezclar con `deliveryAddress` /
+     `courier`.
+  4. `courier` → **`shipping_total = 0`** siempre (flete en agencia);
+     catálogo + snapshot + XOR → **Regla 31** (DECISIONS #43).
+  5. Congelar `shipping_total` al crear. Guest revalida el fee enviado
+     (`SHIPPING_FEE_MISMATCH` si no coincide; courier exige `=== 0`).
+- **Guest ecommerce:** `delivery` \| `pickup_point` \| `courier`. Flag
   `storeFeatures.pickupEnabled` oculta recojo en tienda; **no** controla
-  puntos de recojo (`pickup_points_enabled` en DB).
+  puntos de recojo (`pickup_points_enabled`) ni courier (`courier_enabled`).
 - **Fallo:** `delivery_enabled = false` o pin/distrito fuera de Piura →
-  `OUT_OF_COVERAGE`. Kill switch de puntos → `covered: false`.
+  `OUT_OF_COVERAGE`. Kill switch de puntos / courier → listado vacío /
+  `covered: false`.
 
 ### Regla 20 — Stock de envases
 
@@ -431,6 +435,36 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 
 ---
 
+## Fulfillment — envío courier (agencia nacional)
+
+### Regla 31 — Catálogo courier + snapshot guest
+
+- **Trigger:** Staff toggles en `/delivery` (pestaña Envío por agencia);
+  checkout guest elige `courier`; create orden admin/ecommerce guest.
+- **Pasos:**
+  1. Fuente: `pricing.courier_departments` — una fila por departamento;
+     `provinces` jsonb array fijo (`slug`, `name`, `enabled`); staff solo
+     togglea `enabled` e `is_active` del departamento (no crea provincias).
+  2. Kill switch global: `delivery_settings.courier_enabled`. Off → listado
+     checkout vacío.
+  3. Cobertura checkout: dept `is_active` **y** provincia `enabled` en JSON.
+     **Provincia Piura** no debe existir en el catálogo courier del dept.
+     Piura (local) → `method: delivery`.
+  4. Guest/admin create **rehidrata** destino desde DB (`departmentId`,
+     `provinceSlug` → nombres congelados). Cliente completa
+     `recipient` (`dni`, `fullName`, `agencyAddress`).
+  5. **`shipping_total = 0`** siempre para `courier` (flete en agencia).
+     RPC guest rechaza `shipping_total > 0`.
+  6. Snapshot en `orders.fulfillment.courier`; XOR: sin `deliveryAddress`,
+     `pickupPoint` ni `mapPin`.
+  7. Logística post-`ready`: igual que `delivery` → `in_transit` (carrier +
+     tracking) → `delivered` (DECISIONS #42 / #43).
+- **RLS:** SELECT público solo dept `is_active`; staff CRUD completo.
+- **Fallo:** Destino disabled/inactivo → sin cobertura checkout / error al
+  submit; XOR inválido rechazado por Zod y RPC.
+
+---
+
 ## Futuro (v2 — no implementar en v1)
 
 | ID  | Tema                           |
@@ -445,18 +479,19 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 
 ## Índice rápido
 
-| ID    | Dominio            | Resumen                                                            |
-| ----- | ------------------ | ------------------------------------------------------------------ |
-| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package) |
-| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio      |
-| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
-| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular |
-| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)   |
-| 19–20 | Delivery / Envases | Tarifa distrito / pickup / pickup_point; stock envase 1:1          |
-| 21    | Products           | Min/max compra por presentación (default 10/100)                   |
-| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
-| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
-| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
-| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)    |
-| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)    |
-| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda    |
+| ID    | Dominio            | Resumen                                                             |
+| ----- | ------------------ | ------------------------------------------------------------------- |
+| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package)  |
+| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio       |
+| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único                |
+| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular  |
+| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)    |
+| 19–20 | Delivery / Envases | Tarifa distrito / pickup / pickup_point / courier→R31; stock envase |
+| 21    | Products           | Min/max compra por presentación (default 10/100)                    |
+| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max      |
+| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                 |
+| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas               |
+| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)     |
+| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)     |
+| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda     |
+| 31    | Fulfillment        | Courier agencia: dept/provincias JSON; fee 0; snapshot guest XOR    |

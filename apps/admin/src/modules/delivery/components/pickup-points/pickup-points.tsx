@@ -5,7 +5,10 @@ import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
 import { GranularNumberInput } from "@/shared/forms/granular-number-input";
 import { PickupPointMap } from "./pickup-point-map.dynamic";
-import { PICKUP_POINT_NAME_MAX_LENGTH } from "./pickup-points.helpers";
+import {
+  PICKUP_POINT_NAME_MAX_LENGTH,
+  resolveMapPin,
+} from "./pickup-points.helpers";
 import type { PickupPointsProps } from "./pickup-points.types";
 
 const cardClass =
@@ -51,6 +54,7 @@ export function PickupPoints({
   points,
   pointDraft,
   editingPoint,
+  isMapVisible,
   labels,
   pointSubmitting,
   deletingPointId,
@@ -66,7 +70,7 @@ export function PickupPoints({
   onMapPinChange,
 }: PickupPointsProps) {
   const activeDraft = editingPoint ?? pointDraft;
-  const mapPin = { lat: activeDraft.lat, lng: activeDraft.lng };
+  const mapPin = resolveMapPin({ lat: activeDraft.lat, lng: activeDraft.lng });
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -86,23 +90,31 @@ export function PickupPoints({
         />
 
         <div className="space-y-4">
-          <PickupPointMap
-            mapPin={mapPin}
-            labels={{
-              hint: labels.mapHint,
-              searchLabel: labels.mapSearchLabel,
-              searchPlaceholder: labels.mapSearchPlaceholder,
-              searchNoResults: labels.mapSearchNoResults,
-            }}
-            onChange={(pin) => {
-              onMapPinChange(pin);
-              if (editingPoint) {
-                onEditPointChange({ ...editingPoint, ...pin });
-              } else {
-                onPointDraftChange({ ...pointDraft, ...pin });
-              }
-            }}
-          />
+          {isMapVisible ? (
+            <PickupPointMap
+              visible
+              mapPin={mapPin}
+              labels={{
+                hint: labels.mapHint,
+                searchLabel: labels.mapSearchLabel,
+                searchPlaceholder: labels.mapSearchPlaceholder,
+                searchNoResults: labels.mapSearchNoResults,
+              }}
+              onChange={(pin) => {
+                onMapPinChange(pin);
+                if (editingPoint) {
+                  onEditPointChange({ ...editingPoint, ...pin });
+                } else {
+                  onPointDraftChange({ ...pointDraft, ...pin });
+                }
+              }}
+            />
+          ) : (
+            <div
+              className="border-outline-variant/30 bg-surface-container-low h-[min(28rem,55vh)] min-h-72 rounded-2xl border"
+              aria-hidden
+            />
+          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">

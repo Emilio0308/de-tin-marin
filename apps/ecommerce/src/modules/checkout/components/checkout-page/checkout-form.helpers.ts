@@ -18,7 +18,22 @@ export type CheckoutFormValues = Record<CheckoutFormField, string>;
 
 export type CheckoutFieldErrors = Partial<Record<CheckoutFormField, string>>;
 
-export type GuestCheckoutFulfillmentMethod = "delivery" | "pickup_point";
+export type GuestCheckoutFulfillmentMethod =
+  "delivery" | "pickup_point" | "courier";
+
+export const courierFormFields = [
+  "courierDepartmentId",
+  "courierProvinceSlug",
+  "courierDni",
+  "courierFullName",
+  "courierAgencyAddress",
+] as const;
+
+export type CourierFormField = (typeof courierFormFields)[number];
+
+export type CourierFormValues = Record<CourierFormField, string>;
+
+export type CourierFieldErrors = Partial<Record<CourierFormField, string>>;
 
 export type CheckoutFieldErrorKey =
   "required" | "invalidEmail" | "invalidName" | "invalidPhone" | "tooShort";
@@ -50,6 +65,10 @@ export function sanitizePlaceName(value: string): string {
   return sanitizePersonName(value);
 }
 
+export function sanitizeDni(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 8);
+}
+
 export function sanitizeCheckoutField(
   field: CheckoutFormField,
   value: string,
@@ -65,6 +84,20 @@ export function sanitizeCheckoutField(
     case "city":
     case "province":
       return sanitizePlaceName(value);
+    default:
+      return value;
+  }
+}
+
+export function sanitizeCourierField(
+  field: CourierFormField,
+  value: string,
+): string {
+  switch (field) {
+    case "courierDni":
+      return sanitizeDni(value);
+    case "courierFullName":
+      return sanitizePersonName(value);
     default:
       return value;
   }
@@ -111,7 +144,7 @@ export const checkoutFormSchema = checkoutContactSchema
 export function getCheckoutFormSchema(
   method: GuestCheckoutFulfillmentMethod,
 ): z.ZodType<CheckoutFormValues> {
-  if (method === "pickup_point") {
+  if (method === "pickup_point" || method === "courier") {
     return checkoutContactSchema.extend({
       line1: z.string(),
       district: z.string(),
@@ -121,6 +154,66 @@ export function getCheckoutFormSchema(
     }) as z.ZodType<CheckoutFormValues>;
   }
   return checkoutFormSchema;
+}
+
+const courierFormSchema = z.object({
+  courierDepartmentId: z.string().trim().min(1, "required"),
+  courierProvinceSlug: z.string().trim().min(1, "required"),
+  courierDni: z
+    .string()
+    .trim()
+    .regex(/^\d{8}$/, "invalidDni"),
+  courierFullName: z
+    .string()
+    .trim()
+    .min(3, "tooShort")
+    .max(200)
+    .regex(/^[\p{L}]+(?:[ '\-][\p{L}]+)+$/u, "invalidName"),
+  courierAgencyAddress: z.string().trim().min(10, "tooShort").max(500),
+});
+
+export type CourierFieldErrorKey = CheckoutFieldErrorKey | "invalidDni";
+
+export function getCourierFieldErrorKeys(
+  values: CourierFormValues,
+): Partial<Record<CourierFormField, CourierFieldErrorKey>> {
+  const result = courierFormSchema.safeParse(values);
+  if (result.success) return {};
+
+  const errors: Partial<Record<CourierFormField, CourierFieldErrorKey>> = {};
+  for (const issue of result.error.issues) {
+    const field = issue.path[0];
+    if (
+      typeof field !== "string" ||
+      !courierFormFields.includes(field as CourierFormField) ||
+      errors[field as CourierFormField]
+    ) {
+      continue;
+    }
+    const message = issue.message;
+    if (message === "invalidDni") {
+      errors[field as CourierFormField] = "invalidDni";
+    } else {
+      errors[field as CourierFormField] = toErrorKey(message);
+    }
+  }
+  return errors;
+}
+
+export function mapCourierFieldErrors(
+  errorKeys: Partial<Record<CourierFormField, CourierFieldErrorKey>>,
+  labels: CheckoutValidationLabels & { invalidDni: string },
+): CourierFieldErrors {
+  const mapped: CourierFieldErrors = {};
+  for (const field of courierFormFields) {
+    const key = errorKeys[field];
+    if (!key) continue;
+    mapped[field] =
+      key === "invalidDni"
+        ? labels.invalidDni
+        : (labels[key] ?? labels.required);
+  }
+  return mapped;
 }
 
 export function getPickupPointErrorKey(
@@ -239,13 +332,13 @@ export function getFirstInvalidCheckoutField(
 
 /** Id del control a enfocar (incluye pickup fuera del schema de campos). */
 export function getCheckoutFocusTargetId(
-  field: CheckoutFormField | "pickupPointId",
+  field: CheckoutFormField | "pickupPointId" | CourierFormField,
 ): string {
   return field;
 }
 
 export function scrollToCheckoutField(
-  field: CheckoutFormField | "pickupPointId",
+  field: CheckoutFormField | "pickupPointId" | CourierFormField,
 ): void {
   if (typeof document === "undefined") return;
   const el = document.getElementById(getCheckoutFocusTargetId(field));

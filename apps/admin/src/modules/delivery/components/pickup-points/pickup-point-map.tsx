@@ -6,6 +6,7 @@ import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { cn } from "@de-tin-marin/shared/cn";
+import { isValidMapPin, resolveMapPin } from "./pickup-points.helpers";
 import {
   searchMapLocations,
   type MapSearchResult,
@@ -24,12 +25,34 @@ type MapPin = { lat: number; lng: number };
 
 function MapViewSync({ center }: { center: MapPin }) {
   const map = useMap();
+  const { lat, lng } = center;
 
   useEffect(() => {
-    map.flyTo([center.lat, center.lng], Math.max(map.getZoom(), 15), {
+    if (!isValidMapPin({ lat, lng })) return;
+
+    const zoom = map.getZoom();
+    if (!Number.isFinite(zoom)) return;
+
+    map.flyTo([lat, lng], Math.max(zoom, 15), {
       duration: 0.45,
     });
-  }, [center.lat, center.lng, map]);
+  }, [lat, lng, map]);
+
+  return null;
+}
+
+function MapResizeOnVisible({ visible }: { visible: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      map.invalidateSize();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [map, visible]);
 
   return null;
 }
@@ -85,11 +108,14 @@ export function PickupPointMap({
   mapPin,
   onChange,
   labels,
+  visible = true,
 }: {
   mapPin: MapPin;
   onChange: (pin: MapPin) => void;
   labels: PickupPointMapLabels;
+  visible?: boolean;
 }) {
+  const resolvedPin = resolveMapPin(mapPin);
   const listboxId = useId();
   const searchRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
@@ -243,7 +269,7 @@ export function PickupPointMap({
         )}
       >
         <MapContainer
-          center={[mapPin.lat, mapPin.lng]}
+          center={[resolvedPin.lat, resolvedPin.lng]}
           zoom={14}
           scrollWheelZoom
           className="h-full w-full"
@@ -252,9 +278,10 @@ export function PickupPointMap({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapViewSync center={mapPin} />
+          <MapResizeOnVisible visible={visible} />
+          <MapViewSync center={resolvedPin} />
           <MapClickHandler onChange={onChange} />
-          <DraggableMarker position={mapPin} onChange={onChange} />
+          <DraggableMarker position={resolvedPin} onChange={onChange} />
         </MapContainer>
       </div>
     </div>

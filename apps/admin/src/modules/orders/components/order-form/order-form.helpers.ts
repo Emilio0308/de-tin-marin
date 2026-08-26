@@ -229,9 +229,16 @@ export type PickupPointFormOption = {
   fee: number;
 };
 
+export type CourierDepartmentFormOption = {
+  id: string;
+  name: string;
+  provinces: Array<{ slug: string; name: string; enabled: boolean }>;
+};
+
 export function toCreateOrderPayload(
   values: OrderFormValues,
   pickupPoints: PickupPointFormOption[] = [],
+  courierDepartments: CourierDepartmentFormOption[] = [],
 ) {
   const selectedPickupPoint =
     values.fulfillment.method === "pickup_point"
@@ -239,6 +246,19 @@ export function toCreateOrderPayload(
           (point) => point.id === values.fulfillment.pickupPointId,
         )
       : undefined;
+
+  const selectedCourierDepartment =
+    values.fulfillment.method === "courier"
+      ? courierDepartments.find(
+          (department) =>
+            department.id === values.fulfillment.courierDepartmentId,
+        )
+      : undefined;
+  const selectedCourierProvince = selectedCourierDepartment?.provinces.find(
+    (province) =>
+      province.slug === values.fulfillment.courierProvinceSlug &&
+      province.enabled,
+  );
 
   return {
     contact: values.contact,
@@ -259,6 +279,24 @@ export function toCreateOrderPayload(
               lat: selectedPickupPoint.lat,
               lng: selectedPickupPoint.lng,
               fee: selectedPickupPoint.fee,
+            }
+          : undefined,
+      courier:
+        values.fulfillment.method === "courier" &&
+        selectedCourierDepartment &&
+        selectedCourierProvince
+          ? {
+              destination: {
+                departmentId: selectedCourierDepartment.id,
+                departmentName: selectedCourierDepartment.name,
+                provinceSlug: selectedCourierProvince.slug,
+                provinceName: selectedCourierProvince.name,
+              },
+              recipient: {
+                dni: values.fulfillment.courierDni.trim(),
+                fullName: values.fulfillment.courierFullName.trim(),
+                agencyAddress: values.fulfillment.courierAgencyAddress.trim(),
+              },
             }
           : undefined,
       notes: values.fulfillment.notes || null,

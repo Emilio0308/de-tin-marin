@@ -225,7 +225,7 @@ Los ajustes **no** mutan `packagePrice` / `unitPrice` / `lineTotal` de las líne
 }
 ```
 
-`method`: `"delivery"` \| `"pickup"` \| `"pickup_point"`.
+`method`: `"delivery"` \| `"pickup"` \| `"pickup_point"` \| `"courier"`.
 
 - **`pickup`** — recojo en tienda (admin manual; sin dirección ni punto;
   `shipping_total = 0`).
@@ -233,11 +233,41 @@ Los ajustes **no** mutan `packagePrice` / `unitPrice` / `lineTotal` de las líne
   `{ id, name, lat, lng, fee }` congelado al crear (Regla 30). Guest no
   envía `deliveryAddress` ni `mapPin`. El fee se rehidrata desde
   `pricing.pickup_points` (activo); mismatch → no se crea la orden.
-- **`delivery`** — dirección + `metadata.mapPin` (guest). Sin `pickupPoint`.
+- **`courier`** — envío nacional vía agencia (Regla 31). Snapshot
+  `courier.destination` + `courier.recipient` congelado al crear.
+  **`shipping_total = 0`**; guest no envía `deliveryAddress`, `pickupPoint`
+  ni `mapPin`. Cobertura: dept activo + provincia `enabled` en
+  `pricing.courier_departments.provinces`.
+- **`delivery`** — dirección + `metadata.mapPin` (guest). Sin `pickupPoint`
+  ni `courier`.
 
 Checkout ecommerce muestra `pickup_point` solo si
 `listCheckoutPickupPointsAction` devuelve puntos (kill switch on y hay
-activos). Recojo en tienda sigue oculto (`storeFeatures.pickupEnabled`).
+activos). Muestra `courier` solo si `listCheckoutCourierDestinationsAction`
+devuelve dept/provincias (`courier_enabled` on). Recojo en tienda sigue
+oculto (`storeFeatures.pickupEnabled`).
+
+Ejemplo snapshot **`courier`**:
+
+```json
+{
+  "method": "courier",
+  "courier": {
+    "destination": {
+      "departmentId": "uuid",
+      "departmentName": "Piura",
+      "provinceSlug": "sullana",
+      "provinceName": "Sullana"
+    },
+    "recipient": {
+      "dni": "12345678",
+      "fullName": "María García López",
+      "agencyAddress": "Olva Courier - Av. Ugarte 123"
+    }
+  },
+  "notes": null
+}
+```
 
 ## Estados
 
@@ -247,25 +277,26 @@ Toda orden se crea en **`pending_payment`**. Sin estado `draft`.
 pending_payment → paid → preparing → ready
                                       ├─ pickup        → awaiting_pickup → delivered → completed
                                       ├─ pickup_point  → in_transit      → delivered → completed
+                                      ├─ courier       → in_transit      → delivered → completed
                                       └─ delivery      → in_transit      → delivered → completed
                     ↘ cancelled (hasta in_transit / awaiting_pickup inclusive)
 ```
 
 - **`awaiting_pickup`:** solo `fulfillment.method = pickup` (recojo en tienda). Sin panel de envío.
-- **`in_transit`:** `delivery` o `pickup_point`. Al pasar desde `ready` exige carrier + tracking en `commerce.shipments` (`status: shipped`).
+- **`in_transit`:** `delivery`, `pickup_point` o `courier`. Al pasar desde `ready` exige carrier + tracking en `commerce.shipments` (`status: shipped`).
 - **`delivered`:** el cliente **ya tiene** el producto (ambos canales).
 
 ## Transiciones permitidas
 
-| Desde             | Hacia                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| `pending_payment` | `paid`, `cancelled`                                                                              |
-| `paid`            | `preparing`, `cancelled`                                                                         |
-| `preparing`       | `ready`, `cancelled`                                                                             |
-| `ready`           | `awaiting_pickup` (solo pickup), `in_transit` (delivery \| pickup_point + shipment), `cancelled` |
-| `awaiting_pickup` | `delivered`, `cancelled`                                                                         |
-| `in_transit`      | `delivered`, `cancelled`                                                                         |
-| `delivered`       | `completed`                                                                                      |
+| Desde             | Hacia                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `pending_payment` | `paid`, `cancelled`                                                                                         |
+| `paid`            | `preparing`, `cancelled`                                                                                    |
+| `preparing`       | `ready`, `cancelled`                                                                                        |
+| `ready`           | `awaiting_pickup` (solo pickup), `in_transit` (delivery \| pickup_point \| courier + shipment), `cancelled` |
+| `awaiting_pickup` | `delivered`, `cancelled`                                                                                    |
+| `in_transit`      | `delivered`, `cancelled`                                                                                    |
+| `delivered`       | `completed`                                                                                                 |
 
 Cancelación post-pago: refund + restock **atómicos** (Regla 18 / DECISIONS #41–#42 / [S4-09](stages/S4/09-cancel-atomic-restock.md)).
 
@@ -410,7 +441,7 @@ type OrderDTO = {
 - Detalle: composición pack/bundle desde `shopping_cart`; muestra `surchargeTotal`
 - **Crear orden (`/orders/new`):**
   - Tabs catálogo: productos (picker + dual qty), combos, sorpresas
-  - Fulfillment: `delivery` \| `pickup` \| `pickup_point` (selector de puntos)
+  - Fulfillment: `delivery` \| `pickup` \| `pickup_point` \| `courier`
   - Líneas product: steppers presentación + unidad (si `product_type = package`); clamp `needBase ≤ availableBase`
   - Líneas pack/bundle: composición desplegable (`viewComponents`)
   - Totales: tabs Precio final (XOR) y Descuento/recargo; ver § Totales de cabecera
@@ -424,7 +455,7 @@ Detalle de módulo: [`apps/admin/src/modules/orders/README.md`](../apps/admin/sr
 ## Ecommerce
 
 - Carrito localStorage: líneas product siempre `unitQuantity: 0`; cantidad = `packageQuantity`
-- Checkout guest: `surchargeTotal = 0`; `method` = `delivery` \| `pickup_point`;
+- Checkout guest: `surchargeTotal = 0`; `method` = `delivery` \| `pickup_point` \| `courier`;
   input Zod dual con `unitQuantity: 0`
 - Confirmación / lookup guest: DTO incluye `surchargeTotal` (0) y snapshot
   `fulfillment.pickupPoint` si aplica

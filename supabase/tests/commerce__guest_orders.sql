@@ -1,5 +1,5 @@
 begin;
-select plan(11);
+select plan(14);
 
 select ok(
   (
@@ -187,6 +187,46 @@ select lives_ok(
        '{}'::jsonb
      ) $$,
   'guest insert accepts pickup_point with snapshot'
+);
+
+select lives_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"courier@example.com"}'::jsonb,
+       '{"method":"courier","courier":{"destination":{"departmentId":"22222222-2222-4222-8222-222222222222","departmentName":"Piura","provinceSlug":"sullana","provinceName":"Sullana"},"recipient":{"dni":"12345678","fullName":"Ana Garcia Lopez","agencyAddress":"Olva Courier Av 1"}}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 0, 1,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":0,"total":1}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'guest insert accepts courier with snapshot and zero shipping'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"courier-fee@example.com"}'::jsonb,
+       '{"method":"courier","courier":{"destination":{"departmentId":"22222222-2222-4222-8222-222222222222","departmentName":"Piura","provinceSlug":"sullana","provinceName":"Sullana"},"recipient":{"dni":"12345678","fullName":"Ana Garcia Lopez","agencyAddress":"Olva Courier Av 1"}}}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 5, 6,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":5,"total":6}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects courier with non-zero shipping'
+);
+
+select throws_ok(
+  $$ select commerce.insert_guest_order(
+       '{"name":"Ana","lastName":"Garcia","phone":"999","email":"courier-missing@example.com"}'::jsonb,
+       '{"method":"courier"}'::jsonb,
+       '{"lines":[{"type":"product","productId":"00000000-0000-0000-0000-000000000001","sku":"X","name":"Test","packageQuantity":1,"unitQuantity":0,"packagePrice":1,"unitPrice":1,"lineTotal":1}]}'::jsonb,
+       1, 0, 0, 1,
+       '{"subtotal":1,"discountTotal":0,"shippingTotal":0,"total":1}'::jsonb,
+       '{}'::jsonb
+     ) $$,
+  'P0001',
+  'VALIDATION',
+  'guest insert rejects courier without snapshot'
 );
 
 select * from finish();

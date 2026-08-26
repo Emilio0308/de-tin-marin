@@ -29,6 +29,7 @@ const labels: OrderDetailLabels = {
   delivery: "Entrega",
   pickupMethod: "Recojo en tienda",
   pickupPointMethod: "Punto de recojo",
+  courierMethod: "Envío por agencia",
   deliveryMethod: "Delivery",
   mapTitle: "Ubicación de entrega",
   mapHint: "Ubicación seleccionada por el cliente",

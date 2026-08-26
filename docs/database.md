@@ -333,10 +333,25 @@ Seed inicial (Piura): Piura, Castilla, 26 de Octubre, La Unión, Catacaos — mi
 | ----------------------- | ------------- | ------------------------------- |
 | `pickup_enabled`        | boolean       | Recojo en tienda (admin manual) |
 | `pickup_points_enabled` | boolean       | Puntos de recojo en ecommerce   |
+| `courier_enabled`       | boolean       | Envío por agencia en ecommerce  |
 | `delivery_enabled`      | boolean       | Delivery habilitado             |
 | `fallback_fee`          | numeric(12,2) | Tarifa si distrito no listado   |
 
-Resolución al crear orden: `pickup` → `shipping_total = 0`; `pickup_point` → fee del punto activo congelado en snapshot; `delivery` → fee de zona o `fallback_fee` (Regla 19).
+Resolución al crear orden: `pickup` → `shipping_total = 0`; `pickup_point` → fee del punto activo congelado en snapshot; `courier` → `shipping_total = 0`; `delivery` → fee de zona o `fallback_fee` (Regla 19 / Regla 31).
+
+**`pricing.courier_departments`** (S4-11):
+
+| Columna      | Tipo        | Notas                                             |
+| ------------ | ----------- | ------------------------------------------------- |
+| `name`       | text unique | Departamento (Lima, Lambayeque, Piura, …)         |
+| `provinces`  | jsonb array | `{ slug, name, enabled }[]` — lista fija por seed |
+| `is_active`  | boolean     | Kill switch del departamento entero               |
+| `sort_order` | int         | Orden en UI admin / checkout                      |
+
+Seed inicial (inactivo): Lima (10 prov.), Lambayeque (3), Piura dept. **sin**
+provincia `piura` (cobertura local vía `delivery`). Lectura pública checkout:
+solo dept activos con ≥1 provincia `enabled`. Staff edita toggles; no borra
+provincias del JSON.
 
 **`pricing.pickup_points`** (S4-08):
 
@@ -351,8 +366,8 @@ Resolución al crear orden: `pickup` → `shipping_total = 0`; `pickup_point` �
 Lectura pública: solo `is_active = true`. Staff ve y edita inactivos.
 Delete físico: las órdenes históricas conservan el JSONB snapshot.
 
-**`pricing.delivery_settings`** — `pickup_points_enabled` (default `true`) es
-el kill switch global de ecommerce. Off → listado público vacío.
+**`pricing.delivery_settings`** — `pickup_points_enabled` y `courier_enabled`
+(default `false` para courier) son kill switches globales de ecommerce.
 
 ### Schema `commerce`
 
@@ -369,7 +384,7 @@ el kill switch global de ecommerce. Off → listado público vacío.
 | `order_number`                                                             | Código legible (`TM-YYYYMMDD-NNNN`)                                                                                                                                                     |
 | `customer_id`                                                              | → `crm.customers` nullable (guest v1)                                                                                                                                                   |
 | `contact`                                                                  | jsonb — snapshot `name`, `lastName`, `phone`, `email`                                                                                                                                   |
-| `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `pickupPoint`, `notes`                                                                                                                             |
+| `fulfillment`                                                              | jsonb — `method`, `deliveryAddress`, `pickupPoint`, `courier`, `notes`                                                                                                                  |
 | `shopping_cart`                                                            | jsonb — **Order shopping cart** congelado (ver [`orders.md`](orders.md)): product dual `packageQuantity`/`unitQuantity`; pack BOM; bundle components. Migración dual histórica: `00024` |
 | `payment_methods`                                                          | jsonb — array flexible; detalle interno → S2C                                                                                                                                           |
 | `status`                                                                   | `pending_payment` \| `paid` \| `preparing` \| `ready` \| `awaiting_pickup` \| `in_transit` \| `delivered` \| `completed` \| `cancelled` — ver [`orders.md`](orders.md) · `00030` / #42  |
@@ -455,6 +470,7 @@ erDiagram
 | `pricing.campaigns`             | Público (SELECT)              | Staff                       |
 | `pricing.delivery_zones`        | Público activos               | Staff                       |
 | `pricing.pickup_points`         | Público activos               | Staff (CRUD)                |
+| `pricing.courier_departments`   | Público dept activos          | Staff (CRUD)                |
 | `pricing.delivery_settings`     | Público                       | Staff (update)              |
 | `core.hero_settings`            | Público                       | Staff (update)              |
 | `core.about_page_settings`      | Público                       | Staff (update)              |

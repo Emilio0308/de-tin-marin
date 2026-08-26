@@ -76,7 +76,8 @@ function readFulfillmentMethod(
   if (
     method === "delivery" ||
     method === "pickup" ||
-    method === "pickup_point"
+    method === "pickup_point" ||
+    method === "courier"
   ) {
     return method;
   }
@@ -313,6 +314,8 @@ export async function createOrderService(
     method: parsed.data.fulfillment.method,
     district: parsed.data.fulfillment.deliveryAddress?.district,
     pickupPointId: parsed.data.fulfillment.pickupPoint?.id,
+    departmentId: parsed.data.fulfillment.courier?.destination.departmentId,
+    provinceSlug: parsed.data.fulfillment.courier?.destination.provinceSlug,
   });
   const shippingTotal =
     shippingResult.ok === true ? shippingResult.fee : parsed.data.shippingTotal;
@@ -387,6 +390,7 @@ export async function createOrderService(
       method: parsed.data.fulfillment.method,
       deliveryAddress: parsed.data.fulfillment.deliveryAddress,
       pickupPoint: parsed.data.fulfillment.pickupPoint,
+      courier: parsed.data.fulfillment.courier,
     }),
     adminEmail: settings?.email ?? "",
   });

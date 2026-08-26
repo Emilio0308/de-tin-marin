@@ -15,6 +15,7 @@ import {
   resolveDeliveryFeeAction,
 } from "@/modules/delivery/actions/delivery.actions";
 import { listPickupPointsAction } from "@/modules/delivery/actions/pickup-point.actions";
+import { listCourierDepartmentsAction } from "@/modules/delivery/actions/courier.actions";
 import { createOrderAction } from "@/modules/orders/actions/create-order";
 import { previewAdminBundleLineAction } from "@/modules/orders/actions/preview-admin-bundle-line";
 import { previewOrderCartAction } from "@/modules/orders/actions/preview-order-cart";
@@ -180,7 +181,15 @@ export function OrderFormContainer() {
       delivery: t("form.delivery"),
       pickup: t("form.pickup"),
       pickupPoint: t("form.pickupPoint"),
+      courier: t("form.courier"),
       selectPickupPoint: t("form.selectPickupPoint"),
+      courierDepartment: t("form.courierDepartment"),
+      selectCourierDepartment: t("form.selectCourierDepartment"),
+      courierProvince: t("form.courierProvince"),
+      selectCourierProvince: t("form.selectCourierProvince"),
+      courierDni: t("form.courierDni"),
+      courierFullName: t("form.courierFullName"),
+      courierAgencyAddress: t("form.courierAgencyAddress"),
       recipientName: t("form.recipientName"),
       address: t("form.address"),
       district: t("form.district"),
@@ -346,6 +355,27 @@ export function OrderFormContainer() {
     [pickupPointsQuery.data],
   );
 
+  const courierDepartmentsQuery = useQuery({
+    queryKey: ["courier-departments"],
+    queryFn: async () => {
+      const result = await listCourierDepartmentsAction();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  const courierDepartmentOptions = useMemo(
+    () =>
+      (courierDepartmentsQuery.data ?? [])
+        .filter((department) => department.isActive)
+        .map((department) => ({
+          id: department.id,
+          name: department.name,
+          provinces: department.provinces,
+        })),
+    [courierDepartmentsQuery.data],
+  );
+
   const productOptions = pickedProducts;
 
   function handleEnsureProductOption(product: ProductOption) {
@@ -430,14 +460,22 @@ export function OrderFormContainer() {
 
   useEffect(() => {
     void (async () => {
-      const result = await resolveDeliveryFeeAction({
-        method: values.fulfillment.method,
-        district: values.fulfillment.deliveryAddress.district,
-        pickupPointId:
-          values.fulfillment.method === "pickup_point"
-            ? values.fulfillment.pickupPointId || undefined
-            : undefined,
-      });
+      const feeInput =
+        values.fulfillment.method === "courier"
+          ? {
+              method: "courier" as const,
+              departmentId: values.fulfillment.courierDepartmentId || undefined,
+              provinceSlug: values.fulfillment.courierProvinceSlug || undefined,
+            }
+          : {
+              method: values.fulfillment.method,
+              district: values.fulfillment.deliveryAddress.district,
+              pickupPointId:
+                values.fulfillment.method === "pickup_point"
+                  ? values.fulfillment.pickupPointId || undefined
+                  : undefined,
+            };
+      const result = await resolveDeliveryFeeAction(feeInput);
       if (!result.ok) return;
       setValues((current) =>
         current.shippingTotal === result.fee
@@ -449,6 +487,8 @@ export function OrderFormContainer() {
     values.fulfillment.method,
     values.fulfillment.deliveryAddress.district,
     values.fulfillment.pickupPointId,
+    values.fulfillment.courierDepartmentId,
+    values.fulfillment.courierProvinceSlug,
   ]);
 
   useEffect(() => {
@@ -897,7 +937,11 @@ export function OrderFormContainer() {
   }
 
   function handleSubmit() {
-    const validation = validateCreateOrderForm(values, pickupPointOptions);
+    const validation = validateCreateOrderForm(
+      values,
+      pickupPointOptions,
+      courierDepartmentOptions,
+    );
     if (!validation.ok) {
       setFieldErrors(translateFieldErrors(validation.fieldErrorKeys));
       setError(translateValidation(validation.formErrorKey));
@@ -1021,6 +1065,7 @@ export function OrderFormContainer() {
           .filter((zone) => zone.isActive)
           .map((zone) => zone.district)}
         pickupPoints={pickupPointOptions}
+        courierDepartments={courierDepartmentOptions}
         bundleDraft={bundleDraft}
         bundleDraftLoading={bundleDraftLoading}
         bundlePriceSummary={bundlePriceSummary}

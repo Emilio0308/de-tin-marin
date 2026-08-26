@@ -69,6 +69,23 @@ export const createGuestOrderInputSchema = guestOrderInputObjectSchema
       }
     }
 
+    if (value.fulfillment.method === "courier") {
+      if (!value.fulfillment.courier) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "courier is required for courier method",
+          path: ["fulfillment", "courier"],
+        });
+      }
+      if (value.shippingTotal !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "shippingTotal must be 0 for courier",
+          path: ["shippingTotal"],
+        });
+      }
+    }
+
     value.lines.forEach((line, index) => {
       if (line.type === "product") {
         if (line.packageQuantity + line.unitQuantity < 1) {
@@ -104,10 +121,12 @@ export const createGuestOrderInputSchema = guestOrderInputObjectSchema
 
 export const resolveCheckoutFulfillmentFeeInputSchema = z
   .object({
-    method: z.enum(["delivery", "pickup_point"]),
+    method: z.enum(["delivery", "pickup_point", "courier"]),
     district: z.string().max(120).optional(),
     mapPin: mapPinSchema.optional(),
     pickupPointId: z.string().uuid().optional(),
+    departmentId: z.string().uuid().optional(),
+    provinceSlug: z.string().max(80).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.method === "delivery") {
@@ -133,6 +152,23 @@ export const resolveCheckoutFulfillmentFeeInputSchema = z
         message: "pickupPointId is required for pickup_point",
         path: ["pickupPointId"],
       });
+    }
+
+    if (value.method === "courier") {
+      if (!value.departmentId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "departmentId is required for courier",
+          path: ["departmentId"],
+        });
+      }
+      if (!value.provinceSlug?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "provinceSlug is required for courier",
+          path: ["provinceSlug"],
+        });
+      }
     }
   });
 

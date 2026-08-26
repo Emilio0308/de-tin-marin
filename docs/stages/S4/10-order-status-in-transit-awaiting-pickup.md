@@ -24,6 +24,7 @@
 Desde `ready`, el siguiente estado depende de `fulfillment.method`:
 `pickup` → `awaiting_pickup`; `delivery` \| `pickup_point` → `in_transit`
 (con carrier + tracking obligatorios). Luego `delivered` → `completed`.
+(**S4-11 / #43** añade `courier` al mismo camino `in_transit`.)
 
 ## Scope IN
 
@@ -77,6 +78,7 @@ Desde `ready`, el siguiente estado depende de `fulfillment.method`:
 
 - [x] `ready` + `pickup` → solo `awaiting_pickup` (sin shipment)
 - [x] `ready` + `delivery`/`pickup_point` → `in_transit` exige carrier+tracking
+      (`courier` añadido en S4-11 / DECISIONS #43; misma regla)
 - [x] Fallo upsert shipment → orden no cambia de status
 - [x] `delivered` solo desde `awaiting_pickup` \| `in_transit`
 - [x] Panel envío ausente en `paid`/`preparing`; editable en `in_transit`
@@ -87,4 +89,5 @@ Desde `ready`, el siguiente estado depende de `fulfillment.method`:
 
 - Cancel: [`09-cancel-atomic-restock.md`](09-cancel-atomic-restock.md)
 - Pickup points: [`08-pickup-points.md`](08-pickup-points.md)
-- Canónico: [`orders.md`](../../orders.md) · DECISIONS #42
+- Courier: [`11-courier-shipping.md`](11-courier-shipping.md) (mismo `in_transit`)
+- Canónico: [`orders.md`](../../orders.md) · DECISIONS #42 / #43

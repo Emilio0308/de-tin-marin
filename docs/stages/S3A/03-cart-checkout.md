@@ -17,6 +17,7 @@
   `fallback_fee`. Recojo en tienda (`pickup`) desactivado en storefront
   (`pickupEnabled=false`). **Puntos de recojo** (`pickup_point`) → S4-08
   (catálogo + kill switch DB; no usar el flag `pickupEnabled`).
+  **Courier** (`courier`, fee 0) → S4-11 / Regla 31 / DECISIONS #43.
 - **Regla 15** — stock: `strictStockValidationOnCheckout=false` → warnings; `true` → rechazar submit.
 - Hoy `commerce.orders` RLS = **solo staff** → migración con **política guest INSERT** (+ SELECT limitado o RPC lookup en S3A-4).
 - Mapa: proveedor **gratuito** (recomendado **Leaflet + OpenStreetMap**); pin guarda `lat`/`lng` + texto referencia en `fulfillment` / `metadata` — **no** geocoding de pago por ahora.
@@ -57,7 +58,8 @@ interface CartRepository {
 - Formulario: nombre, apellido, teléfono, email (Zod `orderContactSchema`)
 - Delivery único en el brief original (`method: 'delivery'`); pickup **en
   tienda** oculto si `pickupEnabled=false`. **S4-08** añade `pickup_point`
-  (puntos externos) independiente de ese flag.
+  (puntos externos) independiente de ese flag. **S4-11** añade `courier`
+  (agencia nacional, `shipping_total = 0`).
 - Dirección: línea, distrito (select zonas Piura seed S1E), ciudad, provincia, referencia
 - **Mapa Leaflet/OSM:** pin arrastrable; guardar `{ lat, lng }` en `fulfillment.metadata` o `deliveryAddress`
 - Validación cobertura:

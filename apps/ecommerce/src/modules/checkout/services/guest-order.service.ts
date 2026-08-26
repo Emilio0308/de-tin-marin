@@ -13,6 +13,8 @@ import {
   checkOrderStock,
 } from "@de-tin-marin/shared/check-order-stock";
 import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
+import { normalizeProvinceSlug } from "@de-tin-marin/shared/courier-coverage";
+import { courierProvinceSchema } from "@de-tin-marin/validations/courier";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
 import {
   computePackAvailableQuantity as computePackAvailableQuantityShared,
@@ -59,11 +61,23 @@ import {
 import { scheduleOrderCreatedNotification } from "../helpers/schedule-order-created-notification";
 import { asJson, insertGuestOrderRepo } from "../repositories/order.repository";
 import {
+  getCourierDepartmentByIdRepo,
   getDeliverySettingsRepo,
   getPickupPointByIdRepo,
+  listActiveCourierDepartmentsRepo,
   listActiveDeliveryZonesRepo,
   listActivePickupPointsRepo,
 } from "../repositories/delivery.repository";
+
+function parseCourierProvinces(raw: unknown) {
+  if (!Array.isArray(raw)) return [];
+  const provinces = [];
+  for (const item of raw) {
+    const parsed = courierProvinceSchema.safeParse(item);
+    if (parsed.success) provinces.push(parsed.data);
+  }
+  return provinces;
+}
 
 async function resolveBundlesById(
   config: SupabaseConfig,
@@ -601,10 +615,11 @@ export async function createGuestOrderService(
     return { ok: false, error: "INVALID_BUNDLE_CUSTOMIZATION" };
   }
 
-  const [zones, settings, points] = await Promise.all([
+  const [zones, settings, points, courierDepartments] = await Promise.all([
     listActiveDeliveryZonesRepo(config),
     getDeliverySettingsRepo(config),
     listActivePickupPointsRepo(config),
+    listActiveCourierDepartmentsRepo(config),
   ]);
 
   let fulfillmentToPersist = parsed.data.fulfillment;
@@ -649,6 +664,68 @@ export async function createGuestOrderService(
     };
   }
 
+  if (parsed.data.fulfillment.method === "courier") {
+    const courierInput = parsed.data.fulfillment.courier;
+    if (!courierInput) {
+      logServerError(scope, { message: "COURIER_REQUIRED" });
+      return { ok: false, error: "VALIDATION" };
+    }
+
+    const departmentId = courierInput.destination.departmentId;
+    const provinceSlug = courierInput.destination.provinceSlug;
+    const departmentRow =
+      courierDepartments.find((row) => row.id === departmentId) ??
+      (await getCourierDepartmentByIdRepo(config, departmentId));
+
+    if (!departmentRow || !departmentRow.is_active) {
+      logServerError(scope, {
+        message: "OUT_OF_COVERAGE",
+        reason: "courier_department_inactive",
+        departmentId,
+      });
+      return { ok: false, error: "OUT_OF_COVERAGE" };
+    }
+
+    const provinces = parseCourierProvinces(departmentRow.provinces);
+    const province = provinces.find(
+      (entry) =>
+        entry.enabled &&
+        normalizeProvinceSlug(entry.slug) ===
+          normalizeProvinceSlug(provinceSlug),
+    );
+
+    if (!province) {
+      logServerError(scope, {
+        message: "OUT_OF_COVERAGE",
+        reason: "courier_province_disabled",
+        departmentId,
+        provinceSlug,
+      });
+      return { ok: false, error: "OUT_OF_COVERAGE" };
+    }
+
+    fulfillmentToPersist = {
+      method: "courier",
+      courier: {
+        destination: {
+          departmentId: departmentRow.id,
+          departmentName: departmentRow.name,
+          provinceSlug: province.slug,
+          provinceName: province.name,
+        },
+        recipient: courierInput.recipient,
+      },
+      notes: parsed.data.fulfillment.notes ?? null,
+    };
+  }
+
+  const courierDepartmentSources = courierDepartments.map((row) => ({
+    id: row.id,
+    name: row.name,
+    isActive: row.is_active,
+    provinces: parseCourierProvinces(row.provinces),
+  }));
+
   const deliveryResult = resolveCheckoutFulfillmentFee(
     fulfillmentToPersist.method,
     fulfillmentToPersist.deliveryAddress?.district,
@@ -662,6 +739,7 @@ export async function createGuestOrderService(
       pickupEnabled: settings?.pickup_enabled ?? storeFeatures.pickupEnabled,
       pickupPointsEnabled: settings?.pickup_points_enabled ?? true,
       deliveryEnabled: settings?.delivery_enabled ?? true,
+      courierEnabled: settings?.courier_enabled ?? false,
       fallbackFee: Number(settings?.fallback_fee ?? 0),
     },
     fulfillmentToPersist.pickupPoint?.id,
@@ -670,6 +748,13 @@ export async function createGuestOrderService(
       fee: Number(point.fee),
       isActive: point.is_active,
     })),
+    fulfillmentToPersist.method === "courier"
+      ? fulfillmentToPersist.courier?.destination.departmentId
+      : undefined,
+    fulfillmentToPersist.method === "courier"
+      ? fulfillmentToPersist.courier?.destination.provinceSlug
+      : undefined,
+    courierDepartmentSources,
   );
 
   if (!deliveryResult.covered) {
@@ -787,6 +872,7 @@ export async function createGuestOrderService(
       method: fulfillmentToPersist.method,
       deliveryAddress: fulfillmentToPersist.deliveryAddress,
       pickupPoint: fulfillmentToPersist.pickupPoint,
+      courier: fulfillmentToPersist.courier,
     }),
     adminEmail,
   });

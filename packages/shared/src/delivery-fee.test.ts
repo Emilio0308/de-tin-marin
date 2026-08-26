@@ -19,12 +19,17 @@ const settings = {
   pickupEnabled: true,
   pickupPointsEnabled: true,
   deliveryEnabled: true,
+  courierEnabled: false,
   fallbackFee: 20,
 };
 
 describe("resolveDeliveryFee", () => {
   it("returns 0 for pickup", () => {
     expect(resolveDeliveryFee("pickup", "Piura", zones, settings)).toBe(0);
+  });
+
+  it("returns 0 for courier", () => {
+    expect(resolveDeliveryFee("courier", undefined, zones, settings)).toBe(0);
   });
 
   it("returns fee for pickup_point from active point", () => {

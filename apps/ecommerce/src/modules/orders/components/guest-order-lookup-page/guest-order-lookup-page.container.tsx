@@ -154,6 +154,7 @@ export function GuestOrderLookupPageContainer() {
           deliveryTitle: tConfirmation("summary.deliveryTitle"),
           pickupTitle: tConfirmation("summary.pickupTitle"),
           pickupPointTitle: tConfirmation("summary.pickupPointTitle"),
+          courierTitle: tConfirmation("summary.courierTitle"),
           pickupInStoreNote: tConfirmation("summary.pickupInStoreNote"),
           bundleBadge: tConfirmation("summary.bundleBadge"),
           packBadge: tConfirmation("summary.packBadge"),

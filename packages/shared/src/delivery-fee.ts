@@ -16,10 +16,12 @@ export type DeliverySettings = {
   pickupEnabled: boolean;
   pickupPointsEnabled: boolean;
   deliveryEnabled: boolean;
+  courierEnabled: boolean;
   fallbackFee: number;
 };
 
-export type OrderFulfillmentMethod = "delivery" | "pickup" | "pickup_point";
+export type OrderFulfillmentMethod =
+  "delivery" | "pickup" | "pickup_point" | "courier";
 
 export function normalizeDistrict(value: string): string {
   return value.trim().toLowerCase();
@@ -45,7 +47,7 @@ export function resolveDeliveryFee(
   pickupPointId?: string,
   points: PickupPointFeeSource[] = [],
 ): number {
-  if (method === "pickup") return 0;
+  if (method === "pickup" || method === "courier") return 0;
 
   if (method === "pickup_point") {
     const fee = resolvePickupPointFee(pickupPointId, points);

@@ -31,7 +31,7 @@ function pointErrorMessage(
   return t("default");
 }
 
-export function PickupPointsContainer() {
+export function PickupPointsContainer({ isActive }: { isActive: boolean }) {
   const t = useTranslations("delivery.pickupPoints");
   const tErrors = useTranslations("delivery.pickupPoints.errors");
   const tFeedback = useTranslations("common");
@@ -234,6 +234,7 @@ export function PickupPointsContainer() {
           points={points}
           pointDraft={pointDraft}
           editingPoint={editingPoint}
+          isMapVisible={isActive}
           labels={labels}
           pointSubmitting={savePointMutation.isPending}
           deletingPointId={

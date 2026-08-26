@@ -5,6 +5,7 @@ import {
 import type { ZodIssue } from "zod";
 import {
   toCreateOrderPayload,
+  type CourierDepartmentFormOption,
   type PickupPointFormOption,
 } from "../components/order-form/order-form.helpers";
 import type {
@@ -193,6 +194,7 @@ export function mapOrderFormFieldErrorKeys(
 export function validateCreateOrderForm(
   values: OrderFormValues,
   pickupPoints: PickupPointFormOption[] = [],
+  courierDepartments: CourierDepartmentFormOption[] = [],
 ):
   | { ok: true; payload: CreateOrderInput }
   | {
@@ -200,7 +202,11 @@ export function validateCreateOrderForm(
       fieldErrorKeys: OrderFormFieldErrorKeys;
       formErrorKey: "reviewForm";
     } {
-  const payload = toCreateOrderPayload(values, pickupPoints);
+  const payload = toCreateOrderPayload(
+    values,
+    pickupPoints,
+    courierDepartments,
+  );
   const parsed = createOrderInputSchema.safeParse(payload);
 
   if (parsed.success) {

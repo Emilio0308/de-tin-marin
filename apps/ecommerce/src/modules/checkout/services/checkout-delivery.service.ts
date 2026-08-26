@@ -1,6 +1,8 @@
 import "server-only";
 
 import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
+import { listEnabledCheckoutCourierDepartments } from "@de-tin-marin/shared/courier-coverage";
+import { courierProvinceSchema } from "@de-tin-marin/validations/courier";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import { resolveCheckoutFulfillmentFeeInputSchema } from "@de-tin-marin/validations/checkout";
 import {
@@ -12,7 +14,18 @@ import {
   getDeliverySettingsRepo,
   listActiveDeliveryZonesRepo,
   listActivePickupPointsRepo,
+  listActiveCourierDepartmentsRepo,
 } from "../repositories/delivery.repository";
+
+function parseCourierProvinces(raw: unknown) {
+  if (!Array.isArray(raw)) return [];
+  const provinces = [];
+  for (const item of raw) {
+    const parsed = courierProvinceSchema.safeParse(item);
+    if (parsed.success) provinces.push(parsed.data);
+  }
+  return provinces;
+}
 
 export async function listCheckoutPickupPointsService(config: SupabaseConfig) {
   const scope = "listCheckoutPickupPointsService";
@@ -44,6 +57,32 @@ export async function listCheckoutPickupPointsService(config: SupabaseConfig) {
   return { ok: true as const, data };
 }
 
+export async function listCheckoutCourierDestinationsService(
+  config: SupabaseConfig,
+) {
+  const scope = "listCheckoutCourierDestinationsService";
+  const [settings, rows] = await Promise.all([
+    getDeliverySettingsRepo(config),
+    listActiveCourierDepartmentsRepo(config),
+  ]);
+
+  if (settings?.courier_enabled === false) {
+    logServerInfo(scope, "disabled", { reason: "courier_enabled=false" });
+    return { ok: true as const, data: [] };
+  }
+
+  const departments = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    isActive: row.is_active,
+    provinces: parseCourierProvinces(row.provinces),
+  }));
+
+  const data = listEnabledCheckoutCourierDepartments(departments);
+  logServerInfo(scope, "ok", { itemCount: data.length });
+  return { ok: true as const, data };
+}
+
 export async function resolveCheckoutFulfillmentFeeService(
   config: SupabaseConfig,
   raw: unknown,
@@ -61,11 +100,19 @@ export async function resolveCheckoutFulfillmentFeeService(
     return { ok: false, error: "VALIDATION" };
   }
 
-  const [zones, settings, points] = await Promise.all([
+  const [zones, settings, points, courierDepartments] = await Promise.all([
     listActiveDeliveryZonesRepo(config),
     getDeliverySettingsRepo(config),
     listActivePickupPointsRepo(config),
+    listActiveCourierDepartmentsRepo(config),
   ]);
+
+  const courierDepartmentSources = courierDepartments.map((row) => ({
+    id: row.id,
+    name: row.name,
+    isActive: row.is_active,
+    provinces: parseCourierProvinces(row.provinces),
+  }));
 
   const result = resolveCheckoutFulfillmentFee(
     parsed.data.method,
@@ -80,6 +127,7 @@ export async function resolveCheckoutFulfillmentFeeService(
       pickupEnabled: settings?.pickup_enabled ?? false,
       pickupPointsEnabled: settings?.pickup_points_enabled ?? true,
       deliveryEnabled: settings?.delivery_enabled ?? true,
+      courierEnabled: settings?.courier_enabled ?? false,
       fallbackFee: Number(settings?.fallback_fee ?? 0),
     },
     parsed.data.pickupPointId,
@@ -88,6 +136,9 @@ export async function resolveCheckoutFulfillmentFeeService(
       fee: Number(point.fee),
       isActive: point.is_active,
     })),
+    parsed.data.departmentId,
+    parsed.data.provinceSlug,
+    courierDepartmentSources,
   );
 
   logServerInfo(scope, "resolved", {

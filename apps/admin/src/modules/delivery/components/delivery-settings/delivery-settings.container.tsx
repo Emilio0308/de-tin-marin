@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   deleteDeliveryZoneAction,
-  getDeliverySettingsAction,
   listDeliveryZonesAction,
-  updateDeliverySettingsAction,
   upsertDeliveryZoneAction,
 } from "@/modules/delivery/actions/delivery.actions";
 import { useConfirmDialog } from "@/shared/components/confirm-dialog/confirm-dialog";
@@ -19,8 +17,7 @@ import {
   nextZoneSortOrder,
 } from "./delivery-settings.helpers";
 import type {
-  DeliverySettingsLabels,
-  DeliverySettingsValues,
+  DeliveryZonesLabels,
   ZoneDraft,
   ZoneEditDraft,
 } from "./delivery-settings.types";
@@ -41,15 +38,8 @@ export function DeliverySettingsContainer() {
   const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
 
-  const [settingsDraft, setSettingsDraft] = useState<DeliverySettingsValues>({
-    pickupEnabled: true,
-    pickupPointsEnabled: true,
-    deliveryEnabled: true,
-    fallbackFee: 20,
-  });
   const [zoneDraft, setZoneDraft] = useState<ZoneDraft>(buildDefaultZoneDraft);
   const [editingZone, setEditingZone] = useState<ZoneEditDraft | null>(null);
-  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [zoneError, setZoneError] = useState<string | null>(null);
 
   const zonesQuery = useQuery({
@@ -59,34 +49,7 @@ export function DeliverySettingsContainer() {
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
-  });
-
-  const settingsQuery = useQuery({
-    queryKey: ["delivery-settings"],
-    queryFn: async () => {
-      const result = await getDeliverySettingsAction();
-      if (!result.ok) throw new Error(result.error);
-      return result.data;
-    },
-  });
-
-  useEffect(() => {
-    if (!settingsQuery.data) return;
-    setSettingsDraft(settingsQuery.data);
-  }, [settingsQuery.data]);
-
-  const saveSettingsMutation = useMutation({
-    mutationFn: async () => {
-      const result = await updateDeliverySettingsAction(settingsDraft);
-      if (!result.ok) throw new Error(result.error);
-    },
-    onSuccess: async () => {
-      setSettingsError(null);
-      await queryClient.invalidateQueries({ queryKey: ["delivery-settings"] });
-    },
-    onError: (error: Error) => {
-      setSettingsError(zoneErrorMessage(error.message, tErrors));
-    },
+    staleTime: 60_000,
   });
 
   const saveZoneMutation = useMutation({
@@ -123,24 +86,12 @@ export function DeliverySettingsContainer() {
 
   const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
 
-  const labels: DeliverySettingsLabels = useMemo(
+  const labels: DeliveryZonesLabels = useMemo(
     () => ({
-      title: t("title"),
-      subtitle: t("subtitle"),
+      title: t("zonesTitle"),
+      subtitle: t("zonesSubtitle"),
       loading: t("loading"),
       loadError: t("loadError"),
-      sectionGlobal: t("sectionGlobal"),
-      pickupEnabled: t("pickupEnabled"),
-      pickupHint: t("pickupHint"),
-      pickupPointsEnabled: t("pickupPointsEnabled"),
-      pickupPointsHint: t("pickupPointsHint"),
-      deliveryEnabled: t("deliveryEnabled"),
-      deliveryHint: t("deliveryHint"),
-      fallbackFee: t("fallbackFee"),
-      fallbackHint: t("fallbackHint"),
-      saveSettings: t("saveSettings"),
-      savingSettings: t("savingSettings"),
-      settingsSaved: t("settingsSaved"),
       sectionZones: t("sectionZones"),
       district: t("district"),
       districtPlaceholder: t("districtPlaceholder"),
@@ -235,7 +186,7 @@ export function DeliverySettingsContainer() {
     });
   }
 
-  if (zonesQuery.isLoading || settingsQuery.isLoading) {
+  if (zonesQuery.isLoading) {
     return (
       <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col lg:p-8">
         <div className="border-outline-variant/10 bg-surface-container-lowest rounded-4xl border p-12 text-center">
@@ -247,7 +198,7 @@ export function DeliverySettingsContainer() {
     );
   }
 
-  if (zonesQuery.isError || settingsQuery.isError) {
+  if (zonesQuery.isError) {
     return (
       <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col lg:p-8">
         <div className="border-error/20 bg-error-container/40 rounded-4xl border p-12 text-center">
@@ -262,24 +213,19 @@ export function DeliverySettingsContainer() {
   return (
     <>
       {dialog}
-      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:p-8">
+      <div className="gap-stack-lg px-margin-mobile py-stack-md sm:px-stack-md flex flex-1 flex-col pb-8 lg:px-8 lg:pb-8">
         <DeliverySettings
-          settings={settingsDraft}
           zones={zones}
           zoneDraft={zoneDraft}
           editingZone={editingZone}
           labels={labels}
-          settingsSubmitting={saveSettingsMutation.isPending}
           zoneSubmitting={saveZoneMutation.isPending}
           deletingZoneId={
             deleteZoneMutation.isPending
               ? (deleteZoneMutation.variables ?? null)
               : null
           }
-          settingsError={settingsError}
           zoneError={zoneError}
-          onSettingsChange={setSettingsDraft}
-          onSaveSettings={() => saveSettingsMutation.mutate()}
           onZoneDraftChange={setZoneDraft}
           onAddZone={handleAddZone}
           onStartEditZone={handleStartEditZone}

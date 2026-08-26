@@ -400,6 +400,19 @@ Sin reembolso suelto de payment.
 
 **Depends on:** S4-09 ✅, S2C ✅
 
+### S4-11 — Envío courier (agencia nacional) ✅
+
+**Goal:** Staff habilita departamentos/provincias para envío vía agencia;
+checkout guest elige destino + DNI/datos de retiro; **`shipping_total = 0`**
+(flete en agencia). Distinto de `delivery` (Piura local).
+
+- [x] Migración `00031_courier_departments.sql` + RPC guest + pgTAP
+- [x] Admin `/delivery` pestaña courier + `courier_enabled`
+- [x] Checkout, order-form, detalle/confirmación y emails
+- Brief: [`docs/stages/S4/11-courier-shipping.md`](stages/S4/11-courier-shipping.md)
+
+**Depends on:** S1E ✅, S2B ✅, S3A-3 ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

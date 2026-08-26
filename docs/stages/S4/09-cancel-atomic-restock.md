@@ -1,13 +1,13 @@
 # S4-09 · Cancelación atómica (refund + restock)
 
-|                |                                                         |
-| -------------- | ------------------------------------------------------- |
-| **Etapa**      | S4 — Completitud / operaciones                          |
-| **Owner**      | Equipo De Tin Marín                                     |
-| **App(s)**     | `apps/admin`, `supabase`                                |
-| **Schemas**    | `commerce`, `catalog`                                   |
-| **Depende de** | S2A deduct ✅, S2B órdenes ✅, S2C payments ✅           |
-| **Estado**     | done                                                    |
+|                |                                                |
+| -------------- | ---------------------------------------------- |
+| **Etapa**      | S4 — Completitud / operaciones                 |
+| **Owner**      | Equipo De Tin Marín                            |
+| **App(s)**     | `apps/admin`, `supabase`                       |
+| **Schemas**    | `commerce`, `catalog`                          |
+| **Depende de** | S2A deduct ✅, S2B órdenes ✅, S2C payments ✅ |
+| **Estado**     | done                                           |
 
 ## Contexto (leer esto, no todo docs/)
 
@@ -51,19 +51,19 @@ hubo pago/deduct, en una transacción: payments → `refunded` + restock +
 
 ## Tablas y RLS
 
-| Tabla / RPC | ¿Nueva? | Ops | Política | Test |
-| ----------- | ------- | --- | -------- | ---- |
-| `commerce.orders` / `payments` | no | UPDATE vía RPC | staff (`core.is_staff`) | pgTAP |
-| `catalog.products` / `surprise_containers` | no | restock en RPC | SECURITY DEFINER | pgTAP |
-| `cancel_order_with_restock` | sí | EXECUTE authenticated | revoke public | `commerce__cancel_order_restock.sql` |
+| Tabla / RPC                                | ¿Nueva? | Ops                   | Política                | Test                                 |
+| ------------------------------------------ | ------- | --------------------- | ----------------------- | ------------------------------------ |
+| `commerce.orders` / `payments`             | no      | UPDATE vía RPC        | staff (`core.is_staff`) | pgTAP                                |
+| `catalog.products` / `surprise_containers` | no      | restock en RPC        | SECURITY DEFINER        | pgTAP                                |
+| `cancel_order_with_restock`                | sí      | EXECUTE authenticated | revoke public           | `commerce__cancel_order_restock.sql` |
 
 ## Boundaries y DTOs
 
-| Boundary | Tipo | Input | Output |
-| -------- | ---- | ----- | ------ |
-| `cancelOrderAction` | Server Action | `orderId` (+ notes opcional) | `{ id, status }` |
-| RPC `cancel_order_with_restock` | Postgres | `p_order_id`, `p_staff_user_id`, `p_notes` | `{ orderId, status, restocked, idempotent }` |
-| `refundPaymentAction` | Server Action | — | error `USE_CANCEL_ORDER` |
+| Boundary                        | Tipo          | Input                                      | Output                                       |
+| ------------------------------- | ------------- | ------------------------------------------ | -------------------------------------------- |
+| `cancelOrderAction`             | Server Action | `orderId` (+ notes opcional)               | `{ id, status }`                             |
+| RPC `cancel_order_with_restock` | Postgres      | `p_order_id`, `p_staff_user_id`, `p_notes` | `{ orderId, status, restocked, idempotent }` |
+| `refundPaymentAction`           | Server Action | —                                          | error `USE_CANCEL_ORDER`                     |
 
 ## Rules que aplican
 

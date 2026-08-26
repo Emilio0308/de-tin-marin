@@ -78,8 +78,9 @@ Tras checkout, el cliente ve confirmación con número de pedido e instrucciones
 
 ## Rules que aplican
 
-- Reglas **13, 16, 17** (fulfillment `pickup_point`: Regla 30 / S4-08)
-- DECISIONS **#8, #26, #40**
+- Reglas **13, 16, 17** (fulfillment `pickup_point`: Regla 30 / S4-08;
+  `courier`: Regla 31 / S4-11)
+- DECISIONS **#8, #26, #40, #43**
 
 ## Orden de implementación
 

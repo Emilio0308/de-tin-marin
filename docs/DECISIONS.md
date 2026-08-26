@@ -48,7 +48,26 @@
 | 39 | Notificación de orden creada | ✅ | `@de-tin-marin/notifications` usa Nodemailer SMTP server-only. Tras persistir, create-order **await** `scheduleOrderCreatedNotification` (sin `after()`): el request espera el envío; fallo/SMTP ausente **no** altera la orden. Puerto de transporte **587**, `secure: false`, `family: 4`, timeouts 60s. Ecommerce → cliente + admin; admin → solo admin. Admin desde #38 + extras env. Plantillas HTML embebidas en `*.template.ts` (no `readFileSync`). Sin outbox/reintentos/webhooks v1. Regla 28 / S4-06 |
 | 40 | Puntos de recojo vs recojo en tienda | ✅ | **`pickup`** = recojo en tienda (admin manual; sin ubicación). **`pickup_point`** = catálogo `pricing.pickup_points` (nombre + coords + fee configurable). Ecommerce guest solo `delivery` \| `pickup_point`. Snapshot `fulfillment.pickupPoint` al crear orden. Migración `00028`. Brief: S4-08 |
 | 41 | Cancelación atómica (refund + restock) | ✅ | Cancelar orden es el único punto de entrada. `pending_payment` → solo `cancelled`. Post-pago (`paid`/`preparing`/`ready`/`awaiting_pickup`/`in_transit`): RPC `commerce.cancel_order_with_restock` atómica (payments → `refunded` + `restock_stock_for_order` + `cancelled`). Idempotente si ya `cancelled`. Sin reembolso suelto de payment. Migración `00029` (+ `00030` amplía cancelables). Regla 18. Brief: S4-09 |
-| 42 | Estados logísticos por fulfillment | ✅ | Tras `ready`: `pickup` → `awaiting_pickup` → `delivered`; `delivery`/`pickup_point` → `in_transit` (exige carrier+tracking en `commerce.shipments`) → `delivered`. `delivered` = cliente ya tiene el producto. Sin estado “en el punto”. `canTransitionOrderStatus(from, to, method)`. Migración `00030`. Regla 14 + cancel Regla 18 ampliada. Brief: S4-10 |
+| 42 | Estados logísticos por fulfillment | ✅ | Tras `ready`: `pickup` → `awaiting_pickup` → `delivered`; `delivery`/`pickup_point`/`courier` → `in_transit` (exige carrier+tracking en `commerce.shipments`) → `delivered`. `delivered` = cliente ya tiene el producto. Sin estado “en el punto”. `canTransitionOrderStatus(from, to, method)`. Migración `00030`. Regla 14 + cancel Regla 18 ampliada. Brief: S4-10 |
+| 43 | Envío courier (agencia nacional) | ✅ | **`courier`** ≠ `delivery` (Piura local). Catálogo `pricing.courier_departments` con provincias fijas en JSON `provinces[]` (`slug`, `name`, `enabled`); staff togglea dept/provincia. Kill switch `delivery_settings.courier_enabled`. Guest ecommerce: `delivery` \| `pickup_point` \| `courier`; **`shipping_total = 0`** (flete en agencia). Snapshot `fulfillment.courier` (destino + DNI/nombre/dirección agencia). Provincia **Piura** excluida del seed courier (cobertura local vía `delivery`). Migración `00031`. Brief: S4-11 |
+
+## Docs sincronizados (2026-08-25 — envío courier / agencia nacional)
+
+- DECISIONS **#43** — cuarto método `courier`; fee 0; catálogo
+  `courier_departments.provinces` jsonb; guest XOR; sin provincia Piura en
+  courier (solapamiento con delivery local)
+- Migración `00031_courier_departments.sql` + pgTAP + rewrite
+  `insert_guest_order` (`courier`, `shipping_total = 0`)
+- Regla **31** — cobertura dept activo + provincia `enabled`; snapshot congelado
+- Regla **19** guest: `delivery` \| `pickup_point` \| `courier`; Regla **14**
+  logística: `courier` → `in_transit` (alineado con #42)
+- Admin `/delivery` pestaña **Envío por agencia** + toggle `courier_enabled`;
+  order-form/detalle admin; checkout guest dept/provincia/DNI/agencia
+- Notificaciones + confirmación/lookup guest con resumen courier
+- Brief [`stages/S4/11-courier-shipping.md`](stages/S4/11-courier-shipping.md);
+  roadmap S4-11 ✅; índice [`docs/README.md`](README.md)
+- Docs: `database.md`, `orders.md`, READMEs delivery/checkout/orders;
+  cross-ref S3A-3 / S3A-4
 
 ## Docs sincronizados (2026-08-25 — enableUnitsPerPerson)
 

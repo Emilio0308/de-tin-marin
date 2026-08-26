@@ -6,6 +6,10 @@ import {
   type OrderFulfillmentMethod,
   type PickupPointFeeSource,
 } from "./delivery-fee";
+import {
+  resolveCourierCoverage,
+  type CourierDepartmentSource,
+} from "./courier-coverage";
 import { roundMoney } from "./prices";
 
 export const PIURA_DELIVERY_BOUNDS = {
@@ -42,9 +46,22 @@ export function resolveCheckoutFulfillmentFee(
   settings: DeliverySettings,
   pickupPointId?: string,
   points: PickupPointFeeSource[] = [],
+  courierDepartmentId?: string,
+  courierProvinceSlug?: string,
+  courierDepartments: CourierDepartmentSource[] = [],
 ): CheckoutFulfillmentResult {
   if (method === "pickup") {
     return { covered: true, fee: 0 };
+  }
+
+  if (method === "courier") {
+    const courierResult = resolveCourierCoverage(
+      courierDepartmentId,
+      courierProvinceSlug,
+      courierDepartments,
+      settings.courierEnabled,
+    );
+    return { covered: courierResult.covered, fee: 0 };
   }
 
   if (method === "pickup_point") {

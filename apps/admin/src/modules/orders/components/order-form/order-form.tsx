@@ -112,6 +112,7 @@ export function OrderForm({
   packCompositionsById,
   deliveryDistricts,
   pickupPoints,
+  courierDepartments,
   bundleDraft,
   bundleDraftLoading,
   bundlePriceSummary,
@@ -148,6 +149,14 @@ export function OrderForm({
   const [draftPackQty, setDraftPackQty] = useState(1);
   const [cartTab, setCartTab] = useState<CartTab>("products");
   const [totalsTab, setTotalsTab] = useState<TotalsTab>("final");
+
+  const selectedCourierDepartment = courierDepartments.find(
+    (department) => department.id === values.fulfillment.courierDepartmentId,
+  );
+  const courierProvinceOptions =
+    selectedCourierDepartment?.provinces.filter(
+      (province) => province.enabled,
+    ) ?? [];
 
   const selectedProduct = products.find(
     (product) => product.id === draftProductId,
@@ -352,31 +361,35 @@ export function OrderForm({
         <div className={cardClass}>
           <SectionHeader icon={MapPin} title={labels.deliverySection} />
           <div className="mb-4 flex flex-wrap gap-3">
-            {(["delivery", "pickup", "pickup_point"] as const).map((method) => (
-              <label
-                key={method}
-                className={methodPillClass(
-                  values.fulfillment.method === method,
-                )}
-              >
-                <input
-                  type="radio"
-                  className="sr-only"
-                  checked={values.fulfillment.method === method}
-                  onChange={() =>
-                    onChange({
-                      ...values,
-                      fulfillment: { ...values.fulfillment, method },
-                    })
-                  }
-                />
-                {method === "delivery"
-                  ? labels.delivery
-                  : method === "pickup"
-                    ? labels.pickup
-                    : labels.pickupPoint}
-              </label>
-            ))}
+            {(["delivery", "pickup", "pickup_point", "courier"] as const).map(
+              (method) => (
+                <label
+                  key={method}
+                  className={methodPillClass(
+                    values.fulfillment.method === method,
+                  )}
+                >
+                  <input
+                    type="radio"
+                    className="sr-only"
+                    checked={values.fulfillment.method === method}
+                    onChange={() =>
+                      onChange({
+                        ...values,
+                        fulfillment: { ...values.fulfillment, method },
+                      })
+                    }
+                  />
+                  {method === "delivery"
+                    ? labels.delivery
+                    : method === "pickup"
+                      ? labels.pickup
+                      : method === "pickup_point"
+                        ? labels.pickupPoint
+                        : labels.courier}
+                </label>
+              ),
+            )}
           </div>
           {values.fulfillment.method === "delivery" ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -654,6 +667,114 @@ export function OrderForm({
                   ))}
               </select>
             </Field>
+          ) : values.fulfillment.method === "courier" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label={labels.courierDepartment}
+                error={fieldErrors["fulfillment.courier"]}
+              >
+                <select
+                  className={cn(
+                    "border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary min-h-11 w-full rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2",
+                    fieldErrors["fulfillment.courier"] && "border-error",
+                  )}
+                  value={values.fulfillment.courierDepartmentId}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        courierDepartmentId: event.target.value,
+                        courierProvinceSlug: "",
+                      },
+                    })
+                  }
+                >
+                  <option value="">{labels.selectCourierDepartment}</option>
+                  {courierDepartments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={labels.courierProvince}>
+                <select
+                  className="border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary min-h-11 w-full rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2"
+                  value={values.fulfillment.courierProvinceSlug}
+                  disabled={!values.fulfillment.courierDepartmentId}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        courierProvinceSlug: event.target.value,
+                      },
+                    })
+                  }
+                >
+                  <option value="">{labels.selectCourierProvince}</option>
+                  {courierProvinceOptions.map((province) => (
+                    <option key={province.slug} value={province.slug}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={labels.courierDni}>
+                <input
+                  className={fieldClass}
+                  value={values.fulfillment.courierDni}
+                  inputMode="numeric"
+                  maxLength={8}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        courierDni: event.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 8),
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <Field label={labels.courierFullName}>
+                <input
+                  className={fieldClass}
+                  value={values.fulfillment.courierFullName}
+                  maxLength={200}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      fulfillment: {
+                        ...values.fulfillment,
+                        courierFullName: event.target.value,
+                      },
+                    })
+                  }
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label={labels.courierAgencyAddress}>
+                  <input
+                    className={fieldClass}
+                    value={values.fulfillment.courierAgencyAddress}
+                    maxLength={500}
+                    onChange={(event) =>
+                      onChange({
+                        ...values,
+                        fulfillment: {
+                          ...values.fulfillment,
+                          courierAgencyAddress: event.target.value,
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+            </div>
           ) : (
             <p className="text-on-surface-variant text-sm">{labels.pickup}</p>
           )}
