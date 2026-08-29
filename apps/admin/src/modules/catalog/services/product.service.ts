@@ -221,14 +221,21 @@ export async function listProductsPageService(
   if (!parsed.success) return { ok: false, error: "VALIDATION" };
 
   const { page, pageSize, search, categoryId, status } = parsed.data;
-  const { rows, total } = await listProductsPageRepo(
+  const {
+    rows,
+    total,
+    page: resolvedPage,
+  } = await listProductsPageRepo(
     config,
     { search, categoryId, status },
     { page, pageSize },
   );
 
   if (rows.length === 0) {
-    return { ok: true, data: { items: [], page, pageSize, total } };
+    return {
+      ok: true,
+      data: { items: [], page: resolvedPage, pageSize, total },
+    };
   }
 
   const campaignIds = [
@@ -250,7 +257,7 @@ export async function listProductsPageService(
     ),
   );
 
-  return { ok: true, data: { items, page, pageSize, total } };
+  return { ok: true, data: { items, page: resolvedPage, pageSize, total } };
 }
 
 export async function getProductService(

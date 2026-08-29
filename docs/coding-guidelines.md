@@ -129,6 +129,11 @@ envío de correo.
 Detalle del caso email: [`packages/notifications/README.md`](../packages/notifications/README.md) ·
 [`rules/95-guardrails-lint-ci.md`](rules/95-guardrails-lint-ci.md).
 
+**Imágenes CDN (admin):** si `image_url` apunta a `NEXT_PUBLIC_MEDIA_CDN_BASE_URL`
+(CloudFront), usar `isMediaCdnImageUrl` (`apps/admin/src/shared/helpers/cdn-image.helpers.ts`)
+y `unoptimized` en `next/image` — el CDN ya entrega el asset; el optimizador de
+Next añade latencia y un hop extra vía `/_next/image`. Ver [`infra.md`](infra.md) § App admin.
+
 ## Variables de entorno
 
 Al **agregar una variable de entorno nueva**, completar **todos** estos pasos (si falta uno, Vercel/Turbo falla aunque la var exista en el dashboard):

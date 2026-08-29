@@ -52,6 +52,24 @@
 | 43 | Envío courier (agencia nacional) | ✅ | **`courier`** ≠ `delivery` (Piura local). Catálogo `pricing.courier_departments` con provincias fijas en JSON `provinces[]` (`slug`, `name`, `enabled`); staff togglea dept/provincia. Kill switch `delivery_settings.courier_enabled`. Guest ecommerce: `delivery` \| `pickup_point` \| `courier`; **`shipping_total = 0`** (flete en agencia). Snapshot `fulfillment.courier` (destino + DNI/nombre/dirección agencia). Provincia **Piura** excluida del seed courier (cobertura local vía `delivery`). Migración `00031`. Brief: S4-11 |
 | 44 | Storefront settings (reglas de tienda) | ✅ | Singleton tipado `core.storefront_settings` **≠** `delivery_settings` (tarifas base) **≠** `public_business_settings` (contacto/pagos). Promo envío gratis por método (`free_delivery` / `free_pickup_point`) + ventana opcional compartida; overlay de fee → 0 sin tocar fees de zona/punto. `min_order_subtotal` sobre `subtotal` (guest; admin order-form no bloquea). Aviso `announcement_*` en checkout. Migración `00032`. Regla 32. Brief: S4-12 |
 
+## Docs sincronizados (2026-08-29 — búsqueda productos admin + middleware + CDN thumbs)
+
+- Migración `00033_products_list_search_indexes.sql` — `pg_trgm` + GIN en
+  `catalog.products.name` / `sku`; índice parcial `(is_active, name, id)`
+  para listados admin (`ProductSearchPicker`, `/products`)
+- `listProductsPageRepo` — búsqueda `ILIKE` name/sku con escape; retry
+  página 1 ante PostgREST 416 (`range not satisfiable`)
+- `ProductSearchPicker` — debounce **450 ms**, `keepPreviousData`, tope
+  **3** auto-avances por `excludeIds`, sync si servidor devuelve `page: 1`
+- Admin thumbs CDN — `isMediaCdnImageUrl` + `unoptimized` en `next/image`
+  (CloudFront ya optimizado; evita proxy `/_next/image`)
+- Middleware — `getMiddlewareSupabaseConfig()` (solo `NEXT_PUBLIC_*` en Edge);
+  `shouldRefreshSession` omite refresh en POST / header `Next-Action`;
+  logs JSON `middleware.session` con `MIDDLEWARE_TIMING_LOG=1` o en dev
+- Docs: `database.md`, `rules/10`, `rules/50`, `infra.md`,
+  `coding-guidelines.md`, README catalog; tests `product.repository`,
+  `proxy.test`
+
 ## Docs sincronizados (2026-08-25 — storefront settings / reglas de tienda)
 
 - DECISIONS **#44** — singleton `core.storefront_settings` separado de

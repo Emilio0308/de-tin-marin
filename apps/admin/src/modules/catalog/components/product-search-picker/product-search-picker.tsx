@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { Candy, Search } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { isMediaCdnImageUrl } from "@/shared/helpers/cdn-image.helpers";
 import { shouldShowItemsPerPackage } from "./product-search-picker.helpers";
 import type {
   ProductSearchPickerItem,
@@ -28,7 +29,14 @@ function ProductThumb({ url, name }: { url: string | null; name: string }) {
 
   return (
     <div className="bg-surface-container relative h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-      <Image src={url} alt={name} fill sizes="44px" className="object-cover" />
+      <Image
+        src={url}
+        alt={name}
+        fill
+        sizes="44px"
+        unoptimized={isMediaCdnImageUrl(url)}
+        className="object-cover"
+      />
     </div>
   );
 }

@@ -71,7 +71,7 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 ## Repositories (`repositories/`)
 
 - `category.repository.ts` — `listCategoriesPageRepo` (search name/slug, status, orden `sort_order`)
-- `product.repository.ts` — `listProductsPageRepo` (search name/sku, categoryId, status, orden `name`)
+- `product.repository.ts` — `listProductsPageRepo` (search name/sku ILIKE con escape, categoryId, status, orden `name`/`id`; retry página 1 si PostgREST 416). Índices GIN/trgm: migración `00033`
 - `bundle.repository.ts` — `listBundlesPageRepo` (search name, status, orden `created_at desc`)
 - `pack.repository.ts` — `listPacksPageRepo` (search name/sku, status, orden `created_at desc`)
 - `surprise-container.repository.ts` — `listSurpriseContainersPageRepo` (search name/sku, status incl. `outOfStock`, orden `name`)
@@ -130,14 +130,14 @@ Ver brief [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-li
 
 `components/product-search-picker/` — usado en pack-form, bundle-form y order-form.
 
-| Detalle       | Valor                                                                                                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Boundary      | `listProductsPageAction` (`status` default `"active"`)                                                                                                                           |
-| pageSize      | `ADMIN_DEFAULT_PAGE_SIZE` (hoy **5**)                                                                                                                                            |
-| Búsqueda      | Debounce 300 ms; reset de página/acumulado al cambiar search/status                                                                                                              |
-| Paginación UI | Scroll infinito (`IntersectionObserver` + sentinel); sin botón “Cargar más”                                                                                                      |
-| excludeIds    | Filtra en cliente; si la página visible queda vacía y hay más total, pide la siguiente sola                                                                                      |
-| UI fila       | Thumb (`imageUrl` o placeholder), nombre, precio unidad (`unitNetPrice`), und./presentación si `productType === "package"` o `itemsPerPackage > 1` (`shouldShowItemsPerPackage`) |
-| Colaterales   | `*.types.ts`, `*.helpers.ts`, `*.test.tsx`                                                                                                                                       |
+| Detalle       | Valor                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Boundary      | `listProductsPageAction` (`status` default `"active"`)                                                                                                                                                |
+| pageSize      | `ADMIN_DEFAULT_PAGE_SIZE` (hoy **5**)                                                                                                                                                                 |
+| Búsqueda      | Debounce 450 ms; `keepPreviousData`; query solo cuando el draft está asentado; reset de página/acumulado al cambiar search/status                                                                     |
+| Paginación UI | Scroll infinito (`IntersectionObserver` + sentinel); sin botón “Cargar más”                                                                                                                           |
+| excludeIds    | Filtra en cliente; si la página visible queda vacía y hay más total, pide la siguiente (máx. **3** auto-avances); repo también normaliza a página 1 ante 416                                          |
+| UI fila       | Thumb (`imageUrl` o placeholder; CDN → `unoptimized`), nombre, precio unidad (`unitNetPrice`), und./presentación si `productType === "package"` o `itemsPerPackage > 1` (`shouldShowItemsPerPackage`) |
+| Colaterales   | `*.types.ts`, `*.helpers.ts`, `*.test.tsx`                                                                                                                                                            |
 
 No sustituye la validación de write (create/update solo productos activos — Regla 6 / 23).

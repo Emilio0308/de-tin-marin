@@ -154,6 +154,9 @@ Igual que cambiar Supabase URL entre preview/production: **mismo código, distin
 - En Vercel las vars deben existir **y** estar listadas en `turbo.json` → `tasks.build.env` (si no, Turbo no las inyecta al build aunque estén en el dashboard).
 - Catálogo sigue guardando **URL texto** en `image_url`; no hay tabla de assets en v1.
 - Ecommerce **no** necesita credenciales AWS: solo muestra `imageUrl`.
+- **Admin listados / picker:** URLs bajo `NEXT_PUBLIC_MEDIA_CDN_BASE_URL` usan
+  `isMediaCdnImageUrl` + `unoptimized` en `next/image` (CloudFront ya sirve el
+  asset; evita doble optimización vía `/_next/image`).
 
 ## Checklist antes de prod
 

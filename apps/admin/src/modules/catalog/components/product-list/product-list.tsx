@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AlertTriangle, Candy, Package, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { isMediaCdnImageUrl } from "@/shared/helpers/cdn-image.helpers";
 import type { ProductListItem } from "@de-tin-marin/validations/product";
 import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import type { ProductListLabels, ProductListProps } from "./product-list.types";
@@ -77,7 +78,14 @@ function ProductThumb({
     <div
       className={cn("bg-surface-container relative overflow-hidden", className)}
     >
-      <Image src={url} alt={name} fill sizes="80px" className="object-cover" />
+      <Image
+        src={url}
+        alt={name}
+        fill
+        sizes="80px"
+        unoptimized={isMediaCdnImageUrl(url)}
+        className="object-cover"
+      />
     </div>
   );
 }

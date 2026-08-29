@@ -1,12 +1,14 @@
 import { type NextRequest } from "next/server";
+import { getMiddlewareSupabaseConfig } from "@de-tin-marin/db/config";
 import { updateSession } from "@de-tin-marin/db/proxy";
-import { supabaseConfig } from "@/config/env";
 
+// Timing logs: MIDDLEWARE_TIMING_LOG=1 en Vercel o automático en development.
 export async function middleware(request: NextRequest) {
   const isLogin = request.nextUrl.pathname.startsWith("/login");
 
   return updateSession(request, {
-    ...supabaseConfig,
+    ...getMiddlewareSupabaseConfig(),
+    app: "admin",
     redirectIfUnauthed: !isLogin,
     loginPath: "/login",
     publicPrefixes: ["/login", "/auth"],
