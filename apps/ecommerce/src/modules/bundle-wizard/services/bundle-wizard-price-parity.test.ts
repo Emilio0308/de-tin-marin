@@ -76,10 +76,11 @@ describe("bundle wizard price parity", () => {
     if (!line || line.type !== "bundle") return;
 
     expect(line.quantity).toBe(quantity);
-    expect(line.lineTotal).toBe(templateTotal.total);
-    expect(Math.abs(line.lineTotal - templateTotal.total)).toBeLessThanOrEqual(
-      0.01,
-    );
+    expect(line.normalizedLineTotal).toBe(templateTotal.total);
+    expect(line.lineTotal).toBe(templateTotal.lineTotal);
+    expect(
+      Math.abs(line.normalizedLineTotal - templateTotal.total),
+    ).toBeLessThanOrEqual(0.01);
   });
 
   it("cantidad distinta a la plantilla escala lineTotal proporcionalmente", () => {
@@ -153,6 +154,7 @@ describe("bundle wizard price parity", () => {
     expect(line?.type).toBe("bundle");
     if (!line || line.type !== "bundle") return;
     expect(line.quantity).toBe(30);
-    expect(line.lineTotal).toBe(expected.total);
+    expect(line.normalizedLineTotal).toBe(expected.total);
+    expect(line.lineTotal).toBe(expected.lineTotal);
   });
 });

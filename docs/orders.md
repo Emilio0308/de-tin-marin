@@ -36,15 +36,27 @@ type ShoppingCartLine =
       bundleId: string;
       name: string;
       quantity: number;
-      serviceFee: number;
+      container?: {
+        containerId: string;
+        sku: string;
+        name: string;
+        unitPrice: number;
+      };
+      /** @deprecated Legacy pre-S1E */
+      serviceFee?: number;
+      /** Crudo: quantity × (envase + Σ unitPrice × quantityPerUnit). Auditoría. */
       lineTotal: number;
+      /** Comercial por sorpresa (ceil al step; DECISIONS #45). */
+      normalizedPerSurprisePrice?: number;
+      /** Cobro/UI: quantity × normalizedPerSurprisePrice. Legacy: omitido → usa lineTotal. */
+      normalizedLineTotal?: number;
       components: Array<{
         productId: string;
         productName: string;
         sku: string;
         quantityPerUnit: number;
-        /** Unidades base consumidas (Regla 15). */
         totalQuantity: number;
+        /** prices.unit.netPrice al congelar (sin campaña en componentes v1). */
         unitPrice: number;
       }>;
     }
@@ -102,7 +114,18 @@ Migración `00024_product_line_dual_quantity.sql`. Reemplaza el campo legacy `qu
 
 Ejemplo admin Lay’s (`ipp = 10`): pedido 2 tiras + 7 bolsas → congelado `packageQuantity: 2`, `unitQuantity: 7`. Pedido 2 tiras + 15 bolsas → normaliza a `packageQuantity: 3`, `unitQuantity: 5`.
 
-Helpers canónicos: `buildProductLine`, `normalizeProductLineQuantities`, `computeOrderTotals`, `deriveAdjustmentsFromFinalPrice` en `@de-tin-marin/shared/order-cart`; clamp admin en `@de-tin-marin/shared/product-purchase-limits`.
+Helpers canónicos: `buildProductLine`, `normalizeProductLineQuantities`, `computeOrderTotals`, `getBundleLineChargeableTotal`, `deriveAdjustmentsFromFinalPrice` en `@de-tin-marin/shared/order-cart`; clamp admin en `@de-tin-marin/shared/product-purchase-limits`. Precio sorpresa: `@de-tin-marin/shared/bundle-price` (Regla 8 / DECISIONS #45).
+
+### Línea `type: "bundle"` — precio crudo vs cobrable (DECISIONS #45)
+
+| Campo                        | Significado                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `lineTotal`                  | Total **crudo** congelado (`quantity × rawPerSurprise`) — auditoría              |
+| `normalizedPerSurprisePrice` | Precio comercial por sorpresa tras `normalizeBundlePrice` (step default S/ 0.50) |
+| `normalizedLineTotal`        | **Cobro** = `quantity × normalizedPerSurprisePrice`                              |
+| `components[].unitPrice`     | `prices.unit.netPrice` al armar (sin campaña en componentes v1)                  |
+
+**Totales de orden:** `computeOrderTotals` / `subtotal` suman `getBundleLineChargeableTotal(line)` → `normalizedLineTotal ?? lineTotal`. Checkout drift compara el cobrable, no el crudo.
 
 ### Sorpresa personalizada: límites por plantilla
 
@@ -152,11 +175,12 @@ Constantes: `BUNDLE_LINE_QUANTITY_MIN = 15` y
 Plantilla: productos 1–5, `bundles.quantity = 25` sorpresas. Cliente modifica
 composición → productos 1,2,3,5,6,8 y deja cantidad 30.
 
-Línea `type: "bundle"` con `quantity: 30`, `container` congelado y 6
+Línea `type: "bundle"` con `quantity: 30`, `container` congelado, `lineTotal` crudo,
+`normalizedPerSurprisePrice` / `normalizedLineTotal` comercial, y 6
 `components`. Si cada dulce queda en `quantityPerUnit: 1`,
 `totalQuantity: 30` por componente; si el cliente sube un dulce a
 `quantityPerUnit: 2` (flag `enableUnitsPerPerson`), ese componente congela
-`totalQuantity: 60`. `unitPrice` = final del momento del preview.
+`totalQuantity: 60`. `unitPrice` = `prices.unit.netPrice` (sin campaña).
 
 ## Cabecera de la orden
 
@@ -182,13 +206,13 @@ Línea `type: "bundle"` con `quantity: 30`, `container` congelado y 6
 total = subtotal − discount_total + shipping_total + surcharge_total
 ```
 
-| Campo             | Quién lo setea                | Notas                                               |
-| ----------------- | ----------------------------- | --------------------------------------------------- |
-| `subtotal`        | Backend al crear              | Σ `lineTotal` del `shopping_cart`                   |
-| `shipping_total`  | Fee base + overlay storefront | No se recalcula post-checkout; promo → 0 (Regla 32) |
-| `discount_total`  | Admin (y 0 en guest)          | `>= 0`                                              |
-| `surcharge_total` | **Solo admin**                | `>= 0`; guest siempre `0`                           |
-| `total`           | Backend                       | Fórmula anterior; snapshot                          |
+| Campo             | Quién lo setea                | Notas                                                                                                              |
+| ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `subtotal`        | Backend al crear              | Σ cobrable por línea (`lineTotal` product/pack; bundle → `normalizedLineTotal` vía `getBundleLineChargeableTotal`) |
+| `shipping_total`  | Fee base + overlay storefront | No se recalcula post-checkout; promo → 0 (Regla 32)                                                                |
+| `discount_total`  | Admin (y 0 en guest)          | `>= 0`                                                                                                             |
+| `surcharge_total` | **Solo admin**                | `>= 0`; guest siempre `0`                                                                                          |
+| `total`           | Backend                       | Fórmula anterior; snapshot                                                                                         |
 
 **Admin — UI Totales (`order-form`):**
 
@@ -197,7 +221,7 @@ total = subtotal − discount_total + shipping_total + surcharge_total
 | **Precio final**        | El operador ingresa el **total a cobrar** (incluye envío). Shared `deriveAdjustmentsFromFinalPrice({ subtotal, shippingTotal, finalTotal })` calcula **XOR**: si `final < subtotal+shipping` → solo `discount`; si `final > base` → solo `surcharge`; si igual → ambos 0. |
 | **Descuento / recargo** | Inputs independientes; **pueden coexistir** (p. ej. descuento 5 + recargo 2).                                                                                                                                                                                             |
 
-Los ajustes **no** mutan `packagePrice` / `unitPrice` / `lineTotal` de las líneas (Regla 16).
+Los ajustes **no** mutan `packagePrice` / `unitPrice` / `lineTotal` crudo de las líneas (Regla 16). Bundles: el cobrable congelado es `normalizedLineTotal`.
 
 **Ejemplo (admin):** `subtotal = 100`, `shipping = 10` → base = 110.
 
@@ -477,13 +501,14 @@ src/modules/orders/          # admin
   components/order-detail/
 apps/ecommerce/.../cart|checkout|orders
 packages/shared/order-cart.ts
+packages/shared/bundle-price.ts
 packages/shared/product-purchase-limits.ts
 packages/validations/order.ts
 ```
 
 ## Tests obligatorios
 
-- Snapshot de sorpresa personalizada independiente de plantilla en `shopping_cart`
+- Snapshot bundle: `lineTotal` crudo + `normalizedLineTotal` cobrable (#45)
 - Product dual: normalize `unitQuantity >= ipp` → paquetes; `lineTotal` con ambos precios
 - Admin clamp dual `needBase ≤ availableBase`; ecommerce `unitQuantity = 0`
 - `deriveAdjustmentsFromFinalPrice` (discount XOR surcharge)
@@ -494,4 +519,4 @@ packages/validations/order.ts
 
 ## Reglas relacionadas
 
-Reglas 4, 13–18, 21, 24–25 en [`business-rules.md`](business-rules.md) · DECISIONS #26, #27, #29, #31, #33.
+Reglas 4, 7–8, 13–18, 21, 24–25 en [`business-rules.md`](business-rules.md) · DECISIONS #26, #27, #29, #31, #33, #45.

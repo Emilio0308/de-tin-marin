@@ -5,6 +5,7 @@ import {
   computeOrderTotals,
   deriveAdjustmentsFromFinalPrice,
   formatOrderNumber,
+  getBundleLineChargeableTotal,
   getBundleLineContainerUnitPrice,
   nextLogisticStatus,
   normalizeProductLineQuantities,
@@ -107,12 +108,91 @@ describe("buildShoppingCart", () => {
     expect(cart.lines[1]).toMatchObject({
       type: "bundle",
       lineTotal: 1500,
+      normalizedPerSurprisePrice: 60,
+      normalizedLineTotal: 1500,
       container: { unitPrice: 50 },
       components: [
         { totalQuantity: 25, unitPrice: 8 },
         { totalQuantity: 25, unitPrice: 2 },
       ],
     });
+  });
+
+  it("normalizes per-surprise price when raw has irregular cents", () => {
+    const cart = buildShoppingCart({
+      productsById: new Map([
+        [
+          "p-odd",
+          {
+            id: "p-odd",
+            sku: "ODD",
+            name: "Odd",
+            unitPrice: 4.33,
+            presentationPrice: 4.33,
+            itemsPerPackage: 1,
+          },
+        ],
+      ]),
+      lines: [
+        {
+          type: "bundle",
+          bundleId: "b1",
+          name: "Sorpresa",
+          quantity: 20,
+          container: {
+            containerId: "c1",
+            sku: "BOX",
+            name: "Caja",
+            unitPrice: 1.5,
+          },
+          components: [{ productId: "p-odd", quantityPerUnit: 1 }],
+        },
+      ],
+    });
+
+    const bundleLine = cart.lines[0];
+    expect(bundleLine?.type).toBe("bundle");
+    if (bundleLine?.type !== "bundle") return;
+
+    expect(bundleLine.lineTotal).toBe(116.6);
+    expect(bundleLine.normalizedPerSurprisePrice).toBe(6);
+    expect(bundleLine.normalizedLineTotal).toBe(120);
+    expect(getBundleLineChargeableTotal(bundleLine)).toBe(120);
+  });
+
+  it("computeOrderTotals uses normalized bundle line total", () => {
+    const cart = buildShoppingCart({
+      productsById: new Map([
+        [
+          "p-odd",
+          {
+            id: "p-odd",
+            sku: "ODD",
+            name: "Odd",
+            unitPrice: 4.33,
+            presentationPrice: 4.33,
+            itemsPerPackage: 1,
+          },
+        ],
+      ]),
+      lines: [
+        {
+          type: "bundle",
+          bundleId: "b1",
+          name: "Sorpresa",
+          quantity: 20,
+          container: {
+            containerId: "c1",
+            sku: "BOX",
+            name: "Caja",
+            unitPrice: 1.5,
+          },
+          components: [{ productId: "p-odd", quantityPerUnit: 1 }],
+        },
+      ],
+    });
+
+    expect(computeOrderTotals(cart).subtotal).toBe(120);
   });
 
   it("prices dual package + unit and normalizes", () => {

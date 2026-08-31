@@ -238,4 +238,62 @@ describe("buildOrderCart", () => {
       expect(result.shoppingCart.lines[0]?.type).toBe("bundle");
     }
   });
+
+  it("bundle usa prices.unit.netPrice aunque haya campaña en el producto", () => {
+    const packageProduct = {
+      id: "p3",
+      sku: "SKU-3",
+      name: "Paquete",
+      prices: { normal: { netPrice: 20 }, unit: { netPrice: 2 } },
+      campaign_id: "camp-1",
+      items_per_package: 10,
+    };
+    const result = buildOrderCart({
+      lines: [
+        {
+          type: "bundle",
+          bundleId: "b1",
+          quantity: 1,
+          components: [{ productId: "p3", quantityPerUnit: 1 }],
+        },
+      ],
+      products: [packageProduct],
+      campaigns: [
+        {
+          id: "camp-1",
+          percentage: 20,
+          starts_at: "2020-01-01T00:00:00Z",
+          ends_at: "2099-01-01T00:00:00Z",
+          is_active: true,
+        },
+      ],
+      bundlesById: new Map([
+        [
+          "b1",
+          {
+            id: "b1",
+            name: "Bundle",
+            is_active: true,
+            deleted_at: null,
+            container: {
+              id: "c1",
+              sku: "C-1",
+              name: "Caja",
+              prices: { netPrice: 1 },
+            },
+          },
+        ],
+      ]),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const line = result.shoppingCart.lines[0];
+    expect(line?.type).toBe("bundle");
+    if (line?.type !== "bundle") return;
+    expect(line.components[0]?.unitPrice).toBe(2);
+    expect(line.lineTotal).toBe(3);
+    expect(line.normalizedPerSurprisePrice).toBe(3);
+    expect(line.normalizedLineTotal).toBe(3);
+  });
 });

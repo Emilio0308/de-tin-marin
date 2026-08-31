@@ -29,7 +29,11 @@ export type BundleFormDTO = {
   items: BundleFormItemDTO[];
   itemsSubtotal: number;
   containerSubtotal: number;
+  /** Precio comercial normalizado (plantilla × quantity). */
   total: number;
+  /** Precio crudo sin normalizar. */
+  rawTotal: number;
+  normalizedPerSurprisePrice: number;
 };
 
 export type { BundleListItem };

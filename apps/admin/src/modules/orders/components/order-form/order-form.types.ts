@@ -151,6 +151,7 @@ export type OrderFormBundlePriceSummary = {
   itemsSubtotal: number;
   containerSubtotal: number;
   total: number;
+  rawTotal?: number;
 };
 
 export type OrderFormLabels = {
@@ -247,6 +248,11 @@ export type OrderFormLabels = {
   containerCostHint: (unitPrice: string, quantity: number) => string;
   unitPriceSuffix: string;
   customizeTotal: string;
+  formatBundleTheoreticalTotal: (price: string) => string;
+  formatBundlePerSurprisePrice: (
+    chargeable: string,
+    theoretical: string,
+  ) => string;
   addCandyAction: string;
   candyAlreadyAdded: string;
   searchCandies: string;

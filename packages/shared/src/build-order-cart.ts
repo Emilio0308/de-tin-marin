@@ -167,6 +167,17 @@ export function resolveProductsForOrder(
   );
 }
 
+export function resolveBundleComponentUnitPrices(
+  products: OrderProductSource[],
+): Map<string, number> {
+  return new Map(
+    products.map((product) => {
+      const { unitNetPrice } = parseProductPricesJson(product.prices);
+      return [product.id, roundMoney(unitNetPrice)] as const;
+    }),
+  );
+}
+
 function resolvePackUnitPrice(
   pack: OrderPackSource,
   campaignsById: Map<string, OrderCampaignSource>,
@@ -284,6 +295,9 @@ export function buildOrderCart(input: {
     input.campaigns.map((campaign) => [campaign.id, campaign]),
   );
   const productsById = resolveProductsForOrder(input.products, input.campaigns);
+  const bundleComponentUnitPricesById = resolveBundleComponentUnitPrices(
+    input.products,
+  );
   const enrichedLines = buildEnrichedCartLines(
     input.lines,
     input.bundlesById,
@@ -299,6 +313,7 @@ export function buildOrderCart(input: {
     const shoppingCart = buildShoppingCart({
       lines: enrichedLines,
       productsById,
+      bundleComponentUnitPricesById,
     });
     return { ok: true, shoppingCart };
   } catch {

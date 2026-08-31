@@ -13,6 +13,7 @@ import type {
   OrderShoppingCartPackLine,
   OrderShoppingCartProductLine,
 } from "@de-tin-marin/shared/order-cart";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import { coerceMoney, roundMoney } from "@de-tin-marin/shared/prices";
 import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { resolvePackPurchaseLimits } from "@/modules/catalog/components/pack-detail-page/pack-detail-page.helpers";
@@ -296,6 +297,8 @@ export function sanitizeStoredCartLine(entry: StoredCartLine): StoredCartLine {
     line: {
       ...line,
       lineTotal: coerceMoney(line.lineTotal),
+      normalizedPerSurprisePrice: coerceMoney(line.normalizedPerSurprisePrice),
+      normalizedLineTotal: coerceMoney(line.normalizedLineTotal),
       container: line.container
         ? {
             ...line.container,
@@ -373,13 +376,24 @@ export function applyServerCartPricing(
 
     if (entry.line.type === "bundle" && server.type === "bundle") {
       const bundleLine = entry.line;
-      if (bundleLine.lineTotal === server.lineTotal) return entry;
+      if (
+        bundleLine.lineTotal === server.lineTotal &&
+        bundleLine.normalizedPerSurprisePrice ===
+          server.normalizedPerSurprisePrice &&
+        bundleLine.normalizedLineTotal === server.normalizedLineTotal
+      ) {
+        return entry;
+      }
 
       return {
         ...entry,
         line: {
           ...bundleLine,
           lineTotal: coerceMoney(server.lineTotal),
+          normalizedPerSurprisePrice: coerceMoney(
+            server.normalizedPerSurprisePrice,
+          ),
+          normalizedLineTotal: coerceMoney(server.normalizedLineTotal),
           components: server.components.map((component, componentIndex) => {
             const existing = bundleLine.components[componentIndex];
             return existing
@@ -415,6 +429,14 @@ function cartPricingChanged(
   return next.some((entry, index) => {
     const previous = stored[index];
     if (!previous) return true;
+    if (
+      entry.line.type === "bundle" &&
+      previous.line.type === "bundle" &&
+      getBundleLineChargeableTotal(entry.line) !==
+        getBundleLineChargeableTotal(previous.line)
+    ) {
+      return true;
+    }
     if (entry.line.lineTotal !== previous.line.lineTotal) return true;
     if (
       (entry.line.type === "product" || entry.line.type === "pack") &&

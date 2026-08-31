@@ -52,7 +52,7 @@ function applyCampaign(
 
 Listados (producto o pack) hacen JOIN a `campaigns`, validan vigencia y devuelven `finalPrice` — **el front no recalcula**.
 
-Para bundles y costeo por sorpresa (S1D): `finalUnitPrice = finalPrice / items_per_package`. Sin campaña: `prices.unit.netPrice`.
+Para bundles y costeo por sorpresa (S1D / #45): siempre `prices.unit.netPrice` en componentes — **sin** campaña. Productos sueltos/packs en el mismo pedido sí usan `finalPrice`.
 
 Para packs (S1F): campaña sobre `prices.normal` del combo; `reference` no se descuenta por separado.
 

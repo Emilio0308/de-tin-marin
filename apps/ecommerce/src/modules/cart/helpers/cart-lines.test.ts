@@ -201,6 +201,59 @@ describe("applyServerCartPricing", () => {
     }
   });
 
+  it("sincroniza normalizedLineTotal en bundles", () => {
+    const stored: StoredCartLine[] = [
+      {
+        cartLineId: "bundle-1",
+        line: {
+          type: "bundle",
+          bundleId: "b1",
+          name: "Sorpresa",
+          quantity: 10,
+          lineTotal: 100,
+          normalizedPerSurprisePrice: 10,
+          normalizedLineTotal: 100,
+          container: {
+            containerId: "c1",
+            sku: "ENV-1",
+            name: "Caja",
+            unitPrice: 1,
+          },
+          components: [],
+        },
+      },
+    ];
+
+    const server = [
+      {
+        type: "bundle" as const,
+        bundleId: "b1",
+        name: "Sorpresa",
+        quantity: 10,
+        lineTotal: 101.5,
+        normalizedPerSurprisePrice: 10.5,
+        normalizedLineTotal: 105,
+        container: {
+          containerId: "c1",
+          sku: "ENV-1",
+          name: "Caja",
+          unitPrice: 1,
+        },
+        components: [],
+      },
+    ];
+
+    expect(shouldSyncCartPricing(stored, server)).toBe(true);
+
+    const synced = applyServerCartPricing(stored, server);
+    expect(synced[0]?.line.type).toBe("bundle");
+    if (synced[0]?.line.type === "bundle") {
+      expect(synced[0].line.lineTotal).toBe(101.5);
+      expect(synced[0].line.normalizedLineTotal).toBe(105);
+      expect(synced[0].line.normalizedPerSurprisePrice).toBe(10.5);
+    }
+  });
+
   it("coerce precios nulos del servidor", () => {
     const stored: StoredCartLine[] = [
       {

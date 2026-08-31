@@ -37,6 +37,11 @@ const labels: OrderDetailLabels = {
   summaryTitle: "Resumen",
   surpriseLine: "Sorpresa",
   formatQuantityLabel: (quantity) => `Cantidad: ${quantity}`,
+  bundlePrice: {
+    formatTheoreticalTotal: (price) => `Costo teórico (sin redondeo): ${price}`,
+    formatPerSurprisePrice: (chargeable, theoretical) =>
+      `Por sorpresa: ${chargeable} · teórico ${theoretical}`,
+  },
   formatProductDualQty: (packages, units) =>
     units > 0 ? `${packages} paq. + ${units} u.` : `${packages} paq.`,
   formatComponentsLabel: (count) => `Ver componentes (${count})`,
@@ -289,8 +294,10 @@ describe("OrderDetailView", () => {
             type: "bundle",
             bundleId: "00000000-0000-0000-0000-000000000010",
             name: "Sorpresa mediana",
-            quantity: 1,
-            lineTotal: 25,
+            quantity: 10,
+            lineTotal: 101.5,
+            normalizedPerSurprisePrice: 10.5,
+            normalizedLineTotal: 105,
             components: [
               {
                 productId: "00000000-0000-0000-0000-000000000011",
@@ -307,6 +314,10 @@ describe("OrderDetailView", () => {
     });
 
     expect(screen.getByText("Ver componentes (1)")).toBeInTheDocument();
+    expect(screen.getByText("S/ 105.00")).toBeInTheDocument();
+    expect(
+      screen.getByText("Costo teórico (sin redondeo): S/ 101.50"),
+    ).toBeInTheDocument();
     expect(screen.getByText("GOM-01")).toBeInTheDocument();
     expect(screen.getByText("Gomitas")).toBeInTheDocument();
     expect(screen.getByText("S/ 3.50")).toBeInTheDocument();

@@ -21,7 +21,9 @@ cart-page.container
 | Stock                           | `queryKeys.checkout.stock`   | Sí     |
 | Pricing preview                 | `queryKeys.cart.pricing`     | Sí     |
 
-Estado del carrito: `localStorage` vía `useCart` (líneas `product` | `bundle` | `pack`). **Precios** se recalculan en servidor con `previewGuestOrderCartAction` y se sincronizan al storage vía `useCartPricingPreview`.
+Estado del carrito: `localStorage` vía `useCart` (líneas `product` | `bundle` | `pack`). **Precios** se recalculan en servidor con `previewGuestOrderCartAction` y se sincronizan al storage vía `useCartPricingPreview` (bundles: `normalizedLineTotal`, `normalizedPerSurprisePrice` + `lineTotal` crudo).
+
+Display y totales de línea bundle usan `getBundleLineChargeableTotal` (DECISIONS #45 · brief [S4-13](../../../../docs/stages/S4/13-bundle-price-normalization.md)).
 
 ### Líneas `type: product` (DECISIONS #27)
 

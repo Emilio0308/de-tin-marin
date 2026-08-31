@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import type { OrderNotifyFulfillment, OrderNotifyLine } from "./types";
 
 function formatPackComponentQty(input: {
@@ -73,7 +74,7 @@ export function mapCartLinesToNotifyLines(
       kind: "bundle" as const,
       label: line.name,
       quantityLabel: `Sorpresa × ${line.quantity}`,
-      lineTotal: line.lineTotal,
+      lineTotal: getBundleLineChargeableTotal(line),
       footnote: containerNote,
       components: line.components.map((component) => {
         const perUnit = component.quantityPerUnit;

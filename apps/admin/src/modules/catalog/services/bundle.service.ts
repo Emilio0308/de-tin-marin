@@ -92,7 +92,7 @@ function toListItem(
 ): BundleListItem {
   const container = containersById.get(row.container_id);
   const containerNetPrice = container?.netPrice ?? 0;
-  const { total } = computeBundleTotal({
+  const pricing = computeBundleTotal({
     containerNetPrice,
     quantity: row.quantity,
     items: toPriceItems(items),
@@ -109,7 +109,9 @@ function toListItem(
     customizationMinProducts: row.customization_min_products,
     customizationMaxProducts: row.customization_max_products,
     itemCount: items.length,
-    total,
+    total: pricing.total,
+    rawTotal: pricing.lineTotal,
+    normalizedPerSurprisePrice: pricing.normalizedPerSurprisePrice,
     isActive: row.is_active,
   };
 }
@@ -119,7 +121,7 @@ function toFormDTO(
   items: BundleItemWithProduct[],
   container: { id: string; sku: string; name: string; netPrice: number },
 ): BundleFormDTO {
-  const { itemsSubtotal, containerSubtotal, total } = computeBundleTotal({
+  const pricing = computeBundleTotal({
     containerNetPrice: container.netPrice,
     quantity: row.quantity,
     items: toPriceItems(items),
@@ -138,9 +140,11 @@ function toFormDTO(
     customizationMaxProducts: row.customization_max_products,
     isActive: row.is_active,
     items: items.map(toFormItemDTO),
-    itemsSubtotal,
-    containerSubtotal,
-    total,
+    itemsSubtotal: pricing.itemsSubtotal,
+    containerSubtotal: pricing.containerSubtotal,
+    total: pricing.total,
+    rawTotal: pricing.lineTotal,
+    normalizedPerSurprisePrice: pricing.normalizedPerSurprisePrice,
   };
 }
 

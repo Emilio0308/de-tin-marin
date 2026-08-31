@@ -37,6 +37,7 @@ Documentación canónica del proyecto. La IA y los devs deben leer **solo lo rel
 - [stages/S4/10-order-status-in-transit-awaiting-pickup.md](stages/S4/10-order-status-in-transit-awaiting-pickup.md) — brief estados `in_transit` / `awaiting_pickup` ✅
 - [stages/S4/11-courier-shipping.md](stages/S4/11-courier-shipping.md) — brief envío courier (agencia nacional) ✅
 - [stages/S4/12-storefront-settings.md](stages/S4/12-storefront-settings.md) — brief reglas generales de tienda ✅
+- [stages/S4/13-bundle-price-normalization.md](stages/S4/13-bundle-price-normalization.md) — brief normalización precio sorpresa ✅
 - [stages/S3A/01-remediation-catalog-pagination-sql.md](stages/S3A/01-remediation-catalog-pagination-sql.md) — remediación paginación catálogo público ✅
 - [stages/S3B/01-admin-list-pagination.md](stages/S3B/01-admin-list-pagination.md) — paginación listados admin ✅
 - [stages/STAGE-BRIEF-TEMPLATE.md](stages/STAGE-BRIEF-TEMPLATE.md) — plantilla de briefs

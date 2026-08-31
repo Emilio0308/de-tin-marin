@@ -265,6 +265,10 @@ export function OrderFormContainer() {
         t("form.containerCostHint", { unitPrice, quantity }),
       unitPriceSuffix: t("form.unitPriceSuffix"),
       customizeTotal: t("form.customizeTotal"),
+      formatBundleTheoreticalTotal: (price) =>
+        t("form.bundleTheoreticalTotal", { price }),
+      formatBundlePerSurprisePrice: (chargeable, theoretical) =>
+        t("form.bundlePerSurprisePrice", { chargeable, theoretical }),
       addCandyAction: t("form.addCandyAction"),
       candyAlreadyAdded: t("form.candyAlreadyAdded"),
       searchCandies: t("form.searchCandies"),
@@ -594,7 +598,8 @@ export function OrderFormContainer() {
     ? {
         itemsSubtotal: bundlePreviewQuery.data.itemsSubtotal,
         containerSubtotal: bundlePreviewQuery.data.containerSubtotal,
-        total: bundlePreviewQuery.data.lineTotal,
+        total: bundlePreviewQuery.data.normalizedLineTotal,
+        rawTotal: bundlePreviewQuery.data.lineTotal,
       }
     : null;
 

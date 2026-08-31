@@ -343,6 +343,8 @@ export const orderShoppingCartBundleLineSchema = z.object({
   serviceFee: z.number().optional(),
   container: orderShoppingCartBundleContainerSchema.optional(),
   lineTotal: z.number(),
+  normalizedPerSurprisePrice: z.number().optional(),
+  normalizedLineTotal: z.number().optional(),
   components: z.array(
     z.object({
       productId: z.string().uuid(),

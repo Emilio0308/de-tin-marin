@@ -2,7 +2,7 @@
 
 CRUD de categorías, productos, sorpresas (bundles) y **combos (packs)** en `apps/admin`.
 
-Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [S4/02](../../../docs/stages/S4/02-product-cost-margin.md) _(costo/margen)_ · [S4/04](../../../docs/stages/S4/04-pack-dual-quantities.md) _(BOM pack dual)_
+Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [S4/02](../../../docs/stages/S4/02-product-cost-margin.md) _(costo/margen)_ · [S4/04](../../../docs/stages/S4/04-pack-dual-quantities.md) _(BOM pack dual)_ · [S4/13](../../../docs/stages/S4/13-bundle-price-normalization.md) _(precio sorpresa normalizado)_
 
 ## Capas
 
@@ -60,7 +60,7 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 
 - `category.service.ts`
 - `product.service.ts` — usa `computeFinalPrice` + `computeProductMargin` (costo admin)
-- `bundle.service.ts` — usa `computeBundleTotal`; persiste límites de
+- `bundle.service.ts` — usa `computeBundleTotal` (`total` = precio comercial normalizado; `rawTotal` + `normalizedPerSurprisePrice` en list/form admin); persiste límites de
   personalización por sorpresa (`customizationMinProducts` /
   `customizationMaxProducts`). El rango es `1 ≤ min ≤ max ≤ 100`, con
   defaults 8/20, y la composición base debe cumplirlo. Create/update

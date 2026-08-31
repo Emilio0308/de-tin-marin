@@ -46,6 +46,8 @@ describe("mapCartLinesToNotifyLines", () => {
         name: "Sorpresa cumpleaños",
         quantity: 15,
         lineTotal: 150,
+        normalizedPerSurprisePrice: 11,
+        normalizedLineTotal: 165,
         container: {
           containerId: "c1",
           sku: "ENV-1",
@@ -86,6 +88,7 @@ describe("mapCartLinesToNotifyLines", () => {
       kind: "bundle",
       label: "Sorpresa cumpleaños",
       quantityLabel: "Sorpresa × 15",
+      lineTotal: 165,
       footnote: "Incluye envase: Caja rosa",
     });
     expect(mapped[2]?.components).toEqual([

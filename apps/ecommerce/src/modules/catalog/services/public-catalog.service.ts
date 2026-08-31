@@ -136,7 +136,7 @@ function toBundleListItem(
   const activeItems = items.filter(isActiveBundleItem);
   const container = containersById.get(row.container_id);
   const containerNetPrice = container?.netPrice ?? 0;
-  const { total } = computeBundleTotal({
+  const pricing = computeBundleTotal({
     containerNetPrice,
     quantity: row.quantity,
     items: activeItems.map((item) => ({
@@ -152,7 +152,7 @@ function toBundleListItem(
     imageUrl: normalizeImageUrl(row.image_url),
     quantity: row.quantity,
     containerName: container?.name ?? "—",
-    total,
+    total: pricing.total,
     itemCount: activeItems.length,
     itemsPreview: buildItemsPreview(items).slice(0, 4),
   };
