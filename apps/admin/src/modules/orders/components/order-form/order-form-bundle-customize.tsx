@@ -14,6 +14,7 @@ import {
   removeBundleComponent,
 } from "./order-form-bundle.helpers";
 import { validateBundleCustomization } from "@de-tin-marin/validations/customize-bundle";
+import { OrderBundlePriceDisplay } from "../order-bundle-price-display/order-bundle-price-display";
 import type {
   OrderFormBundleComponent,
   OrderFormBundlePriceSummary,
@@ -85,6 +86,8 @@ export type OrderFormBundleCustomizeProps = {
     containerCostHint: (unitPrice: string, quantity: number) => string;
     unitPriceSuffix: string;
     customizeTotal: string;
+    formatTheoreticalTotal: (price: string) => string;
+    formatPerSurprisePrice: (chargeable: string, theoretical: string) => string;
     addCandyAction: string;
     candyAlreadyAdded: string;
     searchCandies: string;
@@ -403,13 +406,20 @@ export function OrderFormBundleCustomize({
               )}
             </p>
             <div className="bg-primary/20 h-px w-full" />
-            <div className="flex items-center justify-between gap-4">
-              <span className="font-label text-label-bold text-primary text-sm uppercase">
+            <div className="flex items-start justify-between gap-4">
+              <span className="font-label text-label-bold text-primary pt-0.5 text-sm uppercase">
                 {labels.customizeTotal}
               </span>
-              <span className="font-display text-primary text-xl font-extrabold">
-                {formatPrice(priceSummary.total)}
-              </span>
+              <OrderBundlePriceDisplay
+                variant="summary"
+                chargeableTotal={priceSummary.total}
+                rawTotal={priceSummary.rawTotal ?? priceSummary.total}
+                quantity={quantity}
+                labels={{
+                  formatTheoreticalTotal: labels.formatTheoreticalTotal,
+                  formatPerSurprisePrice: labels.formatPerSurprisePrice,
+                }}
+              />
             </div>
           </>
         ) : null}

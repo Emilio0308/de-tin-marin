@@ -8,12 +8,18 @@ Wizard de personalización de sorpresas (S3A-2), integrado con el carrito (S3A-3
 
 ## Boundaries
 
-| Action / Service           | Descripción                                                                                     |
-| -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `getBundleForWizardAction` | Plantilla + `description` + items + container + `personCount` (= `bundles.quantity`, sorpresas) |
-| `previewBundleLineAction`  | Preview precio + stock con `quantity` editable (15–100)                                         |
+| Action / Service           | Descripción                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `getBundleForWizardAction` | Plantilla + `description` + items + container + `personCount` (= `bundles.quantity`, sorpresas)                     |
+| `previewBundleLineAction`  | Preview precio + stock con `quantity` editable (15–100); devuelve `normalizedLineTotal` (cobro) y `lineTotal` crudo |
 
 UI: si `template.description` no es `null`, se muestra bajo el encabezado de la plantilla.
+
+## Precio (DECISIONS #45)
+
+- Componentes: `prices.unit.netPrice` (sin campaña v1).
+- UI del wizard muestra `normalizedLineTotal` del preview.
+- Paridad con catálogo: `computeBundleTotal.total` = precio comercial normalizado (step S/ 0.50 hacia arriba).
 
 ## Cantidad de sorpresas
 
@@ -35,7 +41,7 @@ Con `storeFeatures.enableUnitsPerPerson = true` (activo):
 
 Flag off → UI sin stepper; `quantityPerUnit` forzado a 1 al agregar.
 
-Canónico: DECISIONS #22 · Regla 7 · brief S3A-2.
+Canónico: DECISIONS #22 · Regla 7 · brief S3A-2 · normalización precio S4-13 / #45.
 
 ## Integración con carrito
 

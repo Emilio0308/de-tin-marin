@@ -12,6 +12,7 @@ import {
   aggregateStockDemands,
   checkOrderStock,
 } from "@de-tin-marin/shared/check-order-stock";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import { resolveCheckoutFulfillmentFee } from "@de-tin-marin/shared/checkout-coverage";
 import { normalizeProvinceSlug } from "@de-tin-marin/shared/courier-coverage";
 import {
@@ -496,7 +497,11 @@ export async function previewGuestOrderCartService(
       discountTotal: cartResult.totals.discountTotal,
       shippingTotal: cartResult.totals.shippingTotal,
       total: cartResult.totals.total,
-      lineTotals: cartResult.shoppingCart.lines.map((line) => line.lineTotal),
+      lineTotals: cartResult.shoppingCart.lines.map((line) =>
+        line.type === "bundle"
+          ? getBundleLineChargeableTotal(line)
+          : line.lineTotal,
+      ),
       lines: cartResult.shoppingCart.lines,
     },
   };
@@ -980,7 +985,12 @@ function detectSnapshotPriceDrift(
     }
 
     if (local.type === "bundle" && server.type === "bundle") {
-      if (local.lineTotal !== server.lineTotal) return true;
+      if (
+        getBundleLineChargeableTotal(local) !==
+        getBundleLineChargeableTotal(server)
+      ) {
+        return true;
+      }
     }
   }
 

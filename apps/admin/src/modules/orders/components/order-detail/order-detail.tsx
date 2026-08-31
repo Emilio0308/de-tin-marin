@@ -18,10 +18,12 @@ import {
 import { cn } from "@de-tin-marin/shared/cn";
 import {
   canTransitionOrderStatus,
+  getBundleLineChargeableTotal,
   type OrderStatus,
 } from "@de-tin-marin/shared/order-cart";
 import { Button } from "@de-tin-marin/ui/button";
 import { OrderLocationMap } from "../order-location-map/order-location-map.dynamic";
+import { OrderBundlePriceDisplay } from "../order-bundle-price-display/order-bundle-price-display";
 import { parseOrderMapPin } from "../order-location-map/order-location-map.helpers";
 import {
   orderStatusBadgeClass,
@@ -506,9 +508,12 @@ export function OrderDetailView({
                           </p>
                         </div>
                       </div>
-                      <p className="font-display text-primary shrink-0 text-lg font-extrabold">
-                        S/ {line.lineTotal.toFixed(2)}
-                      </p>
+                      <OrderBundlePriceDisplay
+                        chargeableTotal={getBundleLineChargeableTotal(line)}
+                        rawTotal={line.lineTotal}
+                        quantity={line.quantity}
+                        labels={labels.bundlePrice}
+                      />
                     </div>
                     {line.components.length > 0 ? (
                       <details className="border-outline-variant/40 bg-surface-container-lowest/80 group relative z-10 rounded-lg border">

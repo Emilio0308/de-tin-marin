@@ -82,6 +82,8 @@ describe("previewAdminBundleLineService", () => {
 
     // dulces: 2 * 1 * 3 * 8 = 48; envases: 10 * 3 = 30 → 78
     expect(result.data.lineTotal).toBe(78);
+    expect(result.data.normalizedLineTotal).toBe(78);
+    expect(result.data.normalizedPerSurprisePrice).toBe(26);
     expect(result.data.containerSubtotal).toBe(30);
     expect(result.data.itemsSubtotal).toBe(48);
   });

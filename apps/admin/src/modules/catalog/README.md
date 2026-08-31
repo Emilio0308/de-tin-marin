@@ -2,7 +2,7 @@
 
 CRUD de categorías, productos, sorpresas (bundles) y **combos (packs)** en `apps/admin`.
 
-Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [S4/02](../../../docs/stages/S4/02-product-cost-margin.md) _(costo/margen)_ · [S4/04](../../../docs/stages/S4/04-pack-dual-quantities.md) _(BOM pack dual)_
+Briefs: [S1A](../../../docs/stages/S1A/01-catalog-products-categories.md) · [S1B](../../../docs/stages/S1B/01-bundles.md) · [S1D](../../../docs/stages/S1D/01-products-packages-stock.md) · [S1F](../../../docs/stages/S1F/01-catalog-packs.md) · [S4/02](../../../docs/stages/S4/02-product-cost-margin.md) _(costo/margen)_ · [S4/04](../../../docs/stages/S4/04-pack-dual-quantities.md) _(BOM pack dual)_ · [S4/13](../../../docs/stages/S4/13-bundle-price-normalization.md) _(precio sorpresa normalizado)_
 
 ## Capas
 
@@ -60,7 +60,7 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 
 - `category.service.ts`
 - `product.service.ts` — usa `computeFinalPrice` + `computeProductMargin` (costo admin)
-- `bundle.service.ts` — usa `computeBundleTotal`; persiste límites de
+- `bundle.service.ts` — usa `computeBundleTotal` (`total` = precio comercial normalizado; `rawTotal` + `normalizedPerSurprisePrice` en list/form admin); persiste límites de
   personalización por sorpresa (`customizationMinProducts` /
   `customizationMaxProducts`). El rango es `1 ≤ min ≤ max ≤ 100`, con
   defaults 8/20, y la composición base debe cumplirlo. Create/update
@@ -71,7 +71,7 @@ Ver [S0-03](../../../docs/stages/S0/03-admin-pack-image-upload.md) · [infra.md]
 ## Repositories (`repositories/`)
 
 - `category.repository.ts` — `listCategoriesPageRepo` (search name/slug, status, orden `sort_order`)
-- `product.repository.ts` — `listProductsPageRepo` (search name/sku, categoryId, status, orden `name`)
+- `product.repository.ts` — `listProductsPageRepo` (search name/sku ILIKE con escape, categoryId, status, orden `name`/`id`; retry página 1 si PostgREST 416). Índices GIN/trgm: migración `00033`
 - `bundle.repository.ts` — `listBundlesPageRepo` (search name, status, orden `created_at desc`)
 - `pack.repository.ts` — `listPacksPageRepo` (search name/sku, status, orden `created_at desc`)
 - `surprise-container.repository.ts` — `listSurpriseContainersPageRepo` (search name/sku, status incl. `outOfStock`, orden `name`)
@@ -130,14 +130,14 @@ Ver brief [S3B/01-admin-list-pagination.md](../../../docs/stages/S3B/01-admin-li
 
 `components/product-search-picker/` — usado en pack-form, bundle-form y order-form.
 
-| Detalle       | Valor                                                                                                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Boundary      | `listProductsPageAction` (`status` default `"active"`)                                                                                                                           |
-| pageSize      | `ADMIN_DEFAULT_PAGE_SIZE` (hoy **5**)                                                                                                                                            |
-| Búsqueda      | Debounce 300 ms; reset de página/acumulado al cambiar search/status                                                                                                              |
-| Paginación UI | Scroll infinito (`IntersectionObserver` + sentinel); sin botón “Cargar más”                                                                                                      |
-| excludeIds    | Filtra en cliente; si la página visible queda vacía y hay más total, pide la siguiente sola                                                                                      |
-| UI fila       | Thumb (`imageUrl` o placeholder), nombre, precio unidad (`unitNetPrice`), und./presentación si `productType === "package"` o `itemsPerPackage > 1` (`shouldShowItemsPerPackage`) |
-| Colaterales   | `*.types.ts`, `*.helpers.ts`, `*.test.tsx`                                                                                                                                       |
+| Detalle       | Valor                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Boundary      | `listProductsPageAction` (`status` default `"active"`)                                                                                                                                                |
+| pageSize      | `ADMIN_DEFAULT_PAGE_SIZE` (hoy **5**)                                                                                                                                                                 |
+| Búsqueda      | Debounce 450 ms; `keepPreviousData`; query solo cuando el draft está asentado; reset de página/acumulado al cambiar search/status                                                                     |
+| Paginación UI | Scroll infinito (`IntersectionObserver` + sentinel); sin botón “Cargar más”                                                                                                                           |
+| excludeIds    | Filtra en cliente; si la página visible queda vacía y hay más total, pide la siguiente (máx. **3** auto-avances); repo también normaliza a página 1 ante 416                                          |
+| UI fila       | Thumb (`imageUrl` o placeholder; CDN → `unoptimized`), nombre, precio unidad (`unitNetPrice`), und./presentación si `productType === "package"` o `itemsPerPackage > 1` (`shouldShowItemsPerPackage`) |
+| Colaterales   | `*.types.ts`, `*.helpers.ts`, `*.test.tsx`                                                                                                                                                            |
 
 No sustituye la validación de write (create/update solo productos activos — Regla 6 / 23).

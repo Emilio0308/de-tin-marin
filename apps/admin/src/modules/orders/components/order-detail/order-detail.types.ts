@@ -2,6 +2,7 @@ import type { OrderStatus } from "@de-tin-marin/shared/order-cart";
 import type { OrderFulfillmentMethod } from "@de-tin-marin/shared/delivery-fee";
 import type { OrderDetail } from "@de-tin-marin/validations/order";
 import type { ShipmentStatus } from "@de-tin-marin/validations/shipment";
+import type { OrderBundlePriceDisplayLabels } from "../order-bundle-price-display/order-bundle-price-display.types";
 
 export type TransitionShipmentInput = {
   carrier: string;
@@ -24,6 +25,7 @@ export type OrderDetailLabels = {
   summaryTitle: string;
   surpriseLine: string;
   formatQuantityLabel: (quantity: number) => string;
+  bundlePrice: OrderBundlePriceDisplayLabels;
   formatProductDualQty: (packages: number, units: number) => string;
   formatComponentsLabel: (count: number) => string;
   componentSku: string;

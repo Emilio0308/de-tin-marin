@@ -426,6 +426,18 @@ Separado de `/delivery` y `/business-settings`.
 
 **Depends on:** S1E ✅, S3A-3 ✅, S4-08 ✅, S4-11 ✅
 
+### S4-13 — Normalización precio sorpresa ✅
+
+**Goal:** Precio comercial por sorpresa con redondeo hacia arriba (step S/ 0.50);
+snapshot dual raw/normalizado; cobro vía `getBundleLineChargeableTotal`.
+
+- [x] `@de-tin-marin/shared/bundle-price` + propagación order-cart/build-order-cart
+- [x] DTOs, servicios, UI admin/ecommerce, notificaciones/reportes
+- DECISIONS **#45** · Regla **8**
+- Brief: [`docs/stages/S4/13-bundle-price-normalization.md`](stages/S4/13-bundle-price-normalization.md)
+
+**Depends on:** S1B ✅, S1D ✅, S1E ✅, S3A-2 ✅
+
 ### Pendiente S4
 
 - Customers (sin VIP v1)

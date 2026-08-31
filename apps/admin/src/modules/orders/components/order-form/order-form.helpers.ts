@@ -1,6 +1,7 @@
 import {
   buildShoppingCart,
   computeOrderTotals,
+  getBundleLineChargeableTotal,
   type BuildBundleLineInput,
   type BuildPackLineInput,
   type BuildProductLineInput,
@@ -156,7 +157,10 @@ export function estimateOrderFormLineTotal(
       lines: [buildLine],
       productsById,
     });
-    return shoppingCart.lines[0]?.lineTotal ?? null;
+    const built = shoppingCart.lines[0];
+    if (!built) return null;
+    if (built.type === "bundle") return getBundleLineChargeableTotal(built);
+    return built.lineTotal;
   } catch {
     return null;
   }

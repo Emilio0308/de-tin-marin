@@ -34,15 +34,15 @@ Desde la raíz del repo, `pnpm install` → `pnpm dev` levanta ecommerce (:3000)
 
 ### Packages (scaffolds mínimos)
 
-| Package                | Nombre npm                  | Entrega S0                                                                                                              |
-| ---------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `packages/config`      | `@de-tin-marin/config`      | `env.ts` server/client; export presets TS/ESLint si aplica                                                              |
-| `packages/db`          | `@de-tin-marin/db`          | Factories Supabase: `createServerClient`, `createBrowserClient`, `createAdminClient`; `updateSession()` para middleware |
-| `packages/shared`      | `@de-tin-marin/shared`      | `cn()` + 1 test Vitest                                                                                                  |
-| `packages/types`       | `@de-tin-marin/types`       | Placeholder + script `gen:types` documentado                                                                            |
-| `packages/validations` | `@de-tin-marin/validations` | Placeholder (export vacío o schema `HealthCheck`)                                                                       |
-| `packages/ui`          | `@de-tin-marin/ui`          | Tailwind + 1 primitivo shadcn (`Button`)                                                                                |
-| `packages/ai`          | `@de-tin-marin/ai`          | README placeholder                                                                                                      |
+| Package                | Nombre npm                  | Entrega S0                                                                                                                                                                                 |
+| ---------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/config`      | `@de-tin-marin/config`      | `env.ts` server/client; export presets TS/ESLint si aplica                                                                                                                                 |
+| `packages/db`          | `@de-tin-marin/db`          | Factories Supabase: `createServerClient`, `createBrowserClient`, `createAdminClient`; `updateSession()` + `shouldRefreshSession()` para middleware; `getMiddlewareSupabaseConfig()` (Edge) |
+| `packages/shared`      | `@de-tin-marin/shared`      | `cn()` + 1 test Vitest                                                                                                                                                                     |
+| `packages/types`       | `@de-tin-marin/types`       | Placeholder + script `gen:types` documentado                                                                                                                                               |
+| `packages/validations` | `@de-tin-marin/validations` | Placeholder (export vacío o schema `HealthCheck`)                                                                                                                                          |
+| `packages/ui`          | `@de-tin-marin/ui`          | Tailwind + 1 primitivo shadcn (`Button`)                                                                                                                                                   |
+| `packages/ai`          | `@de-tin-marin/ai`          | README placeholder                                                                                                                                                                         |
 
 ### Apps
 

@@ -1,4 +1,5 @@
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import type { Json } from "@de-tin-marin/types/database";
 import {
   orderShoppingCartBundleLineSchema,
@@ -85,8 +86,8 @@ export function flattenOrderCartLines(
       sku: line.bundleId,
       name: line.name,
       quantity: line.quantity,
-      unitPrice: null,
-      lineTotal: line.lineTotal,
+      unitPrice: line.normalizedPerSurprisePrice ?? null,
+      lineTotal: getBundleLineChargeableTotal(line),
       detail: `${line.components.length} componentes`,
     });
 

@@ -82,6 +82,12 @@ export function OrderDetailContainer() {
       surpriseLine: t("detail.surpriseLine"),
       formatQuantityLabel: (quantity) =>
         t("detail.quantityLabel", { quantity }),
+      bundlePrice: {
+        formatTheoreticalTotal: (price) =>
+          t("detail.bundleTheoreticalTotal", { price }),
+        formatPerSurprisePrice: (chargeable, theoretical) =>
+          t("detail.bundlePerSurprisePrice", { chargeable, theoretical }),
+      },
       formatProductDualQty: (packages, units) =>
         units > 0
           ? t("detail.formatProductDualQtyWithUnits", { packages, units })

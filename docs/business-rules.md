@@ -88,26 +88,31 @@
 
 ### Regla 8 — Precio de sorpresa en orden
 
-- **Trigger:** Calcular total de línea bundle.
+- **Trigger:** Calcular total de línea bundle (catálogo, preview, snapshot de orden, cobro).
 - **Pasos:**
 
 ```text
-line_total =
-  Σ (total_quantity × unit_price_final_producto)   // finalUnitPrice; campaña ya aplicada
-  + containerUnitPrice × line.quantity             // 1 envase por sorpresa, congelado
+itemsSubtotalPerSorpresa = Σ (unitNetPrice × units_per_person)   // prices.unit.netPrice; sin campaña en componentes (v1)
+rawPerSurprise           = containerNetPrice + itemsSubtotalPerSorpresa
+normalizedPerSurprise    = normalizeBundlePrice(rawPerSurprise, step)   // default step = S/ 0.50, redondeo hacia arriba
+lineTotal                = line.quantity × rawPerSurprise              // crudo; auditoría en snapshot
+normalizedLineTotal      = line.quantity × normalizedPerSurprise      // cobro, UI comercial, totales de orden
 ```
 
-- `unit_price_final_producto` = `computeFinalPrice(normal.netPrice, campaign) / items_per_package`, o `prices.unit.netPrice` sin campaña.
-- `containerUnitPrice` = `surprise_containers.prices.netPrice` al crear la orden; congelado en `shopping_cart` como `container.unitPrice`.
-- `units_per_person` y `total_quantity` en **unidades base** (bolsas).
+- **Punto único de verdad:** `@de-tin-marin/shared/bundle-price` (`normalizeBundlePrice`, `computeBundlePerSurprisePrice`, `computeBundleTotal`).
+- `unitNetPrice` = `prices.unit.netPrice` del producto al armar la línea (sin `finalUnitPrice` / campaña en componentes de sorpresa v1).
+- `containerNetPrice` = `surprise_containers.prices.netPrice`; congelado en `shopping_cart` como `container.unitPrice`.
+- **Cobro / emails / reportes:** usar `getBundleLineChargeableTotal(line)` → `normalizedLineTotal` (fallback `lineTotal` en órdenes legacy sin campos nuevos).
+- El premium de redondeo **no se reparte** entre componentes; `components[].unitPrice` sigue siendo el costo unitario real.
 
-**Plantilla (preview admin):**
+**Plantilla (preview admin / listado):**
 
 ```text
-total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
+total (catálogo) = normalizedLineTotal = quantity × normalizedPerSurprise
+rawTotal (solo admin DTO) = quantity × rawPerSurprise
 ```
 
-- **Compat legacy:** órdenes pre-S1E con `serviceFee` en `shopping_cart` (sin `container`) no se recalculan — Regla 16.
+- **Compat legacy:** órdenes pre-S1E con `serviceFee` (sin `container`) no se recalculan — Regla 16. Órdenes sin `normalizedLineTotal` cobran `lineTotal`.
 - **Fallo:** N/A.
 
 ---
@@ -196,7 +201,7 @@ total = bundle.quantity × (containerNetPrice + itemsSubtotalPerSorpresa)
 
 - **Trigger:** Post-checkout (y en create: snapshot ya es definitivo).
 - **Pasos:**
-  1. Usar valores congelados en `orders.shopping_cart` (`packagePrice`/`unitPrice`/`lineTotal` product; `unitPrice` pack; components bundle).
+  1. Usar valores congelados en `orders.shopping_cart` (`packagePrice`/`unitPrice`/`lineTotal` product; `unitPrice` pack; bundle: `normalizedLineTotal` para cobro + `lineTotal` crudo para auditoría).
   2. Ajustes de cabecera **admin-only** (`discount_total` / `surcharge_total`) **no** recalculan precios de línea.
   3. Fórmula cabecera: `total = subtotal − discount_total + shipping_total + surcharge_total` (migración `00023`).
   4. UI admin Totales: tab Precio final deriva discount **XOR** surcharge (`deriveAdjustmentsFromFinalPrice`); tab Descuento/recargo permite ambos a la vez. Guest: ambos ajustes = 0.
@@ -518,20 +523,20 @@ lng, fee }` desde DB (no confiar en el cliente). Punto ausente o
 
 ## Índice rápido
 
-| ID    | Dominio            | Resumen                                                            |
-| ----- | ------------------ | ------------------------------------------------------------------ |
-| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package) |
-| 5–8   | Bundles            | Sin stock dulces, plantilla + envase, personalización, precio      |
-| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único               |
-| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular |
-| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)   |
-| 19–20 | Delivery / Envases | Fee base + overlay R32; pickup/pickup_point/courier→R31; envase    |
-| 21    | Products           | Min/max compra por presentación (default 10/100)                   |
-| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max     |
-| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                |
-| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas              |
-| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)    |
-| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)    |
-| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda    |
-| 31    | Fulfillment        | Courier agencia: dept/provincias JSON; fee 0; snapshot guest XOR   |
-| 32    | Storefront         | Promo envío overlay; min pedido sobre subtotal; aviso checkout     |
+| ID    | Dominio            | Resumen                                                              |
+| ----- | ------------------ | -------------------------------------------------------------------- |
+| 1–4   | Products           | SKU, prices JSONB, activo, stock por `product_type` (unit/package)   |
+| 5–8   | Bundles            | Sin stock; plantilla + envase; precio dinámico + normalización (#45) |
+| 9–12  | Pricing            | Final en backend, 1:1 campaña, vigencia, motor único                 |
+| 13–16 | Orders             | Snapshot; estados (+ logística #42); stock al pagar; no recalcular   |
+| 17–18 | Payments / cancel  | Confirm manual; cancel atómico (refund + restock, DECISIONS #41)     |
+| 19–20 | Delivery / Envases | Fee base + overlay R32; pickup/pickup_point/courier→R31; envase      |
+| 21    | Products           | Min/max compra por presentación (default 10/100)                     |
+| 22–25 | Packs / combos     | Sin stock propio, reference dual qty, deduct pkg+unit, min/max       |
+| 26    | Products (admin)   | Costo proveedor + margen/% derivado (DECISIONS #36)                  |
+| 27    | Settings públicos  | Contacto + instrucciones Yape/transferencia dinámicas                |
+| 28    | Notifications      | Email SMTP post-creación (await best-effort; no tumba la orden)      |
+| 29    | Settings públicos  | Imagen “Nuestra Historia” en `/nosotros` (singleton + fallback)      |
+| 30    | Fulfillment        | Catálogo puntos de recojo + snapshot; guest sin `pickup` tienda      |
+| 31    | Fulfillment        | Courier agencia: dept/provincias JSON; fee 0; snapshot guest XOR     |
+| 32    | Storefront         | Promo envío overlay; min pedido sobre subtotal; aviso checkout       |

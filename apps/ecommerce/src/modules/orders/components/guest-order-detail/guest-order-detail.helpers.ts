@@ -1,3 +1,4 @@
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import type { GuestOrderDetail } from "@de-tin-marin/validations/guest-order";
 import type { GuestOrderLineSummary } from "./guest-order-detail.types";
 
@@ -35,7 +36,7 @@ export function summarizeGuestOrderLines(
       kind: "bundle" as const,
       name: line.name,
       detail: `${labels.formatBundlePersons(line.quantity)} · ${line.components.length} ${labels.bundleComponents}`,
-      lineTotal: line.lineTotal,
+      lineTotal: getBundleLineChargeableTotal(line),
     };
   });
 }

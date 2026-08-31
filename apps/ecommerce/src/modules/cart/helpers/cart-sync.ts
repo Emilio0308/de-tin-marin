@@ -1,6 +1,7 @@
 import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
 import type { OrderStockCheckResult } from "@de-tin-marin/shared/check-order-stock";
 import type { OrderShoppingCartLine } from "@de-tin-marin/shared/order-cart";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import type { StoredCartLine } from "../repositories/cart.repository";
 import { applyServerCartPricing } from "./cart-lines";
 
@@ -80,7 +81,12 @@ export function detectCartPriceDrift(
     }
 
     if (local.type === "bundle" && server.type === "bundle") {
-      if (local.lineTotal !== server.lineTotal) return true;
+      if (
+        getBundleLineChargeableTotal(local) !==
+        getBundleLineChargeableTotal(server)
+      ) {
+        return true;
+      }
     }
   }
 

@@ -1,3 +1,4 @@
+import { computeBundlePerSurprisePrice } from "./bundle-price";
 import type { OrderFulfillmentMethod } from "./delivery-fee";
 import { roundMoney } from "./prices";
 
@@ -58,7 +59,12 @@ export type OrderShoppingCartBundleLine = {
   container?: OrderShoppingCartBundleContainer;
   /** @deprecated Legacy orders pre-S1E */
   serviceFee?: number;
+  /** Raw line total (Σ componentes + envases, sin normalizar). */
   lineTotal: number;
+  /** Precio comercial por sorpresa (ceil al step configurado). Ausente en órdenes legacy. */
+  normalizedPerSurprisePrice?: number;
+  /** Precio comercial de la línea (quantity × normalizedPerSurprisePrice). Ausente en órdenes legacy. */
+  normalizedLineTotal?: number;
   components: OrderShoppingCartBundleComponent[];
   imageUrl?: string | null;
 };
@@ -154,6 +160,8 @@ export type BuildShoppingCartInput = {
     BuildProductLineInput | BuildBundleLineInput | BuildPackLineInput
   >;
   productsById: Map<string, ProductForOrderLine>;
+  /** Bundle components always use prices.unit.netPrice (no campaigns). */
+  bundleComponentUnitPricesById?: Map<string, number>;
 };
 
 export type OrderTotals = {
@@ -205,6 +213,18 @@ export function getBundleLineContainerUnitPrice(
   return line.serviceFee ?? 0;
 }
 
+/** Monto cobrable de una línea bundle (legacy sin campos normalizados → lineTotal). */
+export function getBundleLineChargeableTotal(
+  line: OrderShoppingCartBundleLine,
+): number {
+  return line.normalizedLineTotal ?? line.lineTotal;
+}
+
+function lineSubtotalForOrder(line: OrderShoppingCartLine): number {
+  if (line.type === "bundle") return getBundleLineChargeableTotal(line);
+  return line.lineTotal;
+}
+
 export function normalizeProductLineQuantities(
   packageQuantity: number,
   unitQuantity: number,
@@ -253,6 +273,7 @@ export function buildBundleLine(
   container: OrderShoppingCartBundleContainer,
   components: BundleComponentInput[],
   productsById: Map<string, ProductForOrderLine>,
+  bundleComponentUnitPricesById?: Map<string, number>,
 ): OrderShoppingCartBundleLine {
   const frozenComponents: OrderShoppingCartBundleComponent[] = components.map(
     (component) => {
@@ -260,7 +281,10 @@ export function buildBundleLine(
       if (!product) {
         throw new Error(`PRODUCT_NOT_FOUND:${component.productId}`);
       }
-      const unitPrice = roundMoney(product.unitPrice);
+      const bundleUnitPrice = bundleComponentUnitPricesById?.get(
+        component.productId,
+      );
+      const unitPrice = roundMoney(bundleUnitPrice ?? product.unitPrice);
       const totalQuantity = component.quantityPerUnit * quantity;
       return {
         productId: product.id,
@@ -283,6 +307,15 @@ export function buildBundleLine(
   const lineTotal = roundMoney(
     componentsSubtotal + containerUnitPrice * quantity,
   );
+  const perSurprise = computeBundlePerSurprisePrice({
+    containerNetPrice: containerUnitPrice,
+    items: frozenComponents.map((component) => ({
+      unitNetPrice: component.unitPrice,
+      unitsPerPerson: component.quantityPerUnit,
+    })),
+  });
+  const normalizedPerSurprisePrice = perSurprise.normalizedPerSurprisePrice;
+  const normalizedLineTotal = roundMoney(normalizedPerSurprisePrice * quantity);
 
   return {
     type: "bundle",
@@ -296,6 +329,8 @@ export function buildBundleLine(
       unitPrice: containerUnitPrice,
     },
     lineTotal,
+    normalizedPerSurprisePrice,
+    normalizedLineTotal,
     components: frozenComponents,
   };
 }
@@ -371,6 +406,7 @@ export function buildShoppingCart(
       line.container,
       line.components,
       input.productsById,
+      input.bundleComponentUnitPricesById,
     );
   });
 
@@ -389,7 +425,10 @@ export function computeOrderTotals(
   const surchargeTotal = roundMoney(options.surchargeTotal ?? 0);
   const shippingTotal = roundMoney(options.shippingTotal ?? 0);
   const subtotal = roundMoney(
-    shoppingCart.lines.reduce((sum, line) => sum + line.lineTotal, 0),
+    shoppingCart.lines.reduce(
+      (sum, line) => sum + lineSubtotalForOrder(line),
+      0,
+    ),
   );
   const total = roundMoney(
     subtotal - discountTotal + shippingTotal + surchargeTotal,

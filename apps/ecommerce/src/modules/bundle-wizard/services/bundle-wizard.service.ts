@@ -2,6 +2,7 @@ import "server-only";
 
 import { storeFeatures } from "@de-tin-marin/config/store-features";
 import { buildOrderCartWithTotals } from "@de-tin-marin/shared/build-order-cart";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import {
   aggregateStockDemands,
   checkOrderStock,
@@ -272,6 +273,7 @@ export async function previewBundleLineService(
     ok: true,
     data: {
       lineTotal: bundleLine.lineTotal,
+      normalizedLineTotal: getBundleLineChargeableTotal(bundleLine),
       line: {
         ...bundleLine,
         imageUrl: normalizeImageUrl(bundleRow.image_url),

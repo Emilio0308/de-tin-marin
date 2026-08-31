@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Gift, Pencil, Trash2, Users } from "lucide-react";
 import { cn } from "@de-tin-marin/shared/cn";
+import { isMediaCdnImageUrl } from "@/shared/helpers/cdn-image.helpers";
 import type { BundleListItem } from "@de-tin-marin/validations/bundle";
 import { AdminTablePagination } from "@/shared/components/admin-table-pagination/admin-table-pagination";
 import { AdminCatalogStatusToggle } from "@/shared/components/admin-catalog-status-toggle/admin-catalog-status-toggle";
@@ -40,7 +41,14 @@ function BundleThumb({
     <div
       className={cn("bg-surface-container relative overflow-hidden", className)}
     >
-      <Image src={url} alt={name} fill sizes="80px" className="object-cover" />
+      <Image
+        src={url}
+        alt={name}
+        fill
+        sizes="80px"
+        unoptimized={isMediaCdnImageUrl(url)}
+        className="object-cover"
+      />
     </div>
   );
 }

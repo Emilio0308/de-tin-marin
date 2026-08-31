@@ -153,6 +153,7 @@ export const bundleWizardTemplateSchema = z.object({
 
 export const bundleLinePreviewSchema = z.object({
   lineTotal: z.number(),
+  normalizedLineTotal: z.number(),
   line: orderShoppingCartBundleLineSchema,
   stockCheck: orderStockCheckSchema,
 });

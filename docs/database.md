@@ -226,6 +226,16 @@ fila `default`.
 | `cost_net_price`         | numeric(12,2) nullable | Costo proveedor (PEN; DECISIONS #36 / Regla 26). Margen/% derivados en app, no columnas |
 | `deleted_at`             | timestamptz            | Soft-delete                                                                             |
 
+**Índices listado/búsqueda admin** (migración `00033_products_list_search_indexes.sql`):
+
+| Índice                                 | Tipo / cols                                                | Uso                                        |
+| -------------------------------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| `products_active_not_deleted_name_idx` | parcial `(is_active, name, id)` WHERE `deleted_at IS NULL` | Filtro estado + orden name en `/products`  |
+| `products_name_trgm_idx`               | GIN `name` (`pg_trgm`)                                     | `ILIKE` en `listProductsPageRepo` / picker |
+| `products_sku_trgm_idx`                | GIN `sku` (`pg_trgm`)                                      | Idem búsqueda por SKU                      |
+
+Extensión: `pg_trgm` en schema `extensions`. Validar planes con `EXPLAIN ANALYZE` en staging antes de prod.
+
 > **Stock vendible (Regla 4 / DECISIONS #29):**
 >
 > ```text

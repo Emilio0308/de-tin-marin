@@ -50,6 +50,7 @@ Staff navega listados admin con **paginación SQL real** (`count: exact` + `.ran
 - [x] Listados `/products`, `/categories`, `/bundles`, `/packs`, `/containers`, `/orders` paginan en SQL
 - [x] README catalog/orders actualizados
 - [x] SSR + hidratación RQ en listados admin; home ecommerce vía `loadStorefrontCatalog`
+- [x] Post-S4: índices búsqueda productos (`00033`) + hardening picker/repo (416, debounce 450 ms)
 
 ## Referencias
 

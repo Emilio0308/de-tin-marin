@@ -135,4 +135,4 @@ Grants en `00004`: `GRANT SELECT` a `anon, authenticated`; `GRANT INSERT, UPDATE
 ## Depends on
 
 - [database.md](../../database.md) § catalog (`catalog.bundles`, `catalog.bundle_items`)
-- [DECISIONS.md](../../DECISIONS.md) #5, #6, #22
+- [DECISIONS.md](../../DECISIONS.md) #5, #6, #22, #45 (normalización precio — [`S4-13`](../S4/13-bundle-price-normalization.md))

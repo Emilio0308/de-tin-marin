@@ -127,7 +127,11 @@ export const bundleListItemSchema = z.object({
   customizationMinProducts: z.number(),
   customizationMaxProducts: z.number(),
   itemCount: z.number(),
+  /** Precio comercial normalizado (plantilla × quantity). */
   total: z.number(),
+  /** Precio crudo sin normalizar (plantilla × quantity). */
+  rawTotal: z.number(),
+  normalizedPerSurprisePrice: z.number(),
   isActive: z.boolean(),
 });
 

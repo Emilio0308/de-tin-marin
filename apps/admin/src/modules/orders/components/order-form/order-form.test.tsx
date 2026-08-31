@@ -143,7 +143,11 @@ const labels: OrderFormLabels = {
   containerSubtotal: "Subtotal envases",
   containerCostHint: (unitPrice, quantity) => `${unitPrice} × ${quantity}`,
   unitPriceSuffix: "c/u",
-  customizeTotal: "Total estimado",
+  customizeTotal: "Total a cobrar",
+  formatBundleTheoreticalTotal: (price) =>
+    `Costo teórico (sin redondeo): ${price}`,
+  formatBundlePerSurprisePrice: (chargeable, theoretical) =>
+    `Por sorpresa: ${chargeable} · teórico ${theoretical}`,
   addCandyAction: "Agregar",
   candyAlreadyAdded: "Agregado",
   searchCandies: "Buscar dulces",

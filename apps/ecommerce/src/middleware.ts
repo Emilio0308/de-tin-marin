@@ -1,10 +1,11 @@
 import { type NextRequest } from "next/server";
+import { getMiddlewareSupabaseConfig } from "@de-tin-marin/db/config";
 import { updateSession } from "@de-tin-marin/db/proxy";
-import { supabaseConfig } from "@/config/env";
 
 export async function middleware(request: NextRequest) {
   return updateSession(request, {
-    ...supabaseConfig,
+    ...getMiddlewareSupabaseConfig(),
+    app: "ecommerce",
     redirectIfUnauthed: false,
   });
 }

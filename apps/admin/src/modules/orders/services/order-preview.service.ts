@@ -7,6 +7,7 @@ import {
   type OrderBundleSource,
   type OrderPackSource,
 } from "@de-tin-marin/shared/build-order-cart";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import { roundMoney } from "@de-tin-marin/shared/prices";
 import type { SupabaseConfig } from "@de-tin-marin/db/config";
 import {
@@ -105,6 +106,8 @@ export async function previewAdminBundleLineService(
       ok: true;
       data: {
         lineTotal: number;
+        normalizedLineTotal: number;
+        normalizedPerSurprisePrice: number;
         itemsSubtotal: number;
         containerSubtotal: number;
         unitPricesByProductId: Record<string, number>;
@@ -189,6 +192,10 @@ export async function previewAdminBundleLineService(
     ok: true,
     data: {
       lineTotal: bundleLine.lineTotal,
+      normalizedLineTotal: getBundleLineChargeableTotal(bundleLine),
+      normalizedPerSurprisePrice:
+        bundleLine.normalizedPerSurprisePrice ??
+        getBundleLineChargeableTotal(bundleLine) / bundleLine.quantity,
       itemsSubtotal,
       containerSubtotal,
       unitPricesByProductId,
@@ -311,7 +318,11 @@ export async function previewOrderCartService(
       surchargeTotal: cartResult.totals.surchargeTotal,
       shippingTotal: cartResult.totals.shippingTotal,
       total: cartResult.totals.total,
-      lineTotals: cartResult.shoppingCart.lines.map((line) => line.lineTotal),
+      lineTotals: cartResult.shoppingCart.lines.map((line) =>
+        line.type === "bundle"
+          ? getBundleLineChargeableTotal(line)
+          : line.lineTotal,
+      ),
     },
   };
 }

@@ -237,7 +237,7 @@ export function BundleWizardPageContainer({
       labelsByProductId={labelsByProductId}
       imagesByProductId={imagesByProductId}
       unitPricesByProductId={unitPricesByProductId}
-      lineTotal={previewQuery.data?.lineTotal ?? null}
+      lineTotal={previewQuery.data?.normalizedLineTotal ?? null}
       stockCheck={previewQuery.data?.stockCheck ?? null}
       isValid={isValid}
       canRemove={canRemoveComponent(components, bounds)}

@@ -108,7 +108,7 @@ Listados admin paginados: `page` / `pageSize` / filtros en `searchParams` (`admi
 
 **Home ecommerce:** `loadStorefrontCatalog` (solo tab activo + hero + `catalog_version`) → seed RQ en `app/page.tsx`.
 
-**Admin composición / order-form:** no cargar catálogo completo — `ProductSearchPicker` + `listProductsPageAction` (debounce 300 ms; `pageSize = ADMIN_DEFAULT_PAGE_SIZE`; scroll infinito vía `IntersectionObserver`; auto-avanza página si `excludeIds` deja la vista vacía).
+**Admin composición / order-form:** no cargar catálogo completo — `ProductSearchPicker` + `listProductsPageAction` (debounce **450 ms**; `keepPreviousData`; `pageSize = ADMIN_DEFAULT_PAGE_SIZE`; scroll infinito vía `IntersectionObserver`; auto-avanza página si `excludeIds` deja la vista vacía — máx. **3** veces; repo retry página 1 ante PostgREST 416).
 
 **Dashboard admin:** `getDashboardSummaryService` (counts SQL + recent orders + low-stock candidates) — no `listProducts` / `listOrders` completos.
 

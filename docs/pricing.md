@@ -54,19 +54,21 @@ type ProductPriceDTO = {
 
 ### B) Sorpresas (bundles) — al crear la orden
 
-Los bundles **no tienen precio fijo en catálogo** para venta. El total se calcula al armar el pedido:
+Los bundles **no tienen precio fijo persistido**. El total se calcula al armar el pedido con `@de-tin-marin/shared/bundle-price`:
 
 ```text
-Por cada component en una línea bundle del shopping_cart:
-  totalQuantity × finalUnitPrice   (campaña ya aplicada)
-
-+ service_fee × quantity (línea bundle)
-= lineTotal
+rawPerSurprise        = containerNetPrice + Σ (unitNetPrice × units_per_person)
+normalizedPerSurprise = ceil(rawPerSurprise / step) × step    // step default S/ 0.50
+lineTotal             = quantity × rawPerSurprise             // snapshot (auditoría)
+normalizedLineTotal   = quantity × normalizedPerSurprise      // cobro y UI
 ```
 
-Preview en admin (sin campaña): `prices.unit.netPrice × units_per_person`.
+- Componentes: siempre `prices.unit.netPrice` (sin campaña en sorpresas v1).
+- Catálogo admin: `total` = normalizado; `rawTotal` = crudo (solo admin).
+- Catálogo ecommerce: `total` = normalizado.
+- Totales de orden / checkout: `getBundleLineChargeableTotal(line)`.
 
-**Regla:** 8.
+**Regla:** 8. DECISIONS #45.
 
 ### C) Packs / combos — precio persistido
 
@@ -111,11 +113,11 @@ Línea orden: `unitPrice = finalPrice` congelado; BOM congelada (`packageQuantit
 
 ## Integración con Orders
 
-| Momento          | Qué hace Pricing                                              |
-| ---------------- | ------------------------------------------------------------- |
-| Listar productos | Devuelve `finalPrice` + `finalUnitPrice` por producto         |
-| Armar sorpresa   | Calcula preview con `unit.netPrice` o `finalUnitPrice`        |
-| Confirmar orden  | Snapshot `unitPrice` en `shopping_cart` — Orders no recalcula |
+| Momento          | Qué hace Pricing                                                          |
+| ---------------- | ------------------------------------------------------------------------- |
+| Listar productos | Devuelve `finalPrice` + `finalUnitPrice` por producto                     |
+| Armar sorpresa   | `prices.unit.netPrice` en componentes (sin campaña v1); normalización #45 |
+| Confirmar orden  | Snapshot `unitPrice` + `normalizedLineTotal`; Orders no recalcula         |
 
 ## Módulo
 
@@ -132,7 +134,7 @@ src/modules/pricing/
 - Producto paquete (10 u): coherencia `unit × 10 ≈ normal`
 - Producto con campaña 20% vigente → `finalUnitPrice = finalPrice / items_per_package`
 - Campaña expirada → precio normal
-- Sorpresa: 25 u. × 6 productos + service_fee (precios unit)
+- Sorpresa: raw + normalizado (ej. 10.15/sorpresa → 10.50); `getBundleLineChargeableTotal`
 - Reemplazo producto 4 por 8 → precio refleja producto 8
 
 ## Reglas relacionadas

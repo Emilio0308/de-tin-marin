@@ -653,6 +653,12 @@ export function BundleForm({
                 {formatPrice(priceSummary.total)}
               </span>
             </div>
+            {priceSummary.lineTotal !== priceSummary.total ? (
+              <p className="text-on-surface-variant/70 text-xs">
+                Costo teórico (sin redondeo):{" "}
+                {formatPrice(priceSummary.lineTotal)}
+              </p>
+            ) : null}
           </section>
         </div>
 

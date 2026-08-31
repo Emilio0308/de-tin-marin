@@ -1160,6 +1160,8 @@ export function OrderForm({
                     containerCostHint: labels.containerCostHint,
                     unitPriceSuffix: labels.unitPriceSuffix,
                     customizeTotal: labels.customizeTotal,
+                    formatTheoreticalTotal: labels.formatBundleTheoreticalTotal,
+                    formatPerSurprisePrice: labels.formatBundlePerSurprisePrice,
                     addCandyAction: labels.addCandyAction,
                     candyAlreadyAdded: labels.candyAlreadyAdded,
                     searchCandies: labels.searchCandies,

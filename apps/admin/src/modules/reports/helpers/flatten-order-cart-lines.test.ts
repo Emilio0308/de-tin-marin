@@ -47,6 +47,8 @@ describe("flattenOrderCartLines", () => {
           name: "Sorpresa",
           quantity: 3,
           lineTotal: 30,
+          normalizedPerSurprisePrice: 11,
+          normalizedLineTotal: 33,
           container: {
             containerId,
             sku: "ENV-1",
@@ -70,6 +72,11 @@ describe("flattenOrderCartLines", () => {
     expect(rows.filter((row) => row.level === "line")).toHaveLength(3);
     expect(rows.filter((row) => row.level === "component")).toHaveLength(2);
     expect(rows.filter((row) => row.level === "container")).toHaveLength(1);
+    const bundleRow = rows.find(
+      (row) => row.level === "line" && row.lineType === "bundle",
+    );
+    expect(bundleRow?.lineTotal).toBe(33);
+    expect(bundleRow?.unitPrice).toBe(11);
     expect(rows.some((row) => row.lineType === "pack")).toBe(true);
     expect(rows.some((row) => row.detail === "Envase")).toBe(true);
   });

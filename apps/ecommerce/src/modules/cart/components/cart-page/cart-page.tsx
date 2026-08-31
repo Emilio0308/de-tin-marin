@@ -9,6 +9,7 @@ import { CATALOG_PLACEHOLDER_IMAGE } from "@/modules/catalog/constants";
 import { StorefrontFunnelSteps } from "@/shared/components/storefront-funnel-steps/storefront-funnel-steps";
 import { StockBannerSection } from "@/shared/components/stock-banner/stock-banner";
 import type { ProductPurchaseBounds } from "@de-tin-marin/shared/product-purchase-limits";
+import { getBundleLineChargeableTotal } from "@de-tin-marin/shared/order-cart";
 import type { CartPageProps } from "./cart-page.types";
 
 function CartAtmosphere() {
@@ -554,7 +555,7 @@ export function CartPage({
                         personCount={entry.line.quantity}
                         componentCount={entry.line.components.length}
                         containerName={entry.line.container?.name}
-                        lineTotal={entry.line.lineTotal}
+                        lineTotal={getBundleLineChargeableTotal(entry.line)}
                         imageUrl={
                           lineImageUrlByCartLineId[entry.cartLineId] ??
                           CATALOG_PLACEHOLDER_IMAGE

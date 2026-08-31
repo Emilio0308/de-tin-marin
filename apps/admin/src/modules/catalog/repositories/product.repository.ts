@@ -59,6 +59,10 @@ function escapeIlike(term: string): string {
   return term.replace(/[%_\\]/g, "\\$&");
 }
 
+export function isPostgrestRangeNotSatisfiableError(message: string): boolean {
+  return message.toLowerCase().includes("range not satisfiable");
+}
+
 const PRODUCT_LIST_SELECT =
   "id, sku, name, slug, brand, category_id, product_type, items_per_package, package_label, prices, cost_net_price, campaign_id, stock_sealed_packages, stock_loose_base_units, purchase_min_quantity, purchase_max_quantity, is_active, image_url, categories(name)";
 
@@ -66,42 +70,54 @@ export async function listProductsPageRepo(
   config: SupabaseConfig,
   filters: ProductListFilters,
   pagination: ProductListPagination,
-): Promise<{ rows: ProductWithCategory[]; total: number }> {
+): Promise<{ rows: ProductWithCategory[]; total: number; page: number }> {
   const supabase = await createSupabaseServerClient(config);
-  const { page, pageSize } = pagination;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const { pageSize } = pagination;
+  let { page } = pagination;
 
-  let query = supabase
-    .schema("catalog")
-    .from("products")
-    .select(PRODUCT_LIST_SELECT, { count: "exact" })
-    .is("deleted_at", null);
+  async function runQuery(requestedPage: number) {
+    const from = (requestedPage - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-  if (filters.categoryId) {
-    query = query.eq("category_id", filters.categoryId);
+    let query = supabase
+      .schema("catalog")
+      .from("products")
+      .select(PRODUCT_LIST_SELECT, { count: "exact" })
+      .is("deleted_at", null);
+
+    if (filters.categoryId) {
+      query = query.eq("category_id", filters.categoryId);
+    }
+
+    if (filters.status === "active") {
+      query = query.eq("is_active", true);
+    } else if (filters.status === "inactive") {
+      query = query.eq("is_active", false);
+    }
+
+    if (filters.search) {
+      const term = `%${escapeIlike(filters.search)}%`;
+      query = query.or(`name.ilike.${term},sku.ilike.${term}`);
+    }
+
+    return query
+      .order("name", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
   }
 
-  if (filters.status === "active") {
-    query = query.eq("is_active", true);
-  } else if (filters.status === "inactive") {
-    query = query.eq("is_active", false);
-  }
+  let { data, error, count } = await runQuery(page);
 
-  if (filters.search) {
-    const term = `%${escapeIlike(filters.search)}%`;
-    query = query.or(`name.ilike.${term},sku.ilike.${term}`);
+  if (error && isPostgrestRangeNotSatisfiableError(error.message) && page > 1) {
+    page = 1;
+    ({ data, error, count } = await runQuery(page));
   }
-
-  const { data, error, count } = await query
-    .order("name", { ascending: true })
-    .order("id", { ascending: true })
-    .range(from, to);
 
   if (error) throw new Error(error.message);
   return {
     rows: (data ?? []) as unknown as ProductWithCategory[],
     total: count ?? 0,
+    page,
   };
 }
 
